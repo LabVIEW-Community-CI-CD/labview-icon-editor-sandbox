@@ -4,7 +4,7 @@ Welcome to the **Troubleshooting Guide** for experimental branches. This documen
 
 ---
 
-## Subsection A: Setup & Approval
+## Subsection A: Setup and Approval
 
 ### 1. Experiment Branch Not Created After Steering Committee Approval
 
@@ -15,7 +15,7 @@ You’ve received approval from the Steering Committee, but you don’t see `exp
 An NI maintainer or admin is responsible for actually creating the experiment branch. They might not have completed this step yet.
 
 **Solution (One Paragraph)**  
-Reach out to the maintainer or Open Source Program Manager to confirm they have time to create `experiment/<shortName>` from `develop`. Provide them the agreed short name (e.g., “experiment/async-rework”). Once the branch is created, refresh your repository page or pull the latest remote branches locally. If it still doesn’t show up, verify you have the correct repository access and that the branch was indeed pushed to origin.
+Reach out to the maintainer or Open-Source Program Manager to confirm they have time to create `experiment/<shortName>` from `develop`. Provide them the agreed short name (e.g., “experiment/async-rework”). Once the branch is created, refresh your repository page or pull the latest remote branches locally. If it still doesn’t show up, verify you have the correct repository access and that the branch was indeed pushed to origin.
 
 ---
 
@@ -71,7 +71,7 @@ Use the convention: prefix with `experiment/` followed by a concise, descriptive
 
 ---
 
-## Subsection B: Merging & Sub-Branches
+## Subsection B: Merging and Sub-Branches
 
 ### 6. Merge Conflicts When Pulling from `develop` into Experiment
 
@@ -134,10 +134,10 @@ The final PR from `experiment/<shortName>` to `develop` is ready to merge, but i
 The Steering Committee may be busy or may have assumed maintainers would handle the merge. Alternatively, the necessary version bump label (“major”, “minor”, or “patch”) wasn’t added, so CI might not allow the merge.
 
 **Solution (One Paragraph)**  
-Politely remind the Steering Committee in the PR comments that the experiment is ready to merge. Highlight any last scan results and that all tests pass. Ask for a final review and a decision on the version label for the merge. Maintainers can help by pinging the committee through the appropriate channels (GitHub mentions or a Discord/meeting reminder). Once the Steering Committee adds the label and approves, proceed with the merge into `develop`. If the committee is unavailable, the Open Source Program Manager can step in to ensure the process concludes.
+Politely remind the Steering Committee in the PR comments that the experiment is ready to merge. Highlight any last scan results and that all tests pass. Ask for a final review and a decision on the version label for the merge. Maintainers can help by pinging the committee through the appropriate channels (GitHub mentions or a Discord/meeting reminder). Once the Steering Committee adds the label and approves, proceed with the merge into `develop`. If the committee is unavailable, the Open-Source Program Manager can step in to ensure the process concludes.
   
 ---
 
 ## See Also
-- [maintainers-guide.md](maintainers-guide.md) – Admin tasks and final merge processes.  
-- [GOVERNANCE.md](../../GOVERNANCE.md) – Steering Committee roles, BDFL structure.
+- [**`maintainers-guide.md`**](maintainers-guide.md) – Admin tasks and final merge processes.
+- [**`GOVERNANCE.md`**](../../../GOVERNANCE.md) – Steering Committee roles, BDFL structure.

@@ -1,10 +1,10 @@
 # Powershell Command Line Interface Instructions
 
-This document describes how to **build, test, and distribute** the **LabVIEW Icon Editor** VI Package using **PowerShell**. You can run these scripts locally on your development or self-hosted runner, or within **GitHub Actions**. By making this process open source, we enable community collaboration, easier troubleshooting, and a more transparent build pipeline for the Icon Editor that ships with LabVIEW.
+This document describes how to **build, test, and distribute** the **LabVIEW Icon Editor** VI Package using **PowerShell**. You can run these scripts locally on your development or self-hosted runner, or within **GitHub Actions**. By making this process open-source, we enable community collaboration, easier troubleshooting, and a more transparent build pipeline for the Icon Editor that ships with LabVIEW.
 
 ## Table of Contents
 
-1. [Overview & Prerequisites](#overview--prerequisites)  
+1. [Overview and Prerequisites](#overview-and-prerequisites)
 2. [Editing Guide (PowerShell)](#editing-guide-powershell)  
 3. [Distribution Guide (VI Package via PowerShell)](#distribution-guide-vi-package-via-powershell)  
 4. [Integrating with GitHub Actions](#integrating-with-github-actions)  
@@ -14,8 +14,8 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 
 ---
 
-<a name="overview--prerequisites"></a>
-## 1. Overview & Prerequisites
+<a name="overview-and-prerequisites"></a>
+## 1. Overview and Prerequisites
 
 - **Purpose**: Provide a **PowerShell-centric** approach to build, test, and package the Icon Editor—either locally or via GitHub Actions.
 - **Why PowerShell?**  
@@ -23,9 +23,9 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
   - Lets you debug locally using the **exact same scripts** used in CI, ensuring consistent results between local and automated environments.
 
 - **Prerequisites**:
-  1. **LabVIEW 2021 SP1 (both 32-bit & 64-bit)**.
+  1. **LabVIEW 2021 SP1 (both 32-bit and 64-bit)**.
   2. **PowerShell 7+** and **Git**.
-  3. **Apply** `tooling\deployment\runner_dependencies.vipc` to **both 32-bit & 64-bit LabVIEW**.
+  3. **Apply** `tooling\deployment\runner_dependencies.vipc` to **both 32-bit and 64-bit LabVIEW**.
 
 ---
 
@@ -39,7 +39,7 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 2. **Clone** the [Icon Editor](https://github.com/ni/labview-icon-editor.git) to your development location.
 
 3. **Apply** dependencies:  
-   - `Tooling\deployment\runner_dependencies.vipc` to **LabVIEW 2021 (32-bit) & LabVIEW 2021 (64-bit)**.
+   - `Tooling\deployment\runner_dependencies.vipc` to **LabVIEW 2021 (32-bit) and LabVIEW 2021 (64-bit)**.
 
 4. **Open** PowerShell (Admin), navigate to your working directory:
    ```
@@ -63,7 +63,7 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 <a name="distribution-guide-vi-package-via-powershell"></a>
 ## 3. Distribution Guide (VI Package via PowerShell)
 
-### Why & How for Branding the Package
+### Why and How for Branding the Package
 
 When distributing your own fork or build of the Icon Editor, you may want to **uniquely brand** your `.vip` package with your **organization** and **repository** information (or any other metadata). This ensures:
 - **Unique identification** if multiple organizations produce their own variants of the Editor.
@@ -155,7 +155,7 @@ jobs:
 `Build.ps1` orchestrates the entire build:
 
 1. **Clean**: Removes old `.lvlibp` files in `resource\plugins`.
-2. **Apply VIPC**: For **32-bit** & **64-bit** LabVIEW, ensuring all dependencies are set.
+2. **Apply VIPC**: For **32-bit** and **64-bit** LabVIEW, ensuring all dependencies are set.
 3. **Build**: Invokes `Build_lvlibp.ps1` to produce `.lvlibp` files for both bitnesses, injecting version info (`-Major -Minor -Patch -Build`) and a `-Commit`.
 4. **Rename**: Moves them to `lv_icon_x86.lvlibp` and `lv_icon_x64.lvlibp`.
 5. **Construct DisplayInformationJSON**: 
@@ -190,7 +190,7 @@ jobs:
    ```powershell
    .\Set_Development_Mode.ps1 -RelativePath "C:\labview-icon-editor"
    ```
-2. **Develop & Test**  
+2. **Develop and Test**  
    - You can open `lv_icon_editor.lvproj`, make changes, and run `Run_Unit_Tests.ps1`.
 3. **Open PR**  
    - Mark your PR with semver changes (major/minor/patch).  
@@ -204,5 +204,5 @@ jobs:
 6. **Install**  
    - Use VIPM to install the final `.vip` and confirm changes.
 
-All scripts are fully open source—**collaborators** can debug or extend them locally with minimal friction. 
+All scripts are fully open-source—**collaborators** can debug or extend them locally with minimal friction. 
 

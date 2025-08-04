@@ -2,7 +2,8 @@
 
 This guide explains how to automate build, test, and distribution steps for the **LabVIEW Icon Editor** using GitHub Actions—**with multiple pre-release channels** (Alpha, Beta, RC), optional hotfix branches, and a toggleable **Development Mode** feature. It is designed to align with **Gitflow** practices, allowing you to enforce a hands-off approach where merges flow naturally from `develop` → `release-alpha` → `release-beta` → `release-rc` → `main`, while also ensuring forks can reuse the same build scripts.
 
-> **Note**: For **troubleshooting** and a more extensive **FAQ**, see the [TROUBLESHOOTING FAQ](ci/troubleshooting-faq.md). For more detailed runner setup instructions, see the [runner setup guide](ci/actions/runner-setup-guide.md)
+> [!NOTE]
+> For **troubleshooting** and a more extensive **FAQ**, see [`troubleshooting-faq.md`](ci/troubleshooting-faq.md). For more detailed runner setup instructions, see [`runner-setup-guide.md`](ci/actions/runner-setup-guide.md).
 
 ---
 
@@ -10,26 +11,25 @@ This guide explains how to automate build, test, and distribution steps for the 
 
 1. [Introduction](#1-introduction)  
 2. [Quickstart / Step-by-Step Procedure](#2-quickstart--step-by-step-procedure)  
-3. [Getting Started & Configuration](#3-getting-started--configuration)  
-   1. [Development Mode](#31-development-mode)  
-   2. [Environment Variables](#32-environment-variables)  
-   3. [Self-Hosted Runner Setup](#33-self-hosted-runner-setup)  
-4. [Available CI Workflows](#4-available-ci-workflows)  
-   1. [Development Mode Toggle](#41-development-mode-toggle)  
-       - [Overview](#411-overview)  
-       - [Usage](#412-usage)  
-       - [Examples: Calling This Workflow](#413-examples-calling-this-workflow)  
-       - [Customization](#414-customization)  
-       - [Additional Resources](#415-additional-resources)  
-   2. [Build VI Package](#42-build-vi-package)  
-   3. [Run Unit Tests](#43-run-unit-tests)  
-5. [Gitflow Branching & Versioning](#5-gitflow-branching--versioning)  
+3. [Getting Started and Configuration](#3-getting-started--configuration)
+   1. [Development Mode](#31-development-mode)
+   2. [Environment Variables](#32-environment-variables)
+   3. [Self-Hosted Runner Setup](#33-self-hosted-runner-setup)
+4. [Available CI Workflows](#4-available-ci-workflows)
+   1. [Development Mode Toggle](#41-development-mode-toggle)
+       - [Overview](#411-overview)
+       - [Usage](#412-usage)
+       - [Examples: Calling This Workflow](#413-examples-calling-this-workflow)
+       - [Customization](#414-customization)
+       - [Additional Resources](#415-additional-resources)
+   2. [Build VI Package and Release](#42-build-vi-package)
+5. [Gitflow Branching and Versioning](#5-gitflow-branching--versioning)  
    1. [Branching Overview](#51-branching-overview)  
    2. [Multi-Channel Pre-Releases](#52-multi-channel-pre-releases)  
    3. [Hotfix Branches](#53-hotfix-branches)  
    4. [Version Bumps via Labels](#54-version-bumps-via-labels)  
    5. [Build Number](#55-build-number)  
-6. [Branch Protection & Contributing](#6-branch-protection--contributing)  
+6. [Branch Protection and Contributing](#6-branch-protection--contributing)  
 7. [GPG Signing (Fork-Friendly)](#7-gpg-signing-fork-friendly)  
 8. [External References](#8-external-references)
 
@@ -55,11 +55,10 @@ This workflow ensures that all **forks** of the repository can sync the latest b
 <a name="2-quickstart--step-by-step-procedure"></a>
 ## 2. Quickstart / Step-by-Step Procedure
 
-1. **Set up `.github/workflows`**  
+1. **Set up `.github/workflows`**
    Ensure the following workflows exist (or adapt names as needed):
-   - `development-mode-toggle.yml` (Development Mode Toggle)  
-   - `build-vi-package.yml` (Build VI Package)  
-   - `run-unit-tests.yml` (Run Unit Tests)
+   - `development-mode-toggle.yml` (Development Mode Toggle)
+   - `ci.yml` (Build VI Package and Release)
 
 2. **Configure Permissions**  
    - In **Settings → Actions → General**, set **Workflow permissions** to “Read and write permissions” so the workflow can create tags and releases.
@@ -67,7 +66,7 @@ This workflow ensures that all **forks** of the repository can sync the latest b
 3. **Check Environment Variables**  
    - Decide on `DRAFT_RELEASE`, `USE_AUTO_NOTES`, `ATTACH_ARTIFACTS_TO_RELEASE`, `DISABLE_GPG_ON_FORKS`, etc. (see [Environment Variables](#32-environment-variables)).
 
-4. **Make a Pull Request & Label It**  
+4. **Make a Pull Request and Label It**  
    - Use labels `major`, `minor`, or `patch` if you need a version bump.  
    - If no label is found, only the build number increments.
 
@@ -94,7 +93,7 @@ For a visual reference, you may consult a **Gitflow diagram** that includes alph
 ---
 
 <a name="3-getting-started--configuration"></a>
-## 3. Getting Started & Configuration
+## 3. Getting Started and Configuration
 
 <a name="31-development-mode"></a>
 ### 3.1 Development Mode
@@ -106,7 +105,8 @@ For a visual reference, you may consult a **Gitflow diagram** that includes alph
 - **Disable**:  
   - Run the workflow with `mode=disable` (or call `RevertDevelopmentMode.ps1`).
 
-> **Important**: When Development Mode is **enabled**, you generally can’t test the final `.vip` install properly (since LabVIEW might be pointing to local source). Always **disable** dev mode before attempting a final install or distribution test.
+> [!IMPORTANT]
+> When Development Mode is **enabled**, you generally can’t test the final `.vip` install properly (since LabVIEW might be pointing to local source). Always **disable** dev mode before attempting a final install or distribution test.
 
 <a name="32-environment-variables"></a>
 ### 3.2 Environment Variables
@@ -245,10 +245,10 @@ All dev-mode logic resides in two PowerShell scripts:
 ---
 
 <a name="42-build-vi-package"></a>
-### 4.2 Build VI Package
+### 4.2 Build VI Package and Release
 
-- **File Name**: `build-vi-package.yml`  
-- **Purpose**: Builds the `.vip` artifact, determines the version based on PR labels and commit count, and optionally creates/releases the tag.  
+- **File Name**: `ci.yml`
+- **Purpose**: Builds the `.vip` artifact, determines the version based on PR labels and commit count, and optionally creates/releases the tag.
 - **Features**:  
   - **Label-based** version bump (`major`, `minor`, `patch`), or none if unlabeled.  
   - **Commit-based build number**: `vX.Y.Z-build<commitCount>` (plus optional pre-release suffix).  
@@ -256,21 +256,13 @@ All dev-mode logic resides in two PowerShell scripts:
   - **Fork-Friendly GPG**: Disabled if `DISABLE_GPG_ON_FORKS == true`.  
   - **Attach to Release** if `ATTACH_ARTIFACTS_TO_RELEASE == true`.
 - **Events**: Typically triggered on:
-  - Push or PR merge to `release-alpha/*`, `release-beta/*`, `release-rc/*`, `main`, and `hotfix/*`.  
+  - Push or PR merge to `release-alpha/*`, `release-beta/*`, `release-rc/*`, `main`, and `hotfix/*`.
   - Might also be triggered manually (`workflow_dispatch`) if needed.
-
-<a name="43-run-unit-tests"></a>
-### 4.3 Run Unit Tests
-
-- **File Name**: `run-unit-tests.yml`  
-- **Purpose**: Executes the Icon Editor’s unit tests (e.g., via `unit_tests.ps1`) in a **standard** LabVIEW environment (Dev Mode **disabled**).  
-- **Usage**: Typically run on every pull request or push to validate code changes.
-- **Events**: Often triggered on PRs or pushes to `develop`, `feature/*`, or any branch being tested.
 
 ---
 
 <a name="5-gitflow-branching--versioning"></a>
-## 5. Gitflow Branching & Versioning
+## 5. Gitflow Branching and Versioning
 
 <a name="51-branching-overview"></a>
 ### 5.1 Branching Overview
@@ -319,12 +311,12 @@ When you open a **Pull Request** into `develop`, `release-alpha/*`, or `release-
 ---
 
 <a name="6-branch-protection--contributing"></a>
-## 6. Branch Protection & Contributing
+## 6. Branch Protection and Contributing
 
 In order to **enforce** the Gitflow approach “hands-off”:
 1. **Enable Branch Protection Rules**:  
    - For example, protect `main`, `release-alpha/*`, `release-beta/*`, and `release-rc/*` so that only approved Pull Requests can be merged, preventing direct pushes.  
-   - Require checks (like “Build VI Package” or “Run Unit Tests”) to pass before merging.
+   - Require checks (like “Build VI Package and Release”) to pass before merging.
 2. **Refer to `CONTRIBUTING.md`**:  
    - Document your team’s policies on how merges flow from feature → develop → alpha/beta/rc → main.  
    - Outline any required approvals or code reviews.  
@@ -348,10 +340,10 @@ This ensures forks can build without requiring special key setup, while the main
 <a name="8-external-references"></a>
 ## 8. External References
 
-- **Multi-Channel Logic**: See [docs/ci/actions/multichannel-release-workflow.md](docs/ci/actions/multichannel-release-workflow.md) for deeper details on alpha, beta, and RC release strategies.  
-- **Runner Setup**: For an in-depth guide on configuring your environment, see **`runner-setup-guide.md`**.  
-- **Troubleshooting & FAQ**: See **TROUBLESHOOTING_AND_FAQ.md** (or your chosen file name) for a detailed list of common issues, solutions, and frequently asked questions.  
-- **Contributing**: For main-merge rules, code review guidelines, and other policies, see **`CONTRIBUTING.md`**.  
+- **Multi-Channel Logic**: See [ci/actions/multichannel-release-workflow.md](ci/actions/multichannel-release-workflow.md) for deeper details on alpha, beta, and RC release strategies.
+- **Runner Setup**: For an in-depth guide on configuring your environment, see [**`runner-setup-guide.md`**](ci/actions/runner-setup-guide.md).
+- **Troubleshooting and FAQ**: See [**`troubleshooting-faq.md`**](ci/troubleshooting-faq.md) for a detailed list of common issues, solutions, and frequently asked questions.
+- **Contributing**: For main-merge rules, code review guidelines, and other policies, see [**`CONTRIBUTING.md`**](../CONTRIBUTING.md).
 - **Gitflow Diagram**: [Atlassian Gitflow Workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow) or any other standard resource to visualize the overall branching approach (extended with alpha/beta/rc branches).
 
 ---

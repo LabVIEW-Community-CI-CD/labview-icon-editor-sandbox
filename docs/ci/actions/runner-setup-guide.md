@@ -6,7 +6,7 @@ This guide walks through setting up a self-hosted GitHub Actions runner capable 
 
 - **LabVIEW Installation**: Install LabVIEW 2021 SP1 (32-bit and/or 64-bit as needed) on the machine that will act as the runner.  
 - **VIPM Installation**: Ensure the machine has VI Package Manager (VIPM) installed, as the build produces a `.vip` (VI Package).  
-- **PowerShell & Git**: Install PowerShell 7 (or newer) and Git for Windows. These tools are needed for running build scripts and pulling code.
+- **PowerShell and Git**: Install PowerShell 7 (or newer) and Git for Windows. These tools are needed for running build scripts and pulling code.
 
 > **Important:** The LabVIEW environment on the runner should match the target version for the Icon Editor (e.g., LabVIEW 2021–2025). The runner machine must remain online whenever you want CI jobs to run.
 
@@ -14,7 +14,7 @@ This guide walks through setting up a self-hosted GitHub Actions runner capable 
 
 1. **Generate Runner Token**: In your repository (or organization) on GitHub, go to **Settings → Actions → Runners**. Click **New self-hosted runner** and follow the instructions to generate a runner registration token.
 2. **Download Runner Software**: Download the GitHub Actions runner software for your machine (Windows x64) from the provided link.
-3. **Install & Configure**: Extract the runner software on the LabVIEW machine. From a PowerShell prompt, run `config.cmd`. Provide the repository URL (or org name), paste the token, and assign a runner name and labels (e.g., `iconeditor`).
+3. **Install and Configure**: Extract the runner software on the LabVIEW machine. From a PowerShell prompt, run `config.cmd`. Provide the repository URL (or org name), paste the token, and assign a runner name and labels (e.g., `iconeditor`).
 4. **Service Setup**: (Optional) Run `.\svcinstall.cmd` to install the runner as a service, so it starts automatically with the machine.
 
 After configuration, the runner should show as “Online” in your repo’s **Settings → Actions → Runners** list, with the labels you assigned.
@@ -35,7 +35,7 @@ Once the runner is online and the repository is configured, your CI workflows wi
 
 ## 5. Next Steps
 
-With a self-hosted runner configured, the Icon Editor CI/CD workflows (build, test, etc.) will run in your LabVIEW environment, enabling full automation of the pipeline. For details on how the workflows function and how to troubleshoot any issues, see the [Local CI/CD Workflows guide](../../ci-workflows.md) and the [Troubleshooting & FAQ](../../ci/troubleshooting-faq.md).
+With a self-hosted runner configured, the Icon Editor CI/CD workflows (build, test, etc.) will run in your LabVIEW environment, enabling full automation of the pipeline. For details on how the workflows function and how to troubleshoot any issues, see the [Local CI/CD Workflows guide](../../ci-workflows.md) and the [Troubleshooting and FAQ](../../ci/troubleshooting-faq.md).
 
 If you need to stop using the runner, you can remove it via GitHub Settings or stop the service on the machine. Always **update LabVIEW and VIPM** on the runner machine as needed to keep the environment in sync with project requirements.
 

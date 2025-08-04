@@ -39,7 +39,7 @@ Long-lived **experimental branches** (`experiment/<shortName>`) allow you to dev
 1. **experiment/<shortName>**  
    - The main branch for the experiment, created by an NI maintainer after Steering Committee approval.  
 2. **Automatic Scanning**  
-   - Docker VI Analyzer & CodeQL run on every commit or PR, catching suspicious code before distribution.  
+   - Docker VI Analyzer and CodeQL run on every commit or PR, catching suspicious code before distribution.  
 3. **Manual Approval**  
    - By default, `.vip` packaging is disabled. An NI admin must run an “approve-experiment” workflow to enable artifact distribution for the experiment.  
 4. **Alpha/Beta/RC**  
@@ -53,19 +53,19 @@ Long-lived **experimental branches** (`experiment/<shortName>`) allow you to dev
 
 NI’s primary goal is to make **collaboration** on significant, **long-running** features both **safe and productive**:
 
-1. **Centralized Testing & CI**  
+1. **Centralized Testing and CI**  
    - By hosting experiment branches directly in NI’s main repository, contributors can leverage **official** CI pipelines, scanning tools, and `.vip` build workflows.  
    - This ensures potentially large or risky features still benefit from **consistent** environment checks and automation.
 
-2. **Early Feedback & Transparency**  
+2. **Early Feedback and Transparency**  
    - When experiments happen in **NI’s repo**, stakeholders—including external collaborators and NI R&D—can observe progress in real-time, **test** artifacts promptly, and give feedback early.  
    - This **transparency** supports a faster iteration cycle and a smoother eventual merge into the shipping version of the software.
 
-3. **Coordinated Merges & Oversight**  
+3. **Coordinated Merges and Oversight**  
    - Hosting experimental branches in the main repo facilitates **oversight** by the Steering Committee, enabling them to guide or course-correct large features.  
    - It also simplifies final merges: everything is already in one place, so merging an experiment into `develop` doesn’t involve cross-repo synchronization.
 
-4. **Security & Quality**  
+4. **Security and Quality**  
    - Experiment branches remain subject to **automatic code scanning** (Docker VI Analyzer + CodeQL).  
    - Manual gating of `.vip` distribution ensures NI’s brand and user base are not exposed to unreviewed or potentially insecure code.
 
@@ -76,7 +76,7 @@ NI’s primary goal is to make **collaboration** on significant, **long-running*
 
 ## Detailed and Comprehensive Narrative
 
-1. **Proposal & Scope**  
+1. **Proposal and Scope**  
    - A contributor—internal or external—proposes a **significant** feature via a GitHub Issue, detailing high-level goals and an expected timeline (ranging from ~6–8 weeks up to 1+ year).  
    - The Steering Committee weighs strategic impact, checking if the feature aligns with the roadmap and is worth integrating into `develop` eventually.
 
@@ -88,7 +88,7 @@ NI’s primary goal is to make **collaboration** on significant, **long-running*
    - The experiment branch acts like a **“mini development”** line. Multiple collaborators can open sub-branches, do alpha/beta testing, or run partial merges—**all within** the experiment.  
    - Merges or updates from `develop` can happen periodically to reduce future conflicts.
 
-4. **Security & Manual Approval**  
+4. **Security and Manual Approval**  
    - NI uses a manual “approve-experiment” workflow to **activate** `.vip` distribution for that experiment. This ensures large-scale distributions only happen once scans show no critical issues and maintainers are confident in its safety.
 
 5. **Alpha/Beta/RC Sub-Branches**  
@@ -120,7 +120,7 @@ NI’s primary goal is to make **collaboration** on significant, **long-running*
 
 ### Step 3: Automated Scans and Manual Approval
 - **CI on Every Commit**: Standard CI checks (VI Analyzer, CodeQL) run for all pushes or PRs to the experiment branch, preventing obvious issues.  
-- **No Artifact Publishing**: By default, CI will not publish `.vip` packages for experiment branches. An NI Open Source Program Manager or maintainer must manually trigger an “approve-experiment” event to allow publishing. Until then, artifacts (if built) are kept internal.
+- **No Artifact Publishing**: By default, CI will not publish `.vip` packages for experiment branches. An NI Open-Source Program Manager or maintainer must manually trigger an “approve-experiment” event to allow publishing. Until then, artifacts (if built) are kept internal.
 
 ### Step 4: (Optional) Alpha/Beta/RC Sub-Branches
 - **Sub-Branch Strategy**: For very large efforts, the team can create sub-branches like `experiment/<shortName>/alpha` (then beta, then rc) to stage progressive testing.  
@@ -132,7 +132,7 @@ NI’s primary goal is to make **collaboration** on significant, **long-running*
 
 ### Step 6: Final Merge to `develop`
 - **Review and Label**: When the experiment is complete, a final PR to merge `experiment/<shortName>` back into `develop` is opened. The Steering Committee reviews the full changeset. They assign a release label (major/minor/patch) reflecting the impact of the feature.  
-- **Approval**: Once tests pass and any final feedback is addressed, the Steering Committee (and NI’s Open Source Program Manager, if required) approve and merge the experiment into `develop`. This effectively promotes the feature to be part of the next official release cycle.
+- **Approval**: Once tests pass and any final feedback is addressed, the Steering Committee (and NI’s Open-Source Program Manager, if required) approve and merge the experiment into `develop`. This effectively promotes the feature to be part of the next official release cycle.
 
 ### Step 7: Partial or Abandoned Experiments
 - **Partial Merge**: If only some parts of the experiment are ready or valuable, maintainers might choose to merge those selectively (e.g., via cherry-pick or separate PRs) instead of the entire branch.  
@@ -152,6 +152,6 @@ NI’s primary goal is to make **collaboration** on significant, **long-running*
 ---
 
 ## See Also
-- [maintainers-guide.md](./actions/maintainers-guide.md) — How admins run the “approve-experiment” workflow and perform final merges.  
-- [troubleshooting-experiments.md](./actions/troubleshooting-experiments.md) — Ten common pitfalls (e.g., missing `.vip` artifacts, merge strategies for sub-branches).  
-- [GOVERNANCE.md](../../GOVERNANCE.md) — Steering Committee roles, BDFL membership, and how experiments get approved.
+- [**`maintainers-guide.md`**](./actions/maintainers-guide.md) — How admins run the “approve-experiment” workflow and perform final merges.
+- [**`troubleshooting-experiments.md`**](./actions/troubleshooting-experiments.md) — Ten common pitfalls (e.g., missing `.vip` artifacts, merge strategies for sub-branches).
+- [**`GOVERNANCE.md`**](../../GOVERNANCE.md) — Steering Committee roles, BDFL membership, and how experiments get approved.
