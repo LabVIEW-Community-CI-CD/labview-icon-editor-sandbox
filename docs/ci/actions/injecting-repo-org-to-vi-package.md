@@ -22,10 +22,10 @@ In a multi-fork or multi-organization environment, **injecting the repository na
 - Maintains **consistent** versioning and naming conventions across builds.
 
 We achieve this by:
-1. **Constructing** a JSON object in `Build.ps1` that sets fields like:
-   - `"Company Name"`  
+1. **Constructing** a JSON object in [`Build.ps1`](../../pipeline/scripts/Build.ps1), a top-level build script that orchestrates the process and sets fields such as:
+   - `"Company Name"`
    - `"Author Name (Person or Company)"`
-2. **Calling** `build_vip.ps1`, which **parses** the JSON and **updates** the `.vipb` (VI Package Builder) file.
+2. **Calling** [`build_vip.ps1`](../../pipeline/scripts/build_vip.ps1), which parses the JSON and updates the `.vipb` (VI Package Builder) file with the metadata.
 3. **Using** GitHub Actions environment variables (like `${{ github.repository_owner }}`) to pass the org name, and `${{ github.repository }}` for the repository name.
 
 ---
@@ -79,7 +79,7 @@ jobs:
 **Key points**:
 - **`${{ github.repository_owner }}`** is the **organization** (or user) that owns the repo.
 - **`${{ github.repository }}`** is the “orgName/repoName” string (e.g. `AcmeCorp/lv-icon-editor`).
-- These parameters feed into the final **JSON** that `build_vip.ps1` uses to update the VI Package.
+ - These parameters feed into the final **JSON** that [`build_vip.ps1`](../../pipeline/scripts/build_vip.ps1) uses to update the VI Package.
 
 ---
 
@@ -87,13 +87,13 @@ jobs:
 
 1. **Developer** pushes code to GitHub.  
 2. **GitHub Actions** triggers the workflow.  
-3. **Actions** checks out the repo and runs `Build.ps1`:
+3. **Actions** checks out the repo and runs [`Build.ps1`](../../pipeline/scripts/Build.ps1):
    1. Cleans old artifacts.  
    2. Applies VIPC (32-bit and 64-bit).  
    3. Builds the 32-bit and 64-bit libraries.  
    4. Constructs JSON containing `CompanyName` and `AuthorName` fields, derived from GitHub Action variables.  
-   5. Passes that JSON to `build_vip.ps1`.  
-   6. `build_vip.ps1` injects these fields and version info into the `.vipb` file.  
+   5. Passes that JSON to [`build_vip.ps1`](../../pipeline/scripts/build_vip.ps1).
+   6. [`build_vip.ps1`](../../pipeline/scripts/build_vip.ps1) injects these fields and version info into the `.vipb` file.
    7. Generates the **Icon Editor** `.vip` package.  
 4. **Actions** can then publish or attach the final `.vip` as an artifact.
 
