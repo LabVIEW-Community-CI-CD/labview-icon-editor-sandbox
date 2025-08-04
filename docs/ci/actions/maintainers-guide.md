@@ -2,22 +2,22 @@
 
 ## Introduction
 
-Maintainers of the LabVIEW Icon Editor project handle day-to-day repository upkeep, oversee contributions, and coordinate with NI’s Open Source Program. This guide outlines the responsibilities and processes for maintainers.
+Maintainers of the LabVIEW Icon Editor project handle day-to-day repository upkeep, oversee contributions, and coordinate with NI’s Open-Source Program. This guide outlines the responsibilities and processes for maintainers.
 
-*(For details on overall project governance—Steering Committee roles and the BDFL approach—see [GOVERNANCE.md](../../GOVERNANCE.md).)*
+*(For details on overall project governance—Steering Committee roles and the BDFL approach—see [**`GOVERNANCE.md`**](../../../GOVERNANCE.md).)*
 
 ## Role of Maintainers
 
 - **Code Reviews and Merging** – Review incoming pull requests for quality, style, and alignment with project goals. Only maintainers (and the Steering Committee) have write access to merge PRs. All merges follow the rule of passing CI and at least one maintainer approval.  
 - **Issue Triage** – Regularly monitor GitHub Issues and Discussions. Label issues appropriately (e.g., bugs, enhancements, “Workflow: Open to contribution”), and close or consolidate duplicates.  
 - **Community Support** – Engage on Discord and Discussion forums to answer contributor questions. Help new contributors find starter issues.  
-- **Releases** – Work with NI release engineers or the Open Source Program Manager to coordinate publishing new versions. Maintainers ensure that the `develop` branch is ready for release merges into `main`.
+- **Releases** – Work with NI release engineers or the Open-Source Program Manager to coordinate publishing new versions. Maintainers ensure that the `develop` branch is ready for release merges into `main`.
 
 ## Admin Tasks and Final Merges
 
 Certain actions require NI administrative oversight or special approval:
 
-- **Experiment Branch Approval** – When a long-lived experiment branch is ready to distribute artifacts (VIPs), a maintainer coordinates with the NI Open Source Program Manager (OSPM) to run the “approve-experiment” workflow. This enables CI artifact publishing for that experiment branch.  
+- **Experiment Branch Approval** – When a long-lived experiment branch is ready to distribute artifacts (VIPs), a maintainer coordinates with the NI Open-Source Program Manager (OSPM) to run the “approve-experiment” workflow. This enables CI artifact publishing for that experiment branch.
 - **Finalizing Experiment Merges** – After an experiment concludes, maintainers help prepare the final merge into `develop`. This includes ensuring a proper version label (major/minor/patch) is applied and that any “NoCI” labels or temporary settings are cleaned up. The OSPM or designated NI staff will typically give the final go-ahead for the merge after Steering Committee approval.  
 - **Critical Hotfixes** – In rare cases (e.g., a critical issue in an official release), maintainers may create or approve a `hotfix/*` branch targeting `main`. Such hotfixes should be done in coordination with NI (to ensure the fix is included in official builds). After merging into `main`, the changes should also be merged back into `develop` to keep branches in sync.
 

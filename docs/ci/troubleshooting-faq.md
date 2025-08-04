@@ -1,4 +1,4 @@
-# Troubleshooting & FAQ
+# Troubleshooting and FAQ
 
 This document provides a collection of common **troubleshooting** scenarios (with solutions) and a **FAQ** (Frequently Asked Questions) for the LabVIEW Icon Editor GitHub Actions workflows. Refer back to the main CI guide if you need overall setup instructions or deeper references.
 
