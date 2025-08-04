@@ -23,10 +23,10 @@ You do **not** need to copy/paste the entire workflow snippet here, as it’s al
    - Go to the “Actions” tab on your (or your fork’s) GitHub repository.
    - Select the **“Toggle Development Mode”** workflow.
    - Click “Run workflow” and choose either `enable` or `disable` from the dropdown.
-   - This will execute the PowerShell scripts (`Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`) on the **target self-hosted runner** (your personal machine or a shared machine).
+   - This will execute the PowerShell scripts ([`Set_Development_Mode.ps1`](../../pipeline/scripts/Set_Development_Mode.ps1) or [`RevertDevelopmentMode.ps1`](../../pipeline/scripts/RevertDevelopmentMode.ps1)) on the **target self-hosted runner** (your personal machine or a shared machine).
 
 2. **Important Note for Testing**
-   - If your system is set to dev mode (`enable`), you wont be able to open the icon editor after you install the VI Package.
+   - If your system is set to dev mode (`enable`), you won’t be able to open the icon editor after you install the VI Package.
    - **Once you finish coding** or making changes, **switch back** (`disable`) to a normal testable state to be able to install the VI Package and test your change.
 
 3. **Triggering from Another Workflow**
@@ -106,16 +106,16 @@ Here, you might see something like `githubuser/labview-icon-editor-fork/.github/
 
 ## 4. Customization
 
-All “dev mode” logic resides in two PowerShell scripts:
+All “dev mode” logic resides in two PowerShell scripts located under `pipeline/scripts`:
 
-- **`Set_Development_Mode.ps1`** – Called when mode is `enable`.
-- **`RevertDevelopmentMode.ps1`** – Called when mode is `disable`.
+- **[`Set_Development_Mode.ps1`](../../pipeline/scripts/Set_Development_Mode.ps1)** – Called when mode is `enable`.
+- **[`RevertDevelopmentMode.ps1`](../../pipeline/scripts/RevertDevelopmentMode.ps1)** – Called when mode is `disable`.
 
 These scripts currently do things like update environment variables, configure LabVIEW paths, or install certain dependencies. **To change** how “dev mode” behaves, **edit those scripts** directly. 
 
 ### Pull Requests with Script Updates
 Collaborators are free to:
-1. **Modify** `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1` on their forks.
+1. **Modify** [`Set_Development_Mode.ps1`](../../pipeline/scripts/Set_Development_Mode.ps1) or [`RevertDevelopmentMode.ps1`](../../pipeline/scripts/RevertDevelopmentMode.ps1) on their forks.
 2. **Enable dev mode** on their self-hosted runner (via their fork), capturing the GitHub Actions logs as proof that their changes worked as intended.
 3. **Open a Pull Request** to merge these script changes back into the upstream repository, referencing the successful action logs as additional evidence.
 
