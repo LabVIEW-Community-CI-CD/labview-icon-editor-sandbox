@@ -1,5 +1,17 @@
-# Example usage:
-# .\RevertDevelopmentMode.ps1 -RelativePath "C:\labview-icon-editor"
+<#
+.SYNOPSIS
+    Reverts the repository from development mode.
+
+.DESCRIPTION
+    Restores the packaged LabVIEW sources for both 32-bit and 64-bit
+    environments and closes any running LabVIEW instances.
+
+.PARAMETER RelativePath
+    Path to the repository root.
+
+.EXAMPLE
+    .\RevertDevelopmentMode.ps1 -RelativePath "C:\labview-icon-editor"
+#>
 
 param(
     [Parameter(Mandatory = $true)]
@@ -67,3 +79,4 @@ try {
 }
 
 Write-Host "All scripts executed successfully." -ForegroundColor Green
+

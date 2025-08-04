@@ -1,4 +1,20 @@
-#.\Rename-File.ps1 -CurrentFilename $RelativePath\resource\plugins\lv_icon.lvlibp -NewFilename $lv_icon_x64.lvlibp
+<#
+.SYNOPSIS
+    Renames a specified file.
+
+.DESCRIPTION
+    Checks whether the source file exists and, if so, renames it to the
+    provided target name.
+
+.PARAMETER CurrentFilename
+    Full path to the file to rename.
+
+.PARAMETER NewFilename
+    New name (including path) for the renamed file.
+
+.EXAMPLE
+    .\Rename-file.ps1 -CurrentFilename "C:\path\lv_icon.lvlibp" -NewFilename "lv_icon_x64.lvlibp"
+#>
 param(
     [string]$CurrentFilename,
     [string]$NewFilename
@@ -28,3 +44,4 @@ function Rename-File {
 
 # Call the function
 Rename-File -CurrentFilename $CurrentFilename -NewFilename $NewFilename
+

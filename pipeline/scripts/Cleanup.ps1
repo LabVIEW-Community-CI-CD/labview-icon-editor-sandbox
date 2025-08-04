@@ -1,4 +1,30 @@
-#Example: .\RestoreSetupLVSource.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RelativePath "C:\labview-icon-editor" -LabVIEW_Project "lv_icon_editor" -Build_Spec "Editor Packed Library" 
+<#
+.SYNOPSIS
+    Cleans up the LabVIEW setup after builds.
+
+.DESCRIPTION
+    Calls RestoreSetupLVSource.vi through g-cli to undo temporary configuration
+    and remove the Localhost.LibraryPaths token, returning LabVIEW to its
+    default state.
+
+.PARAMETER MinimumSupportedLVVersion
+    LabVIEW version used to run g-cli.
+
+.PARAMETER SupportedBitness
+    Bitness of the LabVIEW environment ("32" or "64").
+
+.PARAMETER RelativePath
+    Path to the repository root.
+
+.PARAMETER LabVIEW_Project
+    Name of the LabVIEW project (without extension).
+
+.PARAMETER Build_Spec
+    Build specification name within the project.
+
+.EXAMPLE
+    .\Cleanup.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RelativePath "C:\labview-icon-editor" -LabVIEW_Project "lv_icon_editor" -Build_Spec "Editor Packed Library"
+#>
 param(
     [string]$MinimumSupportedLVVersion,
     [string]$SupportedBitness,

@@ -1,6 +1,17 @@
+<#
+.SYNOPSIS
+    Configures the repository for development mode.
 
-# Example usage:
-# .\Set_Development_Mode.ps1 -RelativePath "C:\labview-icon-editor"
+.DESCRIPTION
+    Removes existing packed libraries, adds INI tokens, prepares LabVIEW
+    sources for both 32-bit and 64-bit environments, and closes LabVIEW.
+
+.PARAMETER RelativePath
+    Path to the repository root.
+
+.EXAMPLE
+    .\Set_Development_Mode.ps1 -RelativePath "C:\labview-icon-editor"
+#>
 
 param(
     [string]$RelativePath
@@ -35,3 +46,4 @@ try {
 }
 
 Write-Host "All scripts executed successfully."
+
