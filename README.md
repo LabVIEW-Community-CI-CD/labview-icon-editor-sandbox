@@ -58,6 +58,7 @@ NI’s Open-Source Program encourages **community collaboration** to evolve and 
    - Easy to use in local or GitHub-hosted runners.
 
 3. **CI/CD Workflows**
+   - [CI Workflow Overview](docs/ci-workflows.md#jobs-in-ci-workflow) — explains the jobs in the `ci.yml` pipeline.
    - [Build VI Package](docs/ci/actions/build-vi-package.md).
    - [Development Mode Toggle](docs/ci/actions/development-mode-toggle.md).
 
