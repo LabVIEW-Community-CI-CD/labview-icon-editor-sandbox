@@ -57,11 +57,12 @@ NI’s open-source initiative encourages **community collaboration** on this pro
 ## 🧩 Key Components
 
 1. **Source Code (VIs)** – The editor’s functionality is implemented entirely in LabVIEW, as a collection of VIs organized into a project. This includes the UI and logic for icon editing.  
-2. **PowerShell Automation** – A suite of PowerShell scripts (built on the [G-CLI toolkit](https://github.com/G-CLI/G-CLI)) supports repeatable build and test tasks. These scripts allow running LabVIEW build steps and packaging from the command line, ensuring consistent results between local development and CI.  
-3. **CI/CD Workflows** – GitHub Actions workflows are provided for common tasks:  
-   - **Build VI Package** – Compiles the source and produces a `.vip` artifact (VI Package).  
-   - **Development Mode Toggle** – Enables or disables a mode where LabVIEW loads the Icon Editor from source (for debugging vs. using the installed package).  
+2. **PowerShell Automation** – A suite of PowerShell scripts (built on the [G-CLI toolkit](https://github.com/G-CLI/G-CLI)) supports repeatable build and test tasks. These scripts allow running LabVIEW build steps and packaging from the command line, ensuring consistent results between local development and CI.
+3. **CI/CD Workflows** – GitHub Actions workflows are provided for common tasks:
+   - **Build VI Package** – Compiles the source and produces a `.vip` artifact (VI Package).
+   - **Development Mode Toggle** – Enables or disables a mode where LabVIEW loads the Icon Editor from source (for debugging vs. using the installed package).
    - **Run Unit Tests** – Executes automated tests to verify the Icon Editor’s behavior in a clean LabVIEW environment.
+   Additional details on these pipelines are in [CI Workflows](docs/ci-workflows.md) and the [CI Workflow (Multi-Channel Release Support)](docs/powershell-cli-github-action-instructions.md).
 
 ---
 
@@ -85,8 +86,8 @@ For detailed contribution guidelines (branching strategy, coding style, etc.), p
 1. **Propose & Discuss** – Start by proposing your idea via [GitHub Discussions](https://github.com/ni/labview-icon-editor/discussions) or by opening an issue. Discussing first helps refine the idea and get feedback.
 2. **Issue Approval & Assignment** – Once the idea is approved by the maintainers (Steering Committee), they label the issue `Workflow: Open to contribution`:contentReference[oaicite:4]{index=4}. If you volunteer to implement it, comment on the issue; an NI maintainer will assign it to you and set up a feature branch for development:contentReference[oaicite:5]{index=5}:contentReference[oaicite:6]{index=6}.
 3. **Development Setup** – Fork the repository and clone your fork. Check out the feature branch. Prepare your LabVIEW environment (LabVIEW 2021 SP1 with required dependencies applied). You can develop in two ways:  
-   - *Manual mode:* Follow the [manual-instructions.md](docs/manual-instructions.md) guide to configure LabVIEW to use the editor’s VIs directly (replacing the built-in editor).  
-   - *Automated (CLI) mode:* Follow the [powershell-cli-instructions.md](docs/powershell-cli-instructions.md) to use the PowerShell scripts for building the pack and running tests.
+   - *Manual mode:* Follow the [manual-instructions.md](docs/manual-instructions.md) guide to configure LabVIEW to use the editor’s VIs directly (replacing the built-in editor).
+   - *Automated (CLI) mode:* Use the [powershell-cli-instructions.md](docs/powershell-cli-instructions.md) or the broader [automated-setup.md](docs/automated-setup.md) for PowerShell-based scripts to build the pack and run tests.
 4. **Implement & Test** – Develop your changes using LabVIEW. Test the editor manually in LabVIEW (in development mode) to ensure your changes work. Run any available unit tests. Make sure to apply the `runner_dependencies.vipc` (via VIPM or the scripts) so that all required libraries (G-CLI, etc.) are present.
 5. **Submit a Pull Request** – Open a PR linking to the issue. Our CI will automatically run and **build a `.vip` package** with your changes for testing:contentReference[oaicite:7]{index=7}. Maintainers and others can install this pre-release package to test your contribution. Iterate on any review feedback.
 6. **Merge & Release** – Once your contribution is approved, it will be merged into the `develop` branch. During the next release cycle, `develop` is merged into `main` and a new official Icon Editor version is released. (At that point, your contribution is on track to ship with the next LabVIEW release.)
@@ -109,7 +110,7 @@ For very large or long-term contributions, NI may use an `experiment/<feature-na
 
 In-depth documentation and reference guides are located in the `/docs` directory. Notable documents include:
 
-- **Build & CI Guides:** How to build the Icon Editor and use continuous integration tools. See [Build VI Package](docs/ci/actions/build-vi-package.md) for the packaging workflow, the [Runner Setup Guide](docs/ci/actions/runner-setup-guide.md) for configuring self-hosted runners, and the [PowerShell CLI Usage](docs/powershell-cli-instructions.md) for using build scripts locally or in GitHub Actions.
+- **Build & CI Guides:** How to build the Icon Editor and use continuous integration tools. For local setup, see [manual-instructions.md](docs/manual-instructions.md) or the script-driven [automated-setup.md](docs/automated-setup.md) alongside the [PowerShell CLI Usage](docs/powershell-cli-instructions.md). CI pipelines are covered in [CI Workflows](docs/ci-workflows.md) and the [CI Workflow (Multi-Channel Release Support)](docs/powershell-cli-github-action-instructions.md). Reference scripts are listed in [PowerShell Dependency Scripts](docs/powershell-dependency-scripts.md). Packaging and runner configuration are detailed in [Build VI Package](docs/ci/actions/build-vi-package.md) and the [Runner Setup Guide](docs/ci/actions/runner-setup-guide.md).
 - **Advanced Workflows:** Details on complex release processes and branching strategies. For example, the [Multichannel Release Workflow](docs/ci/actions/multichannel-release-workflow.md) explains alpha/beta/RC release branches, and [EXPERIMENTS.md](docs/ci/experiments.md) covers long-running feature branches. Maintainers can refer to the [Maintainer's Guide](docs/ci/actions/maintainers-guide.md) for internal release duties.
 - **Troubleshooting:** If you encounter issues, see the [Troubleshooting & FAQ](docs/ci/troubleshooting-faq.md) for common problems (environment setup, build failures, etc.). There is also a specialized [Experiments Troubleshooting](docs/ci/actions/troubleshooting-experiments.md) guide for experimental branch issues.
 - **Project Governance:** This project adheres to NI’s open-source governance model. See [GOVERNANCE.md](GOVERNANCE.md) for roles and decision-making processes, and refer to our [Code of Conduct](CODE_OF_CONDUCT.md) for community interaction guidelines.
