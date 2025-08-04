@@ -20,11 +20,11 @@ This document explains how to automate build, test, and distribution steps for t
 ## 1. Introduction
 
 Automating your Icon Editor builds and tests:
-- Provides consistent steps for every commit or pull request
-- Minimizes manual toggling of LabVIEW environment settings
-- Stores build artifacts (VI Packages) in GitHub for easy download
-- Automatically versions releases using **semantic version** logic
-- Handles GPG signing in the main repo but **disables** it for forks (so fork owners aren’t blocked by passphrase prompts)
+- Provides consistent steps for every commit or pull request  
+- Minimizes manual toggling of LabVIEW environment settings  
+- Stores build artifacts (VI Packages) in GitHub for easy download  
+- Automatically versions releases using **semantic version** logic  
+- Handles GPG signing in the main repo but **disables** it for forks (so fork owners aren’t blocked by passphrase prompts)  
 - **Allows you to brand** each VI Package build with your organization or repository name for unique identification
 
 **Prerequisites**:  
@@ -58,7 +58,7 @@ Automating your Icon Editor builds and tests:
 6. **Disable Dev Mode** (optional)  
    Reverts your environment to normal LabVIEW settings, removing local overrides.
 
-**Note**: Passing metadata fields like `-CompanyName` or `-AuthorName` to the build script helps incorporate your **organization** or **repo** name directly into the final VI Package. This makes your build easily distinguishable from other forks or variants.
+> **Note:** Passing metadata fields like `-CompanyName` or `-AuthorName` to the build script helps incorporate your **organization** or **repo** name directly into the final VI Package. This makes your build easily distinguishable from other forks or variants.
 
 ---
 
@@ -79,11 +79,11 @@ Automating your Icon Editor builds and tests:
 
 Below are the **key GitHub Actions** provided in this repository:
 
-1. **[Development Mode Toggle](https://github.com/ni/labview-icon-editor/actions/workflows/development-mode-toggle.yml)**
+1. **[Development Mode Toggle](https://github.com/ni/labview-icon-editor/actions/workflows/development-mode-toggle.yml)**  
    - Invokes `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.  
    - Usually triggered via `workflow_dispatch` for manual toggling.
 
-2. **[Build VI Package & Release](https://github.com/ni/labview-icon-editor/actions/workflows/build-vi-package.yml)**  
+2. **[Build VI Package & Release](https://github.com/ni/labview-icon-editor/actions/workflows/ci.yml)**  
    - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`) or defaults to `patch` for direct pushes.  
    - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).  
    - **Fork-Friendly**: Disables GPG signing if it detects a fork (so no passphrase is needed). In the **main repo** (`ni/labview-icon-editor`), signing remains active.  
@@ -92,10 +92,7 @@ Below are the **key GitHub Actions** provided in this repository:
    - Uploads the `.vip` artifact to GitHub’s build artifacts.  
    - Creates a **GitHub Release** for direct pushes (not for PRs).
 
-3. **[Run Unit Tests](https://github.com/ni/labview-icon-editor/actions/workflows/run-unit-tests.yml)**  
-   - Executes `unit_tests.ps1` in `pipeline/scripts`.  
-   - Usually expects Dev Mode **disabled** for consistent test results.  
-   - Also triggered on pull requests for validation.
+*(The **Run Unit Tests** workflow has been consolidated into the main CI process.)*
 
 ---
 
@@ -117,7 +114,7 @@ Below are the **key GitHub Actions** provided in this repository:
 
 ### 3.4 Running the Actions Locally
 
-Although GitHub Actions primarily runs on GitHub-hosted or self-hosted agents, you can **replicate** the general process locally:
+Although GitHub Actions primarily run on GitHub-hosted or self-hosted agents, you can **replicate** the general process locally:
 
 1. **Enable Development Mode** (if necessary to do dev tasks):  
    - Run the “Development Mode Toggle” workflow with `enable` or manually call `Set_Development_Mode.ps1`.
@@ -141,11 +138,11 @@ Although GitHub Actions primarily runs on GitHub-hosted or self-hosted agents, y
 **Scenario**: You want to implement a new feature, test it, and produce a **uniquely branded** `.vip`.
 
 1. **Enable Development Mode**:  
-   - Either via the **Development Mode Toggle** workflow or `Set_Development_Mode.ps1`.
+   - Either via the **Development Mode Toggle** workflow or by running `Set_Development_Mode.ps1`.
 
-2. **Implement & Test**:  
+2. **Implement and Test**:  
    - Use the **Run Unit Tests** workflow (or local script) to verify your changes pass.  
-   - Keep Dev Mode enabled if needed for debugging; disable if you want a “clean” environment.
+   - Keep Dev Mode enabled if needed for debugging; disable it if you want a “clean” environment.
 
 3. **Open a Pull Request** and **Label** it:  
    - Assign `major`, `minor`, or `patch` to control the version bump.  
