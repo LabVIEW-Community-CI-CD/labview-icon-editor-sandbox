@@ -1,35 +1,49 @@
 <#
-This PowerShell script automates the process of updating a LabVIEW VIPB file’s 
-“Display Information” fields using the given JSON data and then builds the 
-VI Package via g-cli.
+.SYNOPSIS
+    Updates display information in a VIPB file and rebuilds the VI package.
 
-Key Steps:
-1. Resolves paths for your VIPB file and LabVIEW project directory.
-2. (Optionally) creates the release notes file if it does not exist.
-3. Calculates the final LabVIEW version string (e.g., "21.0 (64-bit)").
-4. Parses and updates the DisplayInformationJSON ("Package Version" field) 
-   with Major, Minor, Patch, Build from script parameters.
-5. Calls a LabVIEW VI (via g-cli) to update the VIPB file’s display information 
-   using the updated JSON.
-6. Builds the VI Package (again via g-cli), injecting the same version info 
-   (major, minor, patch, build) and release notes.
-7. Handles errors by outputting error details in JSON format.
+.DESCRIPTION
+    Resolves paths, merges version data into the DisplayInformation JSON, and
+    calls g-cli to update and build the package defined by the VIPB file.
 
-Example Usage:
-.\ModifyVIPBDisplayInfo.ps1 `
-  -SupportedBitness "64" `
-  -RelativePath "C:\release\labview-icon-editor-fork" `
-  -VIPBPath "Tooling\deployment\NI Icon editor.vipb" `
-  -MinimumSupportedLVVersion 2023 `
-  -LabVIEWMinorRevision 3 `
-  -Major 1 `
-  -Minor 0 `
-  -Patch 0 `
-  -Build 2 `
-  -Commit "Placeholder" `
-  -ReleaseNotesFile "C:\release\labview-icon-editor-fork\Tooling\deployment\release_notes.md" `
-  -DisplayInformationJSON '{"Package Version":{"major":0,"minor":0,"patch":0,"build":0},"Product Name":"","Company Name":"","Author Name (Person or Company)":"","Product Homepage (URL)":"","Legal Copyright":"","License Agreement Name":"","Product Description Summary":"","Product Description":"","Release Notes - Change Log":""}'
+.PARAMETER SupportedBitness
+    LabVIEW bitness for the build ("32" or "64").
 
+.PARAMETER RelativePath
+    Path to the repository root.
+
+.PARAMETER VIPBPath
+    Relative path to the VIPB file to modify.
+
+.PARAMETER MinimumSupportedLVVersion
+    Minimum LabVIEW version supported by the package.
+
+.PARAMETER LabVIEWMinorRevision
+    Minor revision number of LabVIEW (0 or 3).
+
+.PARAMETER Major
+    Major version component for the package.
+
+.PARAMETER Minor
+    Minor version component for the package.
+
+.PARAMETER Patch
+    Patch version component for the package.
+
+.PARAMETER Build
+    Build number component for the package.
+
+.PARAMETER Commit
+    Commit identifier embedded in the package metadata.
+
+.PARAMETER ReleaseNotesFile
+    Path to a release notes file injected into the build.
+
+.PARAMETER DisplayInformationJSON
+    JSON string representing the VIPB display information to update.
+
+.EXAMPLE
+    .\ModifyVIPBDisplayInfo.ps1 -SupportedBitness "64" -RelativePath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -MinimumSupportedLVVersion 2023 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
 #>
 param (
     [string]$SupportedBitness,

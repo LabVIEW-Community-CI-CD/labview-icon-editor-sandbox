@@ -1,4 +1,20 @@
-# .\unit_tests.ps1 -RelativePath "C:\labview-icon-editor" -AbsolutePathScripts "C:\labview-icon-editor\pipeline\scripts"
+<#
+.SYNOPSIS
+    Runs a suite of PowerShell test scripts for the repository.
+
+.DESCRIPTION
+    Validates that required paths exist and sequentially executes supporting
+    scripts to prepare and test the LabVIEW icon editor project.
+
+.PARAMETER RelativePath
+    Path to the repository root.
+
+.PARAMETER AbsolutePathScripts
+    Absolute path to the pipeline scripts directory.
+
+.EXAMPLE
+    .\unit_tests.ps1 -RelativePath "C:\labview-icon-editor" -AbsolutePathScripts "C:\labview-icon-editor\pipeline\scripts"
+#>
 param(
     [Parameter(Mandatory = $true)]
     [string]$RelativePath,
@@ -80,3 +96,4 @@ try {
     Write-Host "An unexpected error occurred during script execution: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
+

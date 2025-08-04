@@ -1,5 +1,30 @@
-# Example usage:
-# .\Prepare_LabVIEW_source.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RelativePath "C:\labview icon editor" -LabVIEW_Project "lv_icon_editor" -Build_Spec "Editor Packed Library"
+<#
+.SYNOPSIS
+    Prepares LabVIEW source code for building.
+
+.DESCRIPTION
+    Executes the PrepareIESource.vi via g-cli to unzip required components and
+    update the LabVIEW configuration, ensuring the project is ready for
+    subsequent build steps.
+
+.PARAMETER MinimumSupportedLVVersion
+    LabVIEW version used by g-cli.
+
+.PARAMETER SupportedBitness
+    Target bitness of the LabVIEW environment ("32" or "64").
+
+.PARAMETER RelativePath
+    Path to the repository root containing the project.
+
+.PARAMETER LabVIEW_Project
+    Name of the LabVIEW project (without extension).
+
+.PARAMETER Build_Spec
+    Name of the build specification to prepare.
+
+.EXAMPLE
+    .\Prepare_LabVIEW_source.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RelativePath "C:\labview icon editor" -LabVIEW_Project "lv_icon_editor" -Build_Spec "Editor Packed Library"
+#>
 
 param(
     [Parameter(Mandatory = $true)]
@@ -50,3 +75,4 @@ try {
     Write-Error "Please check the parameters and ensure the command is valid."
     exit 1
 }
+

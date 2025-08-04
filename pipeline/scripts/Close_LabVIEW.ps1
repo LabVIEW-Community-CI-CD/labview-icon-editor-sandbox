@@ -1,4 +1,20 @@
-#Example: .\Close_LabVIEW.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64"
+<#
+.SYNOPSIS
+    Gracefully closes a running LabVIEW instance.
+
+.DESCRIPTION
+    Utilizes g-cli's QuitLabVIEW command to shut down the specified LabVIEW
+    version and bitness, ensuring the application exits cleanly.
+
+.PARAMETER MinimumSupportedLVVersion
+    LabVIEW version to close (e.g., "2021").
+
+.PARAMETER SupportedBitness
+    Bitness of the LabVIEW instance ("32" or "64").
+
+.EXAMPLE
+    .\Close_LabVIEW.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64"
+#>
 param(
     [string]$MinimumSupportedLVVersion,
     [string]$SupportedBitness
@@ -27,3 +43,4 @@ try {
 }
 
 Write-Host "Close LabVIEW $MinimumSupportedLVVersion ($SupportedBitness-bit)"
+
