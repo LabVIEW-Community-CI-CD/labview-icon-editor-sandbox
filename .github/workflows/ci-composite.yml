@@ -96,18 +96,130 @@ jobs:
           minimum_supported_lv_version: ${{ matrix['lv-version'] }}
           supported_bitness:            ${{ matrix.bitness }}
 
-  build-package:
-    name: Build VI Package
-    needs: [test, apply-deps, version]
+  build-ppl-x86:
+    name: Build 32-bit Packed Library
+    needs: [test, version]
     runs-on: self-hosted-windows-lv
     steps:
-      - uses: ./.github/actions/build
+      - uses: ./.github/actions/build-lvlibp
         with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 32
           relative_path: ${{ github.workspace }}
-          major:         ${{ needs.version.outputs.MAJOR }}
-          minor:         ${{ needs.version.outputs.MINOR }}
-          patch:         ${{ needs.version.outputs.PATCH }}
-          build:         ${{ needs.version.outputs.BUILD }}
-          commit:        ${{ github.sha }}
-          company_name:  ${{ github.repository_owner }}
-          author_name:   ${{ github.event.repository.name }}
+          major: ${{ needs.version.outputs.MAJOR }}
+          minor: ${{ needs.version.outputs.MINOR }}
+          patch: ${{ needs.version.outputs.PATCH }}
+          build: ${{ needs.version.outputs.BUILD }}
+          commit: ${{ github.sha }}
+      - uses: ./.github/actions/close-labview
+        with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 32
+      - uses: ./.github/actions/rename-file
+        with:
+          current_filename: ${{ github.workspace }}/resource/plugins/lv_icon.lvlibp
+          new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x86.lvlibp
+      - uses: actions/upload-artifact@v3
+        with:
+          name: lv_icon_x86.lvlibp
+          path: resource/plugins/lv_icon_x86.lvlibp
+
+  build-ppl-x64:
+    name: Build 64-bit Packed Library
+    needs: [test, version]
+    runs-on: self-hosted-windows-lv
+    steps:
+      - uses: ./.github/actions/build-lvlibp
+        with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 64
+          relative_path: ${{ github.workspace }}
+          major: ${{ needs.version.outputs.MAJOR }}
+          minor: ${{ needs.version.outputs.MINOR }}
+          patch: ${{ needs.version.outputs.PATCH }}
+          build: ${{ needs.version.outputs.BUILD }}
+          commit: ${{ github.sha }}
+      - uses: ./.github/actions/close-labview
+        with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 64
+      - uses: ./.github/actions/rename-file
+        with:
+          current_filename: ${{ github.workspace }}/resource/plugins/lv_icon.lvlibp
+          new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x64.lvlibp
+      - uses: actions/upload-artifact@v3
+        with:
+          name: lv_icon_x64.lvlibp
+          path: resource/plugins/lv_icon_x64.lvlibp
+
+  build-vip:
+    name: Build VI Package
+    needs: [build-ppl-x86, build-ppl-x64, version]
+    runs-on: self-hosted-windows-lv
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v3
+        with:
+          name: lv_icon_x86.lvlibp
+          path: resource/plugins
+      - uses: actions/download-artifact@v3
+        with:
+          name: lv_icon_x64.lvlibp
+          path: resource/plugins
+      - name: Generate display information JSON
+        id: display-info
+        shell: pwsh
+        run: |
+          $info = @{
+            "Package Version" = @{
+              "major" = ${{ needs.version.outputs.MAJOR }}
+              "minor" = ${{ needs.version.outputs.MINOR }}
+              "patch" = ${{ needs.version.outputs.PATCH }}
+              "build" = ${{ needs.version.outputs.BUILD }}
+            }
+            "Product Name" = ""
+            "Company Name" = "${{ github.repository_owner }}"
+            "Author Name (Person or Company)" = "${{ github.event.repository.name }}"
+            "Product Homepage (URL)" = ""
+            "Legal Copyright" = ""
+            "License Agreement Name" = ""
+            "Product Description Summary" = ""
+            "Product Description" = ""
+            "Release Notes - Change Log" = ""
+          }
+          $json = $info | ConvertTo-Json -Depth 5
+          "json=$json" >> $Env:GITHUB_OUTPUT
+      - uses: ./.github/actions/modify-vipb-display-info
+        with:
+          supported_bitness: 64
+          relative_path: ${{ github.workspace }}
+          vipb_path: Tooling/deployment/NI Icon editor.vipb
+          minimum_supported_lv_version: 2023
+          labview_minor_revision: 3
+          major: ${{ needs.version.outputs.MAJOR }}
+          minor: ${{ needs.version.outputs.MINOR }}
+          patch: ${{ needs.version.outputs.PATCH }}
+          build: ${{ needs.version.outputs.BUILD }}
+          commit: ${{ github.sha }}
+          release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
+          display_information_json: ${{ steps.display-info.outputs.json }}
+      - uses: ./.github/actions/build-vip
+        with:
+          supported_bitness: 64
+          relative_path: ${{ github.workspace }}
+          vipb_path: Tooling/deployment/NI Icon editor.vipb
+          minimum_supported_lv_version: 2023
+          labview_minor_revision: 3
+          major: ${{ needs.version.outputs.MAJOR }}
+          minor: ${{ needs.version.outputs.MINOR }}
+          patch: ${{ needs.version.outputs.PATCH }}
+          build: ${{ needs.version.outputs.BUILD }}
+          commit: ${{ github.sha }}
+          release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
+          display_information_json: ${{ steps.display-info.outputs.json }}
+      - uses: ./.github/actions/close-labview
+        with:
+          minimum_supported_lv_version: 2023
+          supported_bitness: 64
