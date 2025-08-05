@@ -53,6 +53,8 @@ NI’s open-source initiative encourages **community collaboration** on this pro
 3. **Install** the package by double-clicking the downloaded `.vip` file or using *File ▶ Open Package* in VIPM.
 4. **Verify** the installation by launching LabVIEW, creating a new VI, and opening the Icon Editor (e.g. right-click the VI icon and choose *Edit Icon*).
 
+For additional details and troubleshooting tips, see [INSTALL.md](INSTALL.md).
+
 ---
 
 ## 🧩 Key Components
@@ -109,7 +111,7 @@ For very large or long-term contributions, NI may use an `experiment/<feature-na
 
 ## 📚 Documentation
 
-In-depth documentation and reference guides are located in the `/docs` directory. Notable documents include:
+In-depth documentation and reference guides are located in the `/docs` directory. A complete index is available in [docs/README.md](docs/README.md). Notable documents include:
 
 - **Build & CI Guides:** How to build the Icon Editor and use continuous integration tools. For local setup, see [manual-instructions.md](docs/manual-instructions.md) or the script-driven [automated-setup.md](docs/automated-setup.md). CI pipelines are covered in [CI Workflows](docs/ci-workflows.md) and the [CI Workflow (Multi-Channel Release Support)](docs/powershell-cli-github-action-instructions.md). Reference scripts are listed in [PowerShell Dependency Scripts](docs/powershell-dependency-scripts.md). Packaging and runner configuration are detailed in [Build VI Package](docs/ci/actions/build-vi-package.md) and the [Runner Setup Guide](docs/ci/actions/runner-setup-guide.md).
 - **Composite Actions:** Summary of the repository's reusable GitHub Actions is available in [Composite Actions](docs/ci/actions/README.md).

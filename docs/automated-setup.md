@@ -26,7 +26,7 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 - **Prerequisites**:
   1. **LabVIEW 2021 SP1 (both 32-bit and 64-bit)**.  
   2. **PowerShell 7+** and **Git**.  
-  3. **Apply** `tooling\deployment\runner_dependencies.vipc` **(to both 32-bit and 64-bit)**.
+  3. **Apply** `Tooling\deployment\runner_dependencies.vipc` **(to both 32-bit and 64-bit)**.
 
 ---
 
