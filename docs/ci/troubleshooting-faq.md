@@ -1,4 +1,4 @@
-# Troubleshooting & FAQ
+# Troubleshooting and FAQ
 
 This document provides a collection of common **troubleshooting** scenarios (with solutions) and a **FAQ** (Frequently Asked Questions) for the LabVIEW Icon Editor GitHub Actions workflows. Refer back to the main CI guide if you need overall setup instructions or deeper references.
 
@@ -26,7 +26,7 @@ This document provides a collection of common **troubleshooting** scenarios (wit
 2. [FAQ](#faq)
    1. [Q1: Can I Override the Build Number?](#q1-can-i-override-the-build-number)
    2. [Q2: How Do I Skip Creating a Release?](#q2-how-do-i-skip-creating-a-release)
-   3. [Q3: Can I Have More Than Alpha/Beta/RC Channels?](#q3-can-i-have-more-than-alphabeta-rc-channels)
+   3. [Q3: Can I Have More Than Alpha, Beta, or RC Channels?](#q3-can-i-have-more-than-alpha-beta-or-rc-channels)
    4. [Q4: Do I Need a GPG Key to Build on a Fork?](#q4-do-i-need-a-gpg-key-to-build-on-a-fork)
    5. [Q5: How Can I Attach Multiple `.vip` Files to a Release?](#q5-how-can-i-attach-multiple-vip-files-to-a-release)
    6. [Q6: Do I Need To Merge Hotfixes Into `develop`?](#q6-do-i-need-to-merge-hotfixes-into-develop)
@@ -101,7 +101,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 **Possible Causes**:
 - The workflow only checks for certain labels (`major`, `minor`, `patch`). Typos or different capitalization might be ignored.
-- You’re pushing directly to a branch instead of creating a PR (so no label is read).
+- You’re pushing directly to a branch instead of creating a PR. Version bumps require a labeled pull request.
 
 **Solution**:
 1. Make sure the label is exactly `major`, `minor`, or `patch` in lowercase (unless your workflow script also checks for capitalized labels).  
@@ -286,7 +286,7 @@ You can set an environment variable like `CREATE_RELEASE=false` (if your workflo
 
 ---
 
-### Q3: Can I Have More Than Alpha/Beta/RC Channels?
+### Q3: Can I Have More Than Alpha, Beta, or RC Channels?
 
 **Answer**:  
 Yes, you can add logic for `release-gamma/*` or any naming scheme. Just update the portion of your workflow that checks branch names and appends the appropriate suffix.

@@ -20,11 +20,11 @@ This document explains how to automate build, test, and distribution steps for t
 ## 1. Introduction
 
 Automating your Icon Editor builds and tests:
-- Provides consistent steps for every commit or pull request
-- Minimizes manual toggling of LabVIEW environment settings
-- Stores build artifacts (VI Packages) in GitHub for easy download
-- Automatically versions releases using **semantic version** logic
-- Handles GPG signing in the main repo but **disables** it for forks (so fork owners aren’t blocked by passphrase prompts)
+- Provides consistent steps for every commit or pull request  
+- Minimizes manual toggling of LabVIEW environment settings  
+- Stores build artifacts (VI Packages) in GitHub for easy download  
+- Automatically versions releases using **semantic version** logic  
+- Handles GPG signing in the main repo but **disables** it for forks (so fork owners aren’t blocked by passphrase prompts)  
 - **Allows you to brand** each VI Package build with your organization or repository name for unique identification
 
 **Prerequisites**:  
@@ -36,21 +36,21 @@ Automating your Icon Editor builds and tests:
 
 ## 2. Quickstart
 
-1. **Install PowerShell & Git**  
+1. **Install PowerShell and Git**  
    Ensure your environment has the required tools before setting up the workflows.
 
 2. **Configure a Self-Hosted Runner**  
    Under **Settings → Actions → Runners** in your GitHub repo or organization, add a runner with LabVIEW installed.
 
-3. **Enable/Disable Development Mode**  
-   You can toggle Development Mode either via the “Development Mode Toggle” workflow or manually.  
+3. **Enable or Disable Development Mode**
+   You can toggle Development Mode either via the “Development Mode Toggle” workflow or manually.
    - Development Mode modifies `labview.ini` to reference your local source code.
 
-4. **Run Unit Tests**  
-   Use the **Run Unit Tests** workflow to confirm your environment is valid.  
+4. **Run Tests**
+   Use the main CI workflow (`ci-composite.yml`) to confirm your environment is valid.
    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
 
-5. **Build VI Package & Release**  
+5. **Build VI Package and Release**
    - Produces `.vip` artifacts automatically, **including** optional metadata fields (`-CompanyName`, `-AuthorName`) that let you **brand** your package.  
    - Uses **label-based** version bumping (major/minor/patch) on pull requests.  
    - Creates tags and releases for direct pushes (unless it’s a PR).
@@ -58,7 +58,8 @@ Automating your Icon Editor builds and tests:
 6. **Disable Dev Mode** (optional)  
    Reverts your environment to normal LabVIEW settings, removing local overrides.
 
-**Note**: Passing metadata fields like `-CompanyName` or `-AuthorName` to the build script helps incorporate your **organization** or **repo** name directly into the final VI Package. This makes your build easily distinguishable from other forks or variants.
+> [!NOTE]
+> Passing metadata fields like `-CompanyName` or `-AuthorName` to the build script helps incorporate your **organization** or **repo** name directly into the final VI Package. This makes your build easily distinguishable from other forks or variants.
 
 ---
 
@@ -79,23 +80,31 @@ Automating your Icon Editor builds and tests:
 
 Below are the **key GitHub Actions** provided in this repository:
 
-1. **[Development Mode Toggle](https://github.com/ni/labview-icon-editor/actions/workflows/development-mode-toggle.yml)**
+1. **[Development Mode Toggle](https://github.com/ni/labview-icon-editor/actions/workflows/development-mode-toggle.yml)**  
    - Invokes `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.  
    - Usually triggered via `workflow_dispatch` for manual toggling.
 
-2. **[Build VI Package & Release](https://github.com/ni/labview-icon-editor/actions/workflows/build-vi-package.yml)**  
+2. **[Build VI Package and Release](https://github.com/ni/labview-icon-editor/actions/workflows/ci-composite.yml)**
    - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`) or defaults to `patch` for direct pushes.  
    - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).  
-   - **Fork-Friendly**: Disables GPG signing if it detects a fork (so no passphrase is needed). In the **main repo** (`ni/labview-icon-editor`), signing remains active.  
-   - Produces the `.vip` file via a PowerShell script (e.g., `Build.ps1`).  
-   - **You can pass metadata** (e.g., `-CompanyName`, `-AuthorName`) to embed your organization or repository into the generated `.vip` for distinct branding.  
-   - Uploads the `.vip` artifact to GitHub’s build artifacts.  
+   - **Fork-Friendly**: Disables GPG signing if it detects a fork (so no passphrase is needed). In the **main repo** (`ni/labview-icon-editor`), signing remains active.
+   - Produces the `.vip` file via a PowerShell script (e.g., `Build.ps1`).
+   - **You can pass metadata** (e.g., `-CompanyName`, `-AuthorName`) to embed your organization or repository into the generated `.vip` for distinct branding.
+   - Uploads the `.vip` artifact to GitHub’s build artifacts.
    - Creates a **GitHub Release** for direct pushes (not for PRs).
 
-3. **[Run Unit Tests](https://github.com/ni/labview-icon-editor/actions/workflows/run-unit-tests.yml)**  
-   - Executes `unit_tests.ps1` in `pipeline/scripts`.  
-   - Usually expects Dev Mode **disabled** for consistent test results.  
-   - Also triggered on pull requests for validation.
+#### Jobs in CI workflow
+
+The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks the build into several jobs:
+
+- **prepare** – checks out the repository and marks it as a safe Git directory.
+- **version** – computes the semantic version and build number using commit count and PR labels.
+- **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses.
+- **missing-in-project-check** – verifies every source file is referenced in the `.lvproj`.
+- **test** – runs LabVIEW unit tests across the supported matrix.
+- **build-package** – builds the VI package, tags the commit, and uploads artifacts/releases.
+
+*(The **Run Unit Tests** workflow has been consolidated into the main CI process.)*
 
 ---
 
@@ -117,18 +126,18 @@ Below are the **key GitHub Actions** provided in this repository:
 
 ### 3.4 Running the Actions Locally
 
-Although GitHub Actions primarily runs on GitHub-hosted or self-hosted agents, you can **replicate** the general process locally:
+Although GitHub Actions primarily run on GitHub-hosted or self-hosted agents, you can **replicate** the general process locally:
 
 1. **Enable Development Mode** (if necessary to do dev tasks):  
    - Run the “Development Mode Toggle” workflow with `enable` or manually call `Set_Development_Mode.ps1`.
 
-2. **Run Unit Tests**:  
-   - Confirm everything passes in your local environment.  
+2. **Run Tests**:
+   - Confirm everything passes in your local environment or via the main CI workflow.
    - If you have custom or dev references, ensure Dev Mode is toggled appropriately.
 
-3. **Build VI Package**:  
-   - Manually invoke `Build.ps1` from `pipeline/scripts` to generate a `.vip`.  
-   - Pass optional metadata fields (e.g., `-CompanyName`, `-AuthorName`) if you want your build to be **branded**.  
+3. **Build VI Package**:
+   - Manually invoke `Build.ps1` from `.github/actions/build` to generate a `.vip`.
+   - Pass optional metadata fields (e.g., `-CompanyName`, `-AuthorName`) if you want your build to be **branded**.
    - On GitHub Actions, the workflow will produce and upload the artifact automatically.
 
 4. **Disable Dev Mode**:  
@@ -141,18 +150,18 @@ Although GitHub Actions primarily runs on GitHub-hosted or self-hosted agents, y
 **Scenario**: You want to implement a new feature, test it, and produce a **uniquely branded** `.vip`.
 
 1. **Enable Development Mode**:  
-   - Either via the **Development Mode Toggle** workflow or `Set_Development_Mode.ps1`.
+   - Either via the **Development Mode Toggle** workflow or by running `Set_Development_Mode.ps1`.
 
-2. **Implement & Test**:  
-   - Use the **Run Unit Tests** workflow (or local script) to verify your changes pass.  
-   - Keep Dev Mode enabled if needed for debugging; disable if you want a “clean” environment.
+2. **Implement and Test**:
+   - Use the main CI workflow (or a local script) to verify your changes pass.
+   - Keep Dev Mode enabled if needed for debugging; disable it if you want a “clean” environment.
 
 3. **Open a Pull Request** and **Label** it:  
    - Assign `major`, `minor`, or `patch` to control the version bump.  
    - The CI will validate your code but *won’t* tag or release until merged.
 
 4. **Merge the PR** into `develop` (or `main`):  
-   - The **Build VI Package & Release** workflow automatically tags the commit (e.g., `v1.2.0-build7`) and uploads the `.vip`.  
+   - The **Build VI Package and Release** workflow automatically tags the commit (e.g., `v1.2.0-build7`) and uploads the `.vip`.  
    - **Inside** that `.vip`, the fields for **“Company Name”** and **“Author Name (Person or Company)”** can reflect your **organization** or **repo**, ensuring it’s easy to identify which fork or team produced the build.
 
 5. **Disable Development Mode**:  
@@ -168,4 +177,4 @@ Although GitHub Actions primarily runs on GitHub-hosted or self-hosted agents, y
 - **Version Enforcement**: Pull requests without a version label default to `patch`; you can enforce labeling with an optional “Label Enforcer” step if desired.  
 - **Branding**: To highlight the **organization** or **repository** behind a particular build, simply pass `-CompanyName` and `-AuthorName` (or similar parameters) into the `Build.ps1` script. This metadata flows into the final **Display Information** of the Icon Editor’s VI Package.
 
-By adopting these workflows—**Development Mode Toggle**, **Run Unit Tests**, and especially **Build VI Package & Release**—you can maintain a **streamlined, consistent** CI/CD process for the Icon Editor, while customizing the VI Package with your own **unique** or **fork-specific** branding.
+By adopting these workflows—**Development Mode Toggle** and **Build VI Package and Release**—you can maintain a **streamlined, consistent** CI/CD process for the Icon Editor while customizing the VI Package with your own **unique** or **fork-specific** branding.
