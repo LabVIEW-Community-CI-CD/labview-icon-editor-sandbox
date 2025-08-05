@@ -13,7 +13,6 @@ Call **`Build_lvlibp.ps1`** to compile the editor packed library using g-cli.
 | `patch` | **Yes** | `0` | Patch version component. |
 | `build` | **Yes** | `1` | Build number component. |
 | `commit` | **Yes** | `abcdef` | Commit identifier. |
-| `scripts_folder` | **Yes** | `pipeline/scripts` | Folder containing `Build_lvlibp.ps1`. |
 
 ## Quick-start
 ```yaml
@@ -27,7 +26,6 @@ Call **`Build_lvlibp.ps1`** to compile the editor packed library using g-cli.
     patch: 0
     build: 1
     commit: ${{ github.sha }}
-    scripts_folder: pipeline/scripts
 ```
 
 ## License

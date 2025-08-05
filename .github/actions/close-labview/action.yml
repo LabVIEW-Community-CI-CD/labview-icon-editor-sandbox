@@ -11,7 +11,7 @@ runs:
     - name: Run Close_LabVIEW.ps1
       shell: pwsh
       run: |
-        & "${{ inputs.scripts_folder }}/Close_LabVIEW.ps1" \
+        & "${{ github.action_path }}/Close_LabVIEW.ps1" \
           -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} \
           -SupportedBitness ${{ inputs.supported_bitness }}
 inputs:
@@ -20,7 +20,4 @@ inputs:
     required: true
   supported_bitness:
     description: '32 or 64'
-    required: true
-  scripts_folder:
-    description: 'Path to your pipeline/scripts folder'
     required: true

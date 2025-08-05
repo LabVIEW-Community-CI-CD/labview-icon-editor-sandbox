@@ -11,7 +11,7 @@ runs:
     - name: Run ModifyVIPBDisplayInfo.ps1
       shell: pwsh
       run: |
-        & "${{ inputs.scripts_folder }}/ModifyVIPBDisplayInfo.ps1" \
+        & "${{ github.action_path }}/ModifyVIPBDisplayInfo.ps1" \
           -SupportedBitness ${{ inputs.supported_bitness }} \
           -RelativePath "${{ inputs.relative_path }}" \
           -VIPBPath "${{ inputs.vipb_path }}" \
@@ -61,7 +61,4 @@ inputs:
     required: true
   display_information_json:
     description: 'DisplayInformation JSON string'
-    required: true
-  scripts_folder:
-    description: 'Path to your pipeline/scripts folder'
     required: true

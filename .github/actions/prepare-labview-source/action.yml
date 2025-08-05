@@ -11,7 +11,7 @@ runs:
     - name: Run Prepare_LabVIEW_source.ps1
       shell: pwsh
       run: |
-        & "${{ inputs.scripts_folder }}/Prepare_LabVIEW_source.ps1" \
+        & "${{ github.action_path }}/Prepare_LabVIEW_source.ps1" \
           -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} \
           -SupportedBitness ${{ inputs.supported_bitness }} \
           -RelativePath "${{ inputs.relative_path }}" \
@@ -32,7 +32,4 @@ inputs:
     required: true
   build_spec:
     description: 'Build specification name'
-    required: true
-  scripts_folder:
-    description: 'Path to your pipeline/scripts folder'
     required: true

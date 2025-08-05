@@ -10,7 +10,6 @@ Run **`RestoreSetupLVSource.ps1`** to restore packaged LabVIEW sources and remov
 | `relative_path` | **Yes** | `${{ github.workspace }}` | Repository root path. |
 | `labview_project` | **Yes** | `lv_icon_editor` | Project name (no extension). |
 | `build_spec` | **Yes** | `Editor Packed Library` | Build specification name. |
-| `scripts_folder` | **Yes** | `pipeline/scripts` | Folder containing `RestoreSetupLVSource.ps1`. |
 
 ## Quick-start
 ```yaml
@@ -21,7 +20,6 @@ Run **`RestoreSetupLVSource.ps1`** to restore packaged LabVIEW sources and remov
     relative_path: ${{ github.workspace }}
     labview_project: lv_icon_editor
     build_spec: "Editor Packed Library"
-    scripts_folder: pipeline/scripts
 ```
 
 ## License

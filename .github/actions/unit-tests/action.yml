@@ -11,13 +11,10 @@ runs:
     - name: Run unit_tests.ps1
       shell: pwsh
       run: |
-        & "${{ inputs.scripts_folder }}/unit_tests.ps1" \
+        & "${{ github.action_path }}/unit_tests.ps1" \
           -RelativePath "${{ inputs.relative_path }}" \
-          -AbsolutePathScripts "${{ inputs.relative_path }}/${{ inputs.scripts_folder }}"
+          -AbsolutePathScripts "${{ github.action_path }}"
 inputs:
   relative_path:
     description: 'Workspace root path'
-    required: true
-  scripts_folder:
-    description: 'Path to your pipeline/scripts folder'
     required: true

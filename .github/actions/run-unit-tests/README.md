@@ -7,7 +7,6 @@ Invoke **`RunUnitTests.ps1`** to execute LabVIEW unit tests and output a result 
 |------|----------|---------|-------------|
 | `minimum_supported_lv_version` | **Yes** | `2021` | LabVIEW major version. |
 | `supported_bitness` | **Yes** | `32` or `64` | Target LabVIEW bitness. |
-| `scripts_folder` | **Yes** | `pipeline/scripts` | Folder containing `RunUnitTests.ps1`. |
 
 ## Quick-start
 ```yaml
@@ -15,7 +14,6 @@ Invoke **`RunUnitTests.ps1`** to execute LabVIEW unit tests and output a result 
   with:
     minimum_supported_lv_version: 2024
     supported_bitness: 64
-    scripts_folder: pipeline/scripts
 ```
 
 ## License

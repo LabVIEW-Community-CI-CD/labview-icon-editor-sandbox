@@ -7,7 +7,6 @@ Use **`Rename-file.ps1`** to rename a file within the repository.
 |------|----------|---------|-------------|
 | `current_filename` | **Yes** | `resource/plugins/lv_icon.lvlibp` | Existing file path. |
 | `new_filename` | **Yes** | `lv_icon_x64.lvlibp` | New file name or path. |
-| `scripts_folder` | **Yes** | `pipeline/scripts` | Folder containing `Rename-file.ps1`. |
 
 ## Quick-start
 ```yaml
@@ -15,7 +14,6 @@ Use **`Rename-file.ps1`** to rename a file within the repository.
   with:
     current_filename: resource/plugins/lv_icon.lvlibp
     new_filename: lv_icon_x64.lvlibp
-    scripts_folder: pipeline/scripts
 ```
 
 ## License

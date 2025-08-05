@@ -17,7 +17,6 @@ Execute **`ModifyVIPBDisplayInfo.ps1`** to merge metadata into a `.vipb` file be
 | `commit` | **Yes** | `abcdef` | Commit identifier. |
 | `release_notes_file` | **Yes** | `Tooling/deployment/release_notes.md` | Release notes file. |
 | `display_information_json` | **Yes** | `'{}'` | JSON for display information. |
-| `scripts_folder` | **Yes** | `pipeline/scripts` | Folder containing `ModifyVIPBDisplayInfo.ps1`. |
 
 ## Quick-start
 ```yaml
@@ -34,7 +33,6 @@ Execute **`ModifyVIPBDisplayInfo.ps1`** to merge metadata into a `.vipb` file be
     commit: ${{ github.sha }}
     release_notes_file: Tooling/deployment/release_notes.md
     display_information_json: '{}'
-    scripts_folder: pipeline/scripts
 ```
 
 ## License

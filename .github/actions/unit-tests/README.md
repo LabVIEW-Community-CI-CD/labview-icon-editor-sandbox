@@ -6,14 +6,12 @@ Use **`unit_tests.ps1`** to orchestrate setup and LabVIEW unit testing for both 
 | Name | Required | Example | Description |
 |------|----------|---------|-------------|
 | `relative_path` | **Yes** | `${{ github.workspace }}` | Repository root path. |
-| `scripts_folder` | **Yes** | `pipeline/scripts` | Folder containing `unit_tests.ps1`. |
 
 ## Quick-start
 ```yaml
 - uses: ./.github/actions/unit-tests
   with:
     relative_path: ${{ github.workspace }}
-    scripts_folder: pipeline/scripts
 ```
 
 ## License
