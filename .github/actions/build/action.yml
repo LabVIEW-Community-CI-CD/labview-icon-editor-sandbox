@@ -11,16 +11,16 @@ runs:
     - name: Run Build.ps1
       shell: pwsh
       run: |
-        & "${{ github.action_path }}/Build.ps1" \
-          -RelativePath "${{ inputs.relative_path }}" \
-          -AbsolutePathScripts "${{ github.action_path }}" \
-          -Major ${{ inputs.major }} \
-          -Minor ${{ inputs.minor }} \
-          -Patch ${{ inputs.patch }} \
-          -Build ${{ inputs.build }} \
-          -Commit "${{ inputs.commit }}" \
-          -LabVIEWMinorRevision ${{ inputs.labview_minor_revision }} \
-          -CompanyName "${{ inputs.company_name }}" \
+        & "${{ github.action_path }}/Build.ps1" `
+          -RelativePath "${{ inputs.relative_path }}" `
+          -AbsolutePathScripts "${{ inputs.relative_path }}/pipeline/scripts" `
+          -Major ${{ inputs.major }} `
+          -Minor ${{ inputs.minor }} `
+          -Patch ${{ inputs.patch }} `
+          -Build ${{ inputs.build }} `
+          -Commit "${{ inputs.commit }}" `
+          -LabVIEWMinorRevision ${{ inputs.labview_minor_revision }} `
+          -CompanyName "${{ inputs.company_name }}" `
           -AuthorName "${{ inputs.author_name }}"
 inputs:
   relative_path:
