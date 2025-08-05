@@ -30,6 +30,8 @@ jobs:
   prepare:
     name: Prepare Workspace
     runs-on: self-hosted-windows-lv
+    outputs:
+      vipc_changed: ${{ steps.vipc_filter.outputs.vipc }}
     steps:
       - name: Check out code (full depth, clean)
         uses: actions/checkout@v3
@@ -40,6 +42,13 @@ jobs:
       - name: Trust repo folder (Git safe.directory)
         shell: pwsh
         run: git config --global --add safe.directory "$Env:GITHUB_WORKSPACE"
+      - id: vipc_filter
+        name: Check for VIPC changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            vipc:
+              - '**/*.vipc'
 
   version:
     name: Compute Version
@@ -73,6 +82,7 @@ jobs:
             bitness: "64"
     steps:
       - name: Checkout for VIPC
+        if: needs.prepare.outputs.vipc_changed == 'true'
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -80,6 +90,7 @@ jobs:
           persist-credentials: true
 
       - name: Apply VIPC for ${{ matrix['lv-version'] }} (${{ matrix.bitness }}-bit)
+        if: needs.prepare.outputs.vipc_changed == 'true'
         uses: ./.github/actions/apply-vipc
         with:
           minimum_supported_lv_version: ${{ matrix['lv-version'] }}
@@ -90,9 +101,14 @@ jobs:
           vipc_path:                    "Tooling/deployment/runner_dependencies.vipc"
 
       - name: Summarize VIPC
+        if: needs.prepare.outputs.vipc_changed == 'true'
         shell: pwsh
         run: |
           Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Value "- $(${{ matrix['lv-version'] }}) ($(${{ matrix.bitness }})-bit)"
+
+      - name: Skip applying VIPC (no changes)
+        if: needs.prepare.outputs.vipc_changed != 'true'
+        run: echo "No .vipc changes detected; skipping dependency application."
 
   missing-in-project-check:
     name: Test Missing‑In‑Project Action on Windows
