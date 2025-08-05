@@ -80,11 +80,11 @@ Automating your Icon Editor builds and tests:
 
 Below are the **key GitHub Actions** provided in this repository:
 
-1. **[Development Mode Toggle](https://github.com/ni/labview-icon-editor/actions/workflows/development-mode-toggle.yml)**  
+1. **[Development Mode Toggle](ci/actions/development-mode-toggle.md)**
    - Invokes `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.  
    - Usually triggered via `workflow_dispatch` for manual toggling.
 
-2. **[Build VI Package and Release](https://github.com/ni/labview-icon-editor/actions/workflows/ci-composite.yml)**
+2. **[Build VI Package and Release](ci/actions/build-vi-package.md)**
    - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`) or defaults to `patch` for direct pushes.  
    - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).  
    - **Fork-Friendly**: Disables GPG signing if it detects a fork (so no passphrase is needed). In the **main repo** (`ni/labview-icon-editor`), signing remains active.

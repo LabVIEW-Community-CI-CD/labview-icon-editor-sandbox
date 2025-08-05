@@ -339,7 +339,7 @@ This ensures forks can build without requiring special key setup, while the main
 <a name="8-external-references"></a>
 ## 8. External References
 
-- **Multi-Channel Logic**: See [ci/actions/multichannel-release-workflow.md](ci/actions/multichannel-release-workflow.md) for deeper details on alpha, beta, and RC release strategies.
+- **Multi-Channel Logic**: See [**`multichannel-release-workflow.md`**](ci/actions/multichannel-release-workflow.md) for details on alpha/beta/RC branch strategy.
 - **Runner Setup**: For an in-depth guide on configuring your environment, see [**`runner-setup-guide.md`**](ci/actions/runner-setup-guide.md).
 - **Troubleshooting and FAQ**: See [**`troubleshooting-faq.md`**](ci/troubleshooting-faq.md) for a detailed list of common issues, solutions, and frequently asked questions.
 - **Contributing**: For main-merge rules, code review guidelines, and other policies, see [**`CONTRIBUTING.md`**](../CONTRIBUTING.md).
