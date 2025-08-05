@@ -27,8 +27,62 @@ on:
   workflow_dispatch:
 
 jobs:
+  issue-status:
+    name: Verify Issue Status
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.check.outputs.proceed }}
+    steps:
+      - name: Determine if CI should run
+        id: check
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            if (!branch.startsWith('issue-')) {
+              core.setOutput('proceed', 'true');
+              return;
+            }
+            const match = branch.match(/^issue-(\d+)/);
+            if (!match) {
+              core.setOutput('proceed', 'false');
+              core.warning(`Cannot parse issue number from branch '${branch}'`);
+              return;
+            }
+            const issueNumber = parseInt(match[1], 10);
+            const query = `
+              query($owner:String!, $repo:String!, $number:Int!){
+                repository(owner:$owner, name:$repo){
+                  issue(number:$number){
+                    projectItems(first:10){
+                      nodes{
+                        fieldValueByName(name: "Status"){
+                          ... on ProjectV2ItemFieldSingleSelectValue{
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+            const variables = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: issueNumber
+            };
+            const result = await github.graphql(query, variables);
+            const nodes = result.repository.issue.projectItems.nodes;
+            const status = nodes.map(n => n.fieldValueByName?.name).find(Boolean);
+            core.info(`Issue status: ${status}`);
+            core.setOutput('proceed', status === 'In Progress' ? 'true' : 'false');
+
   changes:
     name: Detect VIPC changes
+    needs: issue-status
+    if: needs.issue-status.outputs.proceed == 'true'
     runs-on: ubuntu-latest
     outputs:
       vipc: ${{ steps.filter.outputs.vipc }}
@@ -70,6 +124,8 @@ jobs:
 
   version:
     name: Compute Version
+    needs: issue-status
+    if: needs.issue-status.outputs.proceed == 'true'
     runs-on: self-hosted-windows-lv
     outputs:
       VERSION:       ${{ steps.compute.outputs.VERSION }}
