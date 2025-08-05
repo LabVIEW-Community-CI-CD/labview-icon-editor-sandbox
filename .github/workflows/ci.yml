@@ -216,6 +216,11 @@ jobs:
         shell: pwsh
         run: git config --global --add safe.directory "$Env:GITHUB_WORKSPACE"
 
+      - name: Generate release notes
+        uses: ./.github/actions/generate-release-notes
+        with:
+          output_path: Tooling/deployment/release_notes.md
+
       - name: Possibly disable GPG signing on forks
         if: ${{ env.DISABLE_GPG_ON_FORKS == 'true' }}
         id: disable_signing
