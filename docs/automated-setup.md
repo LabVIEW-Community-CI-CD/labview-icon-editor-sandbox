@@ -24,7 +24,7 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
   - Debug locally the same steps used in CI, ensuring consistent results.
 
 - **Prerequisites**:
-  1. **LabVIEW 2021 SP1 (both 32-bit and 64-bit)**.  
+  1. **LabVIEW 2021 SP1 (both 32-bit and 64-bit)** and **LabVIEW 2023 (64-bit) for package building**.
   2. **PowerShell 7+** and **Git**.  
   3. **Apply** `Tooling\deployment\runner_dependencies.vipc` **(to both 32-bit and 64-bit)**.
 
@@ -102,7 +102,7 @@ We provide **GitHub Actions** that wrap these same PowerShell scripts for buildi
 
 - **Development Mode Toggle**: Uses `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.  
 - **Run Unit Tests**: Calls `unit_tests.ps1`.  
-- **Build VI Package and Release**: Internally calls `Build.ps1` to produce a `.vip` and create a GitHub Release.  
+- **Build VI Package**: Internally calls `Build.ps1` to produce a `.vip` artifact (and can draft a release if configured).
 
 ### Injecting Organization/Repo for Unique Builds
 
