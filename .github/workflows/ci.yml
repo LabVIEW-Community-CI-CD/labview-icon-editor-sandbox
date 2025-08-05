@@ -46,64 +46,17 @@ jobs:
     needs: prepare
     runs-on: self-hosted-windows-lv
     outputs:
-      VERSION:       ${{ steps.next_version.outputs.VERSION }}
-      MAJOR:         ${{ steps.next_version.outputs.MAJOR }}
-      MINOR:         ${{ steps.next_version.outputs.MINOR }}
-      PATCH:         ${{ steps.next_version.outputs.PATCH }}
-      BUILD:         ${{ steps.inc_build.outputs.new_build_number }}
-      IS_PRERELEASE: ${{ steps.next_version.outputs.IS_PRERELEASE }}
+      VERSION:       ${{ steps.compute.outputs.VERSION }}
+      MAJOR:         ${{ steps.compute.outputs.MAJOR }}
+      MINOR:         ${{ steps.compute.outputs.MINOR }}
+      PATCH:         ${{ steps.compute.outputs.PATCH }}
+      BUILD:         ${{ steps.compute.outputs.BUILD }}
+      IS_PRERELEASE: ${{ steps.compute.outputs.IS_PRERELEASE }}
     steps:
-      - name: Determine bump type
-        id: bump_type
-        uses: actions/github-script@v6
+      - id: compute
+        uses: ./.github/actions/compute-version
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            let bump = 'none';
-            if (context.event_name === 'pull_request') {
-              const labels = context.payload.pull_request.labels.map(l => l.name.toLowerCase());
-              if (labels.includes('major')) bump = 'major';
-              else if (labels.includes('minor')) bump = 'minor';
-              else if (labels.includes('patch')) bump = 'patch';
-            }
-            core.setOutput('bump_type', bump);
-
-      - name: Determine build number
-        id: inc_build
-        shell: pwsh
-        run: |
-          git fetch --unshallow 2>$null || Write-Host "Already a full clone."
-          $count = git rev-list --count HEAD
-          Write-Host "Commit-based build number => $count"
-          "new_build_number=$count" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-
-      - name: Compute version string
-        id: next_version
-        shell: pwsh
-        env:
-          BUMP_TYPE:    ${{ steps.bump_type.outputs.bump_type }}
-          BUILD_NUMBER: ${{ steps.inc_build.outputs.new_build_number }}
-        run: |
-          $latest = (git describe --tags --abbrev=0 2>$null).TrimStart('v') -replace '-build.*'
-          if (-not $latest) { $maj=0; $min=0; $pat=0 } else { $maj,$min,$pat = $latest.Split('.') }
-          switch ($env:BUMP_TYPE) {
-            'major' { $maj++; $min=0; $pat=0 }
-            'minor' { $min++; $pat=0 }
-            'patch' { $pat++ }
-          }
-          $branch = $Env:GITHUB_REF -replace '^refs/heads/',''
-          $suffix = ''
-          if ($branch -like 'release-alpha/*') { $suffix = "alpha.$($Env:BUILD_NUMBER)" }
-          elseif ($branch -like 'release-beta/*')  { $suffix = "beta.$($Env:BUILD_NUMBER)" }
-          elseif ($branch -like 'release-rc/*')    { $suffix = "rc.$($Env:BUILD_NUMBER)" }
-          $version = if ($suffix) { "v$maj.$min.$pat-$suffix-build$($Env:BUILD_NUMBER)" } else { "v$maj.$min.$pat-build$($Env:BUILD_NUMBER)" }
-          $isPre  = if ($suffix) { 'true' } else { 'false' }
-          Write-Host "Computed version => $version"
-          "VERSION=$version"      | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          "MAJOR=$maj"            | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          "MINOR=$min"            | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          "PATCH=$pat"            | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          "IS_PRERELEASE=$isPre"  | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   apply-deps:
     name: Apply VIPC Dependencies
