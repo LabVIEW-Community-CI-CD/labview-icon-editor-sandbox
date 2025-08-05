@@ -53,26 +53,25 @@ jobs:
             Write-Host "Not triggered by a pull request."
           }
             
-      - name: ${{ 
-          github.event_name == 'workflow_dispatch' && 
-            (github.event.inputs.mode == 'enable' && 'Running Set_Development_Mode.ps1' || 'Running RevertDevelopmentMode.ps1') || 
+      - name: ${{
+          github.event_name == 'workflow_dispatch' &&
+            (github.event.inputs.mode == 'enable' && 'Running Set_Development_Mode.ps1' || 'Running RevertDevelopmentMode.ps1') ||
             (inputs.mode == 'enable' && 'Running Set_Development_Mode.ps1' || 'Running RevertDevelopmentMode.ps1') }}
         id: toggle_dev_mode
         shell: pwsh
-        working-directory: pipeline/scripts
         run: |
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
             if ('${{ github.event.inputs.mode }}' -eq 'enable') {
-              ./Set_Development_Mode.ps1 -RelativePath $env:GITHUB_WORKSPACE
+              ./.github/actions/set-development-mode/Set_Development_Mode.ps1 -RelativePath $env:GITHUB_WORKSPACE
             } else {
-              ./RevertDevelopmentMode.ps1 -RelativePath $env:GITHUB_WORKSPACE
+              ./.github/actions/revert-development-mode/RevertDevelopmentMode.ps1 -RelativePath $env:GITHUB_WORKSPACE
             }
           }
           else {
             if ('${{ inputs.mode }}' -eq 'enable') {
-              ./Set_Development_Mode.ps1 -RelativePath $env:GITHUB_WORKSPACE
+              ./.github/actions/set-development-mode/Set_Development_Mode.ps1 -RelativePath $env:GITHUB_WORKSPACE
             } else {
-              ./RevertDevelopmentMode.ps1 -RelativePath $env:GITHUB_WORKSPACE
+              ./.github/actions/revert-development-mode/RevertDevelopmentMode.ps1 -RelativePath $env:GITHUB_WORKSPACE
             }
           }
       #

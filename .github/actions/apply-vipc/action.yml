@@ -11,7 +11,7 @@ runs:
     - name: Run ApplyVIPC.ps1
       shell: pwsh
       run: |
-        & "${{ inputs.scripts_folder }}/ApplyVIPC.ps1" `
+        & "${{ github.action_path }}/ApplyVIPC.ps1" `
           -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} `
           -VIP_LVVersion ${{ inputs.vip_lv_version }} `
           -SupportedBitness ${{ inputs.supported_bitness }} `
@@ -29,9 +29,6 @@ inputs:
     required: true
   relative_path:
     description: 'Workspace root path'
-    required: true
-  scripts_folder:
-    description: 'Path to your pipeline/scripts folder'
     required: true
   vipc_path:
     description: 'Path under repo for the .vipc file (relative to workspace)'

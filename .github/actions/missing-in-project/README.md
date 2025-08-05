@@ -12,8 +12,8 @@ Results are returned as standard GitHub Action outputs so downstream jobs can d
 1. [Prerequisites](#prerequisites)  
 2. [Inputs](#inputs)  
 3. [Outputs](#outputs)  
-4. [Quick‑start](#quick-start)  
-5. [Example: Fail‑fast workflow](#example-fail-fast-workflow)  
+4. [Quick-start](#quick-start)
+5. [Example: Fail-fast workflow](#example-fail-fast-workflow)
 6. [How it works](#how-it-works)  
 7. [Exit codes & failure modes](#exit-codes--failure-modes)  
 8. [Troubleshooting](#troubleshooting)  
@@ -49,9 +49,9 @@ Results are returned as standard GitHub Action outputs so downstream jobs can d
 
 ---
 
-## Quick‑start
+## Quick-start
 ```yaml
-# .github/workflows/ci.yml  (excerpt)
+# .github/workflows/ci-composite.yml  (excerpt)
 jobs:
   prepare:
     runs-on: self-hosted-windows-lv
@@ -73,7 +73,7 @@ jobs:
 
 ---
 
-## Example: Fail‑fast workflow
+## Example: Fail-fast workflow
 If you want **any** missing file to abort the pipeline immediately, place the step in an *independent* job at the top of your DAG and let every other job depend on it:
 
 ```yaml
