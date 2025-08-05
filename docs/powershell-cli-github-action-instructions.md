@@ -248,12 +248,13 @@ All dev-mode logic resides in two PowerShell scripts:
 
 - **File Name**: `ci-composite.yml`
 - **Purpose**: Builds the `.vip` artifact and determines the version based on PR labels and commit count.
-- **Features**:  
-  - **Label-based** version bump (`major`, `minor`, `patch`), or none if unlabeled.  
-  - **Commit-based build number**: `vX.Y.Z-build<commitCount>` (plus optional pre-release suffix).  
-  - **Multi-Channel** detection for `release-alpha/*`, `release-beta/*`, `release-rc/*`.  
-  - **Fork-Friendly GPG**: Disabled if `DISABLE_GPG_ON_FORKS == true`.
-  - **Attach to Release**: If release creation is enabled (`ATTACH_ARTIFACTS_TO_RELEASE == true`), attach the built `.vip` to a GitHub Release.
+- **Features**:
+    - **Issue status gating**: skips most jobs unless the branch's linked issue has Status **In Progress**.
+    - **Label-based** version bump (`major`, `minor`, `patch`), or none if unlabeled.
+    - **Commit-based build number**: `vX.Y.Z-build<commitCount>` (plus optional pre-release suffix).
+    - **Multi-Channel** detection for `release-alpha/*`, `release-beta/*`, `release-rc/*`.
+    - **Fork-Friendly GPG**: Disabled if `DISABLE_GPG_ON_FORKS == true`.
+    - **Attach to Release**: If release creation is enabled (`ATTACH_ARTIFACTS_TO_RELEASE == true`), attach the built `.vip` to a GitHub Release.
 - **Events**: Typically triggered on:
   - Push or PR to `develop`, `feature/*`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `main`, or `hotfix/*`.
   - Might also be triggered manually (`workflow_dispatch`) if needed.

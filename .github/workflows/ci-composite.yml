@@ -1,4 +1,5 @@
 name: CI Pipeline (Composite)
+# Builds, tests, and packages the Icon Editor. See docs/ci-workflows.md for details.
 
 permissions:
   contents: read
@@ -27,9 +28,10 @@ on:
       - synchronize
       - reopened
       - ready_for_review
-  workflow_dispatch:
+  workflow_dispatch: # manual trigger
 
 jobs:
+  # Skip subsequent jobs unless the linked issue's Status is "In Progress"
   issue-status:
     name: Verify Issue Status
     runs-on: ubuntu-latest
@@ -120,6 +122,7 @@ jobs:
             );
             core.setOutput('proceed', proceed ? 'true' : 'false');
 
+  # Detect if VIPC files changed to decide whether dependencies must be installed
   changes:
     name: Detect VIPC changes
     needs: issue-status
