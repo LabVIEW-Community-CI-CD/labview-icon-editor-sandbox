@@ -39,15 +39,34 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const fs = require('fs');
             const branch = context.ref.replace('refs/heads/', '');
             if (!branch.startsWith('issue-')) {
               core.setOutput('proceed', 'true');
+              core.info(
+                `Branch '${branch}' is not issue-specific. CI will proceed.`
+              );
+              fs.appendFileSync(
+                process.env.GITHUB_STEP_SUMMARY,
+                [
+                  '### Issue Status',
+                  '',
+                  `Branch ${branch} is not associated with an issue.`,
+                  'CI will run.',
+                  ''
+                ].join('\n')
+              );
               return;
             }
             const match = branch.match(/^issue-(\d+)/);
             if (!match) {
               core.setOutput('proceed', 'false');
-              core.warning(`Cannot parse issue number from branch '${branch}'`);
+              const msg = `Cannot parse issue number from branch '${branch}'`;
+              core.warning(msg);
+              fs.appendFileSync(
+                process.env.GITHUB_STEP_SUMMARY,
+                ['### Issue Status', '', msg, ''].join('\n')
+              );
               return;
             }
             const issueNumber = parseInt(match[1], 10);
@@ -73,11 +92,27 @@ jobs:
               repo: context.repo.repo,
               number: issueNumber
             };
-            const result = await github.graphql(query, variables);
-            const nodes = result.repository.issue.projectItems.nodes;
-            const status = nodes.map(n => n.fieldValueByName?.name).find(Boolean);
-            core.info(`Issue status: ${status}`);
-            core.setOutput('proceed', status === 'In Progress' ? 'true' : 'false');
+              const result = await github.graphql(query, variables);
+              const nodes = result.repository.issue.projectItems.nodes;
+              const status =
+                nodes.map(n => n.fieldValueByName?.name).find(Boolean) ??
+                'Unknown';
+            const proceed = status === 'In Progress';
+            core.info(`Issue #${issueNumber} status: ${status}`);
+            core.info(`Proceed with CI: ${proceed}`);
+            const summary = [
+              '### Issue Status',
+              '',
+              `- Branch: ${branch}`,
+              `- Issue: #${issueNumber}`,
+              `- Status: **${status}**`,
+              `- CI will ${proceed ? 'run' : 'be skipped'}`
+            ].join('\n');
+            fs.appendFileSync(
+              process.env.GITHUB_STEP_SUMMARY,
+              `${summary}\n`
+            );
+            core.setOutput('proceed', proceed ? 'true' : 'false');
 
   changes:
     name: Detect VIPC changes
