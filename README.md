@@ -12,17 +12,17 @@
 
 **For LabVIEW Users:**
 
-- [Overview](#-overview)
-- [Installation](#-installation)
+- [Overview](#overview)
+- [Installation](#installation)
 
 **For Contributors:**
 
-- [Key Components](#-key-components)
-- [Getting Started (Contributing)](#-getting-started--contributing)
-- [Feature & Experiment Workflows](#-feature--experiment-workflows)
-- [Documentation](#-documentation)
-- [License & CLA](#-license--cla)
-- [Contact & Community](#-contact--community)
+- [Key Components](#key-components)
+- [Getting Started (Contributing)](#getting-started--contributing)
+- [Feature & Experiment Workflows](#feature--experiment-workflows)
+- [Documentation](#documentation)
+- [License & CLA](#license--cla)
+- [Contact & Community](#contact--community)
 
 ---
 
@@ -30,10 +30,10 @@
 
 The **LabVIEW Icon Editor** is an open-source, MIT-licensed tool for creating and editing VI icons, delivered as a VI Package. Each official **LabVIEW** release automatically includes the latest Icon Editor from this repository’s `main` branch (the next integration is targeting **LabVIEW 2026 Q1**).
 
-In practice, **your contributions** – whether new features, fixes, or improvements – can become part of the Icon Editor shipped with LabVIEW itself. The source code is maintained in **LabVIEW 2021 SP1** format for broad compatibility (usable with LabVIEW 2021–2025).
+In practice, **your contributions** – whether new features, fixes, or improvements – can become part of the Icon Editor shipped with LabVIEW itself. The source code is maintained in **LabVIEW 2021 SP1** format for broad compatibility (allowing contributors using LabVIEW 2021–2025 to build the editor), while the released VI Package requires **LabVIEW 2023 SP1 or newer** to run.
 
 - 🛠 **Built in LabVIEW (“G” code)** – All editor functionality is implemented as LabVIEW VIs (graphical code).
-- 📁 **Broad Compatibility** – Source and packages support LabVIEW 2021 SP1 through 2025, ensuring older versions of LabVIEW can use the latest editor.
+- 📁 **Broad Compatibility** – Source is stored in LabVIEW 2021 SP1 format for development, but the distributed packages target LabVIEW 2023 SP1 through 2025.
 - ⚙️ **CI Pipeline** – **GitHub Actions** orchestrate PowerShell-based workflows for testing, building, and publishing the `.vip` package.
 - 🔄 **Modern Development Practices** – This project helped pioneer NI’s open-source CI/CD patterns, and its infrastructure will migrate to a centralized toolkit for future LabVIEW projects.
 
@@ -44,8 +44,9 @@ NI’s open-source initiative encourages **community collaboration** on this pro
 ## 📦 Installation
 
 > **Prerequisites:**
-> • LabVIEW 2021 SP1 (or newer)
+> • LabVIEW 2023 SP1 (or newer)
 > • VI Package Manager (VIPM) installed
+> • *(Development note: Source code is saved in LabVIEW 2021 SP1 for building and backward compatibility.)*
 
 1. **Download** the latest `.vip` installer from the [Releases page](https://github.com/ni/labview-icon-editor/releases/latest).
 2. **Open VIPM** (VI Package Manager) in Administrator mode.
@@ -87,7 +88,7 @@ For detailed contribution guidelines (branching strategy, coding style, etc.), p
 2. **Issue Approval & Assignment** – Once the idea is approved by the maintainers (Steering Committee), they label the issue `Workflow: Open to contribution`. If you volunteer to implement it, comment on the issue; an NI maintainer will assign it to you and set up a feature branch for development.
 3. **Development Setup** – Fork the repository and clone your fork. Check out the feature branch. Prepare your LabVIEW environment (LabVIEW 2021 SP1 with required dependencies applied). You can develop in two ways:
    - *Manual mode:* Follow the [manual-instructions.md](docs/manual-instructions.md) guide to configure LabVIEW to use the editor’s VIs directly (replacing the built-in editor).
-   - *Automated (CLI) mode:* Use the [powershell-cli-instructions.md](docs/powershell-cli-instructions.md) or the broader [automated-setup.md](docs/automated-setup.md) for PowerShell-based scripts to build the pack and run tests.
+    - *Automated (CLI) mode:* Use the [automated-setup.md](docs/automated-setup.md) guide for PowerShell-based scripts to build the pack and run tests.
 4. **Implement & Test** – Develop your changes using LabVIEW. Test the editor manually in LabVIEW (in development mode) to ensure your changes work. Run any available unit tests. Make sure to apply the `runner_dependencies.vipc` (via VIPM or the scripts) so that all required libraries (G-CLI, etc.) are present.
 5. **Submit a Pull Request** – Open a PR linking to the issue. Our CI will automatically run and **build a `.vip` package** with your changes for testing. Maintainers and others can install this pre-release package to test your contribution. Iterate on any review feedback.
 6. **Merge & Release** – Once your contribution is approved, it will be merged into the `develop` branch. During the next release cycle, `develop` is merged into `main` and a new official Icon Editor version is released. (At that point, your contribution is on track to ship with the next LabVIEW release.)
@@ -110,7 +111,7 @@ For very large or long-term contributions, NI may use an `experiment/<feature-na
 
 In-depth documentation and reference guides are located in the `/docs` directory. Notable documents include:
 
-- **Build & CI Guides:** How to build the Icon Editor and use continuous integration tools. For local setup, see [manual-instructions.md](docs/manual-instructions.md) or the script-driven [automated-setup.md](docs/automated-setup.md) alongside the [PowerShell CLI Usage](docs/powershell-cli-instructions.md). CI pipelines are covered in [CI Workflows](docs/ci-workflows.md) and the [CI Workflow (Multi-Channel Release Support)](docs/powershell-cli-github-action-instructions.md). Reference scripts are listed in [PowerShell Dependency Scripts](docs/powershell-dependency-scripts.md). Packaging and runner configuration are detailed in [Build VI Package](docs/ci/actions/build-vi-package.md) and the [Runner Setup Guide](docs/ci/actions/runner-setup-guide.md).
+- **Build & CI Guides:** How to build the Icon Editor and use continuous integration tools. For local setup, see [manual-instructions.md](docs/manual-instructions.md) or the script-driven [automated-setup.md](docs/automated-setup.md). CI pipelines are covered in [CI Workflows](docs/ci-workflows.md) and the [CI Workflow (Multi-Channel Release Support)](docs/powershell-cli-github-action-instructions.md). Reference scripts are listed in [PowerShell Dependency Scripts](docs/powershell-dependency-scripts.md). Packaging and runner configuration are detailed in [Build VI Package](docs/ci/actions/build-vi-package.md) and the [Runner Setup Guide](docs/ci/actions/runner-setup-guide.md).
 - **Composite Actions:** Summary of the repository's reusable GitHub Actions is available in [Composite Actions](docs/ci/actions/README.md).
 - **Advanced Workflows:** Details on complex release processes and branching strategies. For example, the [Multichannel Release Workflow](docs/ci/actions/multichannel-release-workflow.md) explains alpha/beta/RC release branches, and [EXPERIMENTS.md](docs/ci/experiments.md) covers long-running feature branches. Maintainers can refer to the [Maintainer's Guide](docs/ci/actions/maintainers-guide.md) for internal release duties.
 - **Troubleshooting:** If you encounter issues, see the [Troubleshooting & FAQ](docs/ci/troubleshooting-faq.md) for common problems (environment setup, build failures, etc.). There is also a specialized [Experiments Troubleshooting](docs/ci/actions/troubleshooting-experiments.md) guide for experimental branch issues.
@@ -133,4 +134,4 @@ This project is distributed under the **MIT License** – see the [LICENSE](LICE
 
 ### 🙏 Thanks for Contributing!
 
-Your ideas, testing, and code contributions directly shape the Icon Editor experience across **LabVIEW 2021–2026** and beyond. Thank you for helping improve this tool for the entire LabVIEW community!
+Your ideas, testing, and code contributions directly shape the Icon Editor experience across **LabVIEW 2023–2026** and beyond. Thank you for helping improve this tool for the entire LabVIEW community!

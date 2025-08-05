@@ -79,11 +79,13 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
        -RelativePath "C:\labview-icon-editor" `
        -AbsolutePathScripts "C:\labview-icon-editor\pipeline\scripts" `
        -Major 1 -Minor 2 -Patch 3 -Build 45 `
-       -Commit "my-commit-sha" `
-       -LabVIEWMinorRevision 3 `
-       -Verbose
-   ```
-   This generates a `.vip` in `builds\VI Package`.
+    -Commit "my-commit-sha" `
+    -LabVIEWMinorRevision 3 `
+    -Verbose
+    ```
+    This generates a `.vip` in `builds\VI Package`.
+
+   *Branding tip:* Add optional metadata fields such as `-CompanyName` and `-AuthorName` to the command above to embed your organization or repository name in the package. These values appear in the final VI Package metadata, helping identify builds from different forks.
 
 5. **Revert Dev Mode (optional)**:
    ```powershell
