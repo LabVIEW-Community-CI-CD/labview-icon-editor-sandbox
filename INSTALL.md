@@ -8,6 +8,8 @@ This guide explains how to install the LabVIEW Icon Editor VI Package on your sy
 - **VI Package Manager (VIPM)** – You’ll use VIPM to install the `.vip` file. Ensure you have VIPM installed (the free Community Edition is fine).
 
 > *Why LabVIEW 2023+?* The Icon Editor has evolved with new features that depend on improvements in LabVIEW. As of this release, the VI Package is built to support LabVIEW 2023 and onward.
+>
+> *Development note:* The source code is saved in **LabVIEW 2021 SP1** for building and maintenance. Contributors can develop with LabVIEW 2021, but the packaged editor only runs on LabVIEW 2023 SP1 or newer.
 
 ## Installation Steps
 
