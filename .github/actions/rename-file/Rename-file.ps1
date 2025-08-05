@@ -29,16 +29,17 @@ function Rename-File {
     
     # Check if the file exists
     if (-Not (Test-Path -Path $CurrentFilename)) {
-        Write-Host "Error: File '$CurrentFilename' does not exist."
-        return
+        Write-Error "File '$CurrentFilename' does not exist."
+        exit 1
     }
 
     # Attempt to rename the file
     try {
         Rename-Item -Path $CurrentFilename -NewName $NewFilename
-        Write-Host "Rename the packed project library to '$NewFilename'." .ps1
+        Write-Host "Renamed the packed project library to '$NewFilename'."
     } catch {
-        Write-Host "Error: Could not rename the file. $_"
+        Write-Error "Could not rename the file. $_"
+        exit 1
     }
 }
 
