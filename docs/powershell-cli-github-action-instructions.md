@@ -58,7 +58,7 @@ This workflow ensures that all **forks** of the repository can sync the latest b
 1. **Set up `.github/workflows`**
    Ensure the following workflows exist (or adapt names as needed):
    - `development-mode-toggle.yml` (Development Mode Toggle)
-   - `ci.yml` (Build VI Package and Release)
+   - `ci-composite.yml` (Build VI Package and Release)
 
 2. **Configure Permissions**  
    - In **Settings → Actions → General**, set **Workflow permissions** to “Read and write permissions” so the workflow can create tags and releases.
@@ -246,7 +246,7 @@ All dev-mode logic resides in two PowerShell scripts:
 <a name="42-build-vi-package"></a>
 ### 4.2 Build VI Package and Release
 
-- **File Name**: `ci.yml`
+- **File Name**: `ci-composite.yml`
 - **Purpose**: Builds the `.vip` artifact, determines the version based on PR labels and commit count, and optionally creates/releases the tag.
 - **Features**:  
   - **Label-based** version bump (`major`, `minor`, `patch`), or none if unlabeled.  

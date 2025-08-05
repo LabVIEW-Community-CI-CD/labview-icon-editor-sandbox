@@ -47,7 +47,7 @@ Automating your Icon Editor builds and tests:
    - Development Mode modifies `labview.ini` to reference your local source code.
 
 4. **Run Tests**
-   Use the main CI workflow (`ci.yml`) to confirm your environment is valid.
+   Use the main CI workflow (`ci-composite.yml`) to confirm your environment is valid.
    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
 
 5. **Build VI Package and Release**
@@ -84,7 +84,7 @@ Below are the **key GitHub Actions** provided in this repository:
    - Invokes `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.  
    - Usually triggered via `workflow_dispatch` for manual toggling.
 
-2. **[Build VI Package and Release](https://github.com/ni/labview-icon-editor/actions/workflows/ci.yml)**  
+2. **[Build VI Package and Release](https://github.com/ni/labview-icon-editor/actions/workflows/ci-composite.yml)**
    - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`) or defaults to `patch` for direct pushes.  
    - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).  
    - **Fork-Friendly**: Disables GPG signing if it detects a fork (so no passphrase is needed). In the **main repo** (`ni/labview-icon-editor`), signing remains active.
@@ -95,7 +95,7 @@ Below are the **key GitHub Actions** provided in this repository:
 
 #### Jobs in CI workflow
 
-The [`ci.yml`](../.github/workflows/ci.yml) pipeline breaks the build into several jobs:
+The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks the build into several jobs:
 
 - **prepare** – checks out the repository and marks it as a safe Git directory.
 - **version** – computes the semantic version and build number using commit count and PR labels.

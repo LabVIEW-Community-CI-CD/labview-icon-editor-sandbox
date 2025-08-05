@@ -37,7 +37,7 @@ Ensure a runner has all required LabVIEW packages installed before building or t
 
 ## Quick-start
 ```yaml
-# .github/workflows/ci.yml (excerpt)
+# .github/workflows/ci-composite.yml (excerpt)
 steps:
   - uses: actions/checkout@v4
   - name: Install LabVIEW dependencies

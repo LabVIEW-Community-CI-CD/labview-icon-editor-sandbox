@@ -1,6 +1,6 @@
 # LabVIEW Icon Editor
 
-[![Build VI Package](https://github.com/ni/labview-icon-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/ni/labview-icon-editor/actions/workflows/ci.yml)
+[![Build VI Package](https://github.com/ni/labview-icon-editor/actions/workflows/ci-composite.yml/badge.svg)](https://github.com/ni/labview-icon-editor/actions/workflows/ci-composite.yml)
 [![Latest Release](https://img.shields.io/github/v/release/ni/labview-icon-editor?label=release)](https://github.com/ni/labview-icon-editor/releases/latest)
 [![Discord Chat](https://img.shields.io/discord/1319915996789739540?label=Discord&logo=discord&style=flat)](https://discord.gg/q4d3ggrFVA)
 [![License: MIT](https://img.shields.io/github/license/ni/labview-icon-editor?style=flat)](LICENSE)
