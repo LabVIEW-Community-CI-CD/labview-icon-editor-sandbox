@@ -25,6 +25,18 @@ runs:
           -Commit "${{ inputs.commit }}" `
           -ReleaseNotesFile "${{ inputs.release_notes_file }}" `
           -DisplayInformationJSON '${{ inputs.display_information_json }}'
+
+    - name: Upload release notes
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-notes
+        path: ${{ inputs.release_notes_file }}
+
+    - name: Upload VI Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: vi-package
+        path: builds/VI Package/*.vip
 inputs:
   supported_bitness:
     description: '32 or 64'
