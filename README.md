@@ -75,7 +75,7 @@ We welcome both **code** and **non-code** contributions – from adding new feat
 
 - 📑 **Contributor License Agreement (CLA)** – External contributors must sign NI’s CLA before a pull request can be merged (this will be prompted automatically on your first PR). The CLA ensures NI has rights to distribute your code under MIT, and you retain rights to your contributions.
 - 🧭 **Steering Committee** – A small group of NI maintainers and community members governs the project’s direction. They approve significant changes and label issues as “Workflow: Open to contribution” once an idea is ready for external work.
-- 🔄 **Find an Issue to Work On** – Check the issue tracker for issues labeled “[Workflow: Open to contribution]” – these are tasks approved for community development. Comment on the issue to volunteer, and a maintainer will assign it to you and create a feature branch if one doesn’t exist.
+- 🔄 **Find an Issue to Work On** – Check the issue tracker for issues labeled “[Workflow: Open to contribution]” – these are tasks approved for community development. Comment on the issue to volunteer, and a maintainer will assign it to you and create a branch named `issue-<number>-<short-description>` if one doesn’t exist, marking the issue’s Status as `In Progress` so CI will run.
 - 🧪 **Long-Running Features** – Major features that might span weeks or months can be developed on special `experiment/` branches with more rigorous CI (security scans, gated releases). See [EXPERIMENTS.md](docs/ci/experiments.md) for details on how experimental feature branches work.
 
 For detailed contribution guidelines (branching strategy, coding style, etc.), please see the [CONTRIBUTING.md](CONTRIBUTING.md) document. The `/docs` folder also contains setup guides and technical notes (summarized below).
@@ -87,7 +87,7 @@ For detailed contribution guidelines (branching strategy, coding style, etc.), p
 **Standard Feature Contribution Workflow:**
 
 1. **Propose & Discuss** – Start by proposing your idea via [GitHub Discussions](https://github.com/ni/labview-icon-editor/discussions) or by opening an issue. Discussing first helps refine the idea and get feedback.
-2. **Issue Approval & Assignment** – Once the idea is approved by the maintainers (Steering Committee), they label the issue `Workflow: Open to contribution`. If you volunteer to implement it, comment on the issue; an NI maintainer will assign it to you and set up a feature branch for development.
+2. **Issue Approval & Assignment** – Once the idea is approved, maintainers label the issue `Workflow: Open to contribution`. After you volunteer, a maintainer assigns the issue and sets up a branch such as `issue-123-short-description`, ensuring the issue is marked `In Progress` so the CI pipeline defined in [ci-composite.yml](.github/workflows/ci-composite.yml) will execute.
 3. **Development Setup** – Fork the repository and clone your fork. Check out the feature branch. Prepare your LabVIEW environment (LabVIEW 2021 SP1 with required dependencies applied). You can develop in two ways:
    - *Manual mode:* Follow the [manual-instructions.md](docs/manual-instructions.md) guide to configure LabVIEW to use the editor’s VIs directly (replacing the built-in editor).
     - *Automated (CLI) mode:* Use the [automated-setup.md](docs/automated-setup.md) guide for PowerShell-based scripts to build the pack and run tests.
