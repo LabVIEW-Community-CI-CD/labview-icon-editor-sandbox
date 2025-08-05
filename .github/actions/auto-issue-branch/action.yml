@@ -33,9 +33,8 @@ runs:
           const titleOk = title.length > 0 && title.length <= 30;
           const types = ['feature','bug','task'];
           const typeLabel = labels.find(l => types.includes(l));
-          let versionBump = 'none';
-          if (typeLabel === 'feature') versionBump = 'major';
-          else if (typeLabel === 'bug') versionBump = 'minor';
+          const { versionBumpFromType } = require(process.env.GITHUB_ACTION_PATH + '/utils.js');
+          const versionBump = versionBumpFromType(typeLabel);
           let hasProject = false;
           try {
             const data = await github.graphql(
@@ -69,10 +68,8 @@ runs:
           const issue = context.payload.issue;
           const repo = context.repo;
           const rawTitle = issue.title;
-          let short = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
-          if (short.length > 30) short = short.substring(0,30);
-          if (!short) short = 'issue';
-          const branch = `issue-${issue.number}-${short}`;
+          const { buildBranchName } = require(process.env.GITHUB_ACTION_PATH + '/utils.js');
+          const branch = buildBranchName(issue.number, rawTitle);
           let base = `${{ inputs.base_branch || '' }}`;
           if (!base) base = context.payload.repository.default_branch;
           const baseRef = await github.rest.git.getRef({
