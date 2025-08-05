@@ -13,10 +13,16 @@ jobs:
   update-readme:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    env:
+      REF_BRANCH: >-
+        ${{ github.event.workflow_run.head_branch ||
+            github.event.repository.default_branch }}
 
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }        # develop branch by default
+        with:
+          fetch-depth: 0
+          ref: ${{ env.REF_BRANCH }}
 
       # Grab the helper
       - name: Run table refresh
