@@ -47,8 +47,8 @@ By adopting these patterns, maintainers can run alpha, beta, and RC pipelines in
    - The GitHub Actions token (`GITHUB_TOKEN`) needs `contents: write` to push tags & create releases.  
    - If you have branch protection on tags, allow actions to create them.
 
-3. **Labels**  
-   - Pull requests must use `major`, `minor`, or `patch` to increment those fields. If no label, only the build number increments.
+3. **Labels**
+   - Pull requests must include exactly one of `major`, `minor`, or `patch` to increment those fields; missing or multiple labels cause the workflow to fail.
 
 4. **Fork Considerations**  
    - If `DISABLE_GPG_ON_FORKS == true`, the workflow sets `commit.gpgsign` and `tag.gpgsign` to `false` for forks (i.e., if the `github.repository` is not your official name).
@@ -184,8 +184,8 @@ Any commit to these branches triggers an alpha/beta/rc suffix. Merging to `main`
 4. **Final Merge**  
    - Typically, you merge alpha → beta → rc → main in sequence, each step dropping the old suffix for the new. If you do “hotfix” merges or skip channels, ensure you keep version consistency.
 
-5. **Same Bump Type**  
-   - The label-based bump is orthogonal to alpha/beta/rc. If no label is set, major/minor/patch remain the same, but you might still produce `-alpha.<N>-buildXX`.
+5. **Same Bump Type**
+   - The label-based bump is orthogonal to alpha/beta/rc. Exactly one release label is still required; missing or multiple labels will fail the workflow.
 
 
 <a name="faq"></a>

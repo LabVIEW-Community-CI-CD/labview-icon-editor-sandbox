@@ -66,9 +66,8 @@ This workflow ensures that all **forks** of the repository can sync the latest b
 3. **Check Environment Variables**  
    - Decide on `DRAFT_RELEASE`, `USE_AUTO_NOTES`, `ATTACH_ARTIFACTS_TO_RELEASE`, `DISABLE_GPG_ON_FORKS`, etc. (see [Environment Variables](#32-environment-variables)).
 
-4. **Make a Pull Request and Label It**  
-   - Use labels `major`, `minor`, or `patch` if you need a version bump.  
-   - If no label is found, only the build number increments.
+4. **Make a Pull Request and Label It**
+   - Apply exactly one of `major`, `minor`, or `patch` to request a version bump. The workflow fails if none or multiple release labels are present.
 
 5. **Merge to the Appropriate Branch**  
    - In Gitflow, typical merges go from **feature** → **develop**, then eventually to:
@@ -296,8 +295,8 @@ Merging into these branches (or pushing directly to them) triggers a **pre-relea
 ### 5.4 Version Bumps via Labels
 
 When you open a **Pull Request** into `develop`, `release-alpha/*`, or `release-beta/*` (or even `main`/`hotfix/*`):
-- A label of `major`, `minor`, or `patch` increments that segment of the version (e.g., `1.2.3` → `2.0.0` if `major`, etc.).  
-- If **no** label is present, the major/minor/patch remains the same (only the build number increments).
+- You must apply exactly one of the labels `major`, `minor`, or `patch` to increment the corresponding version segment (e.g., `1.2.3` → `2.0.0` if `major`, etc.).
+- The workflow fails if none of these labels is present or if multiple release labels are applied.
 
 > **Note**: This means you can version-bump **incrementally** while merging into `develop` (to reflect that new features are in development), or you can wait until you merge to a pre-release branch. Each time the build runs, the resulting `.vip` has an updated version (with a new build number, plus any alpha/beta/rc suffix if applicable).
 
