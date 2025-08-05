@@ -11,14 +11,14 @@ runs:
     - name: Run Build_lvlibp.ps1
       shell: pwsh
       run: |
-        & "${{ github.action_path }}/Build_lvlibp.ps1" \
-          -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} \
-          -SupportedBitness ${{ inputs.supported_bitness }} \
-          -RelativePath "${{ inputs.relative_path }}" \
-          -Major ${{ inputs.major }} \
-          -Minor ${{ inputs.minor }} \
-          -Patch ${{ inputs.patch }} \
-          -Build ${{ inputs.build }} \
+        & "${{ github.action_path }}/Build_lvlibp.ps1" `
+          -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} `
+          -SupportedBitness ${{ inputs.supported_bitness }} `
+          -RelativePath "${{ inputs.relative_path }}" `
+          -Major ${{ inputs.major }} `
+          -Minor ${{ inputs.minor }} `
+          -Patch ${{ inputs.patch }} `
+          -Build ${{ inputs.build }} `
           -Commit "${{ inputs.commit }}"
 inputs:
   minimum_supported_lv_version:
