@@ -8,6 +8,9 @@ on:
       window_start:
         description: 'Report since YYYY‑MM‑DD'
         required: false
+  push:
+    tags:
+      - '*'
 
 permissions:
   contents: write
@@ -19,7 +22,7 @@ jobs:
 # Job 1 – run git‑hours (Go), build badge, commit to `metrics`
 ###############################################################################
   report:
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop'||startsWith(github.ref,'refs/tags/')
     runs-on: ubuntu-latest
 
     steps:
