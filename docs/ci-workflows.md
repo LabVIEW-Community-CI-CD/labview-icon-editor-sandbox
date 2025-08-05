@@ -95,6 +95,7 @@ Below are the **key GitHub Actions** provided in this repository:
 
 The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks the build into several jobs:
 
+- **issue-status** – checks the linked GitHub issue and skips CI unless its Status is set to “In Progress”.
 - **changes** – checks out the repository and detects `.vipc` file changes to determine if dependencies need to be applied.
 - **version** – computes the semantic version and build number using commit count and PR labels.
 - **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses.
