@@ -127,10 +127,10 @@ Below are **common** environment variables you might configure:
 
 For **detailed runner configuration**, see **`runner-setup-guide.md`**. Below is a short summary:
 
-1. **Install Prerequisites**  
-   - **LabVIEW 2021 SP1** (32-bit or 64-bit)  
-   - **PowerShell 7+**  
-   - **Git for Windows**  
+1. **Install Prerequisites**
+   - **LabVIEW 2021 SP1** (32-bit and 64-bit) plus **LabVIEW 2023** (as needed for packaging)
+   - **PowerShell 7+**
+   - **Git for Windows**
 2. **Add a Self-Hosted Runner**  
    - Go to **Settings → Actions → Runners**. Follow GitHub’s steps to register a Windows runner on your machine with LabVIEW installed.  
 3. **Label Your Runner**  
@@ -247,15 +247,15 @@ All dev-mode logic resides in two PowerShell scripts:
 ### 4.2 Build VI Package and Release
 
 - **File Name**: `ci-composite.yml`
-- **Purpose**: Builds the `.vip` artifact, determines the version based on PR labels and commit count, and optionally creates/releases the tag.
+- **Purpose**: Builds the `.vip` artifact and determines the version based on PR labels and commit count.
 - **Features**:  
   - **Label-based** version bump (`major`, `minor`, `patch`), or none if unlabeled.  
   - **Commit-based build number**: `vX.Y.Z-build<commitCount>` (plus optional pre-release suffix).  
   - **Multi-Channel** detection for `release-alpha/*`, `release-beta/*`, `release-rc/*`.  
-  - **Fork-Friendly GPG**: Disabled if `DISABLE_GPG_ON_FORKS == true`.  
-  - **Attach to Release** if `ATTACH_ARTIFACTS_TO_RELEASE == true`.
+  - **Fork-Friendly GPG**: Disabled if `DISABLE_GPG_ON_FORKS == true`.
+  - **Attach to Release**: If release creation is enabled (`ATTACH_ARTIFACTS_TO_RELEASE == true`), attach the built `.vip` to a GitHub Release.
 - **Events**: Typically triggered on:
-  - Push or PR merge to `release-alpha/*`, `release-beta/*`, `release-rc/*`, `main`, and `hotfix/*`.
+  - Push or PR to `develop`, `feature/*`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `main`, or `hotfix/*`.
   - Might also be triggered manually (`workflow_dispatch`) if needed.
 
 ---
