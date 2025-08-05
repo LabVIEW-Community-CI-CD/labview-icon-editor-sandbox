@@ -11,8 +11,8 @@ runs:
     - name: Run RunUnitTests.ps1
       shell: pwsh
       run: |
-        & "${{ github.action_path }}/RunUnitTests.ps1" \
-          -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} \
+        & "${{ github.action_path }}/RunUnitTests.ps1" `
+          -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} `
           -SupportedBitness ${{ inputs.supported_bitness }}
 inputs:
   minimum_supported_lv_version:
