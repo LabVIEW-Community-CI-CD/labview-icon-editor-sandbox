@@ -48,6 +48,22 @@ jobs:
           relative_path:                ${{ github.workspace }}
           vipc_path:                    "Tooling/deployment/runner_dependencies.vipc"
 
+  version:
+    name: Compute Version
+    runs-on: self-hosted-windows-lv
+    outputs:
+      VERSION:       ${{ steps.compute.outputs.VERSION }}
+      MAJOR:         ${{ steps.compute.outputs.MAJOR }}
+      MINOR:         ${{ steps.compute.outputs.MINOR }}
+      PATCH:         ${{ steps.compute.outputs.PATCH }}
+      BUILD:         ${{ steps.compute.outputs.BUILD }}
+      IS_PRERELEASE: ${{ steps.compute.outputs.IS_PRERELEASE }}
+    steps:
+      - id: compute
+        uses: ./.github/actions/compute-version
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
   missing-in-project-check:
     name: Test Missing-In-Project Action on Windows
     needs: apply-deps
@@ -82,16 +98,16 @@ jobs:
 
   build-package:
     name: Build VI Package
-    needs: [test, apply-deps]
+    needs: [test, apply-deps, version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/build
         with:
           relative_path: ${{ github.workspace }}
-          major:         0
-          minor:         0
-          patch:         0
-          build:         1
+          major:         ${{ needs.version.outputs.MAJOR }}
+          minor:         ${{ needs.version.outputs.MINOR }}
+          patch:         ${{ needs.version.outputs.PATCH }}
+          build:         ${{ needs.version.outputs.BUILD }}
           commit:        ${{ github.sha }}
           company_name:  ${{ github.repository_owner }}
           author_name:   ${{ github.event.repository.name }}
