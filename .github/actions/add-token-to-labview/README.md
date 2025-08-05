@@ -8,7 +8,6 @@ Invoke **`AddTokenToLabVIEW.ps1`** through a composite action to add a `Localhos
 | `minimum_supported_lv_version` | **Yes** | `2021` | LabVIEW major version used by g-cli. |
 | `supported_bitness` | **Yes** | `32` or `64` | Target LabVIEW bitness. |
 | `relative_path` | **Yes** | `${{ github.workspace }}` | Repository root on disk. |
-| `scripts_folder` | **Yes** | `pipeline/scripts` | Folder containing `AddTokenToLabVIEW.ps1`. |
 
 ## Quick-start
 ```yaml
@@ -17,7 +16,6 @@ Invoke **`AddTokenToLabVIEW.ps1`** through a composite action to add a `Localhos
     minimum_supported_lv_version: 2024
     supported_bitness: 64
     relative_path: ${{ github.workspace }}
-    scripts_folder: pipeline/scripts
 ```
 
 ## License

@@ -17,7 +17,6 @@ Runs **`build_vip.ps1`** to update a `.vipb` file's display info and build the V
 | `commit` | **Yes** | `abcdef` | Commit identifier. |
 | `release_notes_file` | **Yes** | `Tooling/deployment/release_notes.md` | Release notes file. |
 | `display_information_json` | **Yes** | `'{}'` | JSON for VIPB display information. |
-| `scripts_folder` | **Yes** | `pipeline/scripts` | Folder containing `build_vip.ps1`. |
 
 ## Quick-start
 ```yaml
@@ -34,7 +33,6 @@ Runs **`build_vip.ps1`** to update a `.vipb` file's display info and build the V
     commit: ${{ github.sha }}
     release_notes_file: Tooling/deployment/release_notes.md
     display_information_json: '{}'
-    scripts_folder: pipeline/scripts
 ```
 
 ## License

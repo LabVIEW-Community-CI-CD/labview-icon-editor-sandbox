@@ -21,7 +21,6 @@ Ensure a runner has all required LabVIEW packages installed before building or t
 | **LabVIEW** `>= 2021` | Must match both `minimum_supported_lv_version` and `vip_lv_version`. |
 | **g-cli** in `PATH` | Used to apply the `.vipc` container. Install from NI Package Manager or include the executable in the runner image. |
 | **PowerShell 7** | Composite steps use PowerShell Core (`pwsh`). |
-| Access to `ApplyVIPC.ps1` | Provide the folder containing the script via `scripts_folder`. |
 
 ---
 
@@ -32,7 +31,6 @@ Ensure a runner has all required LabVIEW packages installed before building or t
 | `vip_lv_version` | **Yes** | `2021` | LabVIEW version used to apply the `.vipc` file. Usually the same as `minimum_supported_lv_version`. |
 | `supported_bitness` | **Yes** | `32` or `64` | LabVIEW bitness to target. |
 | `relative_path` | **Yes** | `${{ github.workspace }}` | Root path of the repository on disk. |
-| `scripts_folder` | **Yes** | `pipeline/scripts` | Folder containing `ApplyVIPC.ps1`. |
 | `vipc_path` | **Yes** | `Tooling/deployment/runner_dependencies.vipc` | Path (relative to `relative_path`) of the container to apply. |
 
 ---
@@ -49,7 +47,6 @@ steps:
       vip_lv_version: 2024
       supported_bitness: 64
       relative_path: ${{ github.workspace }}
-      scripts_folder: pipeline/scripts
       vipc_path: Tooling/deployment/runner_dependencies.vipc
 ```
 

@@ -11,9 +11,9 @@ runs:
     - name: Run Build.ps1
       shell: pwsh
       run: |
-        & "${{ inputs.scripts_folder }}/Build.ps1" \
+        & "${{ github.action_path }}/Build.ps1" \
           -RelativePath "${{ inputs.relative_path }}" \
-          -AbsolutePathScripts "${{ inputs.relative_path }}/${{ inputs.scripts_folder }}" \
+          -AbsolutePathScripts "${{ github.action_path }}" \
           -Major ${{ inputs.major }} \
           -Minor ${{ inputs.minor }} \
           -Patch ${{ inputs.patch }} \
@@ -25,9 +25,6 @@ runs:
 inputs:
   relative_path:
     description: 'Workspace root path'
-    required: true
-  scripts_folder:
-    description: 'Path to your pipeline/scripts folder'
     required: true
   major:
     description: 'Major version'
