@@ -1,6 +1,6 @@
 # Compute Version
 
-This composite action determines the semantic version for the build based on commit history, branch naming conventions and pull request labels. Pull requests must include exactly one of the labels `major`, `minor`, or `patch`; missing or conflicting labels cause the action to fail.
+This composite action determines the semantic version for the build based on commit history, branch naming conventions and pull request labels. Pull requests should include exactly one of the labels `major`, `minor`, or `patch`. If no label is present, the action defaults to `patch`; conflicting labels still cause the action to fail.
 
 ## Inputs
 - `github_token`: GitHub token with repository access.
