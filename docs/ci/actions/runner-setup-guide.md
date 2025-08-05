@@ -1,42 +1,167 @@
-# Icon Editor GitHub Runner Setup Guide
+# Runner Setup Guide
 
-This guide walks through setting up a self-hosted GitHub Actions runner capable of building and testing the LabVIEW Icon Editor. A self-hosted runner is required because the Icon Editor build and test process requires LabVIEW, which isn’t available on GitHub’s hosted runners.
+This document explains how to locally set up and run the **LabVIEW Icon Editor** workflows on a **self-hosted runner** using **GitHub Actions**.
 
-## 1. Prepare the Runner Environment
+## Table of Contents
 
-- **LabVIEW Installation**: Install LabVIEW 2021 SP1 (32-bit and/or 64-bit as needed) on the machine that will act as the runner.  
-- **VIPM Installation**: Ensure the machine has VI Package Manager (VIPM) installed, as the build produces a `.vip` (VI Package).  
-- **PowerShell and Git**: Install PowerShell 7 (or newer) and Git for Windows. These tools are needed for running build scripts and pulling code.
+1. [Introduction](#introduction)  
+2. [Quickstart](#quickstart)  
+3. [Detailed Guide](#detailed-guide)  
+   1. [Development vs. Testing](#development-vs-testing)  
+   2. [Available GitHub Actions](#available-github-actions)  
+   3. [Setting Up a Self-Hosted Runner](#setting-up-a-self-hosted-runner)  
+   4. [Running the Actions Locally](#running-the-actions-locally)  
+   5. [Example Developer Workflow](#example-developer-workflow)  
+4. [Next Steps](#next-steps)
 
-> **Important:** The LabVIEW environment on the runner should match the target version for the Icon Editor (e.g., LabVIEW 2021–2025). The runner machine must remain online whenever you want CI jobs to run.
+<a name="introduction"></a>
+## 1. Introduction
 
-## 2. Configure a GitHub Actions Runner
+This document details how to automate **building**, **testing**, and **packaging** the **LabVIEW Icon Editor** on **Windows** using **GitHub Actions** on a **self-hosted runner**. By employing these workflows, you can:
 
-1. **Generate Runner Token**: In your repository (or organization) on GitHub, go to **Settings → Actions → Runners**. Click **New self-hosted runner** and follow the instructions to generate a runner registration token.
-2. **Download Runner Software**: Download the GitHub Actions runner software for your machine (Windows x64) from the provided link.
-3. **Install and Configure**: Extract the runner software on the LabVIEW machine. From a PowerShell prompt, run `config.cmd`. Provide the repository URL (or org name), paste the token, and assign a runner name and labels (e.g., `iconeditor`).
-4. **Service Setup**: (Optional) Run `.\svcinstall.cmd` to install the runner as a service, so it starts automatically with the machine.
+- **Eliminate** manual tasks like editing `vi.lib` or toggling `labview.ini`.  
+- **Run** consistent builds and tests across different machines or developers.  
+- **Automatically version** your Icon Editor code via **semantic labeling** (major/minor/patch) plus a global build counter.
+- **Upload** the `.vip` artifact for download, and (if configured) attach it to a draft GitHub Release for non-PR builds.
+- Seamlessly handle **fork** scenarios—**GPG signing** is enabled if `github.repository` is your main repo, disabled otherwise.
 
-After configuration, the runner should show as “Online” in your repo’s **Settings → Actions → Runners** list, with the labels you assigned.
+Additionally, **you can pass metadata fields** (like **organization** or **repository name**) to the **build script**. These fields are embedded into the **VI Package** display information, effectively **branding** the Icon Editor package with a unique identifier. This is especially useful when multiple forks or organizations produce their own versions of the Icon Editor—ensuring each `.vip` is clearly labeled with the correct “author” or “company.”
 
-## 3. Configure Runner Permissions and Secrets
+> **Prerequisites**:
+> - **LabVIEW 2021 SP1 (32-bit and 64-bit)** – and **LabVIEW 2023 (64-bit) for building the package**.
+> - The relevant **VIPC** file is now at `Tooling/deployment/runner_dependencies.vipc`.
+> - [PowerShell 7+](https://github.com/PowerShell/PowerShell/releases/latest)
+> - [Git for Windows](https://github.com/git-for-windows/git/releases/latest)
 
-- **Repository Access**: Ensure the runner is **enabled** for the `ni/labview-icon-editor` repository (this is usually the default when added at the repository level).  
-- **Actions Permissions**: Under **Settings → Actions → General**, set **Workflow permissions** to “Read and write permissions” so that workflows can, for example, create releases or attach artifacts.
-- **Secrets**: If any sensitive values are needed (e.g., code-signing credentials, if used), add them under **Settings → Secrets and variables → Actions**. However, for the Icon Editor, most builds can run without additional secrets thanks to fork-friendly defaults.
+<a name="quickstart"></a>
+## 2. Quickstart
 
-## 4. Running Builds and Tests on the Runner
+**For experienced users**, a brief overview:
 
-Once the runner is online and the repository is configured, your CI workflows will automatically pick it up for jobs that specify the corresponding labels.
+1. **Install Required Software**
+   - Ensure **LabVIEW 2021 SP1 32-bit and 64-bit** are installed. If you plan to build the package, install **LabVIEW 2023 (64-bit)** as well.
+   - [PowerShell 7+](https://github.com/PowerShell/PowerShell/releases/latest)
+   - [Git for Windows](https://github.com/git-for-windows/git/releases/latest)
 
-- Open a pull request or dispatch a workflow (like “Build VI Package”). In the GitHub Actions interface, you should see the job assigned to your self-hosted runner. 
-- The runner will checkout the code, then execute the build or test scripts in the repository. Monitor the output from the runner in real-time via the Actions page.
-- **Development Mode**: If your runner machine is also your development machine, be mindful of Development Mode. The “Development Mode Toggle” workflow can point LabVIEW to local source code. Ensure you disable Development Mode when running standard build/test workflows for consistent results.
+2. **Apply the VIPC (optional)**
+   - Apply `Tooling/deployment/runner_dependencies.vipc` with VIPM in **LabVIEW 2021 (32-bit)**; repeat for **LabVIEW 2021 (64-bit)**. If using **LabVIEW 2023 (64-bit)** for builds, apply the same VIPC there as well.
 
-## 5. Next Steps
+3. **Configure a Self-Hosted Runner**  
+   - Go to **Settings → Actions → Runners** in your (forked) repo.  
+   - Follow GitHub’s steps to add a Windows runner.
 
-With a self-hosted runner configured, the Icon Editor CI/CD workflows (build, test, etc.) will run in your LabVIEW environment, enabling full automation of the pipeline. For details on how the workflows function and how to troubleshoot any issues, see the [Local CI/CD Workflows guide](../../ci-workflows.md) and the [Troubleshooting and FAQ](../../ci/troubleshooting-faq.md).
+4. **Development Mode Toggle**  
+   - (Optional) Toggle LabVIEW dev mode (`Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`) via the **Development Mode Toggle** workflow.
 
-If you need to stop using the runner, you can remove it via GitHub Settings or stop the service on the machine. Always **update LabVIEW and VIPM** on the runner machine as needed to keep the environment in sync with project requirements.
+5. **Run Tests**
+   - Run the tests using the main **Build VI Package** CI workflow (it will execute the unit tests).
 
-*(Refer back to the main [README](../../../README.md) for an overview of the project structure and contribution workflow.)*
+6. **Build VI Package**  
+   - Invoke **Build VI Package & Release** to produce `.vip`, automatically version your code (labels vs. default patch), and optionally create a GitHub Release.  
+   - **You can also** pass in **org/repository** info (e.g., `-CompanyName "MyOrg"` or `-AuthorName "myorg/myrepo"`) to brand the resulting package with your unique identifiers.
+
+7. **Disable Dev Mode** (Optional)  
+   - Revert environment once building/testing is done.
+
+
+<a name="detailed-guide"></a>
+## 3. Detailed Guide
+
+<a name="development-vs-testing"></a>
+### 1. Development vs. Testing
+
+**Development Mode**  
+- Temporarily reconfigures `labview.ini` and `vi.lib` so LabVIEW loads your Icon Editor source directly, it also removes `lv_icon.lvlibp`.  
+- Enable/disable via the **Development Mode Toggle** workflow.
+
+**Testing / Distributable Builds**  
+- Usually done in a **normal** LabVIEW environment (Dev Mode disabled).  
+- Ensures that the `.vip` artifact or tests reflect a standard environment.
+
+
+<a name="available-github-actions"></a>
+### 2. Available GitHub Actions
+
+1. **Development Mode Toggle**  
+   - `mode: enable` → calls `Set_Development_Mode.ps1`.  
+   - `mode: disable` → calls `RevertDevelopmentMode.ps1`.  
+   - Great for reconfiguring LabVIEW for local dev vs. distribution builds.
+
+2. **Build VI Package & Release**
+   - Runs the unit tests and, on success, builds the `.vip`.
+   - **Label-based** semantic versioning (`major`, `minor`, `patch`). Defaults to `patch` if no label.
+   - **Counts existing tags** (`v*.*.*-build*`) to increment the global build number.
+   - **Fork-friendly** GPG: disabled for forks to avoid passphrase prompts.
+   - Publishes `.vip` as an artifact and optionally creates a GitHub Release if not a pull request.
+   - **Branding the Package**:
+     - You can **pass** metadata parameters like `-CompanyName` and `-AuthorName` into the build script. These map to fields in the **VI Package** (e.g., “Company Name,” “Author Name (Person or Company)”).
+     - This means each package can show the **organization** and **repository** that produced it, providing a **unique ID** if you have multiple forks or parallel versions.
+
+
+<a name="setting-up-a-self-hosted-runner"></a>
+### 3. Setting Up a Self-Hosted Runner
+
+**Steps**:
+
+1. **Install LabVIEW 2021 SP1 (32-bit and 64-bit)**  
+   - Confirm both are present on your Windows machine.  
+   - Apply `Tooling/deployment/runner_dependencies.vipc` to each if needed.
+
+2. **Install PowerShell 7+ and Git**  
+   - Reboot if newly installed so environment variables are recognized.
+
+3. **Add a Self-Hosted Runner**  
+   - **Settings → Actions → Runners** → **New self-hosted runner**  
+   - Follow GitHub’s CLI instructions.
+
+4. **Labels** (optional)  
+   - If the workflow references `runs-on: [self-hosted, iconeditor]`, label your runner accordingly or update the YAML’s `runs-on` lines.
+
+
+<a name="running-the-actions-locally"></a>
+### 4. Running the Actions Locally
+
+With your runner online:
+
+1. **Enable Dev Mode** (if needed)  
+   - **Actions → Development Mode Toggle**, set `mode: enable`.
+
+2. **Run Tests via Build VI Package**
+   - Execute **Build VI Package & Release** to run the unit tests; review the logs to confirm everything passes.
+
+3. **Build VI Package & Release**  
+   - Produces `.vip`, bumps the version, and can create a Git tag + GitHub Release (if not a PR).  
+   - **Pass** your **org/repo** info (e.g. `-CompanyName "AcmeCorp"` / `-AuthorName "AcmeCorp/IconEditor"`) to embed in the final package.  
+   - Artifacts appear in the run summary under **Artifacts**.
+
+4. **Disable Dev Mode** (if used)  
+   - `mode: disable` reverts your LabVIEW environment.
+
+5. **Review the `.vip`**  
+   - Download from **Artifacts** or check your Release page if a release was created.
+
+
+<a name="example-developer-workflow"></a>
+### 5. Example Developer Workflow
+
+1. **Enable Development Mode**: if you plan to actively modify the Icon Editor code inside LabVIEW.  
+2. **Code & Test**: Make changes, run the **Build VI Package & Release** workflow (which runs unit tests) to confirm stability.
+3. **Open a Pull Request**:  
+   - Assign a version bump label if you want `major`, `minor`, or `patch`.  
+   - The workflow checks this label upon merging.  
+4. **Merge**:  
+   - **Build VI Package & Release** triggers, incrementing version and uploading `.vip`.  
+   - **Metadata** (such as company/repo) is already integrated into the final `.vip`, so each build is easily identified.  
+5. **Disable Dev Mode**: Return to a normal LabVIEW environment.  
+6. **Install & Verify**: Download the `.vip` artifact for final validations.
+
+---
+
+## 4. Next Steps
+
+- **Check the Main Repo’s [README.md](../README.md)**: for environment disclaimers, additional tips, or project-specific instructions.  
+- **Extend the Workflows**: You can add custom steps for linting, coverage, or multi-version LabVIEW tests.  
+- **Submit Pull Requests**: If you refine scripts or fix issues, open a PR with logs showing your updated workflow runs.  
+- **Troubleshoot**: If manual environment edits are needed, consult `ManualSetup.md` or the original documentation for advanced configuration steps.  
+
+**Happy Building!** By integrating these workflows, you’ll maintain a **robust, automated CI/CD** pipeline for the LabVIEW Icon Editor—complete with **semantic versioning**, **build artifact uploads**, **metadata branding** (company/repo), and **GPG-signing** or **GPG-free** mode for forks.
