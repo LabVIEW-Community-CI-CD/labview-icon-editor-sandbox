@@ -1,0 +1,97 @@
+name: CI Pipeline (Composite)
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - release/*
+      - feature/*
+      - hotfix/*
+  pull_request:
+    branches:
+      - main
+      - develop
+      - release/*
+      - feature/*
+      - hotfix/*
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+jobs:
+  apply-deps:
+    name: Apply VIPC Dependencies
+    runs-on: self-hosted-windows-lv
+    strategy:
+      matrix:
+        include:
+          - lv-version: "2021"
+            bitness: "32"
+          - lv-version: "2021"
+            bitness: "64"
+          - lv-version: "2023"
+            bitness: "64"
+    steps:
+      - uses: ./.github/actions/apply-vipc
+        with:
+          minimum_supported_lv_version: ${{ matrix['lv-version'] }}
+          vip_lv_version:               ${{ matrix['lv-version'] }}
+          supported_bitness:            ${{ matrix.bitness }}
+          relative_path:                ${{ github.workspace }}
+          vipc_path:                    "Tooling/deployment/runner_dependencies.vipc"
+
+  missing-in-project-check:
+    name: Test Missing-In-Project Action on Windows
+    needs: apply-deps
+    runs-on: self-hosted-windows-lv
+    strategy:
+      fail-fast: false
+      matrix:
+        lv-version: ["2021"]
+        bitness:    ["64","32"]
+    steps:
+      - uses: ./.github/actions/missing-in-project
+        with:
+          lv-ver:       ${{ matrix.lv-version }}
+          arch:         ${{ matrix.bitness }}
+          project-file: "lv_icon_editor.lvproj"
+
+  test:
+    name: Run Unit Tests
+    needs: [apply-deps, missing-in-project-check]
+    runs-on: ${{ matrix.os == 'windows' && 'self-hosted-windows-lv' || 'self-hosted-linux-lv' }}
+    strategy:
+      matrix:
+        os: [windows]
+        lv-version: ["2021"]
+        bitness: ["64","32"]
+      fail-fast: false
+    steps:
+      - uses: ./.github/actions/run-unit-tests
+        with:
+          minimum_supported_lv_version: ${{ matrix['lv-version'] }}
+          supported_bitness:            ${{ matrix.bitness }}
+
+  build-package:
+    name: Build VI Package
+    needs: [test, apply-deps]
+    runs-on: self-hosted-windows-lv
+    steps:
+      - uses: ./.github/actions/build
+        with:
+          relative_path: ${{ github.workspace }}
+          major:         0
+          minor:         0
+          patch:         0
+          build:         1
+          commit:        ${{ github.sha }}
+          company_name:  ${{ github.repository_owner }}
+          author_name:   ${{ github.event.repository.name }}
