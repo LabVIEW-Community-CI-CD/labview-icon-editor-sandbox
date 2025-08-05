@@ -1,5 +1,8 @@
 name: CI Pipeline (Composite)
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -30,6 +33,9 @@ jobs:
   issue-status:
     name: Verify Issue Status
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
     outputs:
       proceed: ${{ steps.check.outputs.proceed }}
     steps:
@@ -209,6 +215,9 @@ jobs:
     name: Build ${{ matrix.bitness }}-bit Packed Library
     needs: [test, version]
     runs-on: self-hosted-windows-lv
+    permissions:
+      contents: read
+      actions: write
     strategy:
       matrix:
         bitness: [32, 64]
@@ -245,6 +254,9 @@ jobs:
     name: Build VI Package
     needs: [build-ppl, version]
     runs-on: self-hosted-windows-lv
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
