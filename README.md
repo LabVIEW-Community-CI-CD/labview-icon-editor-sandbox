@@ -64,7 +64,7 @@ For additional details and troubleshooting tips, see [INSTALL.md](INSTALL.md).
 3. **CI/CD Workflows** – GitHub Actions workflows are provided for common tasks:
    - **Build VI Package** – Compiles the source and produces a `.vip` artifact (VI Package).
    - **Development Mode Toggle** – Enables or disables a mode where LabVIEW loads the Icon Editor from source (for debugging vs. using the installed package).
-   - **Run Unit Tests** – Executes automated tests to verify the Icon Editor’s behavior in a clean LabVIEW environment.
+   - **Run Unit Tests** (now part of the main CI pipeline) – Executes automated tests to verify the Icon Editor’s behavior in a clean LabVIEW environment.
    Additional details on these pipelines are in [CI Workflows](docs/ci-workflows.md) and the [CI Workflow (Multi-Channel Release Support)](docs/powershell-cli-github-action-instructions.md).
 
 ---
@@ -76,7 +76,7 @@ We welcome both **code** and **non-code** contributions – from adding new feat
 - 📑 **Contributor License Agreement (CLA)** – External contributors must sign NI’s CLA before a pull request can be merged (this will be prompted automatically on your first PR). The CLA ensures NI has rights to distribute your code under MIT, and you retain rights to your contributions.
 - 🧭 **Steering Committee** – A small group of NI maintainers and community members governs the project’s direction. They approve significant changes and label issues as “Workflow: Open to contribution” once an idea is ready for external work.
 - 🔄 **Find an Issue to Work On** – Check the issue tracker for issues labeled “[Workflow: Open to contribution]” – these are tasks approved for community development. Comment on the issue to volunteer, and a maintainer will assign it to you and create a feature branch if one doesn’t exist.
-- 🧪 **Long-Running Features** – Major features that might span weeks or months can be developed on special `experiment/` branches with more rigorous CI (security scans, gated releases). See [EXPERIMENTS.md](docs/ci/experiments.md) for how experimental feature branches work.
+- 🧪 **Long-Running Features** – Major features that might span weeks or months can be developed on special `experiment/` branches with more rigorous CI (security scans, gated releases). See [EXPERIMENTS.md](docs/ci/experiments.md) for details on how experimental feature branches work.
 
 For detailed contribution guidelines (branching strategy, coding style, etc.), please see the [CONTRIBUTING.md](CONTRIBUTING.md) document. The `/docs` folder also contains setup guides and technical notes (summarized below).
 
@@ -105,7 +105,7 @@ For very large or long-term contributions, NI may use an `experiment/<feature-na
 - **Optional sub-branches** – The team can create sub-branches like `alpha`, `beta`, or `rc` under the experiment branch for staged testing releases (e.g. `experiment/feature/alpha`). These follow a multichannel release approach for gradual testing.
 - **Integration** – When the feature is complete, the experiment branch is reviewed and then merged into `develop` (and later into `main`) following Steering Committee approval. If an experiment is aborted or partially finished, it may be archived or selectively merged as appropriate.
 
-*(See [EXPERIMENTS.md](docs/ci/experiments.md) for the full guidelines on experimental branches.)*
+*(See [EXPERIMENTS.md](docs/ci/experiments.md) for full guidelines on experimental branches.)*
 
 ---
 
