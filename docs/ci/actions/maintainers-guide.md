@@ -9,9 +9,20 @@ Maintainers of the LabVIEW Icon Editor project handle day-to-day repository upke
 ## Role of Maintainers
 
 - **Code Reviews and Merging** – Review incoming pull requests for quality, style, and alignment with project goals. Only maintainers (and the Steering Committee) have write access to merge PRs. All merges follow the rule of passing CI and at least one maintainer approval.  
-- **Issue Triage** – Regularly monitor GitHub Issues and Discussions. Label issues appropriately (e.g., bugs, enhancements, “Workflow: Open to contribution”), and close or consolidate duplicates.  
-- **Community Support** – Engage on Discord and Discussion forums to answer contributor questions. Help new contributors find starter issues.  
+- **Issue Triage** – Regularly monitor GitHub Issues and Discussions. Label issues appropriately (e.g., bugs, enhancements, “Workflow: Open to contribution”), and close or consolidate duplicates.
+- **Community Support** – Engage on Discord and Discussion forums to answer contributor questions. Help new contributors find starter issues.
 - **Releases** – Work with NI release engineers or the Open-Source Program Manager to coordinate publishing new versions. Maintainers ensure that the `develop` branch is ready for release merges into `main`.
+
+## Creating Feature Branches
+
+When an issue is approved for work, maintainers must create a branch tied directly to that issue so the CI pipeline can validate its status.
+
+1. **Name the branch** `issue-<number>-<short-description>` (for example, `issue-123-fix-toolbar`).
+2. **Set the issue’s Status** field to `In Progress`. The [composite CI workflow](../../../.github/workflows/ci-composite.yml) checks this field and will skip most jobs if the issue is not marked in progress.
+3. **Branch from `develop`** and push the branch to the main repository so contributors can begin work.
+4. **Open PRs** from the `issue-<number>` branch into `develop` (or another target as appropriate).
+
+This process ensures that each feature branch is traceable to a GitHub issue and that CI only runs for actively tracked work.
 
 ## Admin Tasks and Final Merges
 
