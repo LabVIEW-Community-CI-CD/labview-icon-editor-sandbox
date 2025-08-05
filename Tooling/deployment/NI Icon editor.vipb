@@ -165,9 +165,6 @@
         <Path>Antidoc-Output</Path>
       </Exclusions>
       <Exclusions>
-        <Path>pipeline/scripts</Path>
-      </Exclusions>
-      <Exclusions>
         <Path>pipeline/templates</Path>
       </Exclusions>
       <Exclusions>

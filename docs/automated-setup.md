@@ -42,8 +42,8 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 3. **Apply** dependencies:  
    `Tooling\deployment\runner_dependencies.vipc` to **LabVIEW 2021 (32-bit) and LabVIEW 2021 (64-bit)**.
 
-4. **Open** PowerShell (Admin):  
-   Navigate to your working directory `pipeline\scripts`
+4. **Open** PowerShell (Admin):
+   Navigate to `.github\actions\set-development-mode`
 
 5. **Enable Dev Mode**:
    ```powershell
@@ -70,14 +70,13 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 
 3. **Open** PowerShell (Admin), go to:
    ```powershell
-   cd pipeline\scripts
+   cd .github\actions\build
    ```
 
 4. **Run** `Build.ps1`:
    ```powershell
    .\Build.ps1 `
        -RelativePath "C:\labview-icon-editor" `
-       -AbsolutePathScripts "C:\labview-icon-editor\pipeline\scripts" `
        -Major 1 -Minor 2 -Patch 3 -Build 45 `
     -Commit "my-commit-sha" `
     -LabVIEWMinorRevision 3 `
@@ -89,7 +88,7 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 
 5. **Revert Dev Mode (optional)**:
    ```powershell
-   .\RevertDevelopmentMode.ps1 -RelativePath "C:\labview-icon-editor"
+   ..\revert-development-mode\RevertDevelopmentMode.ps1 -RelativePath "C:\labview-icon-editor"
    ```
 
 6. **Install** the `.vip` in VIPM (as Admin). Validate your custom Icon Editor changes.
@@ -117,9 +116,8 @@ An example step in a GitHub Actions file might look like:
 ```yaml
 - name: Build Icon Editor
   run: |
-    pwsh .\Build.ps1 `
+    pwsh .\.github\actions\build\Build.ps1 `
       -RelativePath "$env:GITHUB_WORKSPACE" `
-      -AbsolutePathScripts "$env:GITHUB_WORKSPACE\pipeline\scripts" `
       -Major 1 -Minor 2 -Patch 0 -Build 10 `
       -Commit "${{ github.sha }}" `
       # You can pass metadata fields to brand the package:

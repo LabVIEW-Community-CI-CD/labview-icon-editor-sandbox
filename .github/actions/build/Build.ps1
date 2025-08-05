@@ -13,7 +13,6 @@
   Example usage:
     .\Build.ps1 `
       -RelativePath "C:\release\labview-icon-editor-fork" `
-      -AbsolutePathScripts "C:\release\labview-icon-editor-fork\pipeline\scripts" `
       -Major 1 -Minor 0 -Patch 0 -Build 3 -Commit "Placeholder" `
       -CompanyName "Acme Corporation" `
       -AuthorName "John Doe (Acme Corp)" `
@@ -24,9 +23,6 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$RelativePath,
-
-    [Parameter(Mandatory = $true)]
-    [string]$AbsolutePathScripts,
 
     [Parameter(Mandatory = $true)]
     [int]$Major = 1,
@@ -102,7 +98,6 @@ try {
     Write-Verbose "Script: Build.ps1 starting."
     Write-Verbose "Parameters received:"
     Write-Verbose " - RelativePath: $RelativePath"
-    Write-Verbose " - AbsolutePathScripts: $AbsolutePathScripts"
     Write-Verbose " - Major: $Major"
     Write-Verbose " - Minor: $Minor"
     Write-Verbose " - Patch: $Patch"
@@ -115,7 +110,9 @@ try {
     # Validate needed folders
     Assert-PathExists $RelativePath "RelativePath"
     Assert-PathExists "$RelativePath\resource\plugins" "Plugins folder"
-    Assert-PathExists $AbsolutePathScripts "Scripts folder"
+
+    $ActionsPath = Split-Path -Parent $PSScriptRoot
+    Assert-PathExists $ActionsPath "Actions folder"
 
     # 1) Clean up old .lvlibp in the plugins folder
     Write-Host "Cleaning up old .lvlibp files in plugins folder..." -ForegroundColor Yellow
@@ -138,7 +135,7 @@ try {
 
 #    # 2) Apply VIPC (32-bit)
 #    Write-Verbose "Now applying VIPC for 32-bit..."
-#    Execute-Script "$($AbsolutePathScripts)\ApplyVIPC.ps1" `
+#    Execute-Script $ApplyVIPC `
 #        ("-MinimumSupportedLVVersion 2021 " +
 #         "-VIP_LVVersion 2021 " +
 #         "-SupportedBitness 32 " +
@@ -147,7 +144,8 @@ try {
 
     # 3) Build LV Library (32-bit)
     Write-Verbose "Building LV library (32-bit)..."
-    Execute-Script "$($AbsolutePathScripts)\Build_lvlibp.ps1" `
+    $BuildLvlibp = Join-Path $ActionsPath "build-lvlibp/Build_lvlibp.ps1"
+    Execute-Script $BuildLvlibp `
         ("-MinimumSupportedLVVersion 2021 " +
          "-SupportedBitness 32 " +
          "-RelativePath `"$RelativePath`" " +
@@ -156,17 +154,20 @@ try {
 
     # 4) Close LabVIEW (32-bit)
     Write-Verbose "Closing LabVIEW (32-bit)..."
-    Execute-Script "$($AbsolutePathScripts)\Close_LabVIEW.ps1" `
+    $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
+    Execute-Script $CloseLabVIEW `
         "-MinimumSupportedLVVersion 2021 -SupportedBitness 32"
 
     # 5) Rename .lvlibp -> lv_icon_x86.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x86.lvlibp..."
-    Execute-Script "$($AbsolutePathScripts)\Rename-File.ps1" `
+    $RenameFile = Join-Path $ActionsPath "rename-file/Rename-file.ps1"
+    Execute-Script $RenameFile `
         "-CurrentFilename `"$RelativePath\resource\plugins\lv_icon.lvlibp`" -NewFilename 'lv_icon_x86.lvlibp'"
 
  #   # 6) Apply VIPC (64-bit)
  #   Write-Verbose "Now applying VIPC for 64-bit..."
- #   Execute-Script "$($AbsolutePathScripts)\ApplyVIPC.ps1" `
+#   $ApplyVIPC = Join-Path $ActionsPath "apply-vipc/ApplyVIPC.ps1"
+#   Execute-Script $ApplyVIPC `
  #       ("-MinimumSupportedLVVersion 2021 " +
  #        "-VIP_LVVersion 2021 " +
  #        "-SupportedBitness 64 " +
@@ -175,7 +176,7 @@ try {
 
     # 7) Build LV Library (64-bit)
     Write-Verbose "Building LV library (64-bit)..."
-    Execute-Script "$($AbsolutePathScripts)\Build_lvlibp.ps1" `
+    Execute-Script $BuildLvlibp `
         ("-MinimumSupportedLVVersion 2021 " +
          "-SupportedBitness 64 " +
          "-RelativePath `"$RelativePath`" " +
@@ -184,13 +185,13 @@ try {
     
     # 7.1) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Execute-Script "$($AbsolutePathScripts)\Close_LabVIEW.ps1" `
+    Execute-Script $CloseLabVIEW `
         "-MinimumSupportedLVVersion 2021 -SupportedBitness 64"
     
 
     # Rename .lvlibp -> lv_icon_x64.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x64.lvlibp..."
-    Execute-Script "$($AbsolutePathScripts)\Rename-File.ps1" `
+    Execute-Script $RenameFile `
         "-CurrentFilename `"$RelativePath\resource\plugins\lv_icon.lvlibp`" -NewFilename 'lv_icon_x64.lvlibp'"
 
     # -------------------------------------------------------------------------
@@ -220,7 +221,8 @@ try {
 
     # 9) Modify VIPB Display Information
     Write-Verbose "Modify VIPB Display Information (64-bit)..."
-    Execute-Script "$($AbsolutePathScripts)\ModifyVIPBDisplayInfo.ps1" `
+    $ModifyVIPB = Join-Path $ActionsPath "modify-vipb-display-info/ModifyVIPBDisplayInfo.ps1"
+    Execute-Script $ModifyVIPB `
         (
             # Use single-dash for all recognized parameters
             "-SupportedBitness 64 " +
@@ -238,7 +240,8 @@ try {
 
     # 11) Build VI Package (64-bit) 2023
     Write-Verbose "Building VI Package (64-bit)..."
-    Execute-Script "$($AbsolutePathScripts)\build_vip.ps1" `
+    $BuildVip = Join-Path $ActionsPath "build-vip/build_vip.ps1"
+    Execute-Script $BuildVip `
         (
             # Use single-dash for all recognized parameters
             "-SupportedBitness 64 " +
@@ -256,7 +259,7 @@ try {
 
     # 12) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Execute-Script "$($AbsolutePathScripts)\Close_LabVIEW.ps1" `
+    Execute-Script $CloseLabVIEW `
         "-MinimumSupportedLVVersion 2023 -SupportedBitness 64"
 
     Write-Host "All scripts executed successfully!" -ForegroundColor Green

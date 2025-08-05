@@ -22,10 +22,10 @@ In a multi-fork or multi-organization environment, **injecting the repository na
 - Maintains **consistent** versioning and naming conventions across builds.
 
 We achieve this by:
-1. **Constructing** a JSON object in [`Build.ps1`](../../../pipeline/scripts/Build.ps1), a top-level build script that orchestrates the process and sets fields such as:
+1. **Constructing** a JSON object in [`Build.ps1`](../../../.github/actions/build/Build.ps1), a top-level build script that orchestrates the process and sets fields such as:
    - `"Company Name"`
    - `"Author Name (Person or Company)"`
-2. **Calling** [`build_vip.ps1`](../../../pipeline/scripts/build_vip.ps1), which parses the JSON and updates the `.vipb` (VI Package Builder) file with the metadata.
+2. **Calling** [`build_vip.ps1`](../../../.github/actions/build-vip/build_vip.ps1), which parses the JSON and updates the `.vipb` (VI Package Builder) file with the metadata.
 3. **Using** GitHub Actions environment variables (like `${{ github.repository_owner }}`) to pass the org name, and `${{ github.repository }}` for the repository name.
 
 ---
@@ -66,9 +66,8 @@ jobs:
 
       - name: Run PowerShell Build
         run: |
-          pwsh .\Build.ps1 `
+          pwsh .\.github\actions\build\Build.ps1 `
             -RelativePath "$env:GITHUB_WORKSPACE" `
-            -AbsolutePathScripts "$env:GITHUB_WORKSPACE\pipeline\scripts" `
             -Major 1 -Minor 0 -Patch 0 -Build 42 `
             -Commit "${{ github.sha }}" `
             -CompanyName "${{ github.repository_owner }}" `
@@ -79,7 +78,7 @@ jobs:
 **Key points**:
 - **`${{ github.repository_owner }}`** is the **organization** (or user) that owns the repo.
 - **`${{ github.repository }}`** is the “orgName/repoName” string (e.g. `AcmeCorp/lv-icon-editor`).
- - These parameters feed into the final **JSON** that [`build_vip.ps1`](../../../pipeline/scripts/build_vip.ps1) uses to update the VI Package.
+ - These parameters feed into the final **JSON** that [`build_vip.ps1`](../../../.github/actions/build-vip/build_vip.ps1) uses to update the VI Package.
 
 ---
 
@@ -87,13 +86,13 @@ jobs:
 
 1. **Developer** pushes code to GitHub.  
 2. **GitHub Actions** triggers the workflow.  
-3. **Actions** checks out the repo and runs [`Build.ps1`](../../../pipeline/scripts/Build.ps1):
+3. **Actions** checks out the repo and runs [`Build.ps1`](../../../.github/actions/build/Build.ps1):
    1. Cleans old artifacts.  
    2. Applies VIPC (32-bit and 64-bit).  
    3. Builds the 32-bit and 64-bit libraries.  
    4. Constructs JSON containing `CompanyName` and `AuthorName` fields, derived from GitHub Action variables.  
-   5. Passes that JSON to [`build_vip.ps1`](../../../pipeline/scripts/build_vip.ps1).
-   6. [`build_vip.ps1`](../../../pipeline/scripts/build_vip.ps1) injects these fields and version info into the `.vipb` file.
+   5. Passes that JSON to [`build_vip.ps1`](../../../.github/actions/build-vip/build_vip.ps1).
+   6. [`build_vip.ps1`](../../../.github/actions/build-vip/build_vip.ps1) injects these fields and version info into the `.vipb` file.
    7. Generates the **Icon Editor** `.vip` package.  
 4. **Actions** can then publish or attach the final `.vip` as an artifact.
 
@@ -106,9 +105,8 @@ jobs:
 You can also run this locally. For example, if you wanted to embed some custom organization and repo data manually:
 
 ```powershell
-.\Build.ps1 `
+\.github\actions\build\Build.ps1 `
   -RelativePath "C:\labview-icon-editor-fork" `
-  -AbsolutePathScripts "C:\labview-icon-editor-fork\pipeline\scripts" `
   -Major 2 -Minor 1 -Patch 0 -Build 5 `
   -Commit "abc12345" `
   -CompanyName "Acme Corporation" `

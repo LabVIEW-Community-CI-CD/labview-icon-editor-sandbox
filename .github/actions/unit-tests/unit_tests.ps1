@@ -9,18 +9,12 @@
 .PARAMETER RelativePath
     Path to the repository root.
 
-.PARAMETER AbsolutePathScripts
-    Absolute path to the pipeline scripts directory.
-
 .EXAMPLE
-    .\unit_tests.ps1 -RelativePath "C:\labview-icon-editor" -AbsolutePathScripts "C:\labview-icon-editor\pipeline\scripts"
+    .\unit_tests.ps1 -RelativePath "C:\labview-icon-editor"
 #>
 param(
     [Parameter(Mandatory = $true)]
-    [string]$RelativePath,
-    
-    [Parameter(Mandatory = $true)]
-    [string]$AbsolutePathScripts
+    [string]$RelativePath
 )
 
 # Helper function to check for file or directory existence
@@ -63,7 +57,9 @@ try {
     # Validate required paths
     Assert-PathExists $RelativePath "RelativePath"
     Assert-PathExists "$RelativePath\resource\plugins" "Plugins folder"
-    Assert-PathExists $AbsolutePathScripts "Scripts folder"
+
+    $ActionsPath = Split-Path -Parent $PSScriptRoot
+    Assert-PathExists $ActionsPath "Actions folder"
 
     # Clean up .lvlibp files in the plugins folder
     Write-Host "Cleaning up old .lvlibp files in plugins folder..." -ForegroundColor Yellow
@@ -76,19 +72,21 @@ try {
     }
     
     # Run Unit Tests
-    Execute-Script "$($AbsolutePathScripts)\RunUnitTests.ps1" `
+    $RunUnitTests = Join-Path $ActionsPath "run-unit-tests/RunUnitTests.ps1"
+    Execute-Script $RunUnitTests `
         "-MinimumSupportedLVVersion 2021 -SupportedBitness 32 -RelativePath `"$RelativePath`""
 
     # Close LabVIEW
-    Execute-Script "$($AbsolutePathScripts)\Close_LabVIEW.ps1" `
+    $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
+    Execute-Script $CloseLabVIEW `
         "-MinimumSupportedLVVersion 2021 -SupportedBitness 32"
 
     # Run Unit Tests
-    Execute-Script "$($AbsolutePathScripts)\RunUnitTests.ps1" `
+    Execute-Script $RunUnitTests `
         "-MinimumSupportedLVVersion 2021 -SupportedBitness 64 -RelativePath `"$RelativePath`""
 
 	# Close LabVIEW
-    Execute-Script "$($AbsolutePathScripts)\Close_LabVIEW.ps1" `
+    Execute-Script $CloseLabVIEW `
         "-MinimumSupportedLVVersion 2021 -SupportedBitness 64"
 		
     Write-Host "All scripts executed successfully!" -ForegroundColor Green
