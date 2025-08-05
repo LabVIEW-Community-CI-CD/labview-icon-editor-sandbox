@@ -27,8 +27,25 @@ on:
   workflow_dispatch:
 
 jobs:
+  changes:
+    name: Detect VIPC changes
+    runs-on: ubuntu-latest
+    outputs:
+      vipc: ${{ steps.filter.outputs.vipc }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            vipc:
+              - '**/*.vipc'
+
   apply-deps:
     name: Apply VIPC Dependencies
+    needs: changes
     runs-on: self-hosted-windows-lv
     strategy:
       matrix:
@@ -41,12 +58,15 @@ jobs:
             bitness: "64"
     steps:
       - uses: ./.github/actions/apply-vipc
+        if: needs.changes.outputs.vipc == 'true'
         with:
           minimum_supported_lv_version: ${{ matrix['lv-version'] }}
           vip_lv_version:               ${{ matrix['lv-version'] }}
           supported_bitness:            ${{ matrix.bitness }}
           relative_path:                ${{ github.workspace }}
           vipc_path:                    "Tooling/deployment/runner_dependencies.vipc"
+      - run: echo "No .vipc changes detected; skipping dependency application."
+        if: needs.changes.outputs.vipc != 'true'
 
   version:
     name: Compute Version
