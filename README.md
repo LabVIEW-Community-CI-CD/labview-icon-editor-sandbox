@@ -1,6 +1,6 @@
 # LabVIEW Icon Editor
 
-[![Build VI Package](https://github.com/ni/labview-icon-editor/actions/workflows/ci-composite.yml/badge.svg)](https://github.com/ni/labview-icon-editor/actions/workflows/ci-composite.yml)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/ni/labview-icon-editor/ci-composite.yml?branch=main)](https://github.com/ni/labview-icon-editor/actions/workflows/ci-composite.yml)
 [![Latest Release](https://img.shields.io/github/v/release/ni/labview-icon-editor?label=release)](https://github.com/ni/labview-icon-editor/releases/latest)
 [![Discord Chat](https://img.shields.io/discord/1319915996789739540?label=Discord&logo=discord&style=flat)](https://discord.gg/q4d3ggrFVA)
 [![License: MIT](https://img.shields.io/github/license/ni/labview-icon-editor?style=flat)](LICENSE)
@@ -12,17 +12,17 @@
 
 **For LabVIEW Users:**
 
-- [Overview](#overview)
-- [Installation](#installation)
+- [Overview](#-overview)
+- [Installation](#-installation)
 
 **For Contributors:**
 
-- [Key Components](#key-components)
-- [Getting Started (Contributing)](#getting-started--contributing)
-- [Feature & Experiment Workflows](#feature--experiment-workflows)
-- [Documentation](#documentation)
-- [License & CLA](#license--cla)
-- [Contact & Community](#contact--community)
+- [Key Components](#-key-components)
+- [Getting Started (Contributing)](#-getting-started--contributing)
+- [Feature & Experiment Workflows](#-feature--experiment-workflows)
+- [Documentation](#-documentation)
+- [License & CLA](#-license--cla)
+- [Contact & Community](#-contact--community)
 
 ---
 
