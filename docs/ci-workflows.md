@@ -27,10 +27,10 @@ Automating your Icon Editor builds and tests:
 - Handles GPG signing in the main repo but **disables** it for forks (so fork owners aren’t blocked by passphrase prompts)  
 - **Allows you to brand** each VI Package build with your organization or repository name for unique identification
 
-**Prerequisites**:  
-- LabVIEW 2021 SP1  (32 and 64-bit)  
-- PowerShell 7+  
-- Git for Windows  
+**Prerequisites**:
+- LabVIEW 2021 SP1 (32-bit and 64-bit) and LabVIEW 2023 (64-bit)
+- PowerShell 7+
+- Git for Windows
 
 ---
 
@@ -50,10 +50,9 @@ Automating your Icon Editor builds and tests:
    Use the main CI workflow (`ci-composite.yml`) to confirm your environment is valid.
    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
 
-5. **Build VI Package and Release**
-   - Produces `.vip` artifacts automatically, **including** optional metadata fields (`-CompanyName`, `-AuthorName`) that let you **brand** your package.  
-   - Uses **label-based** version bumping (major/minor/patch) on pull requests.  
-   - Creates tags and releases for direct pushes (unless it’s a PR).
+5. **Build VI Package**
+   - Produces `.vip` artifacts automatically, **including** optional metadata fields (`-CompanyName`, `-AuthorName`) that let you **brand** your package.
+   - Uses **label-based** version bumping (major/minor/patch) on pull requests.
 
 6. **Disable Dev Mode** (optional)  
    Reverts your environment to normal LabVIEW settings, removing local overrides.
@@ -84,25 +83,26 @@ Below are the **key GitHub Actions** provided in this repository:
    - Invokes `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.  
    - Usually triggered via `workflow_dispatch` for manual toggling.
 
-2. **[Build VI Package and Release](ci/actions/build-vi-package.md)**
-   - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`) or defaults to `patch` for direct pushes.  
-   - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).  
+2. **[Build VI Package](ci/actions/build-vi-package.md)**
+   - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`) or defaults to `patch` for direct pushes.
+   - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).
    - **Fork-Friendly**: Disables GPG signing if it detects a fork (so no passphrase is needed). In the **main repo** (`ni/labview-icon-editor`), signing remains active.
    - Produces the `.vip` file via a PowerShell script (e.g., `Build.ps1`).
    - **You can pass metadata** (e.g., `-CompanyName`, `-AuthorName`) to embed your organization or repository into the generated `.vip` for distinct branding.
    - Uploads the `.vip` artifact to GitHub’s build artifacts.
-   - Creates a **GitHub Release** for direct pushes (not for PRs).
 
 #### Jobs in CI workflow
 
 The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks the build into several jobs:
 
-- **prepare** – checks out the repository and marks it as a safe Git directory.
+- **changes** – checks out the repository and detects `.vipc` file changes to determine if dependencies need to be applied.
 - **version** – computes the semantic version and build number using commit count and PR labels.
 - **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses.
 - **missing-in-project-check** – verifies every source file is referenced in the `.lvproj`.
 - **test** – runs LabVIEW unit tests across the supported matrix.
-- **build-package** – builds the VI package, tags the commit, and uploads artifacts/releases.
+- **build-ppl (32-bit)** – builds the 32-bit packed library.
+- **build-ppl (64-bit)** – builds the 64-bit packed library.
+- **build-vip** – packages the final VI Package using the built libraries and version information.
 
 *(The **Run Unit Tests** workflow has been consolidated into the main CI process.)*
 
@@ -110,9 +110,9 @@ The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks 
 
 ### 3.3 Setting Up a Self-Hosted Runner
 
-1. **Install Prerequisites**:  
-   - LabVIEW 2021 SP1  
-   - PowerShell 7+  
+1. **Install Prerequisites**:
+   - LabVIEW 2021 SP1 (32-bit and 64-bit) and LabVIEW 2023 (64-bit)
+   - PowerShell 7+
    - Git for Windows
 
 2. **Add Self-Hosted Runner**:  
@@ -156,13 +156,13 @@ Although GitHub Actions primarily run on GitHub-hosted or self-hosted agents, yo
    - Use the main CI workflow (or a local script) to verify your changes pass.
    - Keep Dev Mode enabled if needed for debugging; disable it if you want a “clean” environment.
 
-3. **Open a Pull Request** and **Label** it:  
-   - Assign `major`, `minor`, or `patch` to control the version bump.  
-   - The CI will validate your code but *won’t* tag or release until merged.
+3. **Open a Pull Request** and **Label** it:
+   - Assign `major`, `minor`, or `patch` to control the version bump.
+   - The CI validates your code without creating tags or releases.
 
-4. **Merge the PR** into `develop` (or `main`):  
-   - The **Build VI Package and Release** workflow automatically tags the commit (e.g., `v1.2.0-build7`) and uploads the `.vip`.  
-   - **Inside** that `.vip`, the fields for **“Company Name”** and **“Author Name (Person or Company)”** can reflect your **organization** or **repo**, ensuring it’s easy to identify which fork or team produced the build.
+4. **Merge the PR** into `develop` (or `main`):
+     - The **Build VI Package** workflow builds and uploads the `.vip` artifact.
+     - **Inside** that `.vip`, the fields for **“Company Name”** and **“Author Name (Person or Company)”** can reflect your **organization** or **repo**, ensuring it’s easy to identify which fork or team produced the build.
 
 5. **Disable Development Mode**:  
    - Switch LabVIEW back to normal mode.  
@@ -177,4 +177,4 @@ Although GitHub Actions primarily run on GitHub-hosted or self-hosted agents, yo
 - **Version Enforcement**: Pull requests without a version label default to `patch`; you can enforce labeling with an optional “Label Enforcer” step if desired.  
 - **Branding**: To highlight the **organization** or **repository** behind a particular build, simply pass `-CompanyName` and `-AuthorName` (or similar parameters) into the `Build.ps1` script. This metadata flows into the final **Display Information** of the Icon Editor’s VI Package.
 
-By adopting these workflows—**Development Mode Toggle** and **Build VI Package and Release**—you can maintain a **streamlined, consistent** CI/CD process for the Icon Editor while customizing the VI Package with your own **unique** or **fork-specific** branding.
+By adopting these workflows—**Development Mode Toggle** and **Build VI Package**—you can maintain a **streamlined, consistent** CI/CD process for the Icon Editor while customizing the VI Package with your own **unique** or **fork-specific** branding.
