@@ -135,6 +135,7 @@ jobs:
   apply-deps:
     name: Apply VIPC Dependencies
     needs: changes
+    if: needs.changes.outputs.vipc == 'true'
     runs-on: self-hosted-windows-lv
     strategy:
       matrix:
@@ -147,15 +148,12 @@ jobs:
             bitness: "64"
     steps:
       - uses: ./.github/actions/apply-vipc
-        if: needs.changes.outputs.vipc == 'true'
         with:
           minimum_supported_lv_version: ${{ matrix['lv-version'] }}
           vip_lv_version:               ${{ matrix['lv-version'] }}
           supported_bitness:            ${{ matrix.bitness }}
           relative_path:                ${{ github.workspace }}
           vipc_path:                    "Tooling/deployment/runner_dependencies.vipc"
-      - run: echo "No .vipc changes detected; skipping dependency application."
-        if: needs.changes.outputs.vipc != 'true'
 
   version:
     name: Compute Version
@@ -177,7 +175,7 @@ jobs:
 
   missing-in-project-check:
     name: Test Missing-In-Project Action on Windows
-    needs: apply-deps
+    needs: changes
     runs-on: self-hosted-windows-lv
     strategy:
       fail-fast: false
@@ -193,7 +191,7 @@ jobs:
 
   test:
     name: Run Unit Tests
-    needs: [apply-deps, missing-in-project-check]
+    needs: [changes, missing-in-project-check]
     runs-on: ${{ matrix.os == 'windows' && 'self-hosted-windows-lv' || 'self-hosted-linux-lv' }}
     strategy:
       matrix:
