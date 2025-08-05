@@ -205,15 +205,23 @@ jobs:
           minimum_supported_lv_version: ${{ matrix['lv-version'] }}
           supported_bitness:            ${{ matrix.bitness }}
 
-  build-ppl-x86:
-    name: Build 32-bit Packed Library
+  build-ppl:
+    name: Build ${{ matrix.bitness }}-bit Packed Library
     needs: [test, version]
     runs-on: self-hosted-windows-lv
+    strategy:
+      matrix:
+        bitness: [32, 64]
+        include:
+          - bitness: 32
+            suffix: x86
+          - bitness: 64
+            suffix: x64
     steps:
       - uses: ./.github/actions/build-lvlibp
         with:
           minimum_supported_lv_version: 2021
-          supported_bitness: 32
+          supported_bitness: ${{ matrix.bitness }}
           relative_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}
@@ -223,47 +231,19 @@ jobs:
       - uses: ./.github/actions/close-labview
         with:
           minimum_supported_lv_version: 2021
-          supported_bitness: 32
+          supported_bitness: ${{ matrix.bitness }}
       - uses: ./.github/actions/rename-file
         with:
           current_filename: ${{ github.workspace }}/resource/plugins/lv_icon.lvlibp
-          new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x86.lvlibp
+          new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_${{ matrix.suffix }}.lvlibp
       - uses: actions/upload-artifact@v4
         with:
-          name: lv_icon_x86.lvlibp
-          path: resource/plugins/lv_icon_x86.lvlibp
-
-  build-ppl-x64:
-    name: Build 64-bit Packed Library
-    needs: [test, version]
-    runs-on: self-hosted-windows-lv
-    steps:
-      - uses: ./.github/actions/build-lvlibp
-        with:
-          minimum_supported_lv_version: 2021
-          supported_bitness: 64
-          relative_path: ${{ github.workspace }}
-          major: ${{ needs.version.outputs.MAJOR }}
-          minor: ${{ needs.version.outputs.MINOR }}
-          patch: ${{ needs.version.outputs.PATCH }}
-          build: ${{ needs.version.outputs.BUILD }}
-          commit: ${{ github.sha }}
-      - uses: ./.github/actions/close-labview
-        with:
-          minimum_supported_lv_version: 2021
-          supported_bitness: 64
-      - uses: ./.github/actions/rename-file
-        with:
-          current_filename: ${{ github.workspace }}/resource/plugins/lv_icon.lvlibp
-          new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x64.lvlibp
-      - uses: actions/upload-artifact@v4
-        with:
-          name: lv_icon_x64.lvlibp
-          path: resource/plugins/lv_icon_x64.lvlibp
+          name: lv_icon_${{ matrix.suffix }}.lvlibp
+          path: resource/plugins/lv_icon_${{ matrix.suffix }}.lvlibp
 
   build-vip:
     name: Build VI Package
-    needs: [build-ppl-x86, build-ppl-x64, version]
+    needs: [build-ppl, version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: actions/checkout@v3
@@ -274,12 +254,9 @@ jobs:
         # output_path defaults to Tooling/deployment/release_notes.md
       - uses: actions/download-artifact@v4
         with:
-          name: lv_icon_x86.lvlibp
           path: resource/plugins
-      - uses: actions/download-artifact@v4
-        with:
-          name: lv_icon_x64.lvlibp
-          path: resource/plugins
+          pattern: lv_icon_*.lvlibp
+          merge-multiple: true
       - name: Generate display information JSON
         id: display-info
         shell: pwsh
