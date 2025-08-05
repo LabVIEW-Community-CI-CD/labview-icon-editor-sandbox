@@ -135,9 +135,9 @@ Although GitHub Actions primarily run on GitHub-hosted or self-hosted agents, yo
    - Confirm everything passes in your local environment or via the main CI workflow.
    - If you have custom or dev references, ensure Dev Mode is toggled appropriately.
 
-3. **Build VI Package**:  
-   - Manually invoke `Build.ps1` from `pipeline/scripts` to generate a `.vip`.  
-   - Pass optional metadata fields (e.g., `-CompanyName`, `-AuthorName`) if you want your build to be **branded**.  
+3. **Build VI Package**:
+   - Manually invoke `Build.ps1` from `.github/actions/build` to generate a `.vip`.
+   - Pass optional metadata fields (e.g., `-CompanyName`, `-AuthorName`) if you want your build to be **branded**.
    - On GitHub Actions, the workflow will produce and upload the artifact automatically.
 
 4. **Disable Dev Mode**:  

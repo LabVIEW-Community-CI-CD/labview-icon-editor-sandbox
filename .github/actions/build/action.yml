@@ -13,7 +13,6 @@ runs:
       run: |
         & "${{ github.action_path }}/Build.ps1" `
           -RelativePath "${{ inputs.relative_path }}" `
-          -AbsolutePathScripts "${{ inputs.relative_path }}/pipeline/scripts" `
           -Major ${{ inputs.major }} `
           -Minor ${{ inputs.minor }} `
           -Patch ${{ inputs.patch }} `

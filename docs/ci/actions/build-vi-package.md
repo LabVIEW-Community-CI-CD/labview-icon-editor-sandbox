@@ -289,7 +289,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
   ```yaml
   - name: Run LabVIEW Tests
     shell: pwsh
-    run: .\pipeline\scripts\TestLabVIEW.ps1
+    run: .\.github\actions\run-unit-tests\RunUnitTests.ps1
   ```
 - Ensure they pass before building the `.vip`. If they fail, the script can exit with a non-zero code, stopping the release.
 
