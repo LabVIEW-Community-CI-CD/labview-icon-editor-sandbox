@@ -101,7 +101,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 **Possible Causes**:
 - The workflow only checks for certain labels (`major`, `minor`, `patch`). Typos or different capitalization might be ignored.
-- You’re pushing directly to a branch instead of creating a PR (so no label is read).
+- You’re pushing directly to a branch instead of creating a PR. Version bumps require a labeled pull request.
 
 **Solution**:
 1. Make sure the label is exactly `major`, `minor`, or `patch` in lowercase (unless your workflow script also checks for capitalized labels).  

@@ -253,8 +253,8 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
    - If it’s `release/*`, might become `v1.3.0-rc.1-build46`.
 
 ### 7.2 Direct Push to Main or Develop
-- **Scenario**: You quickly push a fix to `develop` without a PR label.
-- **Action**: The workflow sees no label, so major/minor/patch remain unchanged. The build number increments automatically.
+- **Scenario**: You quickly push a fix to `develop` without opening a PR.
+- **Action**: With no pull request labels available, major/minor/patch remain unchanged while the build number increments automatically.
 - **Result**: The new tag might go from `v1.2.3-build46` → `v1.2.3-build47`.
 
 ### 7.3 Working on a Release Branch
@@ -329,8 +329,8 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 ## 10. **FAQ**
 
-**Q:** *How do I force a “patch” bump if I push directly to develop?*  
-**A:** You can edit the “Determine bump type” step to default to `patch` instead of `none` if no label is found.
+**Q:** *How do I force a “patch” bump if I push directly to develop?*
+**A:** Use a pull request with the `patch` label. Direct pushes without PR labels always use the previous version numbers.
 
 **Q:** *What if I want a final release immediately, without draft mode?*  
 **A:** Set `DRAFT_RELEASE: false`. Then your release is published the moment the workflow completes.

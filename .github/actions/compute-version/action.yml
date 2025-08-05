@@ -37,12 +37,20 @@ runs:
       with:
         github-token: ${{ inputs.github_token }}
         script: |
+          const allowed = ['major', 'minor', 'patch'];
           let bump = 'none';
           if (context.event_name === 'pull_request') {
             const labels = context.payload.pull_request.labels.map(l => l.name.toLowerCase());
-            if (labels.includes('major')) bump = 'major';
-            else if (labels.includes('minor')) bump = 'minor';
-            else if (labels.includes('patch')) bump = 'patch';
+            const found = labels.filter(l => allowed.includes(l));
+            if (found.length === 0) {
+              core.setFailed('Missing required release label: major, minor, or patch.');
+              return;
+            }
+            if (found.length > 1) {
+              core.setFailed(`Conflicting release labels detected: ${found.join(', ')}`);
+              return;
+            }
+            bump = found[0];
           }
           core.setOutput('bump_type', bump);
 
