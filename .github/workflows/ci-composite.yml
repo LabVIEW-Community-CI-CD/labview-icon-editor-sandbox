@@ -31,7 +31,7 @@ on:
   workflow_dispatch: # manual trigger
 
 jobs:
-  # Skip subsequent jobs unless the linked issue's Status is "In Progress"
+  # Skip subsequent jobs unless the branch is associated with an issue in progress
   issue-status:
     name: Verify Issue Status
     runs-on: ubuntu-latest
@@ -50,17 +50,16 @@ jobs:
             const fs = require('fs');
             const branch = context.ref.replace('refs/heads/', '');
             if (!branch.startsWith('issue-')) {
-              core.setOutput('proceed', 'true');
-              core.info(
-                `Branch '${branch}' is not issue-specific. CI will proceed.`
-              );
+              core.setOutput('proceed', 'false');
+              const msg = `Branch '${branch}' is not issue-specific. CI will be skipped.`;
+              core.info(msg);
               fs.appendFileSync(
                 process.env.GITHUB_STEP_SUMMARY,
                 [
                   '### Issue Status',
                   '',
                   `Branch ${branch} is not associated with an issue.`,
-                  'CI will run.',
+                  'CI will be skipped.',
                   ''
                 ].join('\n')
               );
@@ -185,7 +184,8 @@ jobs:
 
   missing-in-project-check:
     name: Test Missing-In-Project Action on Windows
-    needs: changes
+    needs: [changes, apply-deps]
+    if: ${{ needs.changes.result == 'success' && (needs.apply-deps.result == 'success' || needs.apply-deps.result == 'skipped') }}
     runs-on: self-hosted-windows-lv
     strategy:
       fail-fast: false
