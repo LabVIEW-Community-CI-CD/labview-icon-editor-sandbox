@@ -78,13 +78,13 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 - (Optional) Additional Windows components (like .NET or Visual Studio) if your pipeline references them.
 
 ### 2.3 Additional Software & Tools
-- **Build Tools**: Some steps may call internal scripts (`Build.ps1`) that assume a certain LabVIEW version or environment.  
-- **Chocolatey** or other package managers only if your script references them.  
-- No `gh` CLI is strictly required—this workflow relies on `Invoke-RestMethod` for uploading release assets if needed.
+- **Build Tools**: The composite workflow uses the `build-lvlibp` and `build-vip` GitHub actions to compile libraries and create the `.vip` package.
+- **Chocolatey** or other package managers only if your script references them.
+- The workflow interacts with GitHub using built-in actions; no `gh` CLI is required.
 
 ### 2.4 Permissions & Credentials
-- **contents: write**: The GITHUB_TOKEN must allow pushing tags and creating releases.  
-- For **forks**, no special credentials are needed beyond GITHUB_TOKEN—if GPG is disabled, there’s no passphrase to worry about.
+- **contents: read**: The GITHUB_TOKEN needs read access to download and upload artifacts.
+- For **forks**, no special credentials are required beyond the default token.
 
 ### 2.5 Hardware/Performance Considerations
 - Building LabVIEW packages can be memory- and CPU-intensive. The runner should have enough resources for your largest builds (e.g., 4+ cores, 8GB+ RAM).  
@@ -96,16 +96,11 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ## 3. **Action Configuration & Usage**
 
 ### 3.1 How the Action Is Triggered
-- **push**: On branches `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `hotfix/*`.
+- **push**: On branches `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `feature/*`, `hotfix/*`.
 - **pull_request**: For PRs into those branches, so you can detect version labels.
 - **workflow_dispatch**: Maintainers can manually run from the Actions tab if needed (e.g., for a hotfix you want to re-release).
 
 ### 3.2 Configurable Inputs / Parameters
-- **Environment Variables**:
-  - `DRAFT_RELEASE` (`true`/`false`): Are releases initially **draft**?  
-  - `USE_AUTO_NOTES` (`true`/`false`): Use GitHub’s auto-generated release notes?  
-  - `ATTACH_ARTIFACTS_TO_RELEASE` (`true`/`false`): Attach the `.vip` to the final release?  
-  - `DISABLE_GPG_ON_FORKS` (`true`/`false`): If `true`, toggles off GPG signing for forks.  
 - **PR Labels**: `major`, `minor`, `patch`, or none. If none, only the build number changes.
 
 ### 3.3 Customization & Fork Setup
@@ -115,13 +110,8 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
   3. **Self-Hosted Runner**: Confirm your runner has the `iconeditor` label or update `runs-on` to match your runner’s labels.
   4. **Write Permissions**: In fork settings → Actions → General, ensure “Workflow Permissions” = “Read and write.”
 
-- **Overriding Defaults**:
-  - In your workflow’s `env:` block or job-level `env:`, you can set `DRAFT_RELEASE: false` if you want automatic publishing, or `ATTACH_ARTIFACTS_TO_RELEASE: true` to attach `.vip`.  
-  - If you want GPG signing on your fork, set `DISABLE_GPG_ON_FORKS: false` (though you must provide keys).
-
 ### 3.4 Artifact Publication
-- By default, the `.vip` is **uploaded** as an ephemeral artifact for that run.  
-- If `ATTACH_ARTIFACTS_TO_RELEASE` is true, it’s also added to the GitHub Release under “Assets” so users can access it any time.
+- The `.vip` is **uploaded** as an ephemeral artifact for that run.
 
 
 
@@ -129,46 +119,28 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 ### 4.1 Pipeline Overview
 
-1. **Disable GPG Signing (if Fork)**  
-   - If `DISABLE_GPG_ON_FORKS == true` and `github.repository` doesn’t match the official repo name, the workflow sets `commit.gpgsign=false` and `tag.gpgsign=false`.  
-   - Purpose: Avoid passphrase prompts or errors for fork maintainers without GPG keys.
-
-2. **Check Out & Full Clone**  
+1. **Check Out & Full Clone**
    - Uses `actions/checkout@v3` with `fetch-depth: 0` so we get the entire commit history (required for commit-based build number).
 
-3. **Determine Bump Type**  
+2. **Determine Bump Type**
    - On PR events, scans the PR labels: `major`, `minor`, `patch`, or defaults to `none`.  
    - If `none`, no version increment beyond the build number.
 
-4. **Commit-Based Build Number**  
+3. **Commit-Based Build Number**
    - We run `git rev-list --count HEAD`, storing the integer in `new_build_number`.  
    - This increments automatically with every commit, ensuring a unique build suffix like `-build37`.
 
-5. **Compute Final Version**
+4. **Compute Final Version**
    - Merges the label-based bump with existing tags (if any).
    - If on `release-alpha/*`, `release-beta/*`, or `release-rc/*`, appends `-alpha.<N>`, `-beta.<N>`, or `-rc.<N>` respectively.
    - Always adds `-build<BUILD_NUMBER>` last, e.g. `v1.2.3-rc.5-build37`.
 
-6. **Build the Icon Editor VI Package**  
-   - Calls a script (`Build.ps1`) that actually compiles LabVIEW code and produces a `.vip` file in `builds/VI Package/`.
+5. **Build the Icon Editor VI Package**
+   - Uses the `build-lvlibp` action to compile the packed libraries.
+   - Runs the `build-vip` action to generate the final `.vip` file.
 
-7. **Capture & Upload Artifacts**  
-   - Finds the `.vip` in `builds/VI Package/`.  
-   - Uploads it as an ephemeral artifact for the current Actions run.
-
-8. **Tag & Push**  
-   - If it’s not a pull request event, creates an annotated tag (e.g., `v1.2.3-build37`) and pushes it to the remote.  
-   - Requires `contents: write` permission for the `GITHUB_TOKEN`.
-
-9. **Create GitHub Release**  
-   - If `DRAFT_RELEASE` is `true`, it’s a draft release. If `false`, publishes immediately.  
-   - If `USE_AUTO_NOTES` is `true`, sets `generate_release_notes: true` for auto content.
-
-10. **Attach `.vip` to the Release** (if `ATTACH_ARTIFACTS_TO_RELEASE == true`)  
-   - Uploads the `.vip` to the release’s “Assets” so it’s accessible even after ephemeral artifacts expire.
-
-11. **Re-Enable GPG** (if needed)  
-   - If GPG was disabled, the Action restores the original commit/tag signing settings.
+6. **Capture & Upload Artifacts**
+   - Uploads the generated `.vip` as an ephemeral artifact for the current Actions run.
 
 ### 4.2 Version or Tagging Steps
 
@@ -179,38 +151,26 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 - **`release-alpha/*`, `release-beta/*`, `release-rc/*`** branches → Add `-alpha.<N>`, `-beta.<N>`, or `-rc.<N>` suffixes to indicate pre-release.
 - Merging back to `main` typically yields a final version with no pre-release suffix.
-- If `draft_release` is `true`, maintainers can manually convert a draft release to a final one after verifying assets or notes.
+- Maintainers can manually convert a pre-release to a final release after verifying assets or notes.
 
 
 
 ## 5. **Security & Permissions**
 
 ### 5.1 Secure Data Handling
-1. **GITHUB_TOKEN**  
-   - This workflow relies on GitHub’s ephemeral GITHUB_TOKEN, which needs enough scope to push tags and create releases (i.e., `contents: write`).
-   - Make sure your repository’s settings under **Actions** → **General** → **Workflow permissions** is set to **Read and write permissions**.
+1. **GITHUB_TOKEN**
+   - This workflow relies on GitHub’s ephemeral GITHUB_TOKEN with read permissions to access the repository and upload artifacts.
+   - Ensure your repository’s settings under **Actions** → **General** → **Workflow permissions** allow the workflow to read contents and publish artifacts.
 
-2. **LabVIEW License & Keys**  
+2. **LabVIEW License**
    - Your self-hosted runner must have a **validly licensed** copy of LabVIEW. If LabVIEW is not licensed or is missing required modules, the build might fail.
-   - If you choose to sign `.vip` or other files, ensure the runner has access to the appropriate certificates or GPG keys (if not disabling GPG on forks).
 
-3. **Fork Environments**  
-   - If the repository is not the official `ni/labview-icon-editor`, and `DISABLE_GPG_ON_FORKS` is set to `true`, this workflow disables commit and tag signing.  
-   - Without that toggle, a fork would often fail if it doesn’t have the correct signing keys available.
+3. **No Long-Term Secrets**
+   - By default, no additional secrets are stored. The ephemeral GITHUB_TOKEN is enough for standard build tasks.
 
-4. **No Long-Term Secrets**  
-   - By default, no additional secrets are stored. The ephemeral GITHUB_TOKEN is enough for standard tagging and release tasks.
-
-### 5.2 Permission Settings & Enforcement
-- If you use **branch or tag protection rules**, configure them so that the GitHub Actions token can create tags.
-- To allow auto-tagging on new versions:
-  1. **Tag Creation** must not be blocked by your repo’s protection rules.
-  2. For changes to the default branch (like `main`), ensure the Action can push if it’s set up with required status checks (or turn on “Allow GitHub Actions to bypass rules” in branch protections).
-
-### 5.3 Fork & Pull Request Security
-- For a public fork, limit your workflow’s scope if you worry about malicious PRs.  
-- By default, secrets like `GITHUB_TOKEN` are available only in limited capacity on PRs from external repos.  
-- GPG signing logic is automatically disabled for forks if you set `DISABLE_GPG_ON_FORKS` to `true`, preventing signing prompts or errors.
+### 5.2 Fork & Pull Request Security
+- For a public fork, limit your workflow’s scope if you worry about malicious PRs.
+- By default, secrets like `GITHUB_TOKEN` are available only in limited capacity on PRs from external repos.
 
 
 
@@ -219,8 +179,8 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 6.1 Keeping the Workflow Updated
 1. **Actions Versions**  
    - This workflow references certain actions, like `actions/checkout@v3` or `actions/github-script@v6`. Keep an eye on updates or deprecations.
-2. **Build.ps1**  
-   - If your LabVIEW project evolves or you add steps, update the `Build.ps1` script accordingly.
+2. **Build Actions**
+   - If your LabVIEW project evolves or you add steps, keep the `build-lvlibp` and `build-vip` actions up to date.
 3. **Windows Runner Updates**  
    - Ensure your self-hosted runner OS is patched and has any new LabVIEW versions if your project updates.
 
@@ -277,7 +237,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 1. **Fork the Repo**: Copy `.github/workflows/ci-composite.yml` to your fork.
 2. **Push Changes**: Create or modify a branch in your fork.
 3. **Open PR (optional)**: If you label it, watch the logs to see if the version increments properly.
-4. **Check the Release**: Ensure a `.vip` file is built, ephemeral artifact is uploaded, and if `ATTACH_ARTIFACTS_TO_RELEASE=true`, it’s attached to your fork’s release assets.
+4. **Check Artifacts**: Ensure a `.vip` file is built and uploaded as an artifact for your run.
 
 ### 8.2 Main Repo Testing
 1. Merge a labeled PR (e.g., `patch`) into `develop`.  
@@ -293,27 +253,16 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
   ```
 - Ensure they pass before building the `.vip`. If they fail, the script can exit with a non-zero code, stopping the release.
 
-### 8.4 Checking GPG Toggle
-- If your fork is named differently (e.g., `username/lv-icon-fork`), confirm `DISABLE_GPG_ON_FORKS=true` toggles off commit/tag signing. Look for a step titled “Possibly disable GPG signing on forks” in your logs.
-
-
 ## 9. **Troubleshooting**
 
 ### 9.1 Common Error Scenarios
 
-1. **No .vip Found**  
-   - Likely your `Build.ps1` didn’t place the artifact in `builds/VI Package/`.  
-   - Check script logs or the step that locates `.vip`.
+1. **No .vip Found**
+   - Ensure the `build-vip` action completed successfully and produced the artifact.
+   - Check action logs for errors in the packaging steps.
 
-2. **Invalid URI** or “Hostname could not be parsed”  
-   - The `upload_url` from `createRelease` might still contain `{?name,label}`. The workflow typically splits on `{`, but if that fails, ensure the code properly strips it out before appending `?name=<filename>`.
-
-3. **Permission Errors Pushing Tag**  
-   - The GITHUB_TOKEN needs `contents: write` permission.  
-   - If your repo or organization uses tag protection, allow GitHub Actions to create tags.
-
-4. **LabVIEW Licensing Failure**  
-   - The self-hosted runner might not have a proper LabVIEW license or is missing required toolkits.  
+2. **LabVIEW Licensing Failure**
+   - The self-hosted runner might not have a proper LabVIEW license or is missing required toolkits.
    - Check LabVIEW logs or ensure you’ve got the correct environment on that machine.
 
 ### 9.2 Debugging Tips
@@ -332,17 +281,8 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 **Q:** *How do I force a “patch” bump if I push directly to develop?*
 **A:** Use a pull request with the `patch` label. Direct pushes without PR labels always use the previous version numbers.
 
-**Q:** *What if I want a final release immediately, without draft mode?*  
-**A:** Set `DRAFT_RELEASE: false`. Then your release is published the moment the workflow completes.
-
-**Q:** *Can I skip attaching `.vip` to the release but keep ephemeral artifacts?*  
-**A:** Yes, keep `ATTACH_ARTIFACTS_TO_RELEASE: false` while the ephemeral artifact upload remains by default.
-
-**Q:** *Do I still need to manually publish the release if it’s a pre-release?*  
-**A:** If `DRAFT_RELEASE` is true, you’ll need to “publish” it from draft. If it’s a `-rc` suffix, that’s just a naming convention, but you can finalize or remove that suffix in a subsequent version.
-
-**Q:** How do I override build number or forcibly skip a release?  
-**A:** By default, we rely on `git rev-list --count HEAD`. You can change it by passing a custom environment variable or skipping the tag steps.
+**Q:** How do I override the build number?
+**A:** By default, we rely on `git rev-list --count HEAD`. You can change it by passing a custom environment variable or adjusting the version logic in your workflow.
 
 **Q:** Does it support alpha/beta channels out of the box?
 **A:** Yes. Branches `release-alpha/*`, `release-beta/*`, and `release-rc/*` automatically append `-alpha.<N>`, `-beta.<N>`, or `-rc.<N>` during the “Compute version string” step.
