@@ -1,13 +1,13 @@
 # **Introduction**
 
-This document is designed to help maintainers, contributors, and engineers automate the release process for LabVIEW-based projects—particularly the **Icon Editor**. By following this workflow, you can:
+This document is designed to help maintainers, contributors, and engineers automate the build and packaging process for LabVIEW-based projects—particularly the **Icon Editor**. By following this workflow, you can:
 
 - Incorporate **label-based semantic versioning** to increment major, minor, or patch numbers automatically.
 - Integrate a **commit-based build number** so each new commit naturally increases a “build” suffix (e.g., `-build42`).
-- Seamlessly **build** a `.vip` file and **publish** it through GitHub Actions, optionally attaching it to a release.
+- Seamlessly **build** a `.vip` file and **upload** it as an artifact through GitHub Actions. If you want to publish a release, run a separate workflow to create it.
 - **Disable GPG signing** on forks, avoiding errors for contributors who lack the main repository’s signing keys.
 
-> Whether you’re merging a pull request, pushing hotfixes directly, or working on release branches with RC tags, this workflow unifies your entire packaging and release pipeline under a single YAML definition.
+> Whether you’re merging a pull request, pushing hotfixes directly, or working on release branches with RC tags, this workflow unifies your packaging pipeline under a single YAML definition. Release creation must be handled separately.
 
 
 # **Table of Contents**
@@ -38,20 +38,20 @@ This document is designed to help maintainers, contributors, and engineers autom
 ## 1. **Overview and Purpose**
 
 ### 1.1 What Problem Does This GitHub Action Solve?
-The **Build VI Package** workflow provides a **consistent, automated release process** for LabVIEW-based projects like the Icon Editor. Instead of manually labeling versions, packaging `.vip` artifacts, and drafting releases, this workflow:
+The **Build VI Package** workflow provides a **consistent, automated build process** for LabVIEW-based projects like the Icon Editor. Instead of manually labeling versions, packaging `.vip` artifacts, and drafting releases, this workflow:
 
 1. **Detects PR labels** (`major`, `minor`, `patch`) to decide version increments.  
 2. Automatically **builds** a `.vip` file using a PowerShell script.  
 3. Optionally **disables GPG signing** if the repo is a **fork**—avoiding errors from missing keys.  
-4. **Pushes tags** and creates **GitHub Releases**, attaching the `.vip` artifact if desired.
+4. **Uploads artifacts** for the build; creating tags or GitHub Releases must be handled separately if desired.
 
 It eliminates confusion around versioning, keeps everything in one pipeline, and ensures every commit or merge triggers a reproducible build.
 
 ### 1.2 Why Was It Created & Primary Function
 - **Why**:  
   - Old manual processes for releasing LabVIEW add-ons involved manually bumping versions, creating `.vip` files, and drafting GitHub releases by hand. This was prone to mistakes.  
-- **Primary Function**:  
-  - Offer a single, fork-friendly script that compiles the `.vip`, increments the version, and publishes a release.  
+- **Primary Function**:
+  - Offer a single, fork-friendly script that compiles the `.vip`, increments the version, and uploads the resulting artifact. Release publishing can be managed with another workflow.
 
 ### 1.3 Intended Users
 - **Library Maintainers** needing reliable, standardized version increments.  
@@ -62,7 +62,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 - **Label-Based Version Bumping**: Maintainers just add `major`, `minor`, or `patch` labels to the PR, no custom scripts needed.  
 - **Commit-Based Build Number**: Every commit increments a “build” suffix, ensuring no collisions.  
 - **Fork-Friendly**: If the repo name indicates it’s not the official one, GPG signing toggles off.  
-- **Simplicity**: All steps—build, artifact upload, release creation—are in a single YAML file.
+- **Simplicity**: Build and artifact upload steps are combined in a single YAML file; release creation can be added separately.
 
 
 
@@ -98,7 +98,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 3.1 How the Action Is Triggered
 - **push**: On branches `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `feature/*`, `hotfix/*`.
 - **pull_request**: For PRs into those branches, so you can detect version labels.
-- **workflow_dispatch**: Maintainers can manually run from the Actions tab if needed (e.g., for a hotfix you want to re-release).
+- **workflow_dispatch**: Maintainers can manually run from the Actions tab if needed (e.g., for a hotfix you want to rebuild).
 
 ### 3.2 Configurable Inputs / Parameters
 - **PR Labels**: `major`, `minor`, `patch`, or none. If none, only the build number changes.
@@ -204,7 +204,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 7.1 Pull Requests with Labels
 - **Scenario**: You create a PR from a feature branch into `develop`.
 - **Action**: Add a label like `major` or `minor`.
-- **Result**: Upon merging, the workflow updates that version field (major/minor/patch) plus applies a commit-based build number, then tags & releases.
+- **Result**: Upon merging, the workflow updates that version field (major/minor/patch) and applies a commit-based build number. The `.vip` artifact is uploaded; any tagging or release must be handled separately.
 
 #### Example:
 1. PR labeled `minor`:  
@@ -215,7 +215,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 7.2 Direct Push to Main or Develop
 - **Scenario**: You quickly push a fix to `develop` without opening a PR.
 - **Action**: With no pull request labels available, major/minor/patch remain unchanged while the build number increments automatically.
-- **Result**: The new tag might go from `v1.2.3-build46` → `v1.2.3-build47`.
+- **Result**: The version might progress from `v1.2.3-build46` to `v1.2.3-build47`.
 
 ### 7.3 Working on a Release Branch
 - **Scenario**: You branch off `release/1.2`.
@@ -225,7 +225,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 7.4 Manually Triggering (workflow_dispatch)
 - **Scenario**: A maintainer manually runs the workflow from the Actions tab (if enabled).
 - **Action**: Provide any input parameters (if configured), or rely on defaults like `none` for version bump.
-- **Result**: The script runs as if it were a push event, producing a tag & release if not a PR context.
+- **Result**: The script runs as if it were a push event and produces a `.vip` artifact. Creating tags or releases requires additional steps.
 
 
 
@@ -242,7 +242,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 8.2 Main Repo Testing
 1. Merge a labeled PR (e.g., `patch`) into `develop`.  
 2. Observe the workflow’s console output: the version should increment patch by 1, and the build number increments from commit count.  
-3. Confirm a new tag & release appear in your main repository’s release list.
+3. Verify that the `.vip` artifact is available. If you run a separate release workflow, confirm that the release was created.
 
 ### 8.3 LabVIEW-Specific QA
 - If you have LabVIEW unit tests, integrate them by adding a step in the YAML:
@@ -251,7 +251,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
     shell: pwsh
     run: .\.github\actions\run-unit-tests\RunUnitTests.ps1
   ```
-- Ensure they pass before building the `.vip`. If they fail, the script can exit with a non-zero code, stopping the release.
+- Ensure they pass before building the `.vip`. If they fail, the script can exit with a non-zero code, stopping the workflow run.
 
 ## 9. **Troubleshooting**
 
@@ -290,11 +290,11 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 **Q:** What about manual triggers?  
 **A:** If `workflow_dispatch` is enabled, you can run it from the Actions tab, typically defaulting to the same logic (`none` for bump).
 
-**Q:** Where do I see ephemeral artifacts?  
-**A:** In the Actions run logs. Look for the “Artifacts” section. If you attach the `.vip` to the release, it’s permanent under “Assets” in the Release page.
+**Q:** Where do I see ephemeral artifacts?
+**A:** In the Actions run logs. Look for the “Artifacts” section. If you later create a release and attach the `.vip`, it becomes permanent under “Assets” on the Release page.
 
 ## 11. **Conclusion**
 
-By properly setting up environment variables, referencing your LabVIEW environment on a self-hosted runner, and using label-based version increments plus a commit-based build number, this GitHub Action automates your entire `.vip` build and release pipeline. Fork owners can disable GPG signing, and maintainers can easily control draft vs. published releases and whether the artifact is attached. Follow the troubleshooting steps if anything goes awry, and enjoy streamlined LabVIEW CI/CD!
+By properly setting up environment variables, referencing your LabVIEW environment on a self-hosted runner, and using label-based version increments plus a commit-based build number, this GitHub Action automates your `.vip` build and artifact upload process. Fork owners can disable GPG signing, and maintainers can extend the pipeline with tagging or release steps if desired. Follow the troubleshooting steps if anything goes awry, and enjoy streamlined LabVIEW CI/CD!
 
 

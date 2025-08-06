@@ -84,7 +84,8 @@ Below are the **key GitHub Actions** provided in this repository:
    - Usually triggered via `workflow_dispatch` for manual toggling.
 
 2. **[Build VI Package](ci/actions/build-vi-package.md)**
-   - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`) or defaults to `patch` for direct pushes.
+   - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`).
+     Direct pushes retain the previous version and increment only the build number.
    - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).
    - **Fork-Friendly**: Disables GPG signing if it detects a fork (so no passphrase is needed). In the **main repo** (`ni/labview-icon-editor`), signing remains active.
    - Produces the `.vip` file via a PowerShell script (e.g., `Build.ps1`).
@@ -97,13 +98,14 @@ The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks 
 
 - **issue-status** – ensures CI runs only on branches named `issue-<number>` whose linked GitHub issue has Status “In Progress”.
 - **changes** – checks out the repository and detects `.vipc` file changes to determine if dependencies need to be applied.
-- **version** – computes the semantic version and build number using commit count and PR labels.
 - **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses.
+- **version** – computes the semantic version and build number using commit count and PR labels.
 - **missing-in-project-check** – verifies every source file is referenced in the `.lvproj`.
 - **test** – runs LabVIEW unit tests across the supported matrix.
-- **build-ppl (32-bit)** – builds the 32-bit packed library.
-- **build-ppl (64-bit)** – builds the 64-bit packed library.
+- **build-ppl** – uses a matrix to build 32-bit and 64-bit packed libraries.
 - **build-vip** – packages the final VI Package using the built libraries and version information.
+
+The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct jobs.
 
 *(The **Run Unit Tests** workflow has been consolidated into the main CI process.)*
 
