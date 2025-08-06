@@ -141,7 +141,7 @@ For **detailed runner configuration**, see **`runner-setup-guide.md`**. Below is
 <a name="4-available-ci-workflows"></a>
 ## 4. Available CI Workflows
 
-Below are the **three** key workflows. Each one is defined in its own `.yml` file.
+Below are the **two** key workflows. Each one is defined in its own `.yml` file.
 
 <a name="41-development-mode-toggle"></a>
 ### 4.1 Development Mode Toggle
