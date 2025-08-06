@@ -22,9 +22,9 @@ This guide explains how to automate build, test, and distribution steps for the 
        - [Examples: Calling This Workflow](#413-examples-calling-this-workflow)
        - [Customization](#414-customization)
        - [Additional Resources](#415-additional-resources)
-   2. [Build VI Package and Release](#42-build-vi-package)
-5. [Gitflow Branching and Versioning](#5-gitflow-branching--versioning)  
-   1. [Branching Overview](#51-branching-overview)  
+   2. [Build VI Package](#42-build-vi-package)
+5. [Gitflow Branching and Versioning](#5-gitflow-branching--versioning)
+   1. [Branching Overview](#51-branching-overview)
    2. [Multi-Channel Pre-Releases](#52-multi-channel-pre-releases)  
    3. [Hotfix Branches](#53-hotfix-branches)  
    4. [Version Bumps via Labels](#54-version-bumps-via-labels)  
@@ -58,13 +58,13 @@ This workflow ensures that all **forks** of the repository can sync the latest b
 1. **Set up `.github/workflows`**
    Ensure the following workflows exist (or adapt names as needed):
    - `development-mode-toggle.yml` (Development Mode Toggle)
-   - `ci-composite.yml` (Build VI Package and Release)
+   - `ci-composite.yml` (Build VI Package)
 
 2. **Configure Permissions**  
    - In **Settings → Actions → General**, set **Workflow permissions** to “Read and write permissions” so the workflow can create tags and releases.
 
-3. **Check Environment Variables**  
-   - Decide on `DRAFT_RELEASE`, `USE_AUTO_NOTES`, `ATTACH_ARTIFACTS_TO_RELEASE`, `DISABLE_GPG_ON_FORKS`, etc. (see [Environment Variables](#32-environment-variables)).
+3. **Check Environment Variables**
+   - Decide on `DRAFT_RELEASE`, `USE_AUTO_NOTES`, `DISABLE_GPG_ON_FORKS`, etc. (see [Environment Variables](#32-environment-variables)).
 
 4. **Make a Pull Request and Label It**
    - Apply exactly one of `major`, `minor`, or `patch` to request a version bump. The workflow fails if none or multiple release labels are present.
@@ -77,9 +77,9 @@ This workflow ensures that all **forks** of the repository can sync the latest b
      - and finally **main** for a final release (no suffix).  
    - Alternatively, **`hotfix/*`** merges can go directly to **main** for quick patches.
 
-6. **Check Outputs and Releases**  
-   - The `.vip` file is generated and uploaded as a build artifact.  
-   - If `ATTACH_ARTIFACTS_TO_RELEASE == true`, it’s attached to the GitHub Release (draft by default).
+6. **Check Build Artifacts**
+   - The `.vip` file is generated and uploaded as a build artifact.
+   - If you want to publish a GitHub Release, create one manually and upload the artifact.
 
 7. **Optionally Enable Development Mode**  
    - If you need LabVIEW to reference local source directly, run the **Development Mode Toggle** workflow (see [Development Mode](#31-development-mode)). Usually, you **disable** it for standard builds/tests.
@@ -115,11 +115,9 @@ Below are **common** environment variables you might configure:
 - **`DRAFT_RELEASE`** (default `true`):  
   - `true` → create a **draft** release (not published).  
   - `false` → publish immediately.
-- **`USE_AUTO_NOTES`** (default `true`):  
+- **`USE_AUTO_NOTES`** (default `true`):
   - `true` → auto-generate release notes.
-- **`ATTACH_ARTIFACTS_TO_RELEASE`** (default `false`):  
-  - `true` → attach the built `.vip` files to the release assets.
-- **`DISABLE_GPG_ON_FORKS`** (default `false`):  
+- **`DISABLE_GPG_ON_FORKS`** (default `false`):
   - `true` → disable GPG signing if running on a fork.
 
 <a name="33-self-hosted-runner-setup"></a>
@@ -244,7 +242,7 @@ All dev-mode logic resides in two PowerShell scripts:
 ---
 
 <a name="42-build-vi-package"></a>
-### 4.2 Build VI Package and Release
+### 4.2 Build VI Package
 
 - **File Name**: `ci-composite.yml`
 - **Purpose**: Builds the `.vip` artifact and determines the version based on PR labels and commit count.
@@ -254,7 +252,7 @@ All dev-mode logic resides in two PowerShell scripts:
     - **Commit-based build number**: `vX.Y.Z-build<commitCount>` (plus optional pre-release suffix).
     - **Multi-Channel** detection for `release-alpha/*`, `release-beta/*`, `release-rc/*`.
     - **Fork-Friendly GPG**: Disabled if `DISABLE_GPG_ON_FORKS == true`.
-    - **Attach to Release**: If release creation is enabled (`ATTACH_ARTIFACTS_TO_RELEASE == true`), attach the built `.vip` to a GitHub Release.
+    - **Upload Artifact**: Builds the `.vip` file and uploads it as a workflow artifact (no automatic GitHub Release attachment).
 - **Events**: Typically triggered on:
   - Push or PR to `develop`, `feature/*`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `main`, or `hotfix/*`.
     The workflow explicitly lists these pre-release patterns and does **not** use a generic `release/*` trigger.
@@ -317,7 +315,7 @@ When you open a **Pull Request** into `develop`, `release-alpha/*`, or `release-
 In order to **enforce** the Gitflow approach “hands-off”:
 1. **Enable Branch Protection Rules**:  
    - For example, protect `main`, `release-alpha/*`, `release-beta/*`, and `release-rc/*` so that only approved Pull Requests can be merged, preventing direct pushes.  
-   - Require checks (like “Build VI Package and Release”) to pass before merging.
+   - Require checks (like “Build VI Package”) to pass before merging.
 2. **Refer to `CONTRIBUTING.md`**:  
    - Document your team’s policies on how merges flow from feature → develop → alpha/beta/rc → main.  
    - Outline any required approvals or code reviews.  
