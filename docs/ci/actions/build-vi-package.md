@@ -96,8 +96,8 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ## 3. **Action Configuration & Usage**
 
 ### 3.1 How the Action Is Triggered
-- **push**: On branches `main`, `develop`, `release/*`, `hotfix/*`.  
-- **pull_request**: For PRs into those branches, so you can detect version labels.  
+- **push**: On branches `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `hotfix/*`.
+- **pull_request**: For PRs into those branches, so you can detect version labels.
 - **workflow_dispatch**: Maintainers can manually run from the Actions tab if needed (e.g., for a hotfix you want to re-release).
 
 ### 3.2 Configurable Inputs / Parameters
@@ -110,10 +110,10 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 ### 3.3 Customization & Fork Setup
 - **Fork Setup**:
-  1. **Copy** the workflow file (`.github/workflows/build-vi-package.yml`) into your fork.  
-  2. **Update** any references to the official repo name (`ni/labview-icon-editor`) if your fork is named differently.  
-  3. **Self-Hosted Runner**: Confirm your runner has the `iconeditor` label or update `runs-on` to match your runner’s labels.  
-  4. **Write Permissions**: In fork settings → Actions → General, ensure “Workflow Permissions” = “Read and write.”  
+  1. **Copy** the workflow file (`.github/workflows/ci-composite.yml`) into your fork.
+  2. **Update** any references to the official repo name (`ni/labview-icon-editor`) if your fork is named differently.
+  3. **Self-Hosted Runner**: Confirm your runner has the `iconeditor` label or update `runs-on` to match your runner’s labels.
+  4. **Write Permissions**: In fork settings → Actions → General, ensure “Workflow Permissions” = “Read and write.”
 
 - **Overriding Defaults**:
   - In your workflow’s `env:` block or job-level `env:`, you can set `DRAFT_RELEASE: false` if you want automatic publishing, or `ATTACH_ARTIFACTS_TO_RELEASE: true` to attach `.vip`.  
@@ -144,9 +144,9 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
    - We run `git rev-list --count HEAD`, storing the integer in `new_build_number`.  
    - This increments automatically with every commit, ensuring a unique build suffix like `-build37`.
 
-5. **Compute Final Version**  
-   - Merges the label-based bump with existing tags (if any).  
-   - If on `release/*` branch, appends a `-rc.<N>` suffix.  
+5. **Compute Final Version**
+   - Merges the label-based bump with existing tags (if any).
+   - If on `release-alpha/*`, `release-beta/*`, or `release-rc/*`, appends `-alpha.<N>`, `-beta.<N>`, or `-rc.<N>` respectively.
    - Always adds `-build<BUILD_NUMBER>` last, e.g. `v1.2.3-rc.5-build37`.
 
 6. **Build the Icon Editor VI Package**  
@@ -177,8 +177,8 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 ### 4.3 Pre-Release vs. Final Release
 
-- **`release/*`** branches → Adds `-rc.<N>` suffix to indicate pre-release.  
-- Merging back to `main` typically yields a final version with no `-rc`.  
+- **`release-alpha/*`, `release-beta/*`, `release-rc/*`** branches → Add `-alpha.<N>`, `-beta.<N>`, or `-rc.<N>` suffixes to indicate pre-release.
+- Merging back to `main` typically yields a final version with no pre-release suffix.
 - If `draft_release` is `true`, maintainers can manually convert a draft release to a final one after verifying assets or notes.
 
 
@@ -230,11 +230,11 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 ### 6.3 Adding New Features
 - You can insert additional steps (e.g., unit tests, static analysis, doc generation) in the YAML. For instance, add a test step before building the `.vip`.
-- To do advanced alpha/beta channels, replicate the `release/*` logic with your own branch pattern (e.g., `release-alpha/*` => `-alpha.<N>`).
+- To add additional channels, replicate the `release-*/*` logic with your own branch pattern (e.g., `release-gamma/*` => `-gamma.<N>`).
 
 ### 6.4 Delegating Workflow Administration
 - If multiple maintainers handle the Action:
-  1. Document who can change the `.github/workflows/build-vi-package.yml` file.
+  1. Document who can change the `.github/workflows/ci-composite.yml` file.
   2. Decide if changes to the workflow require a PR review or certain status checks.
 
 
@@ -248,9 +248,9 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 #### Example:
 1. PR labeled `minor`:  
-   - Previous version: `v1.2.3-build45`  
-   - New version on merge: `v1.3.0-build46`  
-   - If it’s `release/*`, might become `v1.3.0-rc.1-build46`.
+   - Previous version: `v1.2.3-build45`
+   - New version on merge: `v1.3.0-build46`
+   - If it’s `release-rc/*`, might become `v1.3.0-rc.1-build46` (`release-alpha/*` and `release-beta/*` yield `-alpha.<N>` and `-beta.<N>`).
 
 ### 7.2 Direct Push to Main or Develop
 - **Scenario**: You quickly push a fix to `develop` without opening a PR.
@@ -274,9 +274,9 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 
 ### 8.1 Fork Testing
-1. **Fork the Repo**: Copy `.github/workflows/build-vi-package.yml` to your fork.  
-2. **Push Changes**: Create or modify a branch in your fork.  
-3. **Open PR (optional)**: If you label it, watch the logs to see if the version increments properly.  
+1. **Fork the Repo**: Copy `.github/workflows/ci-composite.yml` to your fork.
+2. **Push Changes**: Create or modify a branch in your fork.
+3. **Open PR (optional)**: If you label it, watch the logs to see if the version increments properly.
 4. **Check the Release**: Ensure a `.vip` file is built, ephemeral artifact is uploaded, and if `ATTACH_ARTIFACTS_TO_RELEASE=true`, it’s attached to your fork’s release assets.
 
 ### 8.2 Main Repo Testing
@@ -344,8 +344,8 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 **Q:** How do I override build number or forcibly skip a release?  
 **A:** By default, we rely on `git rev-list --count HEAD`. You can change it by passing a custom environment variable or skipping the tag steps.
 
-**Q:** Does it support alpha/beta channels out of the box?  
-**A:** You can parse more branch patterns (e.g. `release-alpha/*`) and set a suffix like `-alpha.<N>`. The logic is easily adapted in the “Compute version string” step.
+**Q:** Does it support alpha/beta channels out of the box?
+**A:** Yes. Branches `release-alpha/*`, `release-beta/*`, and `release-rc/*` automatically append `-alpha.<N>`, `-beta.<N>`, or `-rc.<N>` during the “Compute version string” step.
 
 **Q:** What about manual triggers?  
 **A:** If `workflow_dispatch` is enabled, you can run it from the Actions tab, typically defaulting to the same logic (`none` for bump).
