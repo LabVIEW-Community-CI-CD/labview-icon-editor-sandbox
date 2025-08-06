@@ -102,7 +102,7 @@ Use whichever patterns best fit your project’s branching model. If you prefer 
 <a name="workflow-steps"></a>
 ## **4. Workflow Steps**
 
-Below is a **high-level** breakdown. In your `.github/workflows/build-vi-package.yml`, these steps typically appear in order:
+Below is a **high-level** breakdown. In your `.github/workflows/ci-composite.yml`, these steps typically appear in order:
 
 <a name="disable-gpg-on-forks"></a>
 ### **Disable GPG on Forks**
