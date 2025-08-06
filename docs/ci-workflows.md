@@ -97,13 +97,14 @@ The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks 
 
 - **issue-status** – ensures CI runs only on branches named `issue-<number>` whose linked GitHub issue has Status “In Progress”.
 - **changes** – checks out the repository and detects `.vipc` file changes to determine if dependencies need to be applied.
-- **version** – computes the semantic version and build number using commit count and PR labels.
 - **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses.
+- **version** – computes the semantic version and build number using commit count and PR labels.
 - **missing-in-project-check** – verifies every source file is referenced in the `.lvproj`.
 - **test** – runs LabVIEW unit tests across the supported matrix.
-- **build-ppl (32-bit)** – builds the 32-bit packed library.
-- **build-ppl (64-bit)** – builds the 64-bit packed library.
+- **build-ppl** – uses a matrix to build 32-bit and 64-bit packed libraries.
 - **build-vip** – packages the final VI Package using the built libraries and version information.
+
+The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct jobs.
 
 *(The **Run Unit Tests** workflow has been consolidated into the main CI process.)*
 
