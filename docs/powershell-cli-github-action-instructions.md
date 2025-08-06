@@ -13,8 +13,7 @@ This guide explains how to automate build, test, and distribution steps for the 
 2. [Quickstart / Step-by-Step Procedure](#2-quickstart--step-by-step-procedure)  
 3. [Getting Started and Configuration](#3-getting-started--configuration)
    1. [Development Mode](#31-development-mode)
-   2. [Environment Variables](#32-environment-variables)
-   3. [Self-Hosted Runner Setup](#33-self-hosted-runner-setup)
+   2. [Self-Hosted Runner Setup](#32-self-hosted-runner-setup)
 4. [Available CI Workflows](#4-available-ci-workflows)
    1. [Development Mode Toggle](#41-development-mode-toggle)
        - [Overview](#411-overview)
@@ -28,10 +27,9 @@ This guide explains how to automate build, test, and distribution steps for the 
    2. [Multi-Channel Pre-Releases](#52-multi-channel-pre-releases)  
    3. [Hotfix Branches](#53-hotfix-branches)  
    4. [Version Bumps via Labels](#54-version-bumps-via-labels)  
-   5. [Build Number](#55-build-number)  
-6. [Branch Protection and Contributing](#6-branch-protection--contributing)  
-7. [GPG Signing (Fork-Friendly)](#7-gpg-signing-fork-friendly)  
-8. [External References](#8-external-references)
+   5. [Build Number](#55-build-number)
+6. [Branch Protection and Contributing](#6-branch-protection--contributing)
+7. [External References](#7-external-references)
 
 ---
 
@@ -45,7 +43,6 @@ Automating your LabVIEW Icon Editor builds and releases offers several benefits:
 - **Multiple pre-release channels** (Alpha/Beta/RC) via dedicated branch names.  
 - **Commit-based build number** appended as `-build<commitCount>`.  
 - **Hotfix branches** for urgent final patch releases.  
-- **Fork-friendly GPG signing** toggles.  
 - **Development Mode** toggle if you need LabVIEW to reference local source code directly for debugging.
 
 This workflow ensures that all **forks** of the repository can sync the latest build scripts from upstream (e.g., NI) and follow the same rules. If you keep your fork up to date, you benefit from any bug fixes or improvements made in the original repo.
@@ -60,16 +57,13 @@ This workflow ensures that all **forks** of the repository can sync the latest b
    - `development-mode-toggle.yml` (Development Mode Toggle)
    - `ci-composite.yml` (Build VI Package)
 
-2. **Configure Permissions**  
-   - In **Settings → Actions → General**, set **Workflow permissions** to “Read and write permissions” so the workflow can create tags and releases.
+2. **Configure Permissions**
+   - In **Settings → Actions → General**, set **Workflow permissions** to allow the workflow to read repository contents and upload artifacts.
 
-3. **Check Environment Variables**
-   - Decide on `DRAFT_RELEASE`, `USE_AUTO_NOTES`, `DISABLE_GPG_ON_FORKS`, etc. (see [Environment Variables](#32-environment-variables)).
+3. **Make a Pull Request and Label It**
+   - Apply at most one of `major`, `minor`, or `patch` to request a version bump. If no label is present, the workflow defaults to a patch bump. The workflow fails only if multiple release labels are applied. See [`compute-version`](../.github/actions/compute-version/action.yml) for details.
 
-4. **Make a Pull Request and Label It**
-   - Apply exactly one of `major`, `minor`, or `patch` to request a version bump. The workflow fails if none or multiple release labels are present.
-
-5. **Merge to the Appropriate Branch**  
+4. **Merge to the Appropriate Branch**
    - In Gitflow, typical merges go from **feature** → **develop**, then eventually to:
      - **`release-alpha/*`** for early testing (`-alpha.<N>`),  
      - **`release-beta/*`** for later testing (`-beta.<N>`),  
@@ -81,11 +75,8 @@ This workflow ensures that all **forks** of the repository can sync the latest b
    - The `.vip` file is generated and uploaded as a build artifact.
    - If you want to publish a GitHub Release, create one manually and upload the artifact.
 
-7. **Optionally Enable Development Mode**  
+7. **Optionally Enable Development Mode**
    - If you need LabVIEW to reference local source directly, run the **Development Mode Toggle** workflow (see [Development Mode](#31-development-mode)). Usually, you **disable** it for standard builds/tests.
-
-8. **Publish or Finalize the Release**  
-   - If your release is drafted, you can edit notes and publish manually. Otherwise, it’s published immediately when `DRAFT_RELEASE == false`.
 
 For a visual reference, you may consult a **Gitflow diagram** that includes alpha/beta/rc branches as an extension of the typical `release/` branch. This helps illustrate how merges flow between `develop` and `main`.
 
@@ -99,29 +90,16 @@ For a visual reference, you may consult a **Gitflow diagram** that includes alph
 
 **Development Mode** configures LabVIEW for local debugging or specialized project setups. It often involves modifying `labview.ini` so LabVIEW references local source code. You can **enable** or **disable** it as needed:
 
-- **Enable**:  
+- **Enable**:
   - Run the **Development Mode Toggle** workflow with `mode=enable` (or manually call `Set_Development_Mode.ps1`).
-- **Disable**:  
+- **Disable**:
   - Run the workflow with `mode=disable` (or call `RevertDevelopmentMode.ps1`).
 
 > [!IMPORTANT]
 > When Development Mode is **enabled**, you generally can’t test the final `.vip` install properly (since LabVIEW might be pointing to local source). Always **disable** dev mode before attempting a final install or distribution test.
 
-<a name="32-environment-variables"></a>
-### 3.2 Environment Variables
-
-Below are **common** environment variables you might configure:
-
-- **`DRAFT_RELEASE`** (default `true`):  
-  - `true` → create a **draft** release (not published).  
-  - `false` → publish immediately.
-- **`USE_AUTO_NOTES`** (default `true`):
-  - `true` → auto-generate release notes.
-- **`DISABLE_GPG_ON_FORKS`** (default `false`):
-  - `true` → disable GPG signing if running on a fork.
-
-<a name="33-self-hosted-runner-setup"></a>
-### 3.3 Self-Hosted Runner Setup
+<a name="32-self-hosted-runner-setup"></a>
+### 3.2 Self-Hosted Runner Setup
 
 For **detailed runner configuration**, see **`runner-setup-guide.md`**. Below is a short summary:
 
@@ -251,7 +229,6 @@ All dev-mode logic resides in two PowerShell scripts:
     - **Label-based** version bump (`major`, `minor`, `patch`), or none if unlabeled.
     - **Commit-based build number**: `vX.Y.Z-build<commitCount>` (plus optional pre-release suffix).
     - **Multi-Channel** detection for `release-alpha/*`, `release-beta/*`, `release-rc/*`.
-    - **Fork-Friendly GPG**: Disabled if `DISABLE_GPG_ON_FORKS == true`.
     - **Upload Artifact**: Builds the `.vip` file and uploads it as a workflow artifact (no automatic GitHub Release attachment).
 - **Events**: Typically triggered on:
   - Push or PR to `develop`, `feature/*`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `main`, or `hotfix/*`.
@@ -295,8 +272,8 @@ Merging into these branches (or pushing directly to them) triggers a **pre-relea
 ### 5.4 Version Bumps via Labels
 
 When you open a **Pull Request** into `develop`, `release-alpha/*`, or `release-beta/*` (or even `main`/`hotfix/*`):
-- You must apply exactly one of the labels `major`, `minor`, or `patch` to increment the corresponding version segment (e.g., `1.2.3` → `2.0.0` if `major`, etc.).
-- The workflow fails if none of these labels is present or if multiple release labels are applied.
+- Apply at most one of the labels `major`, `minor`, or `patch` to increment the corresponding version segment (e.g., `1.2.3` → `2.0.0` if `major`, etc.).
+- If multiple release labels are applied, the workflow fails. When no release label is present, it defaults to a patch bump. See [`compute-version`](../.github/actions/compute-version/action.yml) for implementation details.
 
 > **Note**: This means you can version-bump **incrementally** while merging into `develop` (to reflect that new features are in development), or you can wait until you merge to a pre-release branch. Each time the build runs, the resulting `.vip` has an updated version (with a new build number, plus any alpha/beta/rc suffix if applicable).
 
@@ -324,20 +301,8 @@ In order to **enforce** the Gitflow approach “hands-off”:
 
 ---
 
-<a name="7-gpg-signing-fork-friendly"></a>
-## 7. GPG Signing (Fork-Friendly)
-
-The workflows support **GPG signing** for tags and releases in the **main** repository. However, on forks you often lack the GPG key/passphrase. To avoid blocking prompts:
-
-- **`DISABLE_GPG_ON_FORKS = true`** automatically **disables** signing if the workflow detects it’s running on a fork.  
-- If you’re in the **main** repo and have GPG keys set up, signing remains **enabled**.
-
-This ensures forks can build without requiring special key setup, while the main repository can maintain secure signing.
-
----
-
-<a name="8-external-references"></a>
-## 8. External References
+<a name="7-external-references"></a>
+## 7. External References
 
 - **Multi-Channel Logic**: See [**`multichannel-release-workflow.md`**](ci/actions/multichannel-release-workflow.md) for details on alpha/beta/RC branch strategy.
 - **Runner Setup**: For an in-depth guide on configuring your environment, see [**`runner-setup-guide.md`**](ci/actions/runner-setup-guide.md).
