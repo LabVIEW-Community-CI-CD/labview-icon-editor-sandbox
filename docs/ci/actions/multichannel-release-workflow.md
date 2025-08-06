@@ -8,11 +8,10 @@ This revised guide focuses on the **release workflow**, specifically how we hand
 1. [Overview & Purpose](#overview--purpose)  
 2. [Requirements & Environment](#requirements--environment)  
 3. [Configuration & Branch Patterns](#configuration--branch-patterns)  
-4. [Workflow Steps](#workflow-steps)  
-   - [Disable GPG on Forks](#disable-gpg-on-forks)  
-   - [Fetch & Determine Version](#fetch--determine-version)  
-   - [Build & Artifact Handling](#build--artifact-handling)  
-   - [Tag & Release Creation](#tag--release-creation)  
+4. [Workflow Steps](#workflow-steps)
+   - [Fetch & Determine Version](#fetch--determine-version)
+   - [Build & Artifact Handling](#build--artifact-handling)
+   - [Tag & Release Creation](#tag--release-creation)
 5. [Multiple Pre-Release Channels Explained](#multiple-pre-release-channels-explained)  
    - [Branch Name Conventions](#branch-name-conventions)  
    - [Alpha / Beta / RC Logic](#alpha--beta--rc-logic)  
@@ -31,7 +30,6 @@ This **Multi-Channel Release Workflow** automates the packaging and releasing of
 - Uses **label-based** semantic version increments for major/minor/patch.
 - Maintains a **commit-based build number**, so every new commit yields a unique suffix (`-buildNN`).
 - Extends pre-release logic to **Alpha**, **Beta**, and **RC** channels, not just a single `release/*` for RC.
-- Optionally **disables GPG** signing if the repository is a fork.
 
 By adopting these patterns, maintainers can run alpha, beta, and RC pipelines in parallel or sequentially, each channel generating distinct pre-release versions.
 
@@ -48,10 +46,7 @@ By adopting these patterns, maintainers can run alpha, beta, and RC pipelines in
    - If you have branch protection on tags, allow actions to create them.
 
 3. **Labels**
-   - Pull requests must include exactly one of `major`, `minor`, or `patch` to increment those fields; missing or multiple labels cause the workflow to fail.
-
-4. **Fork Considerations**  
-   - If `DISABLE_GPG_ON_FORKS == true`, the workflow sets `commit.gpgsign` and `tag.gpgsign` to `false` for forks (i.e., if the `github.repository` is not your official name).
+   - Pull requests may include at most one of `major`, `minor`, or `patch` to increment those fields. If none is provided, the workflow defaults to a patch bump. Multiple release labels cause the workflow to fail. See [`compute-version`](../../.github/actions/compute-version/action.yml) for the label-handling logic.
 
 
 <a name="configuration--branch-patterns"></a>
@@ -104,15 +99,6 @@ Use whichever patterns best fit your project’s branching model. If you prefer 
 
 Below is a **high-level** breakdown. In your `.github/workflows/ci-composite.yml`, these steps typically appear in order:
 
-<a name="disable-gpg-on-forks"></a>
-### **Disable GPG on Forks**
-- If `DISABLE_GPG_ON_FORKS == true` and the repo name doesn’t match your official repository, sets:
-  ```powershell
-  git config --global commit.gpgsign false
-  git config --global tag.gpgsign false
-  ```
-- Captures the old values to restore them later.
-
 <a name="fetch--determine-version"></a>
 ### **Fetch & Determine Version**
 1. **Check out** the repo with `fetch-depth: 0` to have full commit history.  
@@ -126,7 +112,7 @@ Below is a **high-level** breakdown. In your `.github/workflows/ci-composite.yml
 
 <a name="build--artifact-handling"></a>
 ### **Build & Artifact Handling**
-- Calls a `Build.ps1` script that compiles LabVIEW code and outputs `.vip` to `builds/VI Package/*.vip`.
+- Uses the `build-lvlibp` and `build-vip` actions to compile code and produce the `.vip` package.
 - Uploads the `.vip` as an ephemeral artifact with `actions/upload-artifact@v4`.
 
 <a name="tag--release-creation"></a>
@@ -211,7 +197,7 @@ Any commit to these branches triggers an alpha/beta/rc suffix. Merging to `main`
    - Typically, you merge alpha → beta → rc → main in sequence, each step dropping the old suffix for the new. If you do “hotfix” merges or skip channels, ensure you keep version consistency.
 
 5. **Same Bump Type**
-   - The label-based bump is orthogonal to alpha/beta/rc. Exactly one release label is still required; missing or multiple labels will fail the workflow.
+   - The label-based bump is orthogonal to alpha/beta/rc. If multiple release labels are applied, the workflow fails; with none, it defaults to a patch bump.
 
 
 <a name="faq"></a>

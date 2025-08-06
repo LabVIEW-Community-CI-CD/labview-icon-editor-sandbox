@@ -22,11 +22,9 @@ In a multi-fork or multi-organization environment, **injecting the repository na
 - Maintains **consistent** versioning and naming conventions across builds.
 
 We achieve this by:
-1. **Constructing** a JSON object in [`Build.ps1`](../../../.github/actions/build/Build.ps1), a top-level build script that orchestrates the process and sets fields such as:
-   - `"Company Name"`
-   - `"Author Name (Person or Company)"`
-2. **Calling** [`build_vip.ps1`](../../../.github/actions/build-vip/build_vip.ps1), which parses the JSON and updates the `.vipb` (VI Package Builder) file with the metadata.
-3. **Using** GitHub Actions environment variables (like `${{ github.repository_owner }}`) to pass the org name, and `${{ github.repository }}` for the repository name.
+1. **Generating** a JSON object with fields like `"Company Name"` and `"Author Name (Person or Company)"` directly in the workflow using GitHub-provided variables (e.g., `${{ github.repository_owner }}` and `${{ github.event.repository.name }}`).
+2. **Using** the `modify-vipb-display-info` action to merge this JSON into the `.vipb` (VI Package Builder) file.
+3. **Building** the package with the `build-lvlibp` and `build-vip` actions from the composite CI workflow.
 
 ---
 
@@ -49,36 +47,43 @@ We achieve this by:
 A typical **GitHub Actions** workflow might have steps like:
 
 ```yaml
-name: Build LabVIEW Icon Editor
-on:
-  push:
-    branches: [ "main" ]
-
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: self-hosted-windows-lv
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v3
-
-      - name: Setup PowerShell
-        uses: actions/setup-powershell@v2
-
-      - name: Run PowerShell Build
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-lvlibp
+        with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 64
+          relative_path: ${{ github.workspace }}
+      - name: Generate display information JSON
+        id: display-info
+        shell: pwsh
         run: |
-          pwsh .\.github\actions\build\Build.ps1 `
-            -RelativePath "$env:GITHUB_WORKSPACE" `
-            -Major 1 -Minor 0 -Patch 0 -Build 42 `
-            -Commit "${{ github.sha }}" `
-            -CompanyName "${{ github.repository_owner }}" `
-            -AuthorName "${{ github.repository }}" `
-            -Verbose
+          $info = @{
+            "Company Name" = "${{ github.repository_owner }}"
+            "Author Name (Person or Company)" = "${{ github.event.repository.name }}"
+          }
+          "json=$($info | ConvertTo-Json -Depth 5 -Compress)" >> $Env:GITHUB_OUTPUT
+      - uses: ./.github/actions/modify-vipb-display-info
+        with:
+          vipb_path: Tooling/deployment/NI Icon editor.vipb
+          display_information_json: ${{ steps.display-info.outputs.json }}
+          relative_path: ${{ github.workspace }}
+          supported_bitness: 64
+      - uses: ./.github/actions/build-vip
+        with:
+          vipb_path: Tooling/deployment/NI Icon editor.vipb
+          display_information_json: ${{ steps.display-info.outputs.json }}
+          relative_path: ${{ github.workspace }}
+          supported_bitness: 64
 ```
 
 **Key points**:
 - **`${{ github.repository_owner }}`** is the **organization** (or user) that owns the repo.
-- **`${{ github.repository }}`** is the “orgName/repoName” string (e.g. `AcmeCorp/lv-icon-editor`).
- - These parameters feed into the final **JSON** that [`build_vip.ps1`](../../../.github/actions/build-vip/build_vip.ps1) uses to update the VI Package.
+- **`${{ github.event.repository.name }}`** is the repository name.
+- The generated JSON is consumed by `modify-vipb-display-info` and `build-vip` to embed this metadata in the final package.
 
 ---
 
@@ -86,23 +91,20 @@ jobs:
 
 1. **Developer** pushes code to GitHub.  
 2. **GitHub Actions** triggers the workflow.  
-3. **Actions** checks out the repo and runs [`Build.ps1`](../../../.github/actions/build/Build.ps1):
-   1. Cleans old artifacts.  
-   2. Applies VIPC (32-bit and 64-bit).  
-   3. Builds the 32-bit and 64-bit libraries.  
-   4. Constructs JSON containing `CompanyName` and `AuthorName` fields, derived from GitHub Action variables.  
-   5. Passes that JSON to [`build_vip.ps1`](../../../.github/actions/build-vip/build_vip.ps1).
-   6. [`build_vip.ps1`](../../../.github/actions/build-vip/build_vip.ps1) injects these fields and version info into the `.vipb` file.
-   7. Generates the **Icon Editor** `.vip` package.  
-4. **Actions** can then publish or attach the final `.vip` as an artifact.
+3. **Actions** check out the repo and run the build actions:
+   1. `build-lvlibp` compiles the 32-bit and 64-bit libraries.
+   2. A PowerShell step generates JSON with `CompanyName` and `AuthorName` fields derived from GitHub variables.
+   3. `modify-vipb-display-info` merges that JSON into the `.vipb` file.
+   4. `build-vip` produces the final **Icon Editor** `.vip` package.
+4. **Actions** can then upload the resulting `.vip` as an artifact.
 
 ---
 
 ## Example Usage
 
-### Local Command-Line
+### Legacy Local Command-Line
 
-You can also run this locally. For example, if you wanted to embed some custom organization and repo data manually:
+The previous build system used a `Build.ps1` script. For historical reference, you can still run it locally:
 
 ```powershell
 \.github\actions\build\Build.ps1 `
@@ -114,7 +116,7 @@ You can also run this locally. For example, if you wanted to embed some custom o
   -Verbose
 ```
 
-This produces a `.vip` file that, when inspected in VIPM or LabVIEW, shows **“Acme Corporation”** as the company and **“acme-corp/lv-icon-editor”** in the author field.
+This legacy script produces a `.vip` file that, when inspected in VIPM or LabVIEW, shows **“Acme Corporation”** as the company and **“acme-corp/lv-icon-editor”** in the author field.
 
 ---
 
