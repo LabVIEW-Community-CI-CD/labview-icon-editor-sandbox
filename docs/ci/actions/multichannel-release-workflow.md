@@ -63,12 +63,38 @@ By adopting these patterns, maintainers can run alpha, beta, and RC pipelines in
 2. **Beta**  
    - Branch pattern: `release-beta/*`.  
    - Produces `vX.Y.Z-beta.<N>-build<commitCount>`.  
-3. **RC**  
-   - Branch pattern: `release-rc/*`.  
-   - Produces `vX.Y.Z-rc.<N>-build<commitCount>`.  
-4. **Other Branches**  
-   - `main`, `develop`, `hotfix/*` produce final releases with no alpha/beta/rc suffix.  
-   - No label => major/minor/patch remain unchanged; build increments only.
+3. **RC**
+  - Branch pattern: `release-rc/*`.
+  - Produces `vX.Y.Z-rc.<N>-build<commitCount>`.
+4. **Other Branches**
+  - `main`, `develop`, `hotfix/*` produce final releases with no alpha/beta/rc suffix.
+  - No label => major/minor/patch remain unchanged; build increments only.
+
+The accompanying GitHub Actions workflow (`ci-composite.yml`) lists `release-alpha/*`, `release-beta/*`, and `release-rc/*` in its trigger patterns so commits or pull requests to these branches automatically run this pipeline.
+
+To enable these pre-release branches, ensure the workflow's `on.push.branches` and `on.pull_request.branches` sections include the patterns:
+
+```yaml
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - release-alpha/*
+      - release-beta/*
+      - release-rc/*
+      - feature/*
+      - hotfix/*
+  pull_request:
+    branches:
+      - main
+      - develop
+      - release-alpha/*
+      - release-beta/*
+      - release-rc/*
+      - feature/*
+      - hotfix/*
+```
 
 Use whichever patterns best fit your project’s branching model. If you prefer subdirectories (`release/alpha/*` vs. `release-alpha/*`), adapt the snippet accordingly.
 
@@ -76,7 +102,7 @@ Use whichever patterns best fit your project’s branching model. If you prefer 
 <a name="workflow-steps"></a>
 ## **4. Workflow Steps**
 
-Below is a **high-level** breakdown. In your `.github/workflows/build-vi-package.yml`, these steps typically appear in order:
+Below is a **high-level** breakdown. In your `.github/workflows/ci-composite.yml`, these steps typically appear in order:
 
 <a name="disable-gpg-on-forks"></a>
 ### **Disable GPG on Forks**
