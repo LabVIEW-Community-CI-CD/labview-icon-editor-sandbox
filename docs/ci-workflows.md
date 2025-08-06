@@ -84,7 +84,8 @@ Below are the **key GitHub Actions** provided in this repository:
    - Usually triggered via `workflow_dispatch` for manual toggling.
 
 2. **[Build VI Package](ci/actions/build-vi-package.md)**
-   - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`) or defaults to `patch` for direct pushes.
+   - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`).
+     Direct pushes retain the previous version and increment only the build number.
    - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).
    - **Fork-Friendly**: Disables GPG signing if it detects a fork (so no passphrase is needed). In the **main repo** (`ni/labview-icon-editor`), signing remains active.
    - Produces the `.vip` file via a PowerShell script (e.g., `Build.ps1`).
