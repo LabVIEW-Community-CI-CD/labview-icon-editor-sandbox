@@ -13,7 +13,7 @@ In LabVIEW-centric projects, “development mode” usually refers to a runner s
 - Lets you quickly switch back to a **testable** state when you’re done coding so you can install the final VI Package to test your change.
 - Allows collaborators to **experiment with or update the order of operations** in the underlying PowerShell scripts on their own fork, then propose those changes via pull requests if they happen to improve our overall process.
 
-**Note**: Contributors who fork this repository can keep their local copy of `.github/workflows/toggle-dev-mode.yml` and its associated PowerShell scripts up to date by frequently pulling changes from the upstream repository. Likewise, if they make improvements to the scripts in their fork, they can open a pull request to merge those improvements back upstream.
+**Note**: Contributors who fork this repository can keep their local copy of `.github/workflows/development-mode-toggle.yml` and its associated PowerShell scripts up to date by frequently pulling changes from the upstream repository. Likewise, if they make improvements to the scripts in their fork, they can open a pull request to merge those improvements back upstream.
 
 ## 2. Usage
 
@@ -50,14 +50,14 @@ If you have another workflow file (e.g., `my-other-workflow.yml`) in the same re
 
     jobs:
       call-dev-mode:
-        runs-on: [self-hosted, iconeditor]
+        runs-on: [self-hosted-windows-lv]
         steps:
           - name: Invoke Dev Mode Toggle (enable)
-            uses: ./.github/workflows/toggle-dev-mode.yml
+            uses: ./.github/workflows/development-mode-toggle.yml
             with:
               mode: enable
 
-1. `uses: ./.github/workflows/toggle-dev-mode.yml` – Tells GitHub to run a local reusable workflow found in your repo.
+1. `uses: ./.github/workflows/development-mode-toggle.yml` – Tells GitHub to run a local reusable workflow found in your repo.
 2. `with:` – Passes inputs to that workflow. Here, `mode: enable`.
 
 ### 3.2 Call from Another Repository (Direct GitHub Reference)
@@ -71,10 +71,10 @@ If you store “Development mode toggle” in a separate public repo, you can re
 
     jobs:
       remote-dev-mode:
-        runs-on: [self-hosted, iconeditor]
+        runs-on: [self-hosted-windows-lv]
         steps:
           - name: Use remote Dev Mode Toggle
-            uses: <owner>/<repo>/.github/workflows/toggle-dev-mode.yml@main
+            uses: <owner>/<repo>/.github/workflows/development-mode-toggle.yml@main
             with:
               mode: disable
 
@@ -93,14 +93,14 @@ If a collaborator forked your original repo, they might keep the workflow in the
 
     jobs:
       forked-workflow-call:
-        runs-on: [self-hosted, iconeditor]
+        runs-on: [self-hosted-windows-lv]
         steps:
           - name: Call Dev Mode Toggle from My Fork
-            uses: <your-fork>/<repo>/.github/workflows/toggle-dev-mode.yml@my-feature-branch
+            uses: <your-fork>/<repo>/.github/workflows/development-mode-toggle.yml@my-feature-branch
             with:
               mode: enable
 
-Here, you might see something like `githubuser/labview-icon-editor-fork/.github/workflows/toggle-dev-mode.yml@feature-xyz`. Again, you pass the `mode` input as needed. Whenever upstream changes are made to the scripts, the fork owner can **pull** to update their local `.github/workflows/toggle-dev-mode.yml` file.
+Here, you might see something like `githubuser/labview-icon-editor-fork/.github/workflows/development-mode-toggle.yml@feature-xyz`. Again, you pass the `mode` input as needed. Whenever upstream changes are made to the scripts, the fork owner can **pull** to update their local `.github/workflows/development-mode-toggle.yml` file.
 
 ---
 
