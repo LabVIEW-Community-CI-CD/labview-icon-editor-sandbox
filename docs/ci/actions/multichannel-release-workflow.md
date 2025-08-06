@@ -63,12 +63,14 @@ By adopting these patterns, maintainers can run alpha, beta, and RC pipelines in
 2. **Beta**  
    - Branch pattern: `release-beta/*`.  
    - Produces `vX.Y.Z-beta.<N>-build<commitCount>`.  
-3. **RC**  
-   - Branch pattern: `release-rc/*`.  
-   - Produces `vX.Y.Z-rc.<N>-build<commitCount>`.  
-4. **Other Branches**  
-   - `main`, `develop`, `hotfix/*` produce final releases with no alpha/beta/rc suffix.  
-   - No label => major/minor/patch remain unchanged; build increments only.
+3. **RC**
+  - Branch pattern: `release-rc/*`.
+  - Produces `vX.Y.Z-rc.<N>-build<commitCount>`.
+4. **Other Branches**
+  - `main`, `develop`, `hotfix/*` produce final releases with no alpha/beta/rc suffix.
+  - No label => major/minor/patch remain unchanged; build increments only.
+
+The accompanying GitHub Actions workflow (`ci-composite.yml`) lists `release-alpha/*`, `release-beta/*`, and `release-rc/*` in its trigger patterns so commits or pull requests to these branches automatically run this pipeline.
 
 Use whichever patterns best fit your project’s branching model. If you prefer subdirectories (`release/alpha/*` vs. `release-alpha/*`), adapt the snippet accordingly.
 
