@@ -13,14 +13,18 @@ on:
     branches:
       - main
       - develop
-      - release/*
+      - release-alpha/*
+      - release-beta/*
+      - release-rc/*
       - feature/*
       - hotfix/*
   pull_request:
     branches:
       - main
       - develop
-      - release/*
+      - release-alpha/*
+      - release-beta/*
+      - release-rc/*
       - feature/*
       - hotfix/*
     types:

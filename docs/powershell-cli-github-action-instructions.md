@@ -257,6 +257,7 @@ All dev-mode logic resides in two PowerShell scripts:
     - **Attach to Release**: If release creation is enabled (`ATTACH_ARTIFACTS_TO_RELEASE == true`), attach the built `.vip` to a GitHub Release.
 - **Events**: Typically triggered on:
   - Push or PR to `develop`, `feature/*`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `main`, or `hotfix/*`.
+    The workflow explicitly lists these pre-release patterns and does **not** use a generic `release/*` trigger.
   - Might also be triggered manually (`workflow_dispatch`) if needed.
 
 ---
@@ -273,7 +274,7 @@ All dev-mode logic resides in two PowerShell scripts:
 - **`release/*`**: branched off `develop` when nearing release.  
 - **`hotfix/*`**: branched off `main` for urgent fixes.  
 
-In this repo, we extend the concept of `release/*` into **`release-alpha/*`, `release-beta/*`, and `release-rc/*`** to differentiate pre-release stages. Merges flow as:
+In this repo, we extend the concept of `release/*` into **`release-alpha/*`, `release-beta/*`, and `release-rc/*`** to differentiate pre-release stages. The CI workflow mirrors this by triggering on these exact patterns. Merges flow as:
 - **feature** → **develop** → **release-alpha/X.Y** → **release-beta/X.Y** → **release-rc/X.Y** → **main**.
 
 <a name="52-multi-channel-pre-releases"></a>
