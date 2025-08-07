@@ -98,7 +98,7 @@ The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks 
 
 - **issue-status** – ensures CI runs only on branches named `issue-<number>` whose linked GitHub issue has Status “In Progress”.
 - **changes** – checks out the repository and detects `.vipc` file changes to determine if dependencies need to be applied.
-- **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses.
+- **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses **only when** the `changes` job reports `.vipc` modifications (`if: needs.changes.outputs.vipc == 'true'`).
 - **version** – computes the semantic version and build number using commit count and PR labels.
 - **missing-in-project-check** – verifies every source file is referenced in the `.lvproj`.
 - **test** – runs LabVIEW unit tests across the supported matrix.
