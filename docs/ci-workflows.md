@@ -63,6 +63,7 @@ Automating your Icon Editor builds and tests:
    - Produces `.vip` artifacts automatically. By default, the workflow populates the **“Company Name”** with `github.repository_owner` and the **“Author Name”** with `github.event.repository.name`, so each build is branded with your GitHub account and repository.
    - To use different branding, edit the **“Generate display information JSON”** step in [`.github/workflows/ci-composite.yml`](../.github/workflows/ci-composite.yml) and supply custom values for these fields.
    - Uses **label-based** version bumping (major/minor/patch) on pull requests.
+   - Generates `Tooling/deployment/release_notes.md` summarizing recent commits. Use this file to draft changelogs or release notes.
 
 6. **Disable Dev Mode** (optional)  
    Reverts your environment to normal LabVIEW settings, removing local overrides.
