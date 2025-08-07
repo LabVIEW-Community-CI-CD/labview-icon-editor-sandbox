@@ -47,7 +47,12 @@ Automating your Icon Editor builds and tests:
 
 4. **Run Tests**
    Use the main CI workflow (`ci-composite.yml`) to confirm your environment is valid.
-   - The workflow triggers on pushes or pull requests to `main`, `develop`, and release branches (for example, `release-*`, `feature/*`, and `hotfix/*`).
+   - The workflow triggers on pushes or pull requests to:
+     - `main`
+     - `develop`
+     - release branches: `release-alpha/*`, `release-beta/*`, `release-rc/*`
+     - feature branches: `feature/*`
+     - hotfix branches: `hotfix/*`
    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
    - An `issue-status` job gates execution: it skips all other jobs unless the branch starts with `issue-<number>` and the linked GitHub issue’s Status is **In Progress**. This gating helps avoid ambiguous runs for automated tools.
 

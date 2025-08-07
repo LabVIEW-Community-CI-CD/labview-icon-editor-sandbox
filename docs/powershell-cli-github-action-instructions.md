@@ -225,7 +225,7 @@ All dev-mode logic resides in two PowerShell scripts:
  - **File Name**: `ci-composite.yml`
  - **Purpose**: A dedicated **version** job (using `compute-version`) derives the version from PR labels and commit count, and the **Build VI Package** job builds the `.vip` artifact using that version output.
 - **Features**:
-    - **Issue status gating**: skips most jobs unless the branch's linked issue has Status **In Progress**.
+    - **Issue status gating**: skips most jobs unless the branch name starts with `issue-<number>` and the linked issue has Status **In Progress**.
     - **Label-based** version bump (`major`, `minor`, `patch`), or none if unlabeled.
     - **Commit-based build number**: `vX.Y.Z-build<commitCount>` (plus optional pre-release suffix).
     - **Multi-Channel** detection for `release-alpha/*`, `release-beta/*`, `release-rc/*`.
