@@ -44,7 +44,7 @@ We achieve this by:
 
 ## GitHub Actions and PowerShell
 
-A typical **GitHub Actions** workflow might have steps like. The composite CI workflow builds **32- and 64-bit** packed libraries separately, but the `build-vi-package` step packages only a **64-bit** VI package for **LabVIEW 2023**. The steps below mirror [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) lines 230-248 and 270-324:
+A typical **GitHub Actions** workflow might have steps like the snippet below. It is an illustrative example that condenses the process into a single job. In the actual [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) workflow, these steps are separated into the **`build-ppl`** and **`build-vi-package`** jobs. The snippet mirrors key steps such as `build-lvlibp`, `modify-vipb-display-info`, and `build-vi-package`:
 
 ```yaml
 jobs:
