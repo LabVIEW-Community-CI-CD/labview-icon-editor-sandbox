@@ -226,7 +226,9 @@ All dev-mode logic resides in two PowerShell scripts:
  - **Purpose**: A dedicated **version** job (using `compute-version`) derives the version from PR labels and commit count, and the **Build VI Package** job builds the `.vip` artifact using that version output.
 - **Features**:
     - **Issue status gating**: skips most jobs unless the branch name contains `issue-<number>` (e.g., `issue-123`, `feature/issue-123`) and the linked issue has Status **In Progress**.
-    - **Label-based** version bump (`major`, `minor`, `patch`), or none if unlabeled.
+    - **Label-based** version bump (`major`, `minor`, `patch`); unlabeled pull requests
+      default to `patch` (see `.github/actions/compute-version/action.yml`, used by
+      `compute-version` in `ci-composite.yml`).
     - **Commit-based build number**: `vX.Y.Z-build<commitCount>` (plus optional pre-release suffix).
     - **Multi-Channel** detection for `release-alpha/*`, `release-beta/*`, `release-rc/*`.
     - **Upload Artifact**: Builds the `.vip` file and uploads it as a workflow artifact (no automatic GitHub Release attachment).
