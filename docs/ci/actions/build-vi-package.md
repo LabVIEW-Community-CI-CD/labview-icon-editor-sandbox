@@ -237,9 +237,9 @@ without labels, the version components remain unchanged and only the build numbe
 - **Result**: The version might progress from `v1.2.3-build46` to `v1.2.3-build47`.
 
 ### 7.3 Working on a Release Branch
-- **Scenario**: You branch off `release/1.2`.
-- **Action**: The workflow appends `-rc.<N>` each time you commit to that release branch, e.g. `v1.2.0-rc.2-build50`.
-- **Result**: Merging `release/1.2` back to `main` finalizes `v1.2.0-build51`.
+- **Scenario**: You branch off `release-rc/1.2`.
+- **Action**: The workflow appends `-rc.<N>` each time you commit to that pre-release branch, e.g. `v1.2.0-rc.2-build50`. Branches named `release-alpha/1.2` or `release-beta/1.2` would similarly append `-alpha.<N>` or `-beta.<N>`; these patterns correspond to the `release-alpha/*`, `release-beta/*`, and `release-rc/*` rules in `ci-composite.yml`.
+- **Result**: Merging `release-rc/1.2` back to `main` finalizes `v1.2.0-build51`.
 
 ### 7.4 Manually Triggering (workflow_dispatch)
 - **Scenario**: A maintainer manually runs the workflow from the Actions tab (if enabled).
