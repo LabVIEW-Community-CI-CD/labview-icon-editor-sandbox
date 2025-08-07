@@ -44,15 +44,15 @@ We achieve this by:
 
 ## GitHub Actions and PowerShell
 
-A typical **GitHub Actions** workflow might have steps like the snippet below. It is an illustrative example that condenses the process into a single job. In the actual [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) workflow, these steps are separated into the **`build-ppl`** and **`build-vi-package`** jobs. The `build-ppl` job compiles the 32- and 64-bit packed libraries, while `build-vi-package` injects the display metadata and creates the final `.vip` file. Referring to the jobs by name—rather than line numbers—helps avoid future drift. The snippet mirrors key steps such as `build-lvlibp`, `modify-vipb-display-info`, and `build-vi-package`:
+An abbreviated **GitHub Actions** example below mirrors the [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) workflow. The **`build-ppl`** job uses a matrix to compile both 32- and 64-bit packed libraries, and the **`build-vi-package`** job injects the display metadata and creates the final `.vip` file. Referring to the jobs by name—rather than line numbers—helps avoid future drift. The snippet highlights key steps such as `build-lvlibp`, `modify-vipb-display-info`, and `build-vi-package`:
 
 ```yaml
 jobs:
-  build:
+  build-ppl:
     runs-on: self-hosted-windows-lv
     strategy:
       matrix:
-        bitness: [64, 32]
+        bitness: [32, 64]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/build-lvlibp
@@ -65,6 +65,12 @@ jobs:
           patch: ${{ needs.version.outputs.PATCH }}
           build: ${{ needs.version.outputs.BUILD }}
           commit: ${{ github.sha }}
+
+  build-vi-package:
+    runs-on: self-hosted-windows-lv
+    needs: build-ppl
+    steps:
+      - uses: actions/checkout@v4
       - name: Generate display information JSON
         id: display-info
         shell: pwsh
@@ -103,6 +109,9 @@ jobs:
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
 ```
+
+> **Note:** `build-vi-package` runs outside the bitness matrix because the Icon Editor ships only a 64-bit VI Package; packaging the 32-bit output would duplicate artifacts.
+
 **Key points**:
 - **`${{ github.repository_owner }}`** is the **organization** (or user) that owns the repo.
 - **`${{ github.event.repository.name }}`** is the repository name.
