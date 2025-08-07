@@ -140,7 +140,7 @@ components remain unchanged and only the build number increases.
 ### 4.1 Pipeline Overview
 
 1. **Check Out & Full Clone**
-   - Uses `actions/checkout@v4` with `fetch-depth: 0` so we get the entire commit history (required for the commit-based build number).
+   - Uses `actions/checkout@v3` with `fetch-depth: 0` so we get the entire commit history (required for the commit-based build number).
 
 2. **Determine Bump Type**
    - On PR events, scans the PR labels: `major`, `minor`, `patch`, or defaults to `none`.  
