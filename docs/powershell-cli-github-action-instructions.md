@@ -110,7 +110,7 @@ For **detailed runner configuration**, see **`runner-setup-guide.md`**. Below is
 2. **Add a Self-Hosted Runner**  
    - Go to **Settings → Actions → Runners**. Follow GitHub’s steps to register a Windows runner on your machine with LabVIEW installed.  
 3. **Label Your Runner**  
-   - For example, `self-hosted, iconeditor`. Ensure your workflow’s `runs-on` references these labels.
+   - For example, use `self-hosted-windows-lv` (or `self-hosted-linux-lv` for Linux). Ensure your workflow’s `runs-on` references these labels.
 
 ---
 
@@ -142,7 +142,7 @@ You’ll typically name the workflow file **`development-mode-toggle.yml`**. Its
 1. **Trigger Manually**  
    - Go to the **Actions** tab, select the “Development Mode Toggle” workflow, click “Run workflow.”  
    - Choose `enable` or `disable` to run the corresponding PowerShell script (`Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`).  
-   - The workflow runs on your self-hosted runner (e.g., labeled `self-hosted, iconeditor`).
+   - The workflow runs on your self-hosted runner (e.g., labeled `self-hosted-windows-lv`).
 
 2. **Important Note for Testing**  
    - With dev mode **enabled**, LabVIEW references local code, so installing the `.vip` may fail or cause conflicts.  
@@ -163,7 +163,7 @@ on:
 
 jobs:
   call-dev-mode:
-    runs-on: [self-hosted, iconeditor]
+  runs-on: self-hosted-windows-lv
     steps:
       - name: Invoke Dev Mode Toggle (enable)
         uses: ./.github/workflows/development-mode-toggle.yml
@@ -179,7 +179,7 @@ on:
 
 jobs:
   remote-dev-mode:
-    runs-on: [self-hosted, iconeditor]
+  runs-on: self-hosted-windows-lv
     steps:
       - name: Use remote Dev Mode Toggle
         uses: <owner>/<repo>/.github/workflows/development-mode-toggle.yml@main
@@ -195,7 +195,7 @@ on:
 
 jobs:
   forked-workflow-call:
-    runs-on: [self-hosted, iconeditor]
+  runs-on: self-hosted-windows-lv
     steps:
       - name: Call Dev Mode Toggle from My Fork
         uses: <your-fork>/<repo>/.github/workflows/development-mode-toggle.yml@my-feature-branch

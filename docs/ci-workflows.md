@@ -1,6 +1,6 @@
 # Local CI/CD Workflows
 
-This document explains how to automate build, test, and distribution steps for the Icon Editor using GitHub Actions. It includes features such as **fork-friendly GPG signing** toggles, **automatic version bumping** (using labels), and the **release creation** process. Additionally, it shows how you can **brand** the resulting VI Package with **organization** and **repository** metadata for unique identification.
+This document explains how to automate build, test, and distribution steps for the Icon Editor using GitHub Actions. It includes features such as **fork-friendly GPG signing** toggles, **automatic version bumping** (using labels), and **artifact upload**. Additionally, it shows how you can **brand** the resulting VI Package with **organization** and **repository** metadata for unique identification.
 
 ---
 
@@ -49,6 +49,7 @@ Automating your Icon Editor builds and tests:
 4. **Run Tests**
    Use the main CI workflow (`ci-composite.yml`) to confirm your environment is valid.
    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
+   - CI jobs proceed only when your branch is named `issue-<number>` and the linked GitHub issue’s Status is **In Progress**. See the [`issue-status` job](../.github/workflows/ci-composite.yml#L39) for details.
 
 5. **Build VI Package**
    - Produces `.vip` artifacts automatically, **including** optional metadata fields (`-CompanyName`, `-AuthorName`) that let you **brand** your package.
@@ -122,7 +123,7 @@ The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct
    Go to **Settings → Actions → Runners** in your GitHub repository (or organization) and follow the steps to register a runner on your machine that has LabVIEW installed.
 
 3. **Label the Runner** (optional):  
-   - You may label it `self-hosted, iconeditor` (or adjust the workflow’s `runs-on` lines to match your chosen labels).  
+   - Use labels such as `self-hosted-windows-lv` (and `self-hosted-linux-lv` for Linux). Adjust the workflow’s `runs-on` lines to match your runner labels.
    - This helps ensure the correct environment is used for building the Icon Editor.
 
 ---
