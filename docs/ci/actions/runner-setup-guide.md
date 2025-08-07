@@ -44,6 +44,7 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
 
 2. **Apply the VIPC (optional)**
    - Apply `Tooling/deployment/runner_dependencies.vipc` with VIPM in **LabVIEW 2021 (32-bit)**; repeat for **LabVIEW 2021 (64-bit)**. If using **LabVIEW 2023 (64-bit)** for builds, apply the same VIPC there as well.
+   - The CI workflow's `apply-deps` job installs these dependencies only when `.vipc` files change (`if: needs.changes.outputs.vipc == 'true'`). On a fresh runner or when no `.vipc` changes are present, apply the VIPC manually.
 
 3. **Configure a Self-Hosted Runner**  
    - Go to **Settings → Actions → Runners** in your (forked) repo.  
@@ -114,7 +115,7 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
    - Follow GitHub’s CLI instructions.
 
 4. **Labels** (optional)
-   - The workflow uses the `self-hosted-windows-lv` label. A Linux label (`self-hosted-linux-lv`) is reserved for future jobs but is not currently used in `ci-composite.yml`. Label your runner accordingly or update the YAML’s `runs-on` lines.
+   - The workflow uses the `self-hosted-windows-lv` label. Its `runs-on` expression also references `self-hosted-linux-lv` for potential Linux jobs, though the default matrix runs only on Windows. Label your runner accordingly, and prepare a Linux runner with `self-hosted-linux-lv` if you expand the matrix.
 
 
 <a name="running-the-actions-locally"></a>
