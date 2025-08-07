@@ -173,7 +173,9 @@ jobs:
       BUILD:         ${{ steps.compute.outputs.BUILD }}
       IS_PRERELEASE: ${{ steps.compute.outputs.IS_PRERELEASE }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - id: compute
         uses: ./.github/actions/compute-version
         with:
