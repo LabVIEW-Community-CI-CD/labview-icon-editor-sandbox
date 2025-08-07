@@ -145,12 +145,19 @@ Below are 13 possible issues you might encounter, along with suggested steps to 
 - You can’t merge into `main` or `release-alpha/*`; GitHub says “Branch is protected.”
 
 **Possible Causes**:
-- Strict branch protection rules require approvals or passing checks before merging.  
+- Strict branch protection rules require approvals or passing checks before merging.
+- The [`issue-status`](../../.github/workflows/ci-composite.yml#L41-L151) job determined the branch name or issue status was invalid, so downstream checks were skipped.
 - You’re lacking the required PR reviews or status checks.
 
 **Solution**:
-1. Have the required reviewers approve your Pull Request.  
-2. Ensure the “Build VI Package” and “Run Unit Tests” checks pass.  
+1. Have the required reviewers approve your Pull Request.
+2. Ensure all required status checks pass:
+   - [`issue-status`](../../.github/workflows/ci-composite.yml#L41-L151) – verifies branch naming and issue status. If it fails or is skipped, downstream jobs won’t run.
+   - [`changes`](../../.github/workflows/ci-composite.yml#L153-L170) – detects `.vipc` file changes.
+   - [`apply-deps`](../../.github/workflows/ci-composite.yml#L171-L193) – applies VIPC dependencies when needed.
+   - [`missing-in-project-check`](../../.github/workflows/ci-composite.yml#L215-L230) – validates project file membership.
+   - [`Run Unit Tests`](../../.github/workflows/ci-composite.yml#L232-L247) – executes unit tests.
+   - [`Build VI Package`](../../.github/workflows/ci-composite.yml#L287-L340) – produces the `.vip` artifact.
 3. Update your `CONTRIBUTING.md` to specify the merging rules so contributors know what’s needed.
 
 ---
