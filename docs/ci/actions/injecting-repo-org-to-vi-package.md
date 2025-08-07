@@ -44,7 +44,7 @@ We achieve this by:
 
 ## GitHub Actions and PowerShell
 
-A typical **GitHub Actions** workflow might have steps like:
+A typical **GitHub Actions** workflow might have steps like (showing only the 64-bit path for brevity):
 
 ```yaml
 jobs:
@@ -79,6 +79,8 @@ jobs:
           relative_path: ${{ github.workspace }}
           supported_bitness: 64
 ```
+
+The real CI workflow repeats these steps for the 32-bit toolchain as well.
 
 **Key points**:
 - **`${{ github.repository_owner }}`** is the **organization** (or user) that owns the repo.
