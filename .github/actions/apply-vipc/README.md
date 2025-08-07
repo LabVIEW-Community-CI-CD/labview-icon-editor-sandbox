@@ -43,12 +43,15 @@ steps:
   - name: Install LabVIEW dependencies
     uses: ./.github/actions/apply-vipc
     with:
-      minimum_supported_lv_version: 2024
-      vip_lv_version: 2024
+      minimum_supported_lv_version: 2021
+      vip_lv_version: 2021
       supported_bitness: 64
       relative_path: ${{ github.workspace }}
       vipc_path: Tooling/deployment/runner_dependencies.vipc
 ```
+
+The CI pipeline applies these dependencies across multiple LabVIEW versions—2021 (32-bit and 64-bit) and 2023 (64-bit)—as shown in
+[`.github/workflows/ci-composite.yml`](../../workflows/ci-composite.yml).
 
 ---
 
