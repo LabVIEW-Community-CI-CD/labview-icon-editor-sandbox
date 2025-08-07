@@ -42,9 +42,9 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
    - [PowerShell 7+](https://github.com/PowerShell/PowerShell/releases/latest)
    - [Git for Windows](https://github.com/git-for-windows/git/releases/latest)
 
-2. **Apply the VIPC (optional)**
+2. **Apply the VIPC**
    - Apply `Tooling/deployment/runner_dependencies.vipc` with VIPM in **LabVIEW 2021 (32-bit)**; repeat for **LabVIEW 2021 (64-bit)**. If using **LabVIEW 2023 (64-bit)** for builds, apply the same VIPC there as well.
-   - The CI workflow's `apply-deps` job installs these dependencies only when `.vipc` files change (`if: needs.changes.outputs.vipc == 'true'`). On a fresh runner or when no `.vipc` changes are present, apply the VIPC manually.
+   - This is required on new runners because the workflow's `apply-deps` job in `.github/workflows/ci-composite.yml` runs only when `.vipc` files change (`if: needs.changes.outputs.vipc == 'true'`). When no `.vipc` updates exist, dependencies aren't installed automatically, so apply the VIPC manually.
 
 3. **Configure a Self-Hosted Runner**  
    - Go to **Settings → Actions → Runners** in your (forked) repo.  
