@@ -134,9 +134,10 @@ The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct
 2. **Add Self-Hosted Runner**:  
    Go to **Settings → Actions → Runners** in your GitHub repository (or organization) and follow the steps to register a runner on your machine that has LabVIEW installed.
 
-3. **Label the Runner** (optional):  
-   - Use labels such as `self-hosted-windows-lv` (and `self-hosted-linux-lv` for Linux). Adjust the workflow’s `runs-on` lines to match your runner labels.
-   - This helps ensure the correct environment is used for building the Icon Editor.
+3. **Label the Runner** (optional):
+   - Use labels such as `self-hosted-windows-lv` for the default jobs. The default CI matrix currently runs only on this Windows label.
+   - `self-hosted-linux-lv` is included for potential future expansion but isn't used by the default jobs yet.
+   - Adjust the workflow’s `runs-on` lines to match your runner labels. This helps ensure the correct environment is used for building the Icon Editor.
 
 ---
 
