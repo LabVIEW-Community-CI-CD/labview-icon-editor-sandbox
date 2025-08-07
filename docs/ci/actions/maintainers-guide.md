@@ -22,10 +22,12 @@ current.
 
 1. Confirm the related GitHub issue is approved for work.
 2. Create a branch from `develop` named `issue-<number>-<short-description>`
-   (for example, `issue-123-fix-toolbar`).
-3. Set the issue's **Status** field to `In Progress`. The
-   [composite CI workflow](../../../.github/workflows/ci-composite.yml) skips
-   most jobs when the status is not set.
+   (for example, `issue-123-fix-toolbar`). Branch names **must** include
+   `issue-<number>`.
+3. Set the linked issue's **Status** field to `In Progress`. The
+   [`issue-status` job](../../../.github/workflows/ci-composite.yml)
+   enforces the branch naming and status requirements, skipping most jobs when
+   either condition is not met.
 4. Push the branch to the main repository and open a pull request targeting
    `develop` (or another appropriate branch).
 5. Run unit tests or scripted checks locally whenever possible.
