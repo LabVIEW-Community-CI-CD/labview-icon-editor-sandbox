@@ -51,9 +51,10 @@ Results are returned as standard GitHub Action outputs so downstream jobs can d
 
 ## Quick-start
 ```yaml
-# .github/workflows/ci-composite.yml  (excerpt)
+# .github/workflows/ci-composite.yml – missing-in-project-check (excerpt)
 jobs:
-  prepare:
+  missing-in-project-check:
+    needs: [changes, apply-deps]
     runs-on: self-hosted-windows-lv
     steps:
       - name: Check out repository
@@ -78,17 +79,21 @@ If you want **any** missing file to abort the pipeline immediately, place the st
 
 ```yaml
 jobs:
-  missing-check:
+  missing-in-project-check:
+    needs: [changes, apply-deps]
     runs-on: self-hosted-windows-lv
+    strategy:
+      matrix:
+        arch: [32, 64]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/missing-in-project
         with:
-          lv-ver: 2024
-          arch: 64
+          lv-ver: 2021
+          arch: ${{ matrix.arch }}
 
   build-package:
-    needs: missing-check
+    needs: missing-in-project-check
     …
 ```
 
@@ -127,9 +132,9 @@ jobs:
 ## Developing & testing locally
 ```powershell
 pwsh -File .github/actions/missing-in-project/Invoke-MissingInProjectCLI.ps1 `
-      -LVVersion 2024 `
+      -LVVersion 2021 `
       -Arch 64 `
-      -ProjectFile 'C:\path	o\MyProj.lvproj'
+      -ProjectFile 'C:\path\to\MyProj.lvproj'
 
 echo "Exit code: $LASTEXITCODE"
 type .github/actions/missing-in-project/missing_files.txt
