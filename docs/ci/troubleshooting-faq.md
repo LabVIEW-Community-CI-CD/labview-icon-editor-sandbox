@@ -8,43 +8,41 @@ This document provides a collection of common **troubleshooting** scenarios (wit
 
 1. [Troubleshooting](#troubleshooting)
    1. [No. 1: LabVIEW Not Found on Runner](#no-1-labview-not-found-on-runner)
-   2. [No. 2: GPG Key Missing or Invalid](#no-2-gpg-key-missing-or-invalid)
-   3. [No. 3: No `.vip` Artifact Found](#no-3-no-vip-artifact-found)
-   4. [No. 4: Version Label Not Recognized](#no-4-version-label-not-recognized)
-   5. [No. 5: Build Number Not Updating](#no-5-build-number-not-updating)
-   6. [No. 6: Dev Mode Still Enabled After Build](#no-6-dev-mode-still-enabled-after-build)
-   7. [No. 7: Release Not Created or Drafted](#no-7-release-not-created-or-drafted)
-   8. [No. 8: Branch Protection Blocks Merge](#no-8-branch-protection-blocks-merge)
-   9. [No. 9: Incorrect Pre-Release Suffix (Alpha/Beta/RC)](#no-9-incorrect-pre-release-suffix-alphabetarc)
-   10. [No. 10: Hotfix Not Tagged as Expected](#no-10-hotfix-not-tagged-as-expected)
-   11. [No. 11: Double-Dash Parameters Not Recognized](#no-11-double-dash-parameters-not-recognized)  
-   12. [No. 12: Company/Author Fields Not Populating](#no-12-companyauthor-fields-not-populating)  
-   13. [No. 13: JSON Fields Overwritten Incorrectly](#no-13-json-fields-overwritten-incorrectly)  
-   14. [No. 14: Repository Forks Not Displaying Correct Metadata](#no-14-repository-forks-not-displaying-correct-metadata)
+   2. [No. 2: No `.vip` Artifact Found](#no-2-no-vip-artifact-found)
+   3. [No. 3: Version Label Not Recognized](#no-3-version-label-not-recognized)
+   4. [No. 4: Build Number Not Updating](#no-4-build-number-not-updating)
+   5. [No. 5: Dev Mode Still Enabled After Build](#no-5-dev-mode-still-enabled-after-build)
+   6. [No. 6: Release Not Created or Drafted](#no-6-release-not-created-or-drafted)
+   7. [No. 7: Branch Protection Blocks Merge](#no-7-branch-protection-blocks-merge)
+   8. [No. 8: Incorrect Pre-Release Suffix (Alpha/Beta/RC)](#no-8-incorrect-pre-release-suffix-alphabetarc)
+   9. [No. 9: Hotfix Not Tagged as Expected](#no-9-hotfix-not-tagged-as-expected)
+   10. [No. 10: Double-Dash Parameters Not Recognized](#no-10-double-dash-parameters-not-recognized)
+   11. [No. 11: Company/Author Fields Not Populating](#no-11-companyauthor-fields-not-populating)
+   12. [No. 12: JSON Fields Overwritten Incorrectly](#no-12-json-fields-overwritten-incorrectly)
+   13. [No. 13: Repository Forks Not Displaying Correct Metadata](#no-13-repository-forks-not-displaying-correct-metadata)
 
 
 2. [FAQ](#faq)
    1. [Q1: Can I Override the Build Number?](#q1-can-i-override-the-build-number)
    2. [Q2: How Do I Skip Creating a Release?](#q2-how-do-i-skip-creating-a-release)
    3. [Q3: Can I Have More Than Alpha, Beta, or RC Channels?](#q3-can-i-have-more-than-alpha-beta-or-rc-channels)
-   4. [Q4: Do I Need a GPG Key to Build on a Fork?](#q4-do-i-need-a-gpg-key-to-build-on-a-fork)
-   5. [Q5: How Can I Attach Multiple `.vip` Files to a Release?](#q5-how-can-i-attach-multiple-vip-files-to-a-release)
-   6. [Q6: Do I Need To Merge Hotfixes Into `develop`?](#q6-do-i-need-to-merge-hotfixes-into-develop)
-   7. [Q7: What If I Don’t Want a Draft Release?](#q7-what-if-i-dont-want-a-draft-release)
-   8. [Q8: Can I Use This Workflow Without Gitflow?](#q8-can-i-use-this-workflow-without-gitflow)
-   9. [Q9: Why Is My Dev Mode Toggle Not Working Locally?](#q9-why-is-my-dev-mode-toggle-not-working-locally)
-   10. [Q10: Can I Use a Different LabVIEW Version (e.g., 2023)?](#q10-can-i-use-a-different-labview-version-eg-2023)
-   11. [Q11: How Do I Pass Repository Name and Organization?](#q11-how-do-i-pass-repository-name-and-organization)  
-   12. [Q12: Can I Omit the Company/Author Fields in My JSON?](#q12-can-i-omit-the-companyauthor-fields-in-my-json)  
-   13. [Q13: Why Must I Use Single-Dash Instead of Double-Dash?](#q13-why-must-i-use-single-dash-instead-of-double-dash)  
-   14. [Q14: Can I Add More Fields to the VIPB Display Information?](#q14-can-i-add-more-fields-to-the-vipb-display-information)
+   4. [Q4: How Can I Attach Multiple `.vip` Files to a Release?](#q4-how-can-i-attach-multiple-vip-files-to-a-release)
+   5. [Q5: Do I Need To Merge Hotfixes Into `develop`?](#q5-do-i-need-to-merge-hotfixes-into-develop)
+   6. [Q6: What If I Don’t Want a Draft Release?](#q6-what-if-i-dont-want-a-draft-release)
+   7. [Q7: Can I Use This Workflow Without Gitflow?](#q7-can-i-use-this-workflow-without-gitflow)
+   8. [Q8: Why Is My Dev Mode Toggle Not Working Locally?](#q8-why-is-my-dev-mode-toggle-not-working-locally)
+   9. [Q9: Can I Use a Different LabVIEW Version (e.g., 2023)?](#q9-can-i-use-a-different-labview-version-eg-2023)
+   10. [Q10: How Do I Pass Repository Name and Organization?](#q10-how-do-i-pass-repository-name-and-organization)
+   11. [Q11: Can I Omit the Company/Author Fields in My JSON?](#q11-can-i-omit-the-companyauthor-fields-in-my-json)
+   12. [Q12: Why Must I Use Single-Dash Instead of Double-Dash?](#q12-why-must-i-use-single-dash-instead-of-double-dash)
+   13. [Q13: Can I Add More Fields to the VIPB Display Information?](#q13-can-i-add-more-fields-to-the-vipb-display-information)
 
 
 ---
 
 ## Troubleshooting
 
-Below are 14 possible issues you might encounter, along with suggested steps to resolve them.
+Below are 13 possible issues you might encounter, along with suggested steps to resolve them.
 
 ### No. 1: LabVIEW Not Found on Runner
 
@@ -62,23 +60,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 2: GPG Key Missing or Invalid
-
-**Symptoms**:
-- The workflow tries to sign a tag or release, then fails with “gpg: signing failed: No secret key” or a passphrase prompt.
-
-**Possible Causes**:
-- You’re on the main repository but haven’t set up the required GPG key.
-- On a fork, GPG is disabled, but the script is still attempting to sign.
-
-**Solution**:
-1. If you’re running on a fork, set `DISABLE_GPG_ON_FORKS=true`.  
-2. If you’re on the main repo, ensure the GPG key is installed, and the passphrase (if any) is available to the workflow.  
-3. Confirm your GitHub Actions secrets are correctly set for GPG usage (e.g., `GPG_PRIVATE_KEY`, `PASSPHRASE`).
-
----
-
-### No. 3: No `.vip` Artifact Found
+### No. 2: No `.vip` Artifact Found
 
 **Symptoms**:
 - The build succeeds, but the “Upload artifact” step fails with “File not found” or empty artifact.
@@ -94,7 +76,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 4: Version Label Not Recognized
+### No. 3: Version Label Not Recognized
 
 **Symptoms**:
 - You labeled your Pull Request “minor” or “patch,” but the version doesn’t increment that segment.
@@ -110,7 +92,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 5: Build Number Not Updating
+### No. 4: Build Number Not Updating
 
 **Symptoms**:
 - Every build produces the same “-buildN” suffix, or the commit count doesn’t match reality.
@@ -126,7 +108,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 6: Dev Mode Still Enabled After Build
+### No. 5: Dev Mode Still Enabled After Build
 
 **Symptoms**:
 - You run a build, but the environment remains in “development mode,” causing odd behavior when installing `.vip`.
@@ -141,7 +123,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 7: Release Not Created or Drafted
+### No. 6: Release Not Created or Drafted
 
 **Symptoms**:
 - The workflow completes, but you see no new release in GitHub’s “Releases” section.
@@ -157,7 +139,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 8: Branch Protection Blocks Merge
+### No. 7: Branch Protection Blocks Merge
 
 **Symptoms**:
 - You can’t merge into `main` or `release-alpha/*`; GitHub says “Branch is protected.”
@@ -173,7 +155,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 9: Incorrect Pre-Release Suffix (Alpha/Beta/RC)
+### No. 8: Incorrect Pre-Release Suffix (Alpha/Beta/RC)
 
 **Symptoms**:
 - You expected a `-beta.<N>` suffix, but got `-alpha.<N>` or no suffix at all.
@@ -188,7 +170,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 10: Hotfix Not Tagged as Expected
+### No. 9: Hotfix Not Tagged as Expected
 
 **Symptoms**:
 - Your hotfix branch merges produce a release, but the tag isn’t correct (e.g., it’s missing or still in RC mode).
@@ -204,7 +186,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 11: Double-Dash Parameters Not Recognized
+### No. 10: Double-Dash Parameters Not Recognized
 
 **Symptoms**:
 - You see an error like:  
@@ -220,7 +202,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 12: Company/Author Fields Not Populating
+### No. 11: Company/Author Fields Not Populating
 
 **Symptoms**:
 - The final `.vip` file’s metadata for “Company Name” or “Author Name (Person or Company)” remains empty.
@@ -236,7 +218,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 13: JSON Fields Overwritten Incorrectly
+### No. 12: JSON Fields Overwritten Incorrectly
 
 **Symptoms**:
 - You see “Add-Member … already exists” errors, or your `Package Version` keys get overwritten unexpectedly.
@@ -252,7 +234,7 @@ Below are 14 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 14: Repository Forks Not Displaying Correct Metadata
+### No. 13: Repository Forks Not Displaying Correct Metadata
 
 **Symptoms**:
 - A user forks the repository, but the `.vip` file still shows the **original** repo or organization name.
@@ -293,77 +275,70 @@ Yes, you can add logic for `release-gamma/*` or any naming scheme. Just update t
 
 ---
 
-### Q4: Do I Need a GPG Key to Build on a Fork?
-
-**Answer**:  
-No. If `DISABLE_GPG_ON_FORKS=true`, the signing process is disabled on forks to prevent missing key issues. You can still produce builds without GPG signatures.
-
----
-
-### Q5: How Can I Attach Multiple `.vip` Files to a Release?
+### Q4: How Can I Attach Multiple `.vip` Files to a Release?
 
 **Answer**:  
 Modify the artifact collection or upload steps to match multiple `.vip` patterns (e.g., `*.vip`). Then, in the “Attach Artifacts” step, loop over all matches and upload each.
 
 ---
 
-### Q6: Do I Need To Merge Hotfixes Into `develop`?
+### Q5: Do I Need To Merge Hotfixes Into `develop`?
 
 **Answer**:  
 Yes. In standard Gitflow, after merging a `hotfix/*` into `main`, you also merge it back into `develop` so that your fix is reflected in ongoing development. Otherwise, you risk reintroducing the bug in future releases.
 
 ---
 
-### Q7: What If I Don’t Want a Draft Release?
+### Q6: What If I Don’t Want a Draft Release?
 
 **Answer**:  
 Simply set `DRAFT_RELEASE=false`. The release will be published immediately after the workflow completes. Alternatively, you can remove or tweak that setting in your `.yml` file.
 
 ---
 
-### Q8: Can I Use This Workflow Without Gitflow?
+### Q7: Can I Use This Workflow Without Gitflow?
 
 **Answer**:  
 Technically yes, if you don’t rely on alpha/beta/rc branch naming. But the workflow is designed with Gitflow in mind, so some features (like pre-release suffix detection) might not apply if you only have `main`.
 
 ---
 
-### Q9: Why Is My Dev Mode Toggle Not Working Locally?
+### Q8: Why Is My Dev Mode Toggle Not Working Locally?
 
 **Answer**:  
 The Dev Mode Toggle scripts rely on a self-hosted runner context. If you’re trying to run them directly on your machine outside GitHub Actions, you might need to adapt the PowerShell scripts or replicate the environment variables. Check logs to see if your system path matches what the scripts expect.
 
 ---
 
-### Q10: Can I Use a Different LabVIEW Version (e.g., 2023)?
+### Q9: Can I Use a Different LabVIEW Version (e.g., 2023)?
 
 **Answer**:  
 Yes, if your machine and project support it. You’ll need to install that version on your self-hosted runner, and potentially update environment variables or references in the build scripts (e.g., specifying the correct LabVIEW EXE path). Just ensure everything in the project is compatible.
 
 ---
 
-### Q11: How Do I Pass Repository Name and Organization?
+### Q10: How Do I Pass Repository Name and Organization?
 
 **Answer**:  
 Inside **GitHub Actions**, you can reference environment variables such as `${{ github.repository_owner }}` and `${{ github.repository }}`. Pass them to your script (for example, `-CompanyName "$env:REPO_OWNER"` and `-AuthorName "$env:REPO_NAME"`), which then gets injected into the `DisplayInformationJSON` used by `build_vip.ps1`. This ensures each build is branded with your fork’s or org’s name.
 
 ---
 
-### Q12: Can I Omit the Company/Author Fields in My JSON?
+### Q11: Can I Omit the Company/Author Fields in My JSON?
 
 **Answer**:  
 Yes. If you don’t want to display them, pass empty strings (`-CompanyName "" -AuthorName ""`) or remove those fields from your script’s JSON object. The final `.vip` file will simply show blank lines or omit those entries.
 
 ---
 
-### Q13: Why Must I Use Single-Dash Instead of Double-Dash?
+### Q12: Why Must I Use Single-Dash Instead of Double-Dash?
 
 **Answer**:  
 PowerShell **named parameters** typically start with a single dash (`-Parameter`). Double-dash syntax (`--param`) is common in Linux CLI tools but is not standard in a typical PowerShell `param()` declaration. If you try to pass `--arch` or `--lv-ver`, you’ll get an error about an unrecognized parameter.
 
 ---
 
-### Q14: Can I Add More Fields to the VIPB Display Information?
+### Q13: Can I Add More Fields to the VIPB Display Information?
 
 **Answer**:  
 Absolutely. You can modify `$jsonObject` in your script to include new keys, such as `"Product Description"` or `"Special Internal ID"`. Just be sure that the VI that updates the `.vipb` file (`Modify_VIPB_Display_Information.vi`) knows how to handle those additional fields, or they might be ignored.

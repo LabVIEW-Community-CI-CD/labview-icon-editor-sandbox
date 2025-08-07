@@ -24,7 +24,7 @@ In a multi-fork or multi-organization environment, **injecting the repository na
 We achieve this by:
 1. **Generating** a JSON object with fields like `"Company Name"` and `"Author Name (Person or Company)"` directly in the workflow using GitHub-provided variables (e.g., `${{ github.repository_owner }}` and `${{ github.event.repository.name }}`).
 2. **Using** the `modify-vipb-display-info` action to merge this JSON into the `.vipb` (VI Package Builder) file.
-3. **Building** the package with the `build-lvlibp` and `build-vip` actions from the composite CI workflow.
+3. **Building** the package with the `build-lvlibp` and `build-vi-package` actions from the composite CI workflow.
 
 ---
 
@@ -72,7 +72,7 @@ jobs:
           display_information_json: ${{ steps.display-info.outputs.json }}
           relative_path: ${{ github.workspace }}
           supported_bitness: 64
-      - uses: ./.github/actions/build-vip
+      - uses: ./.github/actions/build-vi-package
         with:
           vipb_path: Tooling/deployment/NI Icon editor.vipb
           display_information_json: ${{ steps.display-info.outputs.json }}
@@ -83,7 +83,7 @@ jobs:
 **Key points**:
 - **`${{ github.repository_owner }}`** is the **organization** (or user) that owns the repo.
 - **`${{ github.event.repository.name }}`** is the repository name.
-- The generated JSON is consumed by `modify-vipb-display-info` and `build-vip` to embed this metadata in the final package.
+- The generated JSON is consumed by `modify-vipb-display-info` and `build-vi-package` to embed this metadata in the final package.
 
 ---
 
@@ -95,7 +95,7 @@ jobs:
    1. `build-lvlibp` compiles the 32-bit and 64-bit libraries.
    2. A PowerShell step generates JSON with `CompanyName` and `AuthorName` fields derived from GitHub variables.
    3. `modify-vipb-display-info` merges that JSON into the `.vipb` file.
-   4. `build-vip` produces the final **Icon Editor** `.vip` package.
+   4. `build-vi-package` produces the final **Icon Editor** `.vip` package.
 4. **Actions** can then upload the resulting `.vip` as an artifact.
 
 ---

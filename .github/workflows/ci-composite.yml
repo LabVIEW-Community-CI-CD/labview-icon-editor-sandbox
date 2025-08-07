@@ -258,7 +258,7 @@ jobs:
           name: lv_icon_${{ matrix.suffix }}.lvlibp
           path: resource/plugins/lv_icon_${{ matrix.suffix }}.lvlibp
 
-  build-vip:
+  build-vi-package:
     name: Build VI Package
     needs: [build-ppl, version]
     runs-on: self-hosted-windows-lv
@@ -314,7 +314,7 @@ jobs:
           commit: ${{ github.sha }}
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
-      - uses: ./.github/actions/build-vip
+      - uses: ./.github/actions/build-vi-package
         with:
           supported_bitness: 64
           relative_path: ${{ github.workspace }}

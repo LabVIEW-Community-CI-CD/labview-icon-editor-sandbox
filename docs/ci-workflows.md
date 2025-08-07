@@ -1,6 +1,6 @@
 # Local CI/CD Workflows
 
-This document explains how to automate build, test, and distribution steps for the Icon Editor using GitHub Actions. It includes features such as **fork-friendly GPG signing** toggles, **automatic version bumping** (using labels), and **artifact upload**. Additionally, it shows how you can **brand** the resulting VI Package with **organization** and **repository** metadata for unique identification.
+This document explains how to automate build, test, and distribution steps for the Icon Editor using GitHub Actions. It includes features such as **automatic version bumping** (using labels) and **artifact upload**. Additionally, it shows how you can **brand** the resulting VI Package with **organization** and **repository** metadata for unique identification.
 
 ---
 
@@ -24,7 +24,6 @@ Automating your Icon Editor builds and tests:
 - Minimizes manual toggling of LabVIEW environment settings  
 - Stores build artifacts (VI Packages) in GitHub for easy download  
 - Automatically versions releases using **semantic version** logic  
-- Handles GPG signing in the main repo but **disables** it for forks (so fork owners aren’t blocked by passphrase prompts)  
 - **Allows you to brand** each VI Package build with your organization or repository name for unique identification
 
 **Prerequisites**:
@@ -88,7 +87,7 @@ Below are the **key GitHub Actions** provided in this repository:
    - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`).
      Direct pushes retain the previous version and increment only the build number.
    - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).
-   - **Fork-Friendly**: Disables GPG signing if it detects a fork (so no passphrase is needed). In the **main repo** (`ni/labview-icon-editor`), signing remains active.
+   - **Fork-Friendly**: Runs in forks without requiring extra signing keys.
    - Produces the `.vip` file via a PowerShell script (e.g., `Build.ps1`).
    - **You can pass metadata** (e.g., `-CompanyName`, `-AuthorName`) to embed your organization or repository into the generated `.vip` for distinct branding.
    - Uploads the `.vip` artifact to GitHub’s build artifacts.
@@ -104,7 +103,7 @@ The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks 
 - **missing-in-project-check** – verifies every source file is referenced in the `.lvproj`.
 - **test** – runs LabVIEW unit tests across the supported matrix.
 - **build-ppl** – uses a matrix to build 32-bit and 64-bit packed libraries.
-- **build-vip** – packages the final VI Package using the built libraries and version information.
+- **build-vi-package** – packages the final VI Package using the built libraries and version information.
 
 The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct jobs.
 
@@ -177,7 +176,6 @@ Although GitHub Actions primarily run on GitHub-hosted or self-hosted agents, yo
 ## Final Notes
 
 - **Artifact Storage**: The `.vip` file is accessible under the Actions run summary (click “Artifacts”).  
-- **Forking**: If another user forks your repo, the new **fork** sees GPG signing disabled automatically, preventing passphrase errors.  
 - **Version Enforcement**: Pull requests without a version label default to `patch`; you can enforce labeling with an optional “Label Enforcer” step if desired.  
 - **Branding**: To highlight the **organization** or **repository** behind a particular build, simply pass `-CompanyName` and `-AuthorName` (or similar parameters) into the `Build.ps1` script. This metadata flows into the final **Display Information** of the Icon Editor’s VI Package.
 

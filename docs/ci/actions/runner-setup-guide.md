@@ -23,7 +23,6 @@ This document details how to automate **building**, **testing**, and **packaging
 - **Run** consistent builds and tests across different machines or developers.  
 - **Automatically version** your Icon Editor code via **semantic labeling** (major/minor/patch) plus a global build counter.
 - **Upload** the `.vip` artifact for download; the workflow does **not** create tags or GitHub releases.
-- Seamlessly handle **fork** scenarios—**GPG signing** is enabled if `github.repository` is your main repo, disabled otherwise.
 
 Additionally, **you can pass metadata fields** (like **organization** or **repository name**) to the **build script**. These fields are embedded into the **VI Package** display information, effectively **branding** the Icon Editor package with a unique identifier. This is especially useful when multiple forks or organizations produce their own versions of the Icon Editor—ensuring each `.vip` is clearly labeled with the correct “author” or “company.”
 
@@ -91,7 +90,7 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
    - Runs the unit tests and, on success, builds the `.vip`.
    - **Label-based** semantic versioning (`major`, `minor`, `patch`). Defaults to `patch` if no label.
    - **Counts existing tags** (`v*.*.*-build*`) to increment the global build number.
-   - **Fork-friendly** GPG: disabled for forks to avoid passphrase prompts.
+   - **Fork-friendly**: runs on forks without requiring signing keys.
    - Publishes `.vip` as an artifact; creating Git tags or GitHub releases requires a separate workflow.
    - **Branding the Package**:
      - You can **pass** metadata parameters like `-CompanyName` and `-AuthorName` into the build script. These map to fields in the **VI Package** (e.g., “Company Name,” “Author Name (Person or Company)”).
@@ -164,4 +163,4 @@ With your runner online:
 - **Submit Pull Requests**: If you refine scripts or fix issues, open a PR with logs showing your updated workflow runs.  
 - **Troubleshoot**: If manual environment edits are needed, consult `ManualSetup.md` or the original documentation for advanced configuration steps.  
 
-**Happy Building!** By integrating these workflows, you’ll maintain a **robust, automated CI/CD** pipeline for the LabVIEW Icon Editor—complete with **semantic versioning**, **build artifact uploads**, **metadata branding** (company/repo), and **GPG-signing** or **GPG-free** mode for forks.
+**Happy Building!** By integrating these workflows, you’ll maintain a **robust, automated CI/CD** pipeline for the LabVIEW Icon Editor—complete with **semantic versioning**, **build artifact uploads**, and **metadata branding** (company/repo).
