@@ -46,7 +46,7 @@ By adopting these patterns, maintainers can run alpha, beta, and RC pipelines in
    - Creating tags or GitHub releases would require additional permissions and a separate workflow.
 
 3. **Labels**
-   - Pull requests may include at most one of `major`, `minor`, or `patch` to increment those fields. If none is provided, the workflow defaults to a patch bump. Multiple release labels cause the workflow to fail. See [`compute-version`](../../.github/actions/compute-version/action.yml) for the label-handling logic.
+  - Pull requests may include at most one of `major`, `minor`, or `patch` to increment those fields. If none is provided, the workflow defaults to a patch bump. Multiple release labels cause the workflow to fail. See [`compute-version`](../../../.github/actions/compute-version/action.yml) for the label-handling logic.
 
 
 <a name="configuration--branch-patterns"></a>
