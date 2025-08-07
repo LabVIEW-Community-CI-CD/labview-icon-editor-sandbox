@@ -107,7 +107,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 - **Fork Setup**:
   1. **Copy** the workflow file (`.github/workflows/ci-composite.yml`) into your fork.
   2. **Update** any references to the official repo name (`ni/labview-icon-editor`) if your fork is named differently.
-  3. **Self-Hosted Runner**: Confirm your runner has the `iconeditor` label or update `runs-on` to match your runner’s labels.
+ 3. **Self-Hosted Runner**: Confirm your runner uses the `self-hosted-windows-lv` label (or `self-hosted-linux-lv` for Linux jobs) or update `runs-on` to match your runner’s labels.
   4. **Write Permissions**: In fork settings → Actions → General, ensure “Workflow Permissions” = “Read and write.”
 
 ### 3.4 Artifact Publication
@@ -120,7 +120,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 4.1 Pipeline Overview
 
 1. **Check Out & Full Clone**
-   - Uses `actions/checkout@v3` with `fetch-depth: 0` so we get the entire commit history (required for commit-based build number).
+   - Uses `actions/checkout@v4` with `fetch-depth: 0` so we get the entire commit history (required for commit-based build number).
 
 2. **Determine Bump Type**
    - On PR events, scans the PR labels: `major`, `minor`, `patch`, or defaults to `none`.  
@@ -177,15 +177,15 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ## 6. **Maintenance & Administration**
 
 ### 6.1 Keeping the Workflow Updated
-1. **Actions Versions**  
-   - This workflow references certain actions, like `actions/checkout@v3` or `actions/github-script@v6`. Keep an eye on updates or deprecations.
+1. **Actions Versions**
+   - This workflow references certain actions, like `actions/checkout@v4` or `actions/github-script@v7`. Keep an eye on updates or deprecations.
 2. **Build Actions**
    - If your LabVIEW project evolves or you add steps, keep the `build-lvlibp` and `build-vip` actions up to date.
 3. **Windows Runner Updates**  
    - Ensure your self-hosted runner OS is patched and has any new LabVIEW versions if your project updates.
 
 ### 6.2 Runner Management
-- **Labels**: The workflow uses `runs-on: [self-hosted, iconeditor]`. Confirm your runner has both `self-hosted` and `iconeditor` labels.
+- **Labels**: The workflow uses `runs-on: self-hosted-windows-lv` (and `self-hosted-linux-lv` where applicable). Confirm your runner has the required label.
 - **Resource Monitoring**: If the build is large or slow, upgrade the machine specs or add more runners to handle parallel tasks.
 
 ### 6.3 Adding New Features
