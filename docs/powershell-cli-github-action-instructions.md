@@ -222,8 +222,8 @@ All dev-mode logic resides in two PowerShell scripts:
 <a name="42-ci-pipeline-composite"></a>
 ### 4.2 CI Pipeline (Composite)
 
-- **File Name**: `ci-composite.yml`
-- **Purpose**: The workflow's **Build VI Package** job builds the `.vip` artifact and determines the version based on PR labels and commit count.
+ - **File Name**: `ci-composite.yml`
+ - **Purpose**: A dedicated **version** job (using `compute-version`) derives the version from PR labels and commit count, and the **Build VI Package** job builds the `.vip` artifact using that version output.
 - **Features**:
     - **Issue status gating**: skips most jobs unless the branch's linked issue has Status **In Progress**.
     - **Label-based** version bump (`major`, `minor`, `patch`), or none if unlabeled.
