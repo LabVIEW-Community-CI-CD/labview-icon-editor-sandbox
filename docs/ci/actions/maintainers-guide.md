@@ -24,7 +24,7 @@ current.
 2. Create a branch from `develop` named `issue-<number>-<short-description>`
    (for example, `issue-123-fix-toolbar`). Branch names **must** include
    `issue-<number>`.
-3. Set the linked issue's **Status** field to `In Progress`. The
+3. Set the linked issue's **Status** field to **In Progress**. The
    [`issue-status` job](../../../.github/workflows/ci-composite.yml)
    enforces the branch naming and status requirements, skipping most jobs when
    either condition is not met.
