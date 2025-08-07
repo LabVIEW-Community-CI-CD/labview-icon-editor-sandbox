@@ -116,6 +116,8 @@ The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks 
 - **build-ppl** – uses a matrix to build 32-bit and 64-bit packed libraries, then uses the `rename-file` action to append the bitness to each library’s filename.
 - **build-vi-package** – packages the final VI Package using the built libraries and version information. In `ci-composite.yml` this job passes `supported_bitness: 64`, so it produces only a 64-bit `.vip`.
 
+Both build jobs end with a `close-labview` step that shuts down LabVIEW to free up resources on the runner.
+
 The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct jobs.
 
 *(The **Run Unit Tests** workflow has been consolidated into the main CI process.)*
