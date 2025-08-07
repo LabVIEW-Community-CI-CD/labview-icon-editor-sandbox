@@ -41,8 +41,9 @@ current.
   Coordinate with the NI Open-Source Program Manager (OSPM) before execution.
 - **Finalize experiment merges** – Prior to merging an experiment branch into
   `develop`, apply an appropriate version label (major/minor/patch) and remove
-  any temporary settings or `NoCI` labels. The OSPM or designated NI staff
-  typically gives the final approval.
+  any temporary settings or `NoCI` labels. A `NoCI` label causes the CI
+  workflow to skip all jobs, so clear it before running final tests. The OSPM
+  or designated NI staff typically gives the final approval.
 - **Hotfix branches** – For critical fixes on an official release, create or
   approve a `hotfix/*` branch targeting `main`. After merging into `main`, merge
   the changes back into `develop` to keep branches synchronized.
