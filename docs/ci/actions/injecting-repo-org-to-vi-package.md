@@ -57,6 +57,11 @@ jobs:
           minimum_supported_lv_version: 2021
           supported_bitness: 64
           relative_path: ${{ github.workspace }}
+          major: ${{ needs.version.outputs.major }}
+          minor: ${{ needs.version.outputs.minor }}
+          patch: ${{ needs.version.outputs.patch }}
+          build: ${{ needs.version.outputs.build }}
+          commit: ${{ needs.version.outputs.commit }}
       - name: Generate display information JSON
         id: display-info
         shell: pwsh
@@ -82,6 +87,12 @@ jobs:
           display_information_json: ${{ steps.display-info.outputs.json }}
           relative_path: ${{ github.workspace }}
           supported_bitness: 64
+          major: ${{ needs.version.outputs.major }}
+          minor: ${{ needs.version.outputs.minor }}
+          patch: ${{ needs.version.outputs.patch }}
+          build: ${{ needs.version.outputs.build }}
+          commit: ${{ needs.version.outputs.commit }}
+          release_notes_file: ${{ steps.release-notes.outputs.file }}
 ```
 **Key points**:
 - **`${{ github.repository_owner }}`** is the **organization** (or user) that owns the repo.
