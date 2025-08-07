@@ -81,6 +81,7 @@ on:
       - release-rc/*
       - feature/*
       - hotfix/*
+      - issue-*
   pull_request:
     branches:
       - main
@@ -90,6 +91,7 @@ on:
       - release-rc/*
       - feature/*
       - hotfix/*
+      - issue-*
 ```
 
 Use whichever patterns best fit your project’s branching model. If you prefer subdirectories (`release/alpha/*` vs. `release-alpha/*`), adapt the snippet accordingly.

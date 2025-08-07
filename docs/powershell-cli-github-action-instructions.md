@@ -231,7 +231,7 @@ All dev-mode logic resides in two PowerShell scripts:
     - **Multi-Channel** detection for `release-alpha/*`, `release-beta/*`, `release-rc/*`.
     - **Upload Artifact**: Builds the `.vip` file and uploads it as a workflow artifact (no automatic GitHub Release attachment).
 - **Events**: Typically triggered on:
-  - Push or PR to `develop`, `feature/*`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `main`, or `hotfix/*`.
+  - Push or PR to `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `feature/*`, `hotfix/*`, or `issue-*`.
     The workflow explicitly lists these pre-release patterns and does **not** use a generic `release/*` trigger.
   - Might also be triggered manually (`workflow_dispatch`) if needed.
 
