@@ -101,7 +101,7 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 We provide **GitHub Actions** that wrap these same PowerShell scripts for building the Icon Editor:
 
 - **Development Mode Toggle**: Uses `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.  
-- **Run Unit Tests**: Calls `unit_tests.ps1`.  
+- **Run Unit Tests**: Calls `RunUnitTests.ps1`.
 - **Build VI Package**: Internally calls `Build.ps1` to produce a `.vip` artifact (and can draft a release if configured).
 
 ### Injecting Organization/Repo for Unique Builds
