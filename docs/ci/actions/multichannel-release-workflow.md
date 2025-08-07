@@ -6,12 +6,13 @@ This revised guide focuses on the **release workflow**, specifically how we hand
 ## **Table of Contents**
 
 1. [Overview & Purpose](#overview--purpose)  
-2. [Requirements & Environment](#requirements--environment)  
-3. [Configuration & Branch Patterns](#configuration--branch-patterns)  
+2. [Requirements & Environment](#requirements--environment)
+3. [Configuration & Branch Patterns](#configuration--branch-patterns)
+   - [Issue-Status Gate](#issue-status-gate)
 4. [Workflow Steps](#workflow-steps)
    - [Fetch & Determine Version](#fetch--determine-version)
    - [Build & Artifact Handling](#build--artifact-handling)
-   - [Tag & Release Creation](#tag--release-creation)
+   - [Artifact Upload Only](#artifact-upload-only)
 5. [Multiple Pre-Release Channels Explained](#multiple-pre-release-channels-explained)  
    - [Branch Name Conventions](#branch-name-conventions)  
    - [Alpha / Beta / RC Logic](#alpha--beta--rc-logic)  
@@ -25,7 +26,7 @@ This revised guide focuses on the **release workflow**, specifically how we hand
 <a name="overview--purpose"></a>
 ## **1. Overview & Purpose**
 
-This **Multi-Channel Release Workflow** automates the packaging and releasing of LabVIEW `.vip` files. It:
+This **Multi-Channel Release Workflow** automates packaging LabVIEW `.vip` files for multiple pre-release channels. It uploads artifacts but does not create Git tags or GitHub releases. It:
 
 - Uses **label-based** semantic version increments for major/minor/patch.
 - Maintains a **commit-based build number**, so every new commit yields a unique suffix (`-buildNN`).
@@ -41,12 +42,12 @@ By adopting these patterns, maintainers can run alpha, beta, and RC pipelines in
    - LabVIEW installed to build `.vip` files.  
    - PowerShell 7+ recommended.
 
-2. **Repository Permissions**  
-   - The GitHub Actions token (`GITHUB_TOKEN`) needs `contents: write` to push tags & create releases.  
-   - If you have branch protection on tags, allow actions to create them.
+2. **Repository Permissions**
+   - The GitHub Actions token (`GITHUB_TOKEN`) needs `contents: read` to upload artifacts.
+   - Creating tags or GitHub releases would require additional permissions and a separate workflow.
 
 3. **Labels**
-   - Pull requests may include at most one of `major`, `minor`, or `patch` to increment those fields. If none is provided, the workflow defaults to a patch bump. Multiple release labels cause the workflow to fail. See [`compute-version`](../../.github/actions/compute-version/action.yml) for the label-handling logic.
+  - Pull requests may include at most one of `major`, `minor`, or `patch` to increment those fields. If none is provided, the workflow defaults to a patch bump. Multiple release labels cause the workflow to fail. See [`compute-version`](../../../.github/actions/compute-version/action.yml) for the label-handling logic.
 
 
 <a name="configuration--branch-patterns"></a>
@@ -80,6 +81,7 @@ on:
       - release-rc/*
       - feature/*
       - hotfix/*
+      - issue-*
   pull_request:
     branches:
       - main
@@ -89,9 +91,16 @@ on:
       - release-rc/*
       - feature/*
       - hotfix/*
+      - issue-*
 ```
 
 Use whichever patterns best fit your project’s branching model. If you prefer subdirectories (`release/alpha/*` vs. `release-alpha/*`), adapt the snippet accordingly.
+
+
+<a name="issue-status-gate"></a>
+### **Issue-Status Gate**
+
+The composite CI workflow only runs full jobs when the `issue-status` check succeeds. That job requires the source branch name to contain `issue-<number>` (for example, `release-alpha/issue-123` or `issue-456`) and the linked GitHub issue’s Status to be **In Progress**. Branches without this prefix—such as `release-alpha/2.0`—trigger the workflow but skip all subsequent jobs. See the `issue-status` job in [ci-composite.yml](../../../.github/workflows/ci-composite.yml) for details and its downstream gate.
 
 
 <a name="workflow-steps"></a>
@@ -112,16 +121,12 @@ Below is a **high-level** breakdown. In your `.github/workflows/ci-composite.yml
 
 <a name="build--artifact-handling"></a>
 ### **Build & Artifact Handling**
-- Uses the `build-lvlibp` and `build-vip` actions to compile code and produce the `.vip` package.
-- Uploads the `.vip` as an ephemeral artifact with `actions/upload-artifact@v4`.
+- Uses the `build-lvlibp` and `build-vi-package` actions to compile code and produce the `.vip` package.
 
-<a name="tag--release-creation"></a>
-### **Tag & Release Creation**
-- If event is *not* `pull_request`, we:
-  1. Create an annotated tag → `vX.Y.Z-etc.`
-  2. Push the tag to origin.
-  3. Create a GitHub release. If the version is alpha/beta/rc, set `prerelease: true`.  
-  4. If `ATTACH_ARTIFACTS_TO_RELEASE == true`, attach the `.vip` to the release using `Invoke-RestMethod`.
+<a name="artifact-upload-only"></a>
+### **Artifact Upload Only**
+- Uploads the `.vip` as an ephemeral artifact with `actions/upload-artifact@v4`.
+- The workflow does not create tags or GitHub releases; use a separate workflow if publishing is required.
 
 
 <a name="multiple-pre-release-channels-explained"></a>

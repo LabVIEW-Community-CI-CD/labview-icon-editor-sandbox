@@ -20,7 +20,7 @@ Runs **`build_vip.ps1`** to update a `.vipb` file's display info and build the V
 
 ## Quick-start
 ```yaml
-- uses: ./.github/actions/build-vip
+- uses: ./.github/actions/build-vi-package
   with:
     supported_bitness: 64
     relative_path: ${{ github.workspace }}

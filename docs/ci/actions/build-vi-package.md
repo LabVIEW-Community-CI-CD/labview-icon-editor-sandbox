@@ -5,7 +5,6 @@ This document is designed to help maintainers, contributors, and engineers autom
 - Incorporate **label-based semantic versioning** to increment major, minor, or patch numbers automatically.
 - Integrate a **commit-based build number** so each new commit naturally increases a “build” suffix (e.g., `-build42`).
 - Seamlessly **build** a `.vip` file and **upload** it as an artifact through GitHub Actions. If you want to publish a release, run a separate workflow to create it.
-- **Disable GPG signing** on forks, avoiding errors for contributors who lack the main repository’s signing keys.
 
 > Whether you’re merging a pull request, pushing hotfixes directly, or working on release branches with RC tags, this workflow unifies your packaging pipeline under a single YAML definition. Release creation must be handled separately.
 
@@ -41,9 +40,8 @@ This document is designed to help maintainers, contributors, and engineers autom
 The **Build VI Package** workflow provides a **consistent, automated build process** for LabVIEW-based projects like the Icon Editor. Instead of manually labeling versions, packaging `.vip` artifacts, and drafting releases, this workflow:
 
 1. **Detects PR labels** (`major`, `minor`, `patch`) to decide version increments.  
-2. Automatically **builds** a `.vip` file using a PowerShell script.  
-3. Optionally **disables GPG signing** if the repo is a **fork**—avoiding errors from missing keys.  
-4. **Uploads artifacts** for the build; creating tags or GitHub Releases must be handled separately if desired.
+2. Automatically **builds** a `.vip` file using a PowerShell script.
+3. **Uploads artifacts** for the build; creating tags or GitHub Releases must be handled separately if desired.
 
 It eliminates confusion around versioning, keeps everything in one pipeline, and ensures every commit or merge triggers a reproducible build.
 
@@ -56,12 +54,11 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 1.3 Intended Users
 - **Library Maintainers** needing reliable, standardized version increments.  
 - **CI/CD Engineers** who want to embed LabVIEW packaging in a broader automation ecosystem.  
-- **Fork Contributors** able to run the same workflow in their fork without GPG key issues.
 
 ### 1.4 High-Level Benefits
 - **Label-Based Version Bumping**: Maintainers just add `major`, `minor`, or `patch` labels to the PR, no custom scripts needed.  
 - **Commit-Based Build Number**: Every commit increments a “build” suffix, ensuring no collisions.  
-- **Fork-Friendly**: If the repo name indicates it’s not the official one, GPG signing toggles off.  
+- **Fork-Friendly**: The workflow runs in forks without requiring extra credentials.
 - **Simplicity**: Build and artifact upload steps are combined in a single YAML file; release creation can be added separately.
 
 
@@ -78,7 +75,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 - (Optional) Additional Windows components (like .NET or Visual Studio) if your pipeline references them.
 
 ### 2.3 Additional Software & Tools
-- **Build Tools**: The composite workflow uses the `build-lvlibp` and `build-vip` GitHub actions to compile libraries and create the `.vip` package.
+- **Build Tools**: The composite workflow uses the `build-lvlibp` and `build-vi-package` GitHub actions to compile libraries and create the `.vip` package.
 - **Chocolatey** or other package managers only if your script references them.
 - The workflow interacts with GitHub using built-in actions; no `gh` CLI is required.
 
@@ -96,18 +93,41 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ## 3. **Action Configuration & Usage**
 
 ### 3.1 How the Action Is Triggered
-- **push**: On branches `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `feature/*`, `hotfix/*`.
-- **pull_request**: For PRs into those branches, so you can detect version labels.
-- **workflow_dispatch**: Maintainers can manually run from the Actions tab if needed (e.g., for a hotfix you want to rebuild).
+The `build-vi-package` directory defines a **composite action**. It does not listen for events on its own; instead, the CI workflow in [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) invokes it.
+That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events. Pushes are limited to `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `feature/*`, `hotfix/*`, and `issue-*` branches, and pull requests must target one of those branches. However, `build-vi-package` executes only if the `issue-status` job allows the pipeline to continue: the source branch name must contain `issue-<number>` (for example, `issue-123` or `feature/issue-123`) and the linked issue's Status must be **In Progress**. For pull requests, the gate evaluates the PR’s head branch before proceeding, because its dependencies (`version` and `build-ppl`)
+require that gate.
 
 ### 3.2 Configurable Inputs / Parameters
-- **PR Labels**: `major`, `minor`, `patch`, or none. If none, only the build number changes.
+`ci-composite.yml` calls this action and provides all required inputs automatically. When invoking
+`build-vi-package` from another workflow, supply the following parameters
+(see [action.yml](../../../.github/actions/build-vi-package/action.yml) for details):
+
+| Input | Description |
+| --- | --- |
+| `supported_bitness` | `32` or `64`; selects the VI Package bitness. |
+| `relative_path` | Workspace root path. |
+| `vipb_path` | Path to the `.vipb` file relative to the workspace. |
+| `minimum_supported_lv_version` | LabVIEW major version. |
+| `labview_minor_revision` | LabVIEW minor revision (defaults to `3`). |
+| `major` | Major version component. |
+| `minor` | Minor version component. |
+| `patch` | Patch version component. |
+| `build` | Build number. |
+| `commit` | Commit identifier. |
+| `release_notes_file` | Path to release notes file. |
+| `display_information_json` | DisplayInformation JSON string. |
+
+The `major`, `minor`, and `patch` inputs are derived from pull-request labels (`major`,
+`minor`, `patch`) by the `version` job (which runs the `compute-version` action) in
+`ci-composite.yml`. If a pull request lacks these labels, the `compute-version` action
+defaults to bumping the patch version. For direct pushes without labels, the version
+components remain unchanged and only the build number increases.
 
 ### 3.3 Customization & Fork Setup
 - **Fork Setup**:
   1. **Copy** the workflow file (`.github/workflows/ci-composite.yml`) into your fork.
   2. **Update** any references to the official repo name (`ni/labview-icon-editor`) if your fork is named differently.
-  3. **Self-Hosted Runner**: Confirm your runner has the `iconeditor` label or update `runs-on` to match your runner’s labels.
+ 3. **Self-Hosted Runner**: Confirm your runner uses the `self-hosted-windows-lv` label (or `self-hosted-linux-lv` for Linux jobs) or update `runs-on` to match your runner’s labels.
   4. **Write Permissions**: In fork settings → Actions → General, ensure “Workflow Permissions” = “Read and write.”
 
 ### 3.4 Artifact Publication
@@ -120,7 +140,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 4.1 Pipeline Overview
 
 1. **Check Out & Full Clone**
-   - Uses `actions/checkout@v3` with `fetch-depth: 0` so we get the entire commit history (required for commit-based build number).
+   - Uses `actions/checkout@v3` with `fetch-depth: 0` so we get the entire commit history (required for the commit-based build number).
 
 2. **Determine Bump Type**
    - On PR events, scans the PR labels: `major`, `minor`, `patch`, or defaults to `none`.  
@@ -137,7 +157,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 5. **Build the Icon Editor VI Package**
    - Uses the `build-lvlibp` action to compile the packed libraries.
-   - Runs the `build-vip` action to generate the final `.vip` file.
+   - Runs the `build-vi-package` action to generate the final `.vip` file.
 
 6. **Capture & Upload Artifacts**
    - Uploads the generated `.vip` as an ephemeral artifact for the current Actions run.
@@ -177,15 +197,15 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ## 6. **Maintenance & Administration**
 
 ### 6.1 Keeping the Workflow Updated
-1. **Actions Versions**  
-   - This workflow references certain actions, like `actions/checkout@v3` or `actions/github-script@v6`. Keep an eye on updates or deprecations.
+1. **Actions Versions**
+   - This workflow references certain actions, like `actions/checkout@v4` or `actions/github-script@v7`. Keep an eye on updates or deprecations. Update to a newer checkout version when the action itself is revised. Some internal actions—such as `compute-version`—may still pin different releases for compatibility, so mixing versions is expected.
 2. **Build Actions**
-   - If your LabVIEW project evolves or you add steps, keep the `build-lvlibp` and `build-vip` actions up to date.
+   - If your LabVIEW project evolves or you add steps, keep the `build-lvlibp` and `build-vi-package` actions up to date.
 3. **Windows Runner Updates**  
    - Ensure your self-hosted runner OS is patched and has any new LabVIEW versions if your project updates.
 
 ### 6.2 Runner Management
-- **Labels**: The workflow uses `runs-on: [self-hosted, iconeditor]`. Confirm your runner has both `self-hosted` and `iconeditor` labels.
+- **Labels**: The workflow uses `runs-on: self-hosted-windows-lv` (and `self-hosted-linux-lv` where applicable). Confirm your runner has the required label.
 - **Resource Monitoring**: If the build is large or slow, upgrade the machine specs or add more runners to handle parallel tasks.
 
 ### 6.3 Adding New Features
@@ -204,7 +224,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 7.1 Pull Requests with Labels
 - **Scenario**: You create a PR from a feature branch into `develop`.
 - **Action**: Add a label like `major` or `minor`.
-- **Result**: Upon merging, the workflow updates that version field (major/minor/patch) and applies a commit-based build number. The `.vip` artifact is uploaded; any tagging or release must be handled separately.
+- **Result**: Upon merging, the workflow updates that version field (major/minor/patch) and applies a commit-based build number. If the PR has no version label, the patch version is bumped by default. The `.vip` artifact is uploaded; any tagging or release must be handled separately.
 
 #### Example:
 1. PR labeled `minor`:  
@@ -218,9 +238,9 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 - **Result**: The version might progress from `v1.2.3-build46` to `v1.2.3-build47`.
 
 ### 7.3 Working on a Release Branch
-- **Scenario**: You branch off `release/1.2`.
-- **Action**: The workflow appends `-rc.<N>` each time you commit to that release branch, e.g. `v1.2.0-rc.2-build50`.
-- **Result**: Merging `release/1.2` back to `main` finalizes `v1.2.0-build51`.
+- **Scenario**: You branch off `release-rc/1.2`.
+- **Action**: The workflow appends `-rc.<N>` each time you commit to that pre-release branch, e.g. `v1.2.0-rc.2-build50`. Branches named `release-alpha/1.2` or `release-beta/1.2` would similarly append `-alpha.<N>` or `-beta.<N>`; these patterns correspond to the `release-alpha/*`, `release-beta/*`, and `release-rc/*` rules in `ci-composite.yml`.
+- **Result**: Merging `release-rc/1.2` back to `main` finalizes `v1.2.0-build51`.
 
 ### 7.4 Manually Triggering (workflow_dispatch)
 - **Scenario**: A maintainer manually runs the workflow from the Actions tab (if enabled).
@@ -247,9 +267,10 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 8.3 LabVIEW-Specific QA
 - If you have LabVIEW unit tests, integrate them by adding a step in the YAML:
   ```yaml
-  - name: Run LabVIEW Tests
-    shell: pwsh
-    run: .\.github\actions\run-unit-tests\RunUnitTests.ps1
+  - uses: ./.github/actions/run-unit-tests
+    with:
+      minimum_supported_lv_version: ${{ matrix['lv-version'] }}
+      supported_bitness:            ${{ matrix.bitness }}
   ```
 - Ensure they pass before building the `.vip`. If they fail, the script can exit with a non-zero code, stopping the workflow run.
 
@@ -258,7 +279,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 9.1 Common Error Scenarios
 
 1. **No .vip Found**
-   - Ensure the `build-vip` action completed successfully and produced the artifact.
+   - Ensure the `build-vi-package` action completed successfully and produced the artifact.
    - Check action logs for errors in the packaging steps.
 
 2. **LabVIEW Licensing Failure**
@@ -271,8 +292,8 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 - **Local Testing**: Try running the same powershell commands locally on a dev environment.
 
 ### 9.3 Where to Seek Help
-- For general build or GPG issues, consult NI or LabVIEW community forums.  
-- For GitHub Actions or workflow YAML syntax, check official GitHub Docs or open an issue on your repo.
+- For general build issues, consult NI or LabVIEW community forums.
+ - For GitHub Actions or workflow YAML syntax, check official GitHub Docs or open an issue on your repo.
 
 
 
@@ -295,6 +316,6 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 ## 11. **Conclusion**
 
-By properly setting up environment variables, referencing your LabVIEW environment on a self-hosted runner, and using label-based version increments plus a commit-based build number, this GitHub Action automates your `.vip` build and artifact upload process. Fork owners can disable GPG signing, and maintainers can extend the pipeline with tagging or release steps if desired. Follow the troubleshooting steps if anything goes awry, and enjoy streamlined LabVIEW CI/CD!
+By properly setting up environment variables, referencing your LabVIEW environment on a self-hosted runner, and using label-based version increments plus a commit-based build number, this GitHub Action automates your `.vip` build and artifact upload process. Maintainers can extend the pipeline with tagging or release steps if desired. Follow the troubleshooting steps if anything goes awry, and enjoy streamlined LabVIEW CI/CD!
 
 

@@ -10,7 +10,7 @@ This guide explains how to automate build, test, and distribution steps for the 
 ## Table of Contents
 
 1. [Introduction](#1-introduction)  
-2. [Quickstart / Step-by-Step Procedure](#2-quickstart--step-by-step-procedure)  
+2. [Quickstart / Step-by-Step Procedure](#2-quickstart--step-by-step-procedure)
 3. [Getting Started and Configuration](#3-getting-started--configuration)
    1. [Development Mode](#31-development-mode)
    2. [Self-Hosted Runner Setup](#32-self-hosted-runner-setup)
@@ -21,7 +21,7 @@ This guide explains how to automate build, test, and distribution steps for the 
        - [Examples: Calling This Workflow](#413-examples-calling-this-workflow)
        - [Customization](#414-customization)
        - [Additional Resources](#415-additional-resources)
-   2. [Build VI Package](#42-build-vi-package)
+   2. [CI Pipeline (Composite)](#42-ci-pipeline-composite)
 5. [Gitflow Branching and Versioning](#5-gitflow-branching--versioning)
    1. [Branching Overview](#51-branching-overview)
    2. [Multi-Channel Pre-Releases](#52-multi-channel-pre-releases)  
@@ -55,7 +55,7 @@ This workflow ensures that all **forks** of the repository can sync the latest b
 1. **Set up `.github/workflows`**
    Ensure the following workflows exist (or adapt names as needed):
    - `development-mode-toggle.yml` (Development Mode Toggle)
-   - `ci-composite.yml` (Build VI Package)
+   - `ci-composite.yml` (CI Pipeline (Composite); includes the **Build VI Package** job)
 
 2. **Configure Permissions**
    - In **Settings → Actions → General**, set **Workflow permissions** to allow the workflow to read repository contents and upload artifacts.
@@ -71,11 +71,11 @@ This workflow ensures that all **forks** of the repository can sync the latest b
      - and finally **main** for a final release (no suffix).  
    - Alternatively, **`hotfix/*`** merges can go directly to **main** for quick patches.
 
-6. **Check Build Artifacts**
+5. **Check Build Artifacts**
    - The `.vip` file is generated and uploaded as a build artifact.
    - If you want to publish a GitHub Release, create one manually and upload the artifact.
 
-7. **Optionally Enable Development Mode**
+6. **Optionally Enable Development Mode**
    - If you need LabVIEW to reference local source directly, run the **Development Mode Toggle** workflow (see [Development Mode](#31-development-mode)). Usually, you **disable** it for standard builds/tests.
 
 For a visual reference, you may consult a **Gitflow diagram** that includes alpha/beta/rc branches as an extension of the typical `release/` branch. This helps illustrate how merges flow between `develop` and `main`.
@@ -110,7 +110,7 @@ For **detailed runner configuration**, see **`runner-setup-guide.md`**. Below is
 2. **Add a Self-Hosted Runner**  
    - Go to **Settings → Actions → Runners**. Follow GitHub’s steps to register a Windows runner on your machine with LabVIEW installed.  
 3. **Label Your Runner**  
-   - For example, `self-hosted, iconeditor`. Ensure your workflow’s `runs-on` references these labels.
+   - For example, use `self-hosted-windows-lv` (or `self-hosted-linux-lv` for Linux). Ensure your workflow’s `runs-on` references these labels.
 
 ---
 
@@ -142,7 +142,7 @@ You’ll typically name the workflow file **`development-mode-toggle.yml`**. Its
 1. **Trigger Manually**  
    - Go to the **Actions** tab, select the “Development Mode Toggle” workflow, click “Run workflow.”  
    - Choose `enable` or `disable` to run the corresponding PowerShell script (`Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`).  
-   - The workflow runs on your self-hosted runner (e.g., labeled `self-hosted, iconeditor`).
+   - The workflow runs on your self-hosted runner (e.g., labeled `self-hosted-windows-lv`).
 
 2. **Important Note for Testing**  
    - With dev mode **enabled**, LabVIEW references local code, so installing the `.vip` may fail or cause conflicts.  
@@ -163,7 +163,7 @@ on:
 
 jobs:
   call-dev-mode:
-    runs-on: [self-hosted, iconeditor]
+  runs-on: self-hosted-windows-lv
     steps:
       - name: Invoke Dev Mode Toggle (enable)
         uses: ./.github/workflows/development-mode-toggle.yml
@@ -179,7 +179,7 @@ on:
 
 jobs:
   remote-dev-mode:
-    runs-on: [self-hosted, iconeditor]
+  runs-on: self-hosted-windows-lv
     steps:
       - name: Use remote Dev Mode Toggle
         uses: <owner>/<repo>/.github/workflows/development-mode-toggle.yml@main
@@ -195,7 +195,7 @@ on:
 
 jobs:
   forked-workflow-call:
-    runs-on: [self-hosted, iconeditor]
+  runs-on: self-hosted-windows-lv
     steps:
       - name: Call Dev Mode Toggle from My Fork
         uses: <your-fork>/<repo>/.github/workflows/development-mode-toggle.yml@my-feature-branch
@@ -219,19 +219,19 @@ All dev-mode logic resides in two PowerShell scripts:
 
 ---
 
-<a name="42-build-vi-package"></a>
-### 4.2 Build VI Package
+<a name="42-ci-pipeline-composite"></a>
+### 4.2 CI Pipeline (Composite)
 
-- **File Name**: `ci-composite.yml`
-- **Purpose**: Builds the `.vip` artifact and determines the version based on PR labels and commit count.
+ - **File Name**: `ci-composite.yml`
+ - **Purpose**: A dedicated **version** job (using `compute-version`) derives the version from PR labels and commit count, and the **Build VI Package** job builds the `.vip` artifact using that version output.
 - **Features**:
-    - **Issue status gating**: skips most jobs unless the branch's linked issue has Status **In Progress**.
+    - **Issue status gating**: skips most jobs unless the branch name contains `issue-<number>` (e.g., `issue-123`, `feature/issue-123`) and the linked issue has Status **In Progress**.
     - **Label-based** version bump (`major`, `minor`, `patch`), or none if unlabeled.
     - **Commit-based build number**: `vX.Y.Z-build<commitCount>` (plus optional pre-release suffix).
     - **Multi-Channel** detection for `release-alpha/*`, `release-beta/*`, `release-rc/*`.
     - **Upload Artifact**: Builds the `.vip` file and uploads it as a workflow artifact (no automatic GitHub Release attachment).
 - **Events**: Typically triggered on:
-  - Push or PR to `develop`, `feature/*`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `main`, or `hotfix/*`.
+  - Push or PR to `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `feature/*`, `hotfix/*`, or `issue-*`.
     The workflow explicitly lists these pre-release patterns and does **not** use a generic `release/*` trigger.
   - Might also be triggered manually (`workflow_dispatch`) if needed.
 
@@ -292,7 +292,7 @@ When you open a **Pull Request** into `develop`, `release-alpha/*`, or `release-
 In order to **enforce** the Gitflow approach “hands-off”:
 1. **Enable Branch Protection Rules**:  
    - For example, protect `main`, `release-alpha/*`, `release-beta/*`, and `release-rc/*` so that only approved Pull Requests can be merged, preventing direct pushes.  
-   - Require checks (like “Build VI Package”) to pass before merging.
+   - Require the **Build VI Package** job from the CI Pipeline (Composite) workflow to pass before merging.
 2. **Refer to `CONTRIBUTING.md`**:  
    - Document your team’s policies on how merges flow from feature → develop → alpha/beta/rc → main.  
    - Outline any required approvals or code reviews.  

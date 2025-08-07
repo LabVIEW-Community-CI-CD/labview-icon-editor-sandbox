@@ -1,6 +1,6 @@
 # Local CI/CD Workflows
 
-This document explains how to automate build, test, and distribution steps for the Icon Editor using GitHub Actions. It includes features such as **fork-friendly GPG signing** toggles, **automatic version bumping** (using labels), and the **release creation** process. Additionally, it shows how you can **brand** the resulting VI Package with **organization** and **repository** metadata for unique identification.
+This document explains how to automate build, test, and distribution steps for the Icon Editor using GitHub Actions. It includes features such as **automatic version bumping** (using labels) and **artifact upload**. Additionally, it shows how you can **brand** the resulting VI Package with **organization** and **repository** metadata for unique identification.
 
 ---
 
@@ -24,7 +24,6 @@ Automating your Icon Editor builds and tests:
 - Minimizes manual toggling of LabVIEW environment settings  
 - Stores build artifacts (VI Packages) in GitHub for easy download  
 - Automatically versions releases using **semantic version** logic  
-- Handles GPG signing in the main repo but **disables** it for forks (so fork owners aren’t blocked by passphrase prompts)  
 - **Allows you to brand** each VI Package build with your organization or repository name for unique identification
 
 **Prerequisites**:
@@ -48,17 +47,27 @@ Automating your Icon Editor builds and tests:
 
 4. **Run Tests**
    Use the main CI workflow (`ci-composite.yml`) to confirm your environment is valid.
+   - The workflow triggers on pushes to or pull requests targeting:
+     - `main`
+     - `develop`
+     - release branches: `release-alpha/*`, `release-beta/*`, `release-rc/*`
+     - feature branches: `feature/*`
+     - hotfix branches: `hotfix/*`
+     - issue branches: `issue-*`
+   - `workflow_dispatch` enables manual runs.
    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
+   - An `issue-status` job gates execution: it skips all other jobs unless the source branch name contains `issue-<number>` (for example, `issue-123` or `feature/issue-123`) and the linked GitHub issue’s Status is **In Progress**. For pull requests, the check inspects the PR’s head branch. This gating helps avoid ambiguous runs for automated tools.
 
 5. **Build VI Package**
-   - Produces `.vip` artifacts automatically, **including** optional metadata fields (`-CompanyName`, `-AuthorName`) that let you **brand** your package.
+   - Produces `.vip` artifacts automatically. By default, the workflow populates the **“Company Name”** with `github.repository_owner` and the **“Author Name”** with `github.event.repository.name`, so each build is branded with your GitHub account and repository.
+   - To use different branding, edit the **“Generate display information JSON”** step in [`.github/workflows/ci-composite.yml`](../.github/workflows/ci-composite.yml) and supply custom values for these fields.
    - Uses **label-based** version bumping (major/minor/patch) on pull requests.
 
 6. **Disable Dev Mode** (optional)  
    Reverts your environment to normal LabVIEW settings, removing local overrides.
 
 > [!NOTE]
-> Passing metadata fields like `-CompanyName` or `-AuthorName` to the build script helps incorporate your **organization** or **repo** name directly into the final VI Package. This makes your build easily distinguishable from other forks or variants.
+> The workflow automatically brands the VI Package using the repository owner (`github.repository_owner`) and repository name (`github.event.repository.name`). Modify the “Generate display information JSON” step in `.github/workflows/ci-composite.yml` if you need different values.
 
 ---
 
@@ -87,23 +96,23 @@ Below are the **key GitHub Actions** provided in this repository:
    - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`).
      Direct pushes retain the previous version and increment only the build number.
    - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).
-   - **Fork-Friendly**: Disables GPG signing if it detects a fork (so no passphrase is needed). In the **main repo** (`ni/labview-icon-editor`), signing remains active.
+   - **Fork-Friendly**: Runs in forks without requiring extra signing keys.
    - Produces the `.vip` file via a PowerShell script (e.g., `Build.ps1`).
-   - **You can pass metadata** (e.g., `-CompanyName`, `-AuthorName`) to embed your organization or repository into the generated `.vip` for distinct branding.
+   - By default, “Company Name” and “Author Name” in the generated `.vip` come from `github.repository_owner` and `github.event.repository.name`. Update the “Generate display information JSON” step in [`ci-composite.yml`](../.github/workflows/ci-composite.yml) if you need custom values.
    - Uploads the `.vip` artifact to GitHub’s build artifacts.
 
 #### Jobs in CI workflow
 
 The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks the build into several jobs:
 
-- **issue-status** – ensures CI runs only on branches named `issue-<number>` whose linked GitHub issue has Status “In Progress”.
+- **issue-status** – ensures CI runs only when the source branch name contains `issue-<number>` (such as `issue-123` or `feature/issue-123`) and the linked GitHub issue has Status “In Progress”. For pull requests, the job evaluates the PR’s head branch.
 - **changes** – checks out the repository and detects `.vipc` file changes to determine if dependencies need to be applied.
-- **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses.
+- **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses **only when** the `changes` job reports `.vipc` modifications (`if: needs.changes.outputs.vipc == 'true'`).
 - **version** – computes the semantic version and build number using commit count and PR labels.
 - **missing-in-project-check** – verifies every source file is referenced in the `.lvproj`.
 - **test** – runs LabVIEW unit tests across the supported matrix.
 - **build-ppl** – uses a matrix to build 32-bit and 64-bit packed libraries.
-- **build-vip** – packages the final VI Package using the built libraries and version information.
+- **build-vi-package** – packages the final VI Package using the built libraries and version information. In `ci-composite.yml` this job passes `supported_bitness: 64`, so it produces only a 64-bit `.vip`.
 
 The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct jobs.
 
@@ -122,7 +131,7 @@ The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct
    Go to **Settings → Actions → Runners** in your GitHub repository (or organization) and follow the steps to register a runner on your machine that has LabVIEW installed.
 
 3. **Label the Runner** (optional):  
-   - You may label it `self-hosted, iconeditor` (or adjust the workflow’s `runs-on` lines to match your chosen labels).  
+   - Use labels such as `self-hosted-windows-lv` (and `self-hosted-linux-lv` for Linux). Adjust the workflow’s `runs-on` lines to match your runner labels.
    - This helps ensure the correct environment is used for building the Icon Editor.
 
 ---
@@ -165,7 +174,7 @@ Although GitHub Actions primarily run on GitHub-hosted or self-hosted agents, yo
 
 4. **Merge the PR** into `develop` (or `main`):
      - The **Build VI Package** workflow builds and uploads the `.vip` artifact.
-     - **Inside** that `.vip`, the fields for **“Company Name”** and **“Author Name (Person or Company)”** can reflect your **organization** or **repo**, ensuring it’s easy to identify which fork or team produced the build.
+     - **Inside** that `.vip`, the **“Company Name”** and **“Author Name (Person or Company)”** fields are filled automatically using `github.repository_owner` and `github.event.repository.name`. Modify the “Generate display information JSON” step in `.github/workflows/ci-composite.yml` to override them.
 
 5. **Disable Development Mode**:  
    - Switch LabVIEW back to normal mode.  
@@ -176,7 +185,6 @@ Although GitHub Actions primarily run on GitHub-hosted or self-hosted agents, yo
 ## Final Notes
 
 - **Artifact Storage**: The `.vip` file is accessible under the Actions run summary (click “Artifacts”).  
-- **Forking**: If another user forks your repo, the new **fork** sees GPG signing disabled automatically, preventing passphrase errors.  
 - **Version Enforcement**: Pull requests without a version label default to `patch`; you can enforce labeling with an optional “Label Enforcer” step if desired.  
 - **Branding**: To highlight the **organization** or **repository** behind a particular build, simply pass `-CompanyName` and `-AuthorName` (or similar parameters) into the `Build.ps1` script. This metadata flows into the final **Display Information** of the Icon Editor’s VI Package.
 

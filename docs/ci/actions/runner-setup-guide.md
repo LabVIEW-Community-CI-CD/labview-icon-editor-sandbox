@@ -22,8 +22,7 @@ This document details how to automate **building**, **testing**, and **packaging
 - **Eliminate** manual tasks like editing `vi.lib` or toggling `labview.ini`.  
 - **Run** consistent builds and tests across different machines or developers.  
 - **Automatically version** your Icon Editor code via **semantic labeling** (major/minor/patch) plus a global build counter.
-- **Upload** the `.vip` artifact for download, and (if configured) attach it to a draft GitHub Release for non-PR builds.
-- Seamlessly handle **fork** scenarios—**GPG signing** is enabled if `github.repository` is your main repo, disabled otherwise.
+- **Upload** the `.vip` artifact for download; the workflow does **not** create tags or GitHub releases.
 
 Additionally, **you can pass metadata fields** (like **organization** or **repository name**) to the **build script**. These fields are embedded into the **VI Package** display information, effectively **branding** the Icon Editor package with a unique identifier. This is especially useful when multiple forks or organizations produce their own versions of the Icon Editor—ensuring each `.vip` is clearly labeled with the correct “author” or “company.”
 
@@ -45,6 +44,7 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
 
 2. **Apply the VIPC (optional)**
    - Apply `Tooling/deployment/runner_dependencies.vipc` with VIPM in **LabVIEW 2021 (32-bit)**; repeat for **LabVIEW 2021 (64-bit)**. If using **LabVIEW 2023 (64-bit)** for builds, apply the same VIPC there as well.
+   - The CI workflow's `apply-deps` job installs these dependencies only when `.vipc` files change (`if: needs.changes.outputs.vipc == 'true'`). On a fresh runner or when no `.vipc` changes are present, apply the VIPC manually.
 
 3. **Configure a Self-Hosted Runner**  
    - Go to **Settings → Actions → Runners** in your (forked) repo.  
@@ -54,10 +54,10 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
    - (Optional) Toggle LabVIEW dev mode (`Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`) via the **Development Mode Toggle** workflow.
 
 5. **Run Tests**
-   - Run the tests using the main **Build VI Package** CI workflow (it will execute the unit tests).
+   - Run the tests using the **CI Pipeline (Composite)** workflow; its dedicated **test** job executes the unit tests.
 
-6. **Build VI Package**  
-   - Invoke **Build VI Package & Release** to produce `.vip`, automatically version your code (labels vs. default patch), and optionally create a GitHub Release.  
+6. **Build VI Package**
+   - Invoke the **Build VI Package** job within the CI Pipeline (Composite) workflow to produce a `.vip` using the version computed by the workflow's separate **version** job (see that job's output for the generated version). Publishing tags or GitHub releases requires a separate workflow.
    - **You can also** pass in **org/repository** info (e.g., `-CompanyName "MyOrg"` or `-AuthorName "myorg/myrepo"`) to brand the resulting package with your unique identifiers.
 
 7. **Disable Dev Mode** (Optional)  
@@ -87,12 +87,12 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
    - `mode: disable` → calls `RevertDevelopmentMode.ps1`.  
    - Great for reconfiguring LabVIEW for local dev vs. distribution builds.
 
-2. **Build VI Package & Release**
-   - Runs the unit tests and, on success, builds the `.vip`.
+2. **CI Pipeline (Composite)**
+   - Includes a **test** job for unit tests, a **version** job that computes semantic versioning, and a **build-vi-package** job that packages the `.vip` using the version job's outputs.
    - **Label-based** semantic versioning (`major`, `minor`, `patch`). Defaults to `patch` if no label.
-   - **Counts existing tags** (`v*.*.*-build*`) to increment the global build number.
-   - **Fork-friendly** GPG: disabled for forks to avoid passphrase prompts.
-   - Publishes `.vip` as an artifact and optionally creates a GitHub Release if not a pull request.
+   - **Derives build number from total commit count** (`git rev-list --count HEAD`).
+   - **Fork-friendly**: runs on forks without requiring signing keys.
+   - Publishes `.vip` as an artifact; creating Git tags or GitHub releases requires a separate workflow.
    - **Branding the Package**:
      - You can **pass** metadata parameters like `-CompanyName` and `-AuthorName` into the build script. These map to fields in the **VI Package** (e.g., “Company Name,” “Author Name (Person or Company)”).
      - This means each package can show the **organization** and **repository** that produced it, providing a **unique ID** if you have multiple forks or parallel versions.
@@ -114,8 +114,8 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
    - **Settings → Actions → Runners** → **New self-hosted runner**  
    - Follow GitHub’s CLI instructions.
 
-4. **Labels** (optional)  
-   - If the workflow references `runs-on: [self-hosted, iconeditor]`, label your runner accordingly or update the YAML’s `runs-on` lines.
+4. **Labels** (optional)
+   - The workflow uses the `self-hosted-windows-lv` label. Its `runs-on` expression also references `self-hosted-linux-lv` for potential Linux jobs, though the default matrix runs only on Windows. Label your runner accordingly, and prepare a Linux runner with `self-hosted-linux-lv` if you expand the matrix.
 
 
 <a name="running-the-actions-locally"></a>
@@ -123,35 +123,35 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
 
 With your runner online:
 
-1. **Enable Dev Mode** (if needed)  
+1. **Enable Dev Mode** (if needed)
    - **Actions → Development Mode Toggle**, set `mode: enable`.
 
-2. **Run Tests via Build VI Package**
-   - Execute **Build VI Package & Release** to run the unit tests; review the logs to confirm everything passes.
+2. **Run Tests via CI Pipeline (Composite)**
+   - Execute the workflow and review the **test** job logs to confirm all unit tests pass.
 
-3. **Build VI Package & Release**  
-   - Produces `.vip`, bumps the version, and can create a Git tag + GitHub Release (if not a PR).  
-   - **Pass** your **org/repo** info (e.g. `-CompanyName "AcmeCorp"` / `-AuthorName "AcmeCorp/IconEditor"`) to embed in the final package.  
+3. **Build VI Package**
+   - Produces `.vip` using the version computed in the **version** job (review that job's output for version details). The workflow only uploads the artifact; creating tags or GitHub releases requires additional steps.
+   - **Pass** your **org/repo** info (e.g. `-CompanyName "AcmeCorp"` / `-AuthorName "AcmeCorp/IconEditor"`) to embed in the final package.
    - Artifacts appear in the run summary under **Artifacts**.
 
 4. **Disable Dev Mode** (if used)  
    - `mode: disable` reverts your LabVIEW environment.
 
-5. **Review the `.vip`**  
-   - Download from **Artifacts** or check your Release page if a release was created.
+5. **Review the `.vip`**
+   - Download from **Artifacts**. Publishing to a GitHub release requires a separate workflow.
 
 
 <a name="example-developer-workflow"></a>
 ### 5. Example Developer Workflow
 
 1. **Enable Development Mode**: if you plan to actively modify the Icon Editor code inside LabVIEW.  
-2. **Code & Test**: Make changes, run the **Build VI Package & Release** workflow (which runs unit tests) to confirm stability.
+2. **Code & Test**: Make changes, run the **CI Pipeline (Composite)** workflow (its **test** job runs unit tests) to confirm stability.
 3. **Open a Pull Request**:  
    - Assign a version bump label if you want `major`, `minor`, or `patch`.  
    - The workflow checks this label upon merging.  
-4. **Merge**:  
-   - **Build VI Package & Release** triggers, incrementing version and uploading `.vip`.  
-   - **Metadata** (such as company/repo) is already integrated into the final `.vip`, so each build is easily identified.  
+4. **Merge**:
+   - The **CI Pipeline (Composite)** workflow triggers, with the **version** job computing the version and the **Build VI Package** job using that version to package and upload the `.vip`.
+   - **Metadata** (such as company/repo) is already integrated into the final `.vip`, so each build is easily identified.
 5. **Disable Dev Mode**: Return to a normal LabVIEW environment.  
 6. **Install & Verify**: Download the `.vip` artifact for final validations.
 
@@ -164,4 +164,4 @@ With your runner online:
 - **Submit Pull Requests**: If you refine scripts or fix issues, open a PR with logs showing your updated workflow runs.  
 - **Troubleshoot**: If manual environment edits are needed, consult `ManualSetup.md` or the original documentation for advanced configuration steps.  
 
-**Happy Building!** By integrating these workflows, you’ll maintain a **robust, automated CI/CD** pipeline for the LabVIEW Icon Editor—complete with **semantic versioning**, **build artifact uploads**, **metadata branding** (company/repo), and **GPG-signing** or **GPG-free** mode for forks.
+**Happy Building!** By integrating these workflows, you’ll maintain a **robust, automated CI/CD** pipeline for the LabVIEW Icon Editor—complete with **semantic versioning**, **build artifact uploads**, and **metadata branding** (company/repo).

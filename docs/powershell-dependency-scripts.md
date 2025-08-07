@@ -17,7 +17,6 @@ This document lists the PowerShell scripts used to build, test, and distribute t
 - [Set_Development_Mode.ps1](#set_development_modeps1)
 - [RevertDevelopmentMode.ps1](#revertdevelopmentmodeps1)
 - [RunUnitTests.ps1](#rununittestsps1)
-- [unit_tests.ps1](#unit_testsps1)
 
 ---
 
@@ -58,8 +57,5 @@ Configures the repository for development. Removes existing packed libraries, ad
 Undoes development mode by restoring packaged sources and closing LabVIEW. Helpful when leaving development or before distributing a build.
 
 ## RunUnitTests.ps1
-Locates the `.lvproj`, runs unit tests through g-cli, and outputs a table of results. Used by `unit_tests.ps1` and in CI workflows.
-
-## unit_tests.ps1
-Wrapper that prepares the environment and runs `RunUnitTests.ps1` for both 32-bit and 64-bit LabVIEW. Closes LabVIEW after each run.
+Locates the `.lvproj`, runs unit tests through g-cli, and outputs a table of results. Used in CI workflows.
 
