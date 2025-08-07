@@ -185,7 +185,7 @@ Passing these metadata fields ensures the final `.vip` clearly identifies **whic
    - Label (`major`, `minor`, `patch`) for semver bump.
    - Actions use `Build.ps1` to produce `.vip` on merges.
 4. **Merge**
-   - The `.github/workflows/ci-composite.yml` workflow uploads the built `.vip` as an artifact in its ["Upload VI Package" step](../.github/workflows/ci-composite.yml#L330-L335).
+   - The [`.github/workflows/ci-composite.yml`](../.github/workflows/ci-composite.yml) workflow uploads the built `.vip` as an artifact in its "Upload VI Package" step.
    - It does not automatically create a GitHub Release; draft one manually and attach the artifact if desired.
 5. **Disable Dev Mode**
    - Revert environment.
