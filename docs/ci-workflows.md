@@ -48,7 +48,7 @@ Automating your Icon Editor builds and tests:
 4. **Run Tests**
    Use the main CI workflow (`ci-composite.yml`) to confirm your environment is valid.
    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
-   - CI jobs proceed only when your branch is named `issue-<number>` and the linked GitHub issue’s Status is **In Progress**. See the [`issue-status` job](../.github/workflows/ci-composite.yml#L39) for details.
+   - CI jobs proceed only when your branch is named `issue-<number>` and the linked GitHub issue’s Status is **In Progress**. See the `issue-status` job in [ci-composite.yml](../.github/workflows/ci-composite.yml) for details.
 
 5. **Build VI Package**
    - Produces `.vip` artifacts automatically, **including** optional metadata fields (`-CompanyName`, `-AuthorName`) that let you **brand** your package.
