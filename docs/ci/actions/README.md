@@ -1,12 +1,12 @@
 # Composite GitHub Actions
 
-This repository defines several reusable [composite actions](https://docs.github.com/actions/creating-actions/creating-a-composite-action) in [`.github/actions`](../../../.github/actions). These actions wrap common LabVIEW build and test tasks and can be called from workflows in this or other repositories.
+This repository defines several reusable [composite actions](https://docs.github.com/actions/creating-actions/creating-a-composite-action) in [`.github/actions`](../../../.github/actions). These actions wrap common LabVIEW build and test tasks and can be called from workflows in this or other repositories. Workflows such as [`.github/workflows/ci-composite.yml`](../../../.github/workflows/ci-composite.yml) rely on the [`build-lvlibp`](../../../.github/actions/build-lvlibp) and [`build-vi-package`](../../../.github/actions/build-vi-package) actions for their build steps.
 
 | Action | Description |
 |---|---|
 | [add-token-to-labview](../../../.github/actions/add-token-to-labview) | Adds a `LocalHost.LibraryPaths` token to the LabVIEW INI. |
 | [apply-vipc](../../../.github/actions/apply-vipc) | Installs runner dependencies for a given LabVIEW version and bitness. |
-| [build](../../../.github/actions/build) | Orchestrates the full build and packaging process. |
+| [build](../../../.github/actions/build) | **Deprecated**: previously orchestrated the full build and packaging process. |
 | [build-lvlibp](../../../.github/actions/build-lvlibp) | Creates the editor packed library. |
 | [build-vi-package](../../../.github/actions/build-vi-package) | Updates a VIPB file and builds the VI package. |
 | [close-labview](../../../.github/actions/close-labview) | Gracefully shuts down a LabVIEW instance. |
