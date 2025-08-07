@@ -54,8 +54,9 @@ Automating your Icon Editor builds and tests:
      - feature branches: `feature/*`
      - hotfix branches: `hotfix/*`
      - issue branches: `issue-*`
-   - `workflow_dispatch` enables manual runs.
-   - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
+    - `workflow_dispatch` enables manual runs.
+    - Manual runs still require the branch name to match `issue-<number>` and the linked issue's Status to be **In Progress**; otherwise, downstream jobs are skipped.
+    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
     - An `issue-status` job gates execution. It skips the workflow if a pull request or its branch carries a `NoCI` label, then queries the **Status** field of the linked GitHub issue’s associated project and only proceeds when that field equals **In Progress**. Contributors must ensure their issue is added to a project with this Status value. The job also skips all other jobs unless the source branch name contains `issue-<number>` (for example, `issue-123` or `feature/issue-123`). For pull requests, the check inspects the PR’s head branch. This gating helps avoid ambiguous runs for automated tools.
    - A concurrency group cancels any previous run on the same branch, ensuring only the latest pipeline execution continues.
 
