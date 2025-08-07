@@ -32,11 +32,6 @@ runs:
         name: release-notes
         path: ${{ inputs.release_notes_file }}
 
-    - name: Upload VI Package
-      uses: actions/upload-artifact@v4
-      with:
-        name: vi-package
-        path: builds/VI Package/*.vip
 inputs:
   supported_bitness:
     description: '32 or 64'

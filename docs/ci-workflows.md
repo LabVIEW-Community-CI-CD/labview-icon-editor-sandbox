@@ -57,11 +57,13 @@ Automating your Icon Editor builds and tests:
    - `workflow_dispatch` enables manual runs.
    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
    - An `issue-status` job gates execution: it skips all other jobs unless the source branch name contains `issue-<number>` (for example, `issue-123` or `feature/issue-123`) and the linked GitHub issue’s Status is **In Progress**. For pull requests, the check inspects the PR’s head branch. This gating helps avoid ambiguous runs for automated tools.
+   - A concurrency group cancels any previous run on the same branch, ensuring only the latest pipeline execution continues.
 
 5. **Build VI Package**
    - Produces `.vip` artifacts automatically. By default, the workflow populates the **“Company Name”** with `github.repository_owner` and the **“Author Name”** with `github.event.repository.name`, so each build is branded with your GitHub account and repository.
    - To use different branding, edit the **“Generate display information JSON”** step in [`.github/workflows/ci-composite.yml`](../.github/workflows/ci-composite.yml) and supply custom values for these fields.
    - Uses **label-based** version bumping (major/minor/patch) on pull requests.
+   - Generates `Tooling/deployment/release_notes.md` summarizing recent commits. Use this file to draft changelogs or release notes.
 
 6. **Disable Dev Mode** (optional)  
    Reverts your environment to normal LabVIEW settings, removing local overrides.
@@ -111,8 +113,10 @@ The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks 
 - **version** – computes the semantic version and build number using commit count and PR labels.
 - **missing-in-project-check** – verifies every source file is referenced in the `.lvproj`.
 - **test** – runs LabVIEW unit tests across the supported matrix.
-- **build-ppl** – uses a matrix to build 32-bit and 64-bit packed libraries.
+- **build-ppl** – uses a matrix to build 32-bit and 64-bit packed libraries, then uses the `rename-file` action to append the bitness to each library’s filename.
 - **build-vi-package** – packages the final VI Package using the built libraries and version information. In `ci-composite.yml` this job passes `supported_bitness: 64`, so it produces only a 64-bit `.vip`.
+
+Both build jobs end with a `close-labview` step that shuts down LabVIEW to free up resources on the runner.
 
 The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct jobs.
 
