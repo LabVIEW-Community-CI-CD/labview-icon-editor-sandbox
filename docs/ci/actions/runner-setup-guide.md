@@ -89,7 +89,7 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
 2. **CI Pipeline (Composite)**
    - Includes a **test** job for unit tests, a **version** job that computes semantic versioning, and a **build-vi-package** job that packages the `.vip` using the version job's outputs.
    - **Label-based** semantic versioning (`major`, `minor`, `patch`). Defaults to `patch` if no label.
-   - **Counts existing tags** (`v*.*.*-build*`) to increment the global build number.
+   - **Derives build number from total commit count** (`git rev-list --count HEAD`).
    - **Fork-friendly**: runs on forks without requiring signing keys.
    - Publishes `.vip` as an artifact; creating Git tags or GitHub releases requires a separate workflow.
    - **Branding the Package**:

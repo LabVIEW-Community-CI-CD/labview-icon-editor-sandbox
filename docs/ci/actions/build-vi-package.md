@@ -94,7 +94,10 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 ### 3.1 How the Action Is Triggered
 The `build-vi-package` directory defines a **composite action**. It does not listen for events on its own; instead, the CI workflow in [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) invokes it.
-That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events, so this action executes whenever the workflow is triggered.
+That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events,
+but `build-vi-package` executes only if the `issue-status` job allows the
+pipeline to continue because its dependencies (`version` and `build-ppl`)
+require that gate.
 
 ### 3.2 Configurable Inputs / Parameters
 `ci-composite.yml` calls this action and provides all required inputs automatically. When invoking
