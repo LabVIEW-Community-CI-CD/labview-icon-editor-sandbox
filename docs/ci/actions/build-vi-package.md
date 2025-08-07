@@ -94,8 +94,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 ### 3.1 How the Action Is Triggered
 The `build-vi-package` directory defines a **composite action**. It does not listen for events on its own; instead, the CI workflow in [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) invokes it.
-That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events. Pushes are limited to `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `feature/*`, `hotfix/*`, and `issue-*` branches, and pull requests must target one of those branches. However, `build-vi-package` executes only if the `issue-status` job allows the pipeline to continue: the source branch name must contain `issue-<number>` (for example, `issue-123` or `feature/issue-123`) and the linked issue's Status must be **In Progress**. For pull requests, the gate evaluates the PR’s head branch before proceeding, because its dependencies (`version` and `build-ppl`)
-require that gate.
+That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events. Pushes are limited to `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `feature/*`, `hotfix/*`, and `issue-*` branches, and pull requests must target one of those branches. However, `build-vi-package` executes only if the `issue-status` job allows the pipeline to continue: the source branch name must contain `issue-<number>` (for example, `issue-123` or `feature/issue-123`) and the linked issue's Status must be **In Progress**. For pull requests, the `issue-status` gate evaluates the PR’s head branch before running the `version` and `build-ppl` jobs, which depend on this gate.
 
 ### 3.2 Configurable Inputs / Parameters
 `ci-composite.yml` calls this action and provides all required inputs automatically. When invoking
@@ -140,7 +139,7 @@ components remain unchanged and only the build number increases.
 ### 4.1 Pipeline Overview
 
 1. **Check Out & Full Clone**
-   - Uses `actions/checkout@v3` with `fetch-depth: 0` so we get the entire commit history (required for the commit-based build number).
+   - Uses `actions/checkout@v4` with `fetch-depth: 0` so we get the entire commit history (required for the commit-based build number).
 
 2. **Determine Bump Type**
    - On PR events, scans the PR labels: `major`, `minor`, `patch`, or defaults to `none`.  

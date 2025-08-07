@@ -54,9 +54,10 @@ Automating your Icon Editor builds and tests:
      - feature branches: `feature/*`
      - hotfix branches: `hotfix/*`
      - issue branches: `issue-*`
-   - `workflow_dispatch` enables manual runs.
-   - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
-   - An `issue-status` job gates execution: it skips all other jobs unless the source branch name contains `issue-<number>` (for example, `issue-123` or `feature/issue-123`) and the linked GitHub issue’s Status is **In Progress**. For pull requests, the check inspects the PR’s head branch. This gating helps avoid ambiguous runs for automated tools.
+    - `workflow_dispatch` enables manual runs.
+    - Manual runs still require the branch name to match `issue-<number>` and the linked issue's Status to be **In Progress**; otherwise, downstream jobs are skipped.
+    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
+    - An `issue-status` job gates execution. It skips the workflow if a pull request or its branch carries a `NoCI` label, then queries the **Status** field of the linked GitHub issue’s associated project and only proceeds when that field equals **In Progress**. Contributors must ensure their issue is added to a project with this Status value. The job also skips all other jobs unless the source branch name contains `issue-<number>` (for example, `issue-123` or `feature/issue-123`). For pull requests, the check inspects the PR’s head branch. This gating helps avoid ambiguous runs for automated tools.
    - A concurrency group cancels any previous run on the same branch, ensuring only the latest pipeline execution continues.
 
 5. **Build VI Package**
@@ -107,7 +108,7 @@ Below are the **key GitHub Actions** provided in this repository:
 
 The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks the build into several jobs:
 
-- **issue-status** – ensures CI runs only when the source branch name contains `issue-<number>` (such as `issue-123` or `feature/issue-123`) and the linked GitHub issue has Status “In Progress”. For pull requests, the job evaluates the PR’s head branch.
+- **issue-status** – skips the workflow if the pull request or branch has a `NoCI` label, then queries the **Status** field of the linked GitHub issue’s associated GitHub Project and proceeds only when that field is **In Progress**. Contributors must ensure their issue is added to a project with this Status value. It also requires the source branch name to contain `issue-<number>` (such as `issue-123` or `feature/issue-123`). For pull requests, the job evaluates the PR’s head branch.
 - **changes** – checks out the repository and detects `.vipc` file changes to determine if dependencies need to be applied.
 - **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses **only when** the `changes` job reports `.vipc` modifications (`if: needs.changes.outputs.vipc == 'true'`).
 - **version** – computes the semantic version and build number using commit count and PR labels.
@@ -134,9 +135,10 @@ The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct
 2. **Add Self-Hosted Runner**:  
    Go to **Settings → Actions → Runners** in your GitHub repository (or organization) and follow the steps to register a runner on your machine that has LabVIEW installed.
 
-3. **Label the Runner** (optional):  
-   - Use labels such as `self-hosted-windows-lv` (and `self-hosted-linux-lv` for Linux). Adjust the workflow’s `runs-on` lines to match your runner labels.
-   - This helps ensure the correct environment is used for building the Icon Editor.
+3. **Label the Runner** (optional):
+   - Use labels such as `self-hosted-windows-lv` for the default jobs. The default CI matrix currently runs only on this Windows label.
+   - `self-hosted-linux-lv` is included for potential future expansion but isn't used by the default jobs yet.
+   - Adjust the workflow’s `runs-on` lines to match your runner labels. This helps ensure the correct environment is used for building the Icon Editor.
 
 ---
 

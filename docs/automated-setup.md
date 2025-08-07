@@ -100,9 +100,10 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 
 We provide **GitHub Actions** that wrap these same PowerShell scripts for building the Icon Editor:
 
-- **Development Mode Toggle**: Uses `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.  
-- **Run Unit Tests**: Calls `RunUnitTests.ps1`.
+- **Development Mode Toggle**: Uses `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.
 - **Build VI Package**: Internally calls `Build.ps1` to produce a `.vip` artifact (and can draft a release if configured).
+
+Unit tests run within the `test` job of the composite CI workflow defined in `.github/workflows/ci-composite.yml`.
 
 ### Injecting Organization/Repo for Unique Builds
 
@@ -122,7 +123,7 @@ An example step in a GitHub Actions file might look like:
       -Commit "${{ github.sha }}" `
       # You can pass metadata fields to brand the package:
       -CompanyName "${{ github.repository_owner }}" `
-      -AuthorName "${{ github.repository }}" `
+      -AuthorName "${{ github.event.repository.name }}" `
       -Verbose
 ```
 
@@ -176,19 +177,20 @@ Passing these metadata fields ensures the final `.vip` clearly identifies **whic
 <a name="example-developer-workflow"></a>
 ## 7. Example Developer Workflow
 
-1. **Enable Dev Mode**  
-   - `Set_Development_Mode.ps1` or a “Development Mode Toggle” workflow run.  
-2. **Develop and Test**  
-   - Locally or via “Run Unit Tests” to confirm changes.  
-3. **Open PR**  
-   - Label (`major`, `minor`, `patch`) for semver bump.  
-   - Actions use `Build.ps1` to produce `.vip` on merges.  
-4. **Merge**  
-   - Creates a GitHub Release, attaches the `.vip`.  
-5. **Disable Dev Mode**  
-   - Revert environment.  
-6. **Install**  
-   - Use VIPM to install the `.vip` and confirm final functionality.  
+1. **Enable Dev Mode**
+   - `Set_Development_Mode.ps1` or a “Development Mode Toggle” workflow run.
+2. **Develop and Test**
+   - Run tests locally or through the composite CI workflow's `test` job to confirm changes.
+3. **Open PR**
+   - Label (`major`, `minor`, `patch`) for semver bump.
+   - Actions use `Build.ps1` to produce `.vip` on merges.
+4. **Merge**
+   - The [`.github/workflows/ci-composite.yml`](../.github/workflows/ci-composite.yml) workflow uploads the built `.vip` as an artifact in its "Upload VI Package" step.
+   - It does not automatically create a GitHub Release; draft one manually and attach the artifact if desired.
+5. **Disable Dev Mode**
+   - Revert environment.
+6. **Install**
+   - Use VIPM to install the `.vip` and confirm final functionality.
 
 All scripts are fully open-source—**collaborators** can debug or extend them locally with minimal friction. By passing organization/repo data in either local builds or GitHub Actions, you ensure your **unique** version of the Icon Editor is **clearly labeled** and **easily traced** to its source.
 
