@@ -98,7 +98,7 @@ Use whichever patterns best fit your project’s branching model. If you prefer 
 <a name="issue-status-gate"></a>
 ### **Issue-Status Gate**
 
-The composite CI workflow only runs full jobs when the `issue-status` check succeeds. That job requires the source branch name to contain `issue-<number>` (for example, `release-alpha/issue-123` or `issue-456`) and the linked GitHub issue’s Status to be **In Progress**. Branches without this prefix—such as `release-alpha/2.0`—trigger the workflow but skip all subsequent jobs. See [ci-composite.yml](../../../.github/workflows/ci-composite.yml#L40-L75) for the `issue-status` job and its downstream [gate](../../../.github/workflows/ci-composite.yml#L121-L126).
+The composite CI workflow only runs full jobs when the `issue-status` check succeeds. That job requires the source branch name to contain `issue-<number>` (for example, `release-alpha/issue-123` or `issue-456`) and the linked GitHub issue’s Status to be **In Progress**. Branches without this prefix—such as `release-alpha/2.0`—trigger the workflow but skip all subsequent jobs. See [ci-composite.yml](../../../.github/workflows/ci-composite.yml) for the `issue-status` job (currently lines 40‑119) and its downstream gate.
 
 
 <a name="workflow-steps"></a>
