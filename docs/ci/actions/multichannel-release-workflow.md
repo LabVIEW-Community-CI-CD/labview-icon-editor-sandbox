@@ -30,7 +30,7 @@ This **Multi-Channel Release Workflow** automates packaging LabVIEW `.vip` files
 
 - Uses **label-based** semantic version increments for major/minor/patch.
 - Maintains a **commit-based build number**, so every new commit yields a unique suffix (`-buildNN`).
-- Extends pre-release logic to **Alpha**, **Beta**, and **RC** channels, not just a single `release/*` for RC.
+- Extends pre-release logic to **Alpha**, **Beta**, and **RC** channels, not just a single `release/*` for RC. The pre-release number uses the same commit count as the build number, so both values are identical.
 
 By adopting these patterns, maintainers can run alpha, beta, and RC pipelines in parallel or sequentially, each channel generating distinct pre-release versions.
 
@@ -53,15 +53,15 @@ By adopting these patterns, maintainers can run alpha, beta, and RC pipelines in
 <a name="configuration--branch-patterns"></a>
 ## **3. Configuration & Branch Patterns**
 
-1. **Alpha**  
-   - Branch pattern: `release-alpha/*`.  
-   - Produces versions like `vX.Y.Z-alpha.<N>-build<commitCount>`.  
-2. **Beta**  
-   - Branch pattern: `release-beta/*`.  
-   - Produces `vX.Y.Z-beta.<N>-build<commitCount>`.  
+1. **Alpha**
+   - Branch pattern: `release-alpha/*`.
+   - Produces versions like `vX.Y.Z-alpha.<commitCount>-build<commitCount>`.
+2. **Beta**
+   - Branch pattern: `release-beta/*`.
+   - Produces `vX.Y.Z-beta.<commitCount>-build<commitCount>`.
 3. **RC**
   - Branch pattern: `release-rc/*`.
-  - Produces `vX.Y.Z-rc.<N>-build<commitCount>`.
+  - Produces `vX.Y.Z-rc.<commitCount>-build<commitCount>`.
 4. **Other Branches**
   - `main`, `develop`, `hotfix/*` produce final releases with no alpha/beta/rc suffix.
   - No label => major/minor/patch remain unchanged; build increments only.
@@ -116,8 +116,8 @@ Below is a **high-level** breakdown. In your `.github/workflows/ci-composite.yml
 4. **Compute final version**:  
    - Parse the last stable tag (or default to `v0.0.0`).  
    - Apply major/minor/patch if needed.  
-   - If branch matches `release-alpha/*`, `release-beta/*`, or `release-rc/*`, append `-alpha.<N>`, `-beta.<N>`, or `-rc.<N>`.  
-   - Finally append `-build<commitCount>`.
+   - If branch matches `release-alpha/*`, `release-beta/*`, or `release-rc/*`, append `-alpha.<commitCount>`, `-beta.<commitCount>`, or `-rc.<commitCount>`. The `<N>` value equals the commit count.
+   - Finally append `-build<commitCount>`. Because both suffixes use the commit count, the pre-release number and build number are identical.
 
 <a name="build--artifact-handling"></a>
 ### **Build & Artifact Handling**
@@ -157,8 +157,8 @@ Any commit to these branches triggers an alpha/beta/rc suffix. Merging to `main`
      $preSuffix = ""
    }
    ```
-2. If `$preSuffix` is non-empty, `isPrerelease = true`.  
-3. Final version: `v<major>.<minor>.<patch>-<preSuffix>-build<commitCount>`.
+2. If `$preSuffix` is non-empty, `isPrerelease = true`.
+3. Final version: `v<major>.<minor>.<patch>-<preSuffix>-build<commitCount>`. Since `<preSuffix>` incorporates `$commitsCount`, the pre-release number and build number are the same.
 
 <a name="final-release-flow"></a>
 ### **5.3 Final Release Flow**
@@ -169,17 +169,17 @@ Any commit to these branches triggers an alpha/beta/rc suffix. Merging to `main`
 <a name="usage-examples"></a>
 ## **6. Usage Examples**
 
-1. **Alpha Channel Testing**  
-   - You want an early test for version 2.0: create `release-alpha/2.0`.  
-   - Each commit produces something like `v2.0.0-alpha.2-build41`.  
+1. **Alpha Channel Testing**
+   - You want an early test for version 2.0: create `release-alpha/2.0`.
+   - Each commit produces something like `v2.0.0-alpha.41-build41`.
    - Merging alpha → beta or main finalizes or transitions the channel.
 
-2. **Beta Channel**  
-   - `release-beta/2.0`. Now each commit yields `v2.0.0-beta.3-build45`.  
+2. **Beta Channel**
+   - `release-beta/2.0`. Now each commit yields `v2.0.0-beta.45-build45`.
    - Merging back to `main` yields a stable `v2.0.0-build46`.
 
-3. **RC Branch**  
-   - `release-rc/2.1`. The workflow sets `-rc.<N>` so your testers see it’s near final.  
+3. **RC Branch**
+   - `release-rc/2.1`. The workflow sets `-rc.<commitCount>` so your testers see it’s near final, e.g. `v2.1.0-rc.50-build50`.
    - Merging to main ends the RC, resulting in `v2.1.0-buildXX`.
 
 4. **No Pre-Release**  
@@ -224,4 +224,4 @@ Any commit to these branches triggers an alpha/beta/rc suffix. Merging to `main`
 <a name="conclusion"></a>
 ## **9. Conclusion**
 
-By supporting **multiple pre-release channels** (Alpha, Beta, RC), this updated release workflow offers greater flexibility for iterative testing stages. Each branch pattern yields a distinct suffix (`-alpha.<N>`, `-beta.<N>`, or `-rc.<N>`). Merging into a final branch (e.g., `main`) produces a stable release with no suffix, but still uses **commit-based** build numbering. Combined with label-based major/minor/patch increments, you have a **robust**, **fork-friendly**, and **multi-stage** CI/CD pipeline for LabVIEW. 
+By supporting **multiple pre-release channels** (Alpha, Beta, RC), this updated release workflow offers greater flexibility for iterative testing stages. Each branch pattern yields a distinct suffix (`-alpha.<commitCount>`, `-beta.<commitCount>`, or `-rc.<commitCount>`). Merging into a final branch (e.g., `main`) produces a stable release with no suffix, but still uses **commit-based** build numbering—so the pre-release number and build number are always identical. Combined with label-based major/minor/patch increments, you have a **robust**, **fork-friendly**, and **multi-stage** CI/CD pipeline for LabVIEW.

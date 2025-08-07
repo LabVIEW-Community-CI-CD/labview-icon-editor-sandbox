@@ -12,7 +12,7 @@ This document provides a collection of common **troubleshooting** scenarios (wit
    3. [No. 3: Version Label Not Recognized](#no-3-version-label-not-recognized)
    4. [No. 4: Build Number Not Updating](#no-4-build-number-not-updating)
    5. [No. 5: Dev Mode Still Enabled After Build](#no-5-dev-mode-still-enabled-after-build)
-   6. [No. 6: Release Not Created or Drafted](#no-6-release-not-created-or-drafted)
+   6. [No. 6: Release Not Created](#no-6-release-not-created)
    7. [No. 7: Branch Protection Blocks Merge](#no-7-branch-protection-blocks-merge)
    8. [No. 8: Incorrect Pre-Release Suffix (Alpha/Beta/RC)](#no-8-incorrect-pre-release-suffix-alphabetarc)
    9. [No. 9: Hotfix Not Tagged as Expected](#no-9-hotfix-not-tagged-as-expected)
@@ -24,11 +24,11 @@ This document provides a collection of common **troubleshooting** scenarios (wit
 
 2. [FAQ](#faq)
    1. [Q1: Can I Override the Build Number?](#q1-can-i-override-the-build-number)
-   2. [Q2: How Do I Skip Creating a Release?](#q2-how-do-i-skip-creating-a-release)
+   2. [Q2: How Do I Create a Release?](#q2-how-do-i-create-a-release)
    3. [Q3: Can I Have More Than Alpha, Beta, or RC Channels?](#q3-can-i-have-more-than-alpha-beta-or-rc-channels)
    4. [Q4: How Can I Attach Multiple `.vip` Files to a Release?](#q4-how-can-i-attach-multiple-vip-files-to-a-release)
    5. [Q5: Do I Need To Merge Hotfixes Into `develop`?](#q5-do-i-need-to-merge-hotfixes-into-develop)
-   6. [Q6: What If I Don’t Want a Draft Release?](#q6-what-if-i-dont-want-a-draft-release)
+   6. [Q6: What About Draft Releases?](#q6-what-about-draft-releases)
    7. [Q7: Can I Use This Workflow Without Gitflow?](#q7-can-i-use-this-workflow-without-gitflow)
    8. [Q8: Why Is My Dev Mode Toggle Not Working Locally?](#q8-why-is-my-dev-mode-toggle-not-working-locally)
    9. [Q9: Can I Use a Different LabVIEW Version (e.g., 2023)?](#q9-can-i-use-a-different-labview-version-eg-2023)
@@ -123,18 +123,18 @@ Below are 13 possible issues you might encounter, along with suggested steps to 
 
 ---
 
-### No. 6: Release Not Created or Drafted
+### No. 6: Release Not Created
 
 **Symptoms**:
 - The workflow completes, but you see no new release in GitHub’s “Releases” section.
 
 **Possible Causes**:
-- `DRAFT_RELEASE` is set to `true` (so it’s in draft state), or the “Create Release” step was skipped.
+- The composite pipeline only uploads artifacts and does not create releases automatically.
 - The build was triggered by a Pull Request, and your workflow logic only creates releases on “push” or merges to main.
 
 **Solution**:
-1. Check your workflow triggers: releases are often created only on direct pushes to specific branches.  
-2. If `DRAFT_RELEASE == true`, look in “Releases → Drafts” to publish it manually.  
+1. Create releases manually through GitHub’s interface or configure a separate workflow to publish them.
+2. Check your workflow triggers if you expect another workflow to handle releases on certain branches.
 3. Confirm you have “Read and write” permissions for Actions in your repo settings.
 
 ---
@@ -261,10 +261,10 @@ By default, the workflow calculates the build number with `git rev-list --count 
 
 ---
 
-### Q2: How Do I Skip Creating a Release?
+### Q2: How Do I Create a Release?
 
-**Answer**:  
-You can set an environment variable like `CREATE_RELEASE=false` (if your workflow supports it) or remove the “Create Release” step for certain branches. Another option is to let it create a draft release and simply never publish it.
+**Answer**:
+The composite pipeline only uploads artifacts and does not create GitHub releases automatically. Create releases manually through the GitHub interface or set up a separate workflow dedicated to publishing them.
 
 ---
 
@@ -289,10 +289,10 @@ Yes. In standard Gitflow, after merging a `hotfix/*` into `main`, you also merge
 
 ---
 
-### Q6: What If I Don’t Want a Draft Release?
+### Q6: What About Draft Releases?
 
-**Answer**:  
-Simply set `DRAFT_RELEASE=false`. The release will be published immediately after the workflow completes. Alternatively, you can remove or tweak that setting in your `.yml` file.
+**Answer**:
+The composite pipeline doesn’t create releases, so draft releases are not generated. If you require a draft or published release, create it manually or configure a separate workflow to handle release creation.
 
 ---
 
@@ -319,8 +319,18 @@ Yes, if your machine and project support it. You’ll need to install that versi
 
 ### Q10: How Do I Pass Repository Name and Organization?
 
-**Answer**:  
-Inside **GitHub Actions**, you can reference environment variables such as `${{ github.repository_owner }}` and `${{ github.repository }}`. Pass them to your script (for example, `-CompanyName "$env:REPO_OWNER"` and `-AuthorName "$env:REPO_NAME"`), which then gets injected into the `DisplayInformationJSON` used by `build_vip.ps1`. This ensures each build is branded with your fork’s or org’s name.
+**Answer**:
+Inside **GitHub Actions**, you can reference environment variables such as `${{ github.repository_owner }}` and `${{ github.event.repository.name }}`. Set them first in your workflow step and then pass them to your script:
+
+```yaml
+env:
+  REPO_OWNER: ${{ github.repository_owner }}
+  REPO_NAME: ${{ github.event.repository.name }}
+run: |
+  .\build_vip.ps1 -CompanyName "$env:REPO_OWNER" -AuthorName "$env:REPO_NAME"
+```
+
+`${{ github.repository }}` returns `owner/repo`, so it isn’t suitable for the author field. Using the separate owner and repository values ensures your build is branded correctly when `DisplayInformationJSON` is injected by `build_vip.ps1`.
 
 ---
 
