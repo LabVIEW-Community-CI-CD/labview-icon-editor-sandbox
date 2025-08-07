@@ -123,7 +123,7 @@ An example step in a GitHub Actions file might look like:
       -Commit "${{ github.sha }}" `
       # You can pass metadata fields to brand the package:
       -CompanyName "${{ github.repository_owner }}" `
-      -AuthorName "${{ github.repository }}" `
+      -AuthorName "${{ github.event.repository.name }}" `
       -Verbose
 ```
 
