@@ -196,7 +196,7 @@ only the build number changes.
 
 ### 6.1 Keeping the Workflow Updated
 1. **Actions Versions**
-   - This workflow references certain actions, like `actions/checkout@v3` or `actions/github-script@v7`. Keep an eye on updates or deprecations. Update to a newer checkout version when the action itself is revised.
+   - This workflow references certain actions, like `actions/checkout@v4` or `actions/github-script@v7`. Keep an eye on updates or deprecations. Update to a newer checkout version when the action itself is revised. Some internal actions—such as `compute-version`—may still pin older releases (e.g., `actions/checkout@v3`) for compatibility, so mixing versions is expected.
 2. **Build Actions**
    - If your LabVIEW project evolves or you add steps, keep the `build-lvlibp` and `build-vi-package` actions up to date.
 3. **Windows Runner Updates**  
