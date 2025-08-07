@@ -118,8 +118,9 @@ require that gate.
 | `display_information_json` | DisplayInformation JSON string. |
 
 The `major`, `minor`, and `patch` inputs are derived from pull-request labels (`major`,
-`minor`, `patch`) by the `compute-version` job in `ci-composite.yml`. If no label is present,
-only the build number changes.
+`minor`, `patch`) by the `compute-version` job in `ci-composite.yml`. If a pull request lacks
+these labels, `compute-version` defaults to bumping the patch version. For direct pushes
+without labels, the version components remain unchanged and only the build number increases.
 
 ### 3.3 Customization & Fork Setup
 - **Fork Setup**:
@@ -222,7 +223,7 @@ only the build number changes.
 ### 7.1 Pull Requests with Labels
 - **Scenario**: You create a PR from a feature branch into `develop`.
 - **Action**: Add a label like `major` or `minor`.
-- **Result**: Upon merging, the workflow updates that version field (major/minor/patch) and applies a commit-based build number. The `.vip` artifact is uploaded; any tagging or release must be handled separately.
+- **Result**: Upon merging, the workflow updates that version field (major/minor/patch) and applies a commit-based build number. If the PR has no version label, the patch version is bumped by default. The `.vip` artifact is uploaded; any tagging or release must be handled separately.
 
 #### Example:
 1. PR labeled `minor`:  
