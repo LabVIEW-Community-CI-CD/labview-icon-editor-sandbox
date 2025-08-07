@@ -97,7 +97,28 @@ The `build-vi-package` directory defines a **composite action**. It does not lis
 That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events, so this action executes whenever the workflow is triggered.
 
 ### 3.2 Configurable Inputs / Parameters
-- **PR Labels**: `major`, `minor`, `patch`, or none. If none, only the build number changes.
+`ci-composite.yml` calls this action and provides all required inputs automatically. When invoking
+`build-vi-package` from another workflow, supply the following parameters
+(see [action.yml](../../../.github/actions/build-vi-package/action.yml) for details):
+
+| Input | Description |
+| --- | --- |
+| `supported_bitness` | `32` or `64`; selects the VI Package bitness. |
+| `relative_path` | Workspace root path. |
+| `vipb_path` | Path to the `.vipb` file relative to the workspace. |
+| `minimum_supported_lv_version` | LabVIEW major version. |
+| `labview_minor_revision` | LabVIEW minor revision (defaults to `3`). |
+| `major` | Major version component. |
+| `minor` | Minor version component. |
+| `patch` | Patch version component. |
+| `build` | Build number. |
+| `commit` | Commit identifier. |
+| `release_notes_file` | Path to release notes file. |
+| `display_information_json` | DisplayInformation JSON string. |
+
+The `major`, `minor`, and `patch` inputs are derived from pull-request labels (`major`,
+`minor`, `patch`) by the `compute-version` job in `ci-composite.yml`. If no label is present,
+only the build number changes.
 
 ### 3.3 Customization & Fork Setup
 - **Fork Setup**:
@@ -116,7 +137,7 @@ That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events, so
 ### 4.1 Pipeline Overview
 
 1. **Check Out & Full Clone**
-   - Uses `actions/checkout@v4` with `fetch-depth: 0` so we get the entire commit history (required for commit-based build number).
+   - Uses `actions/checkout@v3` with `fetch-depth: 0` so we get the entire commit history (required for commit-based build number).
 
 2. **Determine Bump Type**
    - On PR events, scans the PR labels: `major`, `minor`, `patch`, or defaults to `none`.  
@@ -174,7 +195,7 @@ That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events, so
 
 ### 6.1 Keeping the Workflow Updated
 1. **Actions Versions**
-   - This workflow references certain actions, like `actions/checkout@v4` or `actions/github-script@v7`. Keep an eye on updates or deprecations.
+   - This workflow references certain actions, like `actions/checkout@v3` or `actions/github-script@v7`. Keep an eye on updates or deprecations. Update to a newer checkout version when the action itself is revised.
 2. **Build Actions**
    - If your LabVIEW project evolves or you add steps, keep the `build-lvlibp` and `build-vi-package` actions up to date.
 3. **Windows Runner Updates**  

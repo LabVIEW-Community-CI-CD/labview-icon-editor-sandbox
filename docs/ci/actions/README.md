@@ -20,6 +20,5 @@ This repository defines several reusable [composite actions](https://docs.github
 | [revert-development-mode](../../../.github/actions/revert-development-mode) | Restores the repository after development mode. |
 | [run-unit-tests](../../../.github/actions/run-unit-tests) | Executes LabVIEW unit tests via g-cli. |
 | [set-development-mode](../../../.github/actions/set-development-mode) | Configures the repository for development mode. |
-| [unit-tests](../../../.github/actions/unit-tests) | Prepares and executes LabVIEW unit tests. |
 
 Each action directory includes a `README.md` and `action.yml` with full usage details.

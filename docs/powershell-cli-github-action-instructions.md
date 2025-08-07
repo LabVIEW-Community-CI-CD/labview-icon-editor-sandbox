@@ -71,11 +71,11 @@ This workflow ensures that all **forks** of the repository can sync the latest b
      - and finally **main** for a final release (no suffix).  
    - Alternatively, **`hotfix/*`** merges can go directly to **main** for quick patches.
 
-6. **Check Build Artifacts**
+5. **Check Build Artifacts**
    - The `.vip` file is generated and uploaded as a build artifact.
    - If you want to publish a GitHub Release, create one manually and upload the artifact.
 
-7. **Optionally Enable Development Mode**
+6. **Optionally Enable Development Mode**
    - If you need LabVIEW to reference local source directly, run the **Development Mode Toggle** workflow (see [Development Mode](#31-development-mode)). Usually, you **disable** it for standard builds/tests.
 
 For a visual reference, you may consult a **Gitflow diagram** that includes alpha/beta/rc branches as an extension of the typical `release/` branch. This helps illustrate how merges flow between `develop` and `main`.
