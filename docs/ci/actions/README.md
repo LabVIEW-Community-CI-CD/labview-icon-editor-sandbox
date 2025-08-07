@@ -8,7 +8,7 @@ This repository defines several reusable [composite actions](https://docs.github
 | [apply-vipc](../../../.github/actions/apply-vipc) | Installs runner dependencies for a given LabVIEW version and bitness. |
 | [build](../../../.github/actions/build) | Orchestrates the full build and packaging process. |
 | [build-lvlibp](../../../.github/actions/build-lvlibp) | Creates the editor packed library. |
-| [build-vip](../../../.github/actions/build-vip) | Updates a VIPB file and builds the VI package. |
+| [build-vi-package](../../../.github/actions/build-vi-package) | Updates a VIPB file and builds the VI package. |
 | [close-labview](../../../.github/actions/close-labview) | Gracefully shuts down a LabVIEW instance. |
 | [missing-in-project](../../../.github/actions/missing-in-project) | Checks a project for missing files using `MissingInProjectCLI.vi`. |
 | [modify-vipb-display-info](../../../.github/actions/modify-vipb-display-info) | Updates display information in a VIPB file. |

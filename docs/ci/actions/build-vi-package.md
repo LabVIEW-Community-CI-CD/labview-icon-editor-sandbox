@@ -5,7 +5,6 @@ This document is designed to help maintainers, contributors, and engineers autom
 - Incorporate **label-based semantic versioning** to increment major, minor, or patch numbers automatically.
 - Integrate a **commit-based build number** so each new commit naturally increases a “build” suffix (e.g., `-build42`).
 - Seamlessly **build** a `.vip` file and **upload** it as an artifact through GitHub Actions. If you want to publish a release, run a separate workflow to create it.
-- **Disable GPG signing** on forks, avoiding errors for contributors who lack the main repository’s signing keys.
 
 > Whether you’re merging a pull request, pushing hotfixes directly, or working on release branches with RC tags, this workflow unifies your packaging pipeline under a single YAML definition. Release creation must be handled separately.
 
@@ -41,9 +40,8 @@ This document is designed to help maintainers, contributors, and engineers autom
 The **Build VI Package** workflow provides a **consistent, automated build process** for LabVIEW-based projects like the Icon Editor. Instead of manually labeling versions, packaging `.vip` artifacts, and drafting releases, this workflow:
 
 1. **Detects PR labels** (`major`, `minor`, `patch`) to decide version increments.  
-2. Automatically **builds** a `.vip` file using a PowerShell script.  
-3. Optionally **disables GPG signing** if the repo is a **fork**—avoiding errors from missing keys.  
-4. **Uploads artifacts** for the build; creating tags or GitHub Releases must be handled separately if desired.
+2. Automatically **builds** a `.vip` file using a PowerShell script.
+3. **Uploads artifacts** for the build; creating tags or GitHub Releases must be handled separately if desired.
 
 It eliminates confusion around versioning, keeps everything in one pipeline, and ensures every commit or merge triggers a reproducible build.
 
@@ -56,12 +54,11 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 1.3 Intended Users
 - **Library Maintainers** needing reliable, standardized version increments.  
 - **CI/CD Engineers** who want to embed LabVIEW packaging in a broader automation ecosystem.  
-- **Fork Contributors** able to run the same workflow in their fork without GPG key issues.
 
 ### 1.4 High-Level Benefits
 - **Label-Based Version Bumping**: Maintainers just add `major`, `minor`, or `patch` labels to the PR, no custom scripts needed.  
 - **Commit-Based Build Number**: Every commit increments a “build” suffix, ensuring no collisions.  
-- **Fork-Friendly**: If the repo name indicates it’s not the official one, GPG signing toggles off.  
+- **Fork-Friendly**: The workflow runs in forks without requiring extra credentials.
 - **Simplicity**: Build and artifact upload steps are combined in a single YAML file; release creation can be added separately.
 
 
@@ -78,7 +75,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 - (Optional) Additional Windows components (like .NET or Visual Studio) if your pipeline references them.
 
 ### 2.3 Additional Software & Tools
-- **Build Tools**: The composite workflow uses the `build-lvlibp` and `build-vip` GitHub actions to compile libraries and create the `.vip` package.
+- **Build Tools**: The composite workflow uses the `build-lvlibp` and `build-vi-package` GitHub actions to compile libraries and create the `.vip` package.
 - **Chocolatey** or other package managers only if your script references them.
 - The workflow interacts with GitHub using built-in actions; no `gh` CLI is required.
 
@@ -137,7 +134,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 5. **Build the Icon Editor VI Package**
    - Uses the `build-lvlibp` action to compile the packed libraries.
-   - Runs the `build-vip` action to generate the final `.vip` file.
+   - Runs the `build-vi-package` action to generate the final `.vip` file.
 
 6. **Capture & Upload Artifacts**
    - Uploads the generated `.vip` as an ephemeral artifact for the current Actions run.
@@ -180,7 +177,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 1. **Actions Versions**
    - This workflow references certain actions, like `actions/checkout@v4` or `actions/github-script@v7`. Keep an eye on updates or deprecations.
 2. **Build Actions**
-   - If your LabVIEW project evolves or you add steps, keep the `build-lvlibp` and `build-vip` actions up to date.
+   - If your LabVIEW project evolves or you add steps, keep the `build-lvlibp` and `build-vi-package` actions up to date.
 3. **Windows Runner Updates**  
    - Ensure your self-hosted runner OS is patched and has any new LabVIEW versions if your project updates.
 
@@ -258,7 +255,7 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 9.1 Common Error Scenarios
 
 1. **No .vip Found**
-   - Ensure the `build-vip` action completed successfully and produced the artifact.
+   - Ensure the `build-vi-package` action completed successfully and produced the artifact.
    - Check action logs for errors in the packaging steps.
 
 2. **LabVIEW Licensing Failure**
@@ -271,8 +268,8 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 - **Local Testing**: Try running the same powershell commands locally on a dev environment.
 
 ### 9.3 Where to Seek Help
-- For general build or GPG issues, consult NI or LabVIEW community forums.  
-- For GitHub Actions or workflow YAML syntax, check official GitHub Docs or open an issue on your repo.
+- For general build issues, consult NI or LabVIEW community forums.
+ - For GitHub Actions or workflow YAML syntax, check official GitHub Docs or open an issue on your repo.
 
 
 
@@ -295,6 +292,6 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 
 ## 11. **Conclusion**
 
-By properly setting up environment variables, referencing your LabVIEW environment on a self-hosted runner, and using label-based version increments plus a commit-based build number, this GitHub Action automates your `.vip` build and artifact upload process. Fork owners can disable GPG signing, and maintainers can extend the pipeline with tagging or release steps if desired. Follow the troubleshooting steps if anything goes awry, and enjoy streamlined LabVIEW CI/CD!
+By properly setting up environment variables, referencing your LabVIEW environment on a self-hosted runner, and using label-based version increments plus a commit-based build number, this GitHub Action automates your `.vip` build and artifact upload process. Maintainers can extend the pipeline with tagging or release steps if desired. Follow the troubleshooting steps if anything goes awry, and enjoy streamlined LabVIEW CI/CD!
 
 
