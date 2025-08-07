@@ -152,8 +152,8 @@ components remain unchanged and only the build number increases.
 
 4. **Compute Final Version**
    - Merges the label-based bump with existing tags (if any).
-   - If on `release-alpha/*`, `release-beta/*`, or `release-rc/*`, appends `-alpha.<N>`, `-beta.<N>`, or `-rc.<N>` respectively.
-   - Always adds `-build<BUILD_NUMBER>` last, e.g. `v1.2.3-rc.5-build37`.
+   - If on `release-alpha/*`, `release-beta/*`, or `release-rc/*`, appends `-alpha.<commitCount>`, `-beta.<commitCount>`, or `-rc.<commitCount>` respectively. Here `<N>` equals the commit count, matching [`compute-version`](../../../.github/actions/compute-version/action.yml).
+   - Always adds `-build<BUILD_NUMBER>` last, e.g. `v1.2.3-rc.37-build37`. Because both values use the commit count, the pre-release number and build number are identical.
 
 5. **Build the Icon Editor VI Package**
    - Uses the `build-lvlibp` action to compile the packed libraries.
@@ -169,7 +169,7 @@ components remain unchanged and only the build number increases.
 
 ### 4.3 Pre-Release vs. Final Release
 
-- **`release-alpha/*`, `release-beta/*`, `release-rc/*`** branches → Add `-alpha.<N>`, `-beta.<N>`, or `-rc.<N>` suffixes to indicate pre-release.
+- **`release-alpha/*`, `release-beta/*`, `release-rc/*`** branches → Add `-alpha.<commitCount>`, `-beta.<commitCount>`, or `-rc.<commitCount>` suffixes to indicate pre-release. The `<N>` value equals the commit count and therefore matches the build suffix.
 - Merging back to `main` typically yields a final version with no pre-release suffix.
 - Maintainers can manually convert a pre-release to a final release after verifying assets or notes.
 
@@ -227,10 +227,10 @@ components remain unchanged and only the build number increases.
 - **Result**: Upon merging, the workflow updates that version field (major/minor/patch) and applies a commit-based build number. If the PR has no version label, the patch version is bumped by default. The `.vip` artifact is uploaded; any tagging or release must be handled separately.
 
 #### Example:
-1. PR labeled `minor`:  
+1. PR labeled `minor`:
    - Previous version: `v1.2.3-build45`
    - New version on merge: `v1.3.0-build46`
-   - If it’s `release-rc/*`, might become `v1.3.0-rc.1-build46` (`release-alpha/*` and `release-beta/*` yield `-alpha.<N>` and `-beta.<N>`).
+   - If it’s `release-rc/*`, might become `v1.3.0-rc.46-build46` (`release-alpha/*` and `release-beta/*` yield `-alpha.<commitCount>` and `-beta.<commitCount>`).
 
 ### 7.2 Direct Push to Main or Develop
 - **Scenario**: You quickly push a fix to `develop` without opening a PR.
@@ -239,7 +239,7 @@ components remain unchanged and only the build number increases.
 
 ### 7.3 Working on a Release Branch
 - **Scenario**: You branch off `release-rc/1.2`.
-- **Action**: The workflow appends `-rc.<N>` each time you commit to that pre-release branch, e.g. `v1.2.0-rc.2-build50`. Branches named `release-alpha/1.2` or `release-beta/1.2` would similarly append `-alpha.<N>` or `-beta.<N>`; these patterns correspond to the `release-alpha/*`, `release-beta/*`, and `release-rc/*` rules in `ci-composite.yml`.
+- **Action**: The workflow appends `-rc.<commitCount>` each time you commit to that pre-release branch, e.g. `v1.2.0-rc.50-build50`. Branches named `release-alpha/1.2` or `release-beta/1.2` would similarly append `-alpha.<commitCount>` or `-beta.<commitCount>`; these patterns correspond to the `release-alpha/*`, `release-beta/*`, and `release-rc/*` rules in `ci-composite.yml`.
 - **Result**: Merging `release-rc/1.2` back to `main` finalizes `v1.2.0-build51`.
 
 ### 7.4 Manually Triggering (workflow_dispatch)
@@ -306,7 +306,7 @@ components remain unchanged and only the build number increases.
 **A:** By default, we rely on `git rev-list --count HEAD`. You can change it by passing a custom environment variable or adjusting the version logic in your workflow.
 
 **Q:** Does it support alpha/beta channels out of the box?
-**A:** Yes. Branches `release-alpha/*`, `release-beta/*`, and `release-rc/*` automatically append `-alpha.<N>`, `-beta.<N>`, or `-rc.<N>` during the “Compute version string” step.
+**A:** Yes. Branches `release-alpha/*`, `release-beta/*`, and `release-rc/*` automatically append `-alpha.<commitCount>`, `-beta.<commitCount>`, or `-rc.<commitCount>` during the “Compute version string” step, so the pre-release number matches the build number.
 
 **Q:** What about manual triggers?  
 **A:** If `workflow_dispatch` is enabled, you can run it from the Actions tab, typically defaulting to the same logic (`none` for bump).
