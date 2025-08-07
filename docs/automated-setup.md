@@ -100,9 +100,10 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 
 We provide **GitHub Actions** that wrap these same PowerShell scripts for building the Icon Editor:
 
-- **Development Mode Toggle**: Uses `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.  
-- **Run Unit Tests**: Calls `RunUnitTests.ps1`.
+- **Development Mode Toggle**: Uses `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.
 - **Build VI Package**: Internally calls `Build.ps1` to produce a `.vip` artifact (and can draft a release if configured).
+
+Unit tests run within the `test` job of the composite CI workflow defined in `.github/workflows/ci-composite.yml`.
 
 ### Injecting Organization/Repo for Unique Builds
 
@@ -176,13 +177,13 @@ Passing these metadata fields ensures the final `.vip` clearly identifies **whic
 <a name="example-developer-workflow"></a>
 ## 7. Example Developer Workflow
 
-1. **Enable Dev Mode**  
-   - `Set_Development_Mode.ps1` or a “Development Mode Toggle” workflow run.  
-2. **Develop and Test**  
-   - Locally or via “Run Unit Tests” to confirm changes.  
-3. **Open PR**  
-   - Label (`major`, `minor`, `patch`) for semver bump.  
-   - Actions use `Build.ps1` to produce `.vip` on merges.  
+1. **Enable Dev Mode**
+   - `Set_Development_Mode.ps1` or a “Development Mode Toggle” workflow run.
+2. **Develop and Test**
+   - Run tests locally or through the composite CI workflow's `test` job to confirm changes.
+3. **Open PR**
+   - Label (`major`, `minor`, `patch`) for semver bump.
+   - Actions use `Build.ps1` to produce `.vip` on merges.
 4. **Merge**  
    - Creates a GitHub Release, attaches the `.vip`.  
 5. **Disable Dev Mode**  
