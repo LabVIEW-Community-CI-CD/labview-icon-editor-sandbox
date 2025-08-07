@@ -44,7 +44,7 @@ We achieve this by:
 
 ## GitHub Actions and PowerShell
 
-A typical **GitHub Actions** workflow might have steps like the snippet below. It is an illustrative example that condenses the process into a single job. In the actual [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) workflow, these steps are separated into the **`build-ppl`** and **`build-vi-package`** jobs. The snippet mirrors key steps such as `build-lvlibp`, `modify-vipb-display-info`, and `build-vi-package`:
+A typical **GitHub Actions** workflow might have steps like the snippet below. It is an illustrative example that condenses the process into a single job. In the actual [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) workflow, these steps are separated into the **`build-ppl`** and **`build-vi-package`** jobs. The `build-ppl` job compiles the 32- and 64-bit packed libraries, while `build-vi-package` injects the display metadata and creates the final `.vip` file. Referring to the jobs by name—rather than line numbers—helps avoid future drift. The snippet mirrors key steps such as `build-lvlibp`, `modify-vipb-display-info`, and `build-vi-package`:
 
 ```yaml
 jobs:
