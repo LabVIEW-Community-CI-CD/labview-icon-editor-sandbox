@@ -53,10 +53,10 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
    - (Optional) Toggle LabVIEW dev mode (`Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`) via the **Development Mode Toggle** workflow.
 
 5. **Run Tests**
-   - Run the tests using the main **Build VI Package** CI workflow (it will execute the unit tests).
+   - Run the tests using the **CI Pipeline (Composite)** workflow; its **Build VI Package** job executes the unit tests.
 
 6. **Build VI Package**
-   - Invoke **Build VI Package** to produce a `.vip` and automatically version your code (labels vs. default patch). Publishing tags or GitHub releases requires a separate workflow.
+   - Invoke the **Build VI Package** job within the CI Pipeline (Composite) workflow to produce a `.vip` and automatically version your code (labels vs. default patch). Publishing tags or GitHub releases requires a separate workflow.
    - **You can also** pass in **org/repository** info (e.g., `-CompanyName "MyOrg"` or `-AuthorName "myorg/myrepo"`) to brand the resulting package with your unique identifiers.
 
 7. **Disable Dev Mode** (Optional)  
@@ -86,8 +86,8 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
    - `mode: disable` → calls `RevertDevelopmentMode.ps1`.  
    - Great for reconfiguring LabVIEW for local dev vs. distribution builds.
 
-2. **Build VI Package**
-   - Runs the unit tests and, on success, builds the `.vip`.
+2. **CI Pipeline (Composite)**
+   - Contains the **Build VI Package** job, which runs unit tests and, on success, builds the `.vip`.
    - **Label-based** semantic versioning (`major`, `minor`, `patch`). Defaults to `patch` if no label.
    - **Counts existing tags** (`v*.*.*-build*`) to increment the global build number.
    - **Fork-friendly**: runs on forks without requiring signing keys.
@@ -122,14 +122,14 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
 
 With your runner online:
 
-1. **Enable Dev Mode** (if needed)  
+1. **Enable Dev Mode** (if needed)
    - **Actions → Development Mode Toggle**, set `mode: enable`.
 
-2. **Run Tests via Build VI Package**
-   - Execute **Build VI Package** to run the unit tests; review the logs to confirm everything passes.
+2. **Run Tests via CI Pipeline (Composite)**
+   - Execute the workflow and review the **Build VI Package** job logs to confirm all unit tests pass.
 
 3. **Build VI Package**
-   - Produces `.vip` and bumps the version. The workflow only uploads the artifact; creating tags or GitHub releases requires additional steps.
+   - Produces `.vip` and bumps the version through the Build VI Package job. The workflow only uploads the artifact; creating tags or GitHub releases requires additional steps.
    - **Pass** your **org/repo** info (e.g. `-CompanyName "AcmeCorp"` / `-AuthorName "AcmeCorp/IconEditor"`) to embed in the final package.
    - Artifacts appear in the run summary under **Artifacts**.
 
@@ -144,12 +144,12 @@ With your runner online:
 ### 5. Example Developer Workflow
 
 1. **Enable Development Mode**: if you plan to actively modify the Icon Editor code inside LabVIEW.  
-2. **Code & Test**: Make changes, run the **Build VI Package** workflow (which runs unit tests) to confirm stability.
+2. **Code & Test**: Make changes, run the **CI Pipeline (Composite)** workflow (its **Build VI Package** job runs unit tests) to confirm stability.
 3. **Open a Pull Request**:  
    - Assign a version bump label if you want `major`, `minor`, or `patch`.  
    - The workflow checks this label upon merging.  
 4. **Merge**:
-   - **Build VI Package** triggers, incrementing version and uploading `.vip`.
+   - The **CI Pipeline (Composite)** workflow triggers, and its **Build VI Package** job increments the version and uploads the `.vip`.
    - **Metadata** (such as company/repo) is already integrated into the final `.vip`, so each build is easily identified.  
 5. **Disable Dev Mode**: Return to a normal LabVIEW environment.  
 6. **Install & Verify**: Download the `.vip` artifact for final validations.

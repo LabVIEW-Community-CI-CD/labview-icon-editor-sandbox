@@ -10,7 +10,7 @@ This guide explains how to automate build, test, and distribution steps for the 
 ## Table of Contents
 
 1. [Introduction](#1-introduction)  
-2. [Quickstart / Step-by-Step Procedure](#2-quickstart--step-by-step-procedure)  
+2. [Quickstart / Step-by-Step Procedure](#2-quickstart--step-by-step-procedure)
 3. [Getting Started and Configuration](#3-getting-started--configuration)
    1. [Development Mode](#31-development-mode)
    2. [Self-Hosted Runner Setup](#32-self-hosted-runner-setup)
@@ -21,7 +21,7 @@ This guide explains how to automate build, test, and distribution steps for the 
        - [Examples: Calling This Workflow](#413-examples-calling-this-workflow)
        - [Customization](#414-customization)
        - [Additional Resources](#415-additional-resources)
-   2. [Build VI Package](#42-build-vi-package)
+   2. [CI Pipeline (Composite)](#42-ci-pipeline-composite)
 5. [Gitflow Branching and Versioning](#5-gitflow-branching--versioning)
    1. [Branching Overview](#51-branching-overview)
    2. [Multi-Channel Pre-Releases](#52-multi-channel-pre-releases)  
@@ -55,7 +55,7 @@ This workflow ensures that all **forks** of the repository can sync the latest b
 1. **Set up `.github/workflows`**
    Ensure the following workflows exist (or adapt names as needed):
    - `development-mode-toggle.yml` (Development Mode Toggle)
-   - `ci-composite.yml` (Build VI Package)
+   - `ci-composite.yml` (CI Pipeline (Composite); includes the **Build VI Package** job)
 
 2. **Configure Permissions**
    - In **Settings → Actions → General**, set **Workflow permissions** to allow the workflow to read repository contents and upload artifacts.
@@ -219,11 +219,11 @@ All dev-mode logic resides in two PowerShell scripts:
 
 ---
 
-<a name="42-build-vi-package"></a>
-### 4.2 Build VI Package
+<a name="42-ci-pipeline-composite"></a>
+### 4.2 CI Pipeline (Composite)
 
 - **File Name**: `ci-composite.yml`
-- **Purpose**: Builds the `.vip` artifact and determines the version based on PR labels and commit count.
+- **Purpose**: The workflow's **Build VI Package** job builds the `.vip` artifact and determines the version based on PR labels and commit count.
 - **Features**:
     - **Issue status gating**: skips most jobs unless the branch's linked issue has Status **In Progress**.
     - **Label-based** version bump (`major`, `minor`, `patch`), or none if unlabeled.
@@ -292,7 +292,7 @@ When you open a **Pull Request** into `develop`, `release-alpha/*`, or `release-
 In order to **enforce** the Gitflow approach “hands-off”:
 1. **Enable Branch Protection Rules**:  
    - For example, protect `main`, `release-alpha/*`, `release-beta/*`, and `release-rc/*` so that only approved Pull Requests can be merged, preventing direct pushes.  
-   - Require checks (like “Build VI Package”) to pass before merging.
+   - Require the **Build VI Package** job from the CI Pipeline (Composite) workflow to pass before merging.
 2. **Refer to `CONTRIBUTING.md`**:  
    - Document your team’s policies on how merges flow from feature → develop → alpha/beta/rc → main.  
    - Outline any required approvals or code reviews.  
