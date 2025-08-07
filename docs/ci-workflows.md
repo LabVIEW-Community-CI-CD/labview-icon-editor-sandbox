@@ -104,7 +104,7 @@ The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks 
 - **missing-in-project-check** – verifies every source file is referenced in the `.lvproj`.
 - **test** – runs LabVIEW unit tests across the supported matrix.
 - **build-ppl** – uses a matrix to build 32-bit and 64-bit packed libraries.
-- **build-vi-package** – packages the final VI Package using the built libraries and version information.
+- **build-vi-package** – packages the final VI Package using the built libraries and version information. In `ci-composite.yml` this job passes `supported_bitness: 64`, so it produces only a 64-bit `.vip`.
 
 The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct jobs.
 
