@@ -53,8 +53,9 @@ Automating your Icon Editor builds and tests:
      - release branches: `release-alpha/*`, `release-beta/*`, `release-rc/*`
      - feature branches: `feature/*`
      - hotfix branches: `hotfix/*`
+     - issue branches: `issue-*`
    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
-   - An `issue-status` job gates execution: it skips all other jobs unless the source branch starts with `issue-<number>` and the linked GitHub issue’s Status is **In Progress**. For pull requests, the check inspects the PR’s head branch. This gating helps avoid ambiguous runs for automated tools.
+   - An `issue-status` job gates execution: it skips all other jobs unless the source branch name contains `issue-<number>` (for example, `issue-123` or `feature/issue-123`) and the linked GitHub issue’s Status is **In Progress**. For pull requests, the check inspects the PR’s head branch. This gating helps avoid ambiguous runs for automated tools.
 
 5. **Build VI Package**
    - Produces `.vip` artifacts automatically. By default, the workflow populates the **“Company Name”** with `github.repository_owner` and the **“Author Name”** with `github.event.repository.name`, so each build is branded with your GitHub account and repository.
@@ -103,7 +104,7 @@ Below are the **key GitHub Actions** provided in this repository:
 
 The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks the build into several jobs:
 
-- **issue-status** – ensures CI runs only when the source branch is named `issue-<number>` and the linked GitHub issue has Status “In Progress”. For pull requests, the job evaluates the PR’s head branch.
+- **issue-status** – ensures CI runs only when the source branch name contains `issue-<number>` (such as `issue-123` or `feature/issue-123`) and the linked GitHub issue has Status “In Progress”. For pull requests, the job evaluates the PR’s head branch.
 - **changes** – checks out the repository and detects `.vipc` file changes to determine if dependencies need to be applied.
 - **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses **only when** the `changes` job reports `.vipc` modifications (`if: needs.changes.outputs.vipc == 'true'`).
 - **version** – computes the semantic version and build number using commit count and PR labels.

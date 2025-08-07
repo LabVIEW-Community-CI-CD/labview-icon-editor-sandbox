@@ -18,6 +18,7 @@ on:
       - release-rc/*
       - feature/*
       - hotfix/*
+      - issue-*
   pull_request:
     branches:
       - main
@@ -27,6 +28,7 @@ on:
       - release-rc/*
       - feature/*
       - hotfix/*
+      - issue-*
     types:
       - opened
       - synchronize
@@ -54,7 +56,8 @@ jobs:
             const fs = require('fs');
             const branch = context.payload.pull_request?.head.ref ??
               context.ref.replace('refs/heads/', '');
-            if (!branch.startsWith('issue-')) {
+            const match = branch.match(/(?:^|\/)issue-(\d+)/);
+            if (!match) {
               core.setOutput('proceed', 'false');
               const msg = `Branch '${branch}' is not issue-specific. CI will be skipped.`;
               core.info(msg);
@@ -67,17 +70,6 @@ jobs:
                   'CI will be skipped.',
                   ''
                 ].join('\n')
-              );
-              return;
-            }
-            const match = branch.match(/^issue-(\d+)/);
-            if (!match) {
-              core.setOutput('proceed', 'false');
-              const msg = `Cannot parse issue number from branch '${branch}'`;
-              core.warning(msg);
-              fs.appendFileSync(
-                process.env.GITHUB_STEP_SUMMARY,
-                ['### Issue Status', '', msg, ''].join('\n')
               );
               return;
             }
