@@ -6,8 +6,9 @@ This revised guide focuses on the **release workflow**, specifically how we hand
 ## **Table of Contents**
 
 1. [Overview & Purpose](#overview--purpose)  
-2. [Requirements & Environment](#requirements--environment)  
-3. [Configuration & Branch Patterns](#configuration--branch-patterns)  
+2. [Requirements & Environment](#requirements--environment)
+3. [Configuration & Branch Patterns](#configuration--branch-patterns)
+   - [Issue-Status Gate](#issue-status-gate)
 4. [Workflow Steps](#workflow-steps)
    - [Fetch & Determine Version](#fetch--determine-version)
    - [Build & Artifact Handling](#build--artifact-handling)
@@ -92,6 +93,12 @@ on:
 ```
 
 Use whichever patterns best fit your project’s branching model. If you prefer subdirectories (`release/alpha/*` vs. `release-alpha/*`), adapt the snippet accordingly.
+
+
+<a name="issue-status-gate"></a>
+### **Issue-Status Gate**
+
+The composite CI workflow only runs full jobs when the `issue-status` check succeeds. That job requires the source branch name to contain `issue-<number>` (for example, `release-alpha/issue-123` or `issue-456`) and the linked GitHub issue’s Status to be **In Progress**. Branches without this prefix—such as `release-alpha/2.0`—trigger the workflow but skip all subsequent jobs. See [ci-composite.yml](../../../.github/workflows/ci-composite.yml#L40-L75) for the `issue-status` job and its downstream [gate](../../../.github/workflows/ci-composite.yml#L121-L126).
 
 
 <a name="workflow-steps"></a>
