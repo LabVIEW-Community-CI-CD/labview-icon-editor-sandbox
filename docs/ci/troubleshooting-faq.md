@@ -319,8 +319,18 @@ Yes, if your machine and project support it. You’ll need to install that versi
 
 ### Q10: How Do I Pass Repository Name and Organization?
 
-**Answer**:  
-Inside **GitHub Actions**, you can reference environment variables such as `${{ github.repository_owner }}` and `${{ github.repository }}`. Pass them to your script (for example, `-CompanyName "$env:REPO_OWNER"` and `-AuthorName "$env:REPO_NAME"`), which then gets injected into the `DisplayInformationJSON` used by `build_vip.ps1`. This ensures each build is branded with your fork’s or org’s name.
+**Answer**:
+Inside **GitHub Actions**, you can reference environment variables such as `${{ github.repository_owner }}` and `${{ github.event.repository.name }}`. Set them first in your workflow step and then pass them to your script:
+
+```yaml
+env:
+  REPO_OWNER: ${{ github.repository_owner }}
+  REPO_NAME: ${{ github.event.repository.name }}
+run: |
+  .\build_vip.ps1 -CompanyName "$env:REPO_OWNER" -AuthorName "$env:REPO_NAME"
+```
+
+`${{ github.repository }}` returns `owner/repo`, so it isn’t suitable for the author field. Using the separate owner and repository values ensures your build is branded correctly when `DisplayInformationJSON` is injected by `build_vip.ps1`.
 
 ---
 
