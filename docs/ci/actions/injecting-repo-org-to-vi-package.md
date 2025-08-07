@@ -44,7 +44,7 @@ We achieve this by:
 
 ## GitHub Actions and PowerShell
 
-A typical **GitHub Actions** workflow might have steps like. The composite CI workflow packages only a **64-bit** VI package, so only the 64-bit path is shown:
+A typical **GitHub Actions** workflow might have steps like. The composite CI workflow packages only a **64-bit** VI package for **LabVIEW 2023**, so only the 64-bit path is shown:
 
 ```yaml
 jobs:
@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/build-lvlibp
         with:
-          minimum_supported_lv_version: 2021
+          minimum_supported_lv_version: 2023
           supported_bitness: 64
           relative_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.major }}
@@ -74,7 +74,7 @@ jobs:
       - uses: ./.github/actions/modify-vipb-display-info
         with:
           vipb_path: Tooling/deployment/NI Icon editor.vipb
-          minimum_supported_lv_version: 2021
+          minimum_supported_lv_version: 2023
           labview_minor_revision: 3
           display_information_json: ${{ steps.display-info.outputs.json }}
           relative_path: ${{ github.workspace }}
@@ -82,7 +82,7 @@ jobs:
       - uses: ./.github/actions/build-vi-package
         with:
           vipb_path: Tooling/deployment/NI Icon editor.vipb
-          minimum_supported_lv_version: 2021
+          minimum_supported_lv_version: 2023
           labview_minor_revision: 3
           display_information_json: ${{ steps.display-info.outputs.json }}
           relative_path: ${{ github.workspace }}
