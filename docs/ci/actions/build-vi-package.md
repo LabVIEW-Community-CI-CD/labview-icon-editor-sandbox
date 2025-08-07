@@ -118,9 +118,10 @@ require that gate.
 | `display_information_json` | DisplayInformation JSON string. |
 
 The `major`, `minor`, and `patch` inputs are derived from pull-request labels (`major`,
-`minor`, `patch`) by the `compute-version` job in `ci-composite.yml`. If a pull request lacks
-these labels, `compute-version` defaults to bumping the patch version. For direct pushes
-without labels, the version components remain unchanged and only the build number increases.
+`minor`, `patch`) by the `version` job (which runs the `compute-version` action) in
+`ci-composite.yml`. If a pull request lacks these labels, the `compute-version` action
+defaults to bumping the patch version. For direct pushes without labels, the version
+components remain unchanged and only the build number increases.
 
 ### 3.3 Customization & Fork Setup
 - **Fork Setup**:
