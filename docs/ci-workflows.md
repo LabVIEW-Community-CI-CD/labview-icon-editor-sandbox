@@ -52,14 +52,15 @@ Automating your Icon Editor builds and tests:
    - An `issue-status` job gates execution: it skips all other jobs unless the branch starts with `issue-<number>` and the linked GitHub issue’s Status is **In Progress**. This gating helps avoid ambiguous runs for automated tools.
 
 5. **Build VI Package**
-   - Produces `.vip` artifacts automatically, **including** optional metadata fields (`-CompanyName`, `-AuthorName`) that let you **brand** your package.
+   - Produces `.vip` artifacts automatically. By default, the workflow populates the **“Company Name”** with `github.repository_owner` and the **“Author Name”** with `github.event.repository.name`, so each build is branded with your GitHub account and repository.
+   - To use different branding, edit the **“Generate display information JSON”** step in [`.github/workflows/ci-composite.yml`](../.github/workflows/ci-composite.yml) and supply custom values for these fields.
    - Uses **label-based** version bumping (major/minor/patch) on pull requests.
 
 6. **Disable Dev Mode** (optional)  
    Reverts your environment to normal LabVIEW settings, removing local overrides.
 
 > [!NOTE]
-> Passing metadata fields like `-CompanyName` or `-AuthorName` to the build script helps incorporate your **organization** or **repo** name directly into the final VI Package. This makes your build easily distinguishable from other forks or variants.
+> The workflow automatically brands the VI Package using the repository owner (`github.repository_owner`) and repository name (`github.event.repository.name`). Modify the “Generate display information JSON” step in `.github/workflows/ci-composite.yml` if you need different values.
 
 ---
 
@@ -90,7 +91,7 @@ Below are the **key GitHub Actions** provided in this repository:
    - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).
    - **Fork-Friendly**: Runs in forks without requiring extra signing keys.
    - Produces the `.vip` file via a PowerShell script (e.g., `Build.ps1`).
-   - **You can pass metadata** (e.g., `-CompanyName`, `-AuthorName`) to embed your organization or repository into the generated `.vip` for distinct branding.
+   - By default, “Company Name” and “Author Name” in the generated `.vip` come from `github.repository_owner` and `github.event.repository.name`. Update the “Generate display information JSON” step in [`ci-composite.yml`](../.github/workflows/ci-composite.yml) if you need custom values.
    - Uploads the `.vip` artifact to GitHub’s build artifacts.
 
 #### Jobs in CI workflow
@@ -166,7 +167,7 @@ Although GitHub Actions primarily run on GitHub-hosted or self-hosted agents, yo
 
 4. **Merge the PR** into `develop` (or `main`):
      - The **Build VI Package** workflow builds and uploads the `.vip` artifact.
-     - **Inside** that `.vip`, the fields for **“Company Name”** and **“Author Name (Person or Company)”** can reflect your **organization** or **repo**, ensuring it’s easy to identify which fork or team produced the build.
+     - **Inside** that `.vip`, the **“Company Name”** and **“Author Name (Person or Company)”** fields are filled automatically using `github.repository_owner` and `github.event.repository.name`. Modify the “Generate display information JSON” step in `.github/workflows/ci-composite.yml` to override them.
 
 5. **Disable Development Mode**:  
    - Switch LabVIEW back to normal mode.  
