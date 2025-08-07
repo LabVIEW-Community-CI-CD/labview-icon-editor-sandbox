@@ -93,9 +93,8 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ## 3. **Action Configuration & Usage**
 
 ### 3.1 How the Action Is Triggered
-- **push**: On branches `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `feature/*`, `hotfix/*`.
-- **pull_request**: For PRs into those branches, so you can detect version labels.
-- **workflow_dispatch**: Maintainers can manually run from the Actions tab if needed (e.g., for a hotfix you want to rebuild).
+The `build-vi-package` directory defines a **composite action**. It does not listen for events on its own; instead, the CI workflow in [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) invokes it.
+That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events, so this action executes whenever the workflow is triggered.
 
 ### 3.2 Configurable Inputs / Parameters
 - **PR Labels**: `major`, `minor`, `patch`, or none. If none, only the build number changes.
@@ -244,9 +243,10 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ### 8.3 LabVIEW-Specific QA
 - If you have LabVIEW unit tests, integrate them by adding a step in the YAML:
   ```yaml
-  - name: Run LabVIEW Tests
-    shell: pwsh
-    run: .\.github\actions\run-unit-tests\RunUnitTests.ps1
+  - uses: ./.github/actions/run-unit-tests
+    with:
+      minimum_supported_lv_version: ${{ matrix['lv-version'] }}
+      supported_bitness:            ${{ matrix.bitness }}
   ```
 - Ensure they pass before building the `.vip`. If they fail, the script can exit with a non-zero code, stopping the workflow run.
 
