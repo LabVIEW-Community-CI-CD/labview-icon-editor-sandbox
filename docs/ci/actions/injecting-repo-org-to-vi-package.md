@@ -44,24 +44,27 @@ We achieve this by:
 
 ## GitHub Actions and PowerShell
 
-A typical **GitHub Actions** workflow might have steps like. The composite CI workflow packages only a **64-bit** VI package for **LabVIEW 2023**, so only the 64-bit path is shown:
+A typical **GitHub Actions** workflow might have steps like. The composite CI workflow builds **32- and 64-bit** packed libraries separately, but the `build-vi-package` step packages only a **64-bit** VI package for **LabVIEW 2023**. The steps below mirror [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) lines 230-248 and 270-324:
 
 ```yaml
 jobs:
   build:
     runs-on: self-hosted-windows-lv
+    strategy:
+      matrix:
+        bitness: [64, 32]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/build-lvlibp
         with:
-          minimum_supported_lv_version: 2023
-          supported_bitness: 64
+          minimum_supported_lv_version: 2021
+          supported_bitness: ${{ matrix.bitness }}
           relative_path: ${{ github.workspace }}
-          major: ${{ needs.version.outputs.major }}
-          minor: ${{ needs.version.outputs.minor }}
-          patch: ${{ needs.version.outputs.patch }}
-          build: ${{ needs.version.outputs.build }}
-          commit: ${{ needs.version.outputs.commit }}
+          major: ${{ needs.version.outputs.MAJOR }}
+          minor: ${{ needs.version.outputs.MINOR }}
+          patch: ${{ needs.version.outputs.PATCH }}
+          build: ${{ needs.version.outputs.BUILD }}
+          commit: ${{ github.sha }}
       - name: Generate display information JSON
         id: display-info
         shell: pwsh
@@ -76,23 +79,29 @@ jobs:
           vipb_path: Tooling/deployment/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
-          display_information_json: ${{ steps.display-info.outputs.json }}
           relative_path: ${{ github.workspace }}
           supported_bitness: 64
+          major: ${{ needs.version.outputs.MAJOR }}
+          minor: ${{ needs.version.outputs.MINOR }}
+          patch: ${{ needs.version.outputs.PATCH }}
+          build: ${{ needs.version.outputs.BUILD }}
+          commit: ${{ github.sha }}
+          release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
+          display_information_json: ${{ steps.display-info.outputs.json }}
       - uses: ./.github/actions/build-vi-package
         with:
           vipb_path: Tooling/deployment/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
-          display_information_json: ${{ steps.display-info.outputs.json }}
           relative_path: ${{ github.workspace }}
           supported_bitness: 64
-          major: ${{ needs.version.outputs.major }}
-          minor: ${{ needs.version.outputs.minor }}
-          patch: ${{ needs.version.outputs.patch }}
-          build: ${{ needs.version.outputs.build }}
-          commit: ${{ needs.version.outputs.commit }}
-          release_notes_file: ${{ steps.release-notes.outputs.file }}
+          major: ${{ needs.version.outputs.MAJOR }}
+          minor: ${{ needs.version.outputs.MINOR }}
+          patch: ${{ needs.version.outputs.PATCH }}
+          build: ${{ needs.version.outputs.BUILD }}
+          commit: ${{ github.sha }}
+          release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
+          display_information_json: ${{ steps.display-info.outputs.json }}
 ```
 **Key points**:
 - **`${{ github.repository_owner }}`** is the **organization** (or user) that owns the repo.
@@ -106,10 +115,10 @@ jobs:
 1. **Developer** pushes code to GitHub.  
 2. **GitHub Actions** triggers the workflow.  
 3. **Actions** check out the repo and run the build actions:
-   1. `build-lvlibp` compiles the 64-bit libraries.
+   1. `build-lvlibp` compiles the **32- and 64-bit** packed libraries.
    2. A PowerShell step generates JSON with `CompanyName` and `AuthorName` fields derived from GitHub variables.
    3. `modify-vipb-display-info` merges that JSON into the `.vipb` file.
-   4. `build-vi-package` produces the final 64-bit **Icon Editor** `.vip` package.
+   4. `build-vi-package` produces the final **64-bit LabVIEW 2023** Icon Editor `.vip` package.
 4. **Actions** can then upload the resulting `.vip` as an artifact.
 
 ---
