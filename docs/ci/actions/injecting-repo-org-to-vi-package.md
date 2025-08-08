@@ -44,12 +44,26 @@ We achieve this by:
 
 ## GitHub Actions and PowerShell
 
-An abbreviated **GitHub Actions** example below mirrors the [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) workflow. The **`build-ppl`** job uses a matrix to compile both 32- and 64-bit packed libraries, and the **`build-vi-package`** job injects the display metadata and creates the final `.vip` file. Referring to the jobs by name—rather than line numbers—helps avoid future drift. The snippet highlights key steps such as `build-lvlibp`, `modify-vipb-display-info`, and `build-vi-package`:
+An abbreviated **GitHub Actions** example below mirrors the [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) workflow. A **`version`** job first computes the semantic version. The **`build-ppl`** job uses a matrix to compile both 32- and 64-bit packed libraries, and the **`build-vi-package`** job injects the display metadata and creates the final `.vip` file. Referring to the jobs by name—rather than line numbers—helps avoid future drift. The snippet highlights key steps such as `compute-version`, `build-lvlibp`, `modify-vipb-display-info`, and `build-vi-package`:
 
 ```yaml
 jobs:
+  version:
+    runs-on: self-hosted-windows-lv
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: compute-version
+        uses: ./.github/actions/compute-version
+    outputs:
+      MAJOR: ${{ steps.compute-version.outputs.MAJOR }}
+      MINOR: ${{ steps.compute-version.outputs.MINOR }}
+      PATCH: ${{ steps.compute-version.outputs.PATCH }}
+      BUILD: ${{ steps.compute-version.outputs.BUILD }}
   build-ppl:
     runs-on: self-hosted-windows-lv
+    needs: version
     strategy:
       matrix:
         bitness: [32, 64]
@@ -68,7 +82,7 @@ jobs:
 
   build-vi-package:
     runs-on: self-hosted-windows-lv
-    needs: build-ppl
+    needs: [build-ppl, version]
     steps:
       - uses: actions/checkout@v4
       - name: Generate display information JSON
@@ -122,10 +136,11 @@ jobs:
 1. **Developer** pushes code to GitHub.  
 2. **GitHub Actions** triggers the workflow.  
 3. **Actions** check out the repo and run the build actions:
-   1. `build-lvlibp` compiles the **32- and 64-bit** packed libraries.
-   2. A PowerShell step generates JSON with `CompanyName` and `AuthorName` fields derived from GitHub variables.
-   3. `modify-vipb-display-info` merges that JSON into the `.vipb` file.
-   4. `build-vi-package` produces the final **64-bit LabVIEW 2023** Icon Editor `.vip` package.
+   1. `compute-version` determines the semantic version.
+   2. `build-lvlibp` compiles the **32- and 64-bit** packed libraries.
+   3. A PowerShell step generates JSON with `CompanyName` and `AuthorName` fields derived from GitHub variables.
+   4. `modify-vipb-display-info` merges that JSON into the `.vipb` file.
+   5. `build-vi-package` produces the final **64-bit LabVIEW 2023** Icon Editor `.vip` package.
 4. **Actions** can then upload the resulting `.vip` as an artifact.
 
 ---
