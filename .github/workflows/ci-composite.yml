@@ -189,7 +189,6 @@ jobs:
           vip_lv_version:               ${{ matrix['lv-version'] }}
           supported_bitness:            ${{ matrix.bitness }}
           relative_path:                ${{ github.workspace }}
-          vipc_path:                    "Tooling/deployment/runner_dependencies.vipc"
 
   version:
     name: Compute Version
@@ -330,7 +329,7 @@ jobs:
         with:
           supported_bitness: 64
           relative_path: ${{ github.workspace }}
-          vipb_path: Tooling/deployment/NI Icon editor.vipb
+          vipb_path: .github/actions/build-vi-package/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
           major: ${{ needs.version.outputs.MAJOR }}
@@ -343,8 +342,6 @@ jobs:
       - uses: ./.github/actions/build-vi-package
         with:
           supported_bitness: 64
-          relative_path: ${{ github.workspace }}
-          vipb_path: Tooling/deployment/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
           major: ${{ needs.version.outputs.MAJOR }}

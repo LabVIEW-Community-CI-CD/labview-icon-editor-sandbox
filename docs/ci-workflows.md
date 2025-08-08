@@ -54,11 +54,11 @@ Automating your Icon Editor builds and tests:
      - feature branches: `feature/*`
      - hotfix branches: `hotfix/*`
      - issue branches: `issue-*`
-    - `workflow_dispatch` enables manual runs.
-    - Manual runs still require the branch name to match `issue-<number>` and the linked issue's Status to be **In Progress**; otherwise, downstream jobs are skipped.
-    - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
-    - An `issue-status` job gates execution. It skips the workflow if a pull request or its branch carries a `NoCI` label, then queries the **Status** field of the linked GitHub issue’s associated project and only proceeds when that field equals **In Progress**. Contributors must ensure their issue is added to a project with this Status value. The job also skips all other jobs unless the source branch name contains `issue-<number>` (for example, `issue-123` or `feature/issue-123`). For pull requests, the check inspects the PR’s head branch. This gating helps avoid ambiguous runs for automated tools.
-   - A concurrency group cancels any previous run on the same branch, ensuring only the latest pipeline execution continues.
+     - `workflow_dispatch` enables manual runs.
+     - Every run—push, pull request, or manual—requires the source branch name to match `issue-<number>` and the linked issue's Status to be **In Progress**; otherwise, downstream jobs are skipped.
+     - Typically run with Dev Mode **disabled** unless you’re testing dev features specifically.
+     - The `issue-status` job enforces these checks and also skips the workflow if the branch or pull request has a `NoCI` label. Contributors must ensure their issue is added to a project with the required Status. For pull requests, the check inspects the head branch. This gating helps avoid ambiguous runs for automated tools.
+     - A concurrency group cancels any previous run on the same branch, ensuring only the latest pipeline execution continues.
 
 5. **Build VI Package**
    - Produces `.vip` artifacts automatically. By default, the workflow populates the **“Company Name”** with `github.repository_owner` and the **“Author Name”** with `github.event.repository.name`, so each build is branded with your GitHub account and repository.
@@ -113,11 +113,11 @@ The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks 
 - **apply-deps** – installs VIPC dependencies for multiple LabVIEW versions and bitnesses **only when** the `changes` job reports `.vipc` modifications (`if: needs.changes.outputs.vipc == 'true'`).
 - **version** – computes the semantic version and build number using commit count and PR labels.
 - **missing-in-project-check** – verifies every source file is referenced in the `.lvproj`.
-- **test** – runs LabVIEW unit tests across the supported matrix.
+- **test** – runs LabVIEW unit tests on Windows in LabVIEW 2021 (32- and 64-bit).
 - **build-ppl** – uses a matrix to build 32-bit and 64-bit packed libraries, then uses the `rename-file` action to append the bitness to each library’s filename.
 - **build-vi-package** – packages the final VI Package using the built libraries and version information. In `ci-composite.yml` this job passes `supported_bitness: 64`, so it produces only a 64-bit `.vip`.
 
-Both build jobs end with a `close-labview` step that shuts down LabVIEW to free up resources on the runner.
+Both `build-ppl` and `build-vi-package` run a `close-labview` step after their build actions finish but before any steps that rename files or upload artifacts, so it isn't the job's final step.
 
 The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct jobs.
 
