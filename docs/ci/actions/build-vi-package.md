@@ -104,8 +104,6 @@ That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events. Pu
 | Input | Description |
 | --- | --- |
 | `supported_bitness` | `32` or `64`; selects the VI Package bitness. |
-| `relative_path` | Workspace root path. |
-| `vipb_path` | Path to the `.vipb` file relative to the workspace. |
 | `minimum_supported_lv_version` | LabVIEW major version. |
 | `labview_minor_revision` | LabVIEW minor revision (defaults to `3`). |
 | `major` | Major version component. |
@@ -115,6 +113,8 @@ That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events. Pu
 | `commit` | Commit identifier. |
 | `release_notes_file` | Path to release notes file. |
 | `display_information_json` | DisplayInformation JSON string. |
+
+The action automatically uses the first `.vipb` file found in `.github/actions/build-vi-package`.
 
 The `major`, `minor`, and `patch` inputs are derived from pull-request labels (`major`,
 `minor`, `patch`) by the `version` job (which runs the `compute-version` action) in
