@@ -61,13 +61,25 @@ runs:
           } catch (e) {
             core.warning('Failed to verify project assignment: ' + e.stack);
           }
+          core.info('milestoneSet: ' + milestoneSet);
+          core.info('hasAssignee: ' + hasAssignee);
+          core.info('titleOk: ' + titleOk);
+          core.info('typeLabel: ' + Boolean(typeLabel));
+          core.info('hasProject: ' + hasProject);
           const conditionsMet = titleOk && milestoneSet && hasAssignee && typeLabel && hasProject;
           core.setOutput('conditions_met', conditionsMet);
           core.setOutput('issue_type', typeLabel || '');
           core.setOutput('version_bump', versionBump);
           core.info('Condition results: ' + JSON.stringify({titleOk, milestoneSet, hasAssignee, typeLabel: typeLabel || '', hasProject}));
           if (!conditionsMet) {
-            core.info('Conditions not met. Skipping branch creation.');
+            const missing = [];
+            if (!titleOk) missing.push('title invalid or too long');
+            if (!milestoneSet) missing.push('no milestone');
+            if (!hasAssignee) missing.push('no assignee');
+            if (!typeLabel) missing.push('missing type label');
+            if (!hasProject) missing.push('not assigned to a project');
+            core.info('Conditions not met: ' + missing.join('; '));
+            core.info('Skipping branch creation.');
           }
     - name: Create branch
       id: create_branch
