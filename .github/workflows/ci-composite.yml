@@ -127,27 +127,71 @@ jobs:
               repo: context.repo.repo,
               number: issueNumber
             };
-              const result = await github.graphql(query, variables);
-              const nodes = result.repository.issue.projectItems.nodes;
-              const status =
+              let result;
+              let nodes = [];
+              let status = 'Unknown';
+              let proceed = false;
+              let issueMissing = false;
+              let queryError = null;
+
+              try {
+                result = await github.graphql(query, variables);
+              } catch (error) {
+                queryError = error;
+                core.error(`GraphQL query failed: ${error.message}`);
+              }
+
+              if (!result?.repository?.issue) {
+                issueMissing = true;
+                core.info('result.repository.issue is null or missing');
+              }
+
+              nodes = result?.repository?.issue?.projectItems?.nodes ?? [];
+              core.info(`Number of project items: ${nodes.length}`);
+              core.debug(`Project item nodes: ${JSON.stringify(nodes)}`);
+
+              status =
                 nodes.map(n => n.fieldValueByName?.name).find(Boolean) ??
                 'Unknown';
-            const proceed = status === 'In Progress';
-            core.info(`Issue #${issueNumber} status: ${status}`);
-            core.info(`Proceed with CI: ${proceed}`);
-            const summary = [
-              '### Issue Status',
-              '',
-              `- Branch: ${branch}`,
-              `- Issue: #${issueNumber}`,
-              `- Status: **${status}**`,
-              `- CI will ${proceed ? 'run' : 'be skipped'}`
-            ].join('\n');
-            fs.appendFileSync(
-              process.env.GITHUB_STEP_SUMMARY,
-              `${summary}\n`
-            );
-            core.setOutput('proceed', proceed ? 'true' : 'false');
+              proceed = status === 'In Progress';
+
+              core.info(`Issue #${issueNumber} status: ${status}`);
+              core.info(`Proceed with CI: ${proceed}`);
+              const summary = [
+                '### Issue Status',
+                '',
+                `- Branch: ${branch}`,
+                `- Issue: #${issueNumber}`,
+                `- Status: **${status}**`,
+                `- CI will ${proceed ? 'run' : 'be skipped'}`
+              ].join('\n');
+              fs.appendFileSync(
+                process.env.GITHUB_STEP_SUMMARY,
+                `${summary}\n`
+              );
+
+              if (status === 'Unknown') {
+                const reasons = [];
+                if (queryError) {
+                  reasons.push(`GraphQL query error: ${queryError.message}`);
+                } else {
+                  if (issueMissing) {
+                    reasons.push('issue not found or inaccessible');
+                  } else if (nodes.length === 0) {
+                    reasons.push('no project items found');
+                  } else if (!nodes.some(n => n.fieldValueByName?.name)) {
+                    reasons.push('missing "Status" field');
+                  }
+                }
+                const reasonText = `Status Unknown - ${reasons.join('; ')}`;
+                core.info(reasonText);
+                fs.appendFileSync(
+                  process.env.GITHUB_STEP_SUMMARY,
+                  `${reasonText}\n`
+                );
+              }
+
+              core.setOutput('proceed', proceed ? 'true' : 'false');
 
   # Detect if VIPC files changed to decide whether dependencies must be installed
   changes:
