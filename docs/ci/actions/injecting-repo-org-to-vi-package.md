@@ -82,7 +82,7 @@ jobs:
           "json=$($info | ConvertTo-Json -Depth 5 -Compress)" >> $Env:GITHUB_OUTPUT
       - uses: ./.github/actions/modify-vipb-display-info
         with:
-          vipb_path: Tooling/deployment/NI Icon editor.vipb
+          vipb_path: .github/actions/build-vi-package/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
           relative_path: ${{ github.workspace }}
@@ -96,10 +96,8 @@ jobs:
           display_information_json: ${{ steps.display-info.outputs.json }}
       - uses: ./.github/actions/build-vi-package
         with:
-          vipb_path: Tooling/deployment/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
-          relative_path: ${{ github.workspace }}
           supported_bitness: 64
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}

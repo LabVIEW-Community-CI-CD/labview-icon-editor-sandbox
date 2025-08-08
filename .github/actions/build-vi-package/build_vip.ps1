@@ -3,17 +3,12 @@
     Updates a VIPB file's display information and builds the VI package.
 
 .DESCRIPTION
-    Resolves paths, merges version details into DisplayInformation JSON, and
-    calls g-cli to modify the VIPB file and create the final VI package.
+    Locates a VIPB file stored alongside this script, merges version details into
+    DisplayInformation JSON, and calls g-cli to create the final VI package.
 
 .PARAMETER SupportedBitness
     LabVIEW bitness for the build ("32" or "64").
 
-.PARAMETER RelativePath
-    Path to the repository root.
-
-.PARAMETER VIPBPath
-    Relative path to the VIPB file to update.
 
 .PARAMETER MinimumSupportedLVVersion
     Minimum LabVIEW version supported by the package.
@@ -43,13 +38,11 @@
     JSON string representing the VIPB display information to update.
 
 .EXAMPLE
-    .\build_vip.ps1 -SupportedBitness "64" -RelativePath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -MinimumSupportedLVVersion 2021 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
+    .\build_vip.ps1 -SupportedBitness "64" -MinimumSupportedLVVersion 2021 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
 #>
 
 param (
     [string]$SupportedBitness,
-    [string]$RelativePath,
-    [string]$VIPBPath,
 
     [int]$MinimumSupportedLVVersion,
 
@@ -67,14 +60,15 @@ param (
     [string]$DisplayInformationJSON
 )
 
-# 1) Resolve paths
+# 1) Locate VIPB file in the action directory
 try {
-    $ResolvedRelativePath = Resolve-Path -Path $RelativePath -ErrorAction Stop
-    $ResolvedVIPBPath = Join-Path -Path $ResolvedRelativePath -ChildPath $VIPBPath -ErrorAction Stop
+    $vipbFile = Get-ChildItem -Path $PSScriptRoot -Filter *.vipb -ErrorAction Stop | Select-Object -First 1
+    if (-not $vipbFile) { throw "No .vipb file found" }
+    $ResolvedVIPBPath = $vipbFile.FullName
 }
 catch {
     $errorObject = [PSCustomObject]@{
-        error      = "Error resolving paths. Ensure RelativePath and VIPBPath are valid."
+        error      = "No .vipb file found in the action directory."
         exception  = $_.Exception.Message
         stackTrace = $_.Exception.StackTrace
     }
