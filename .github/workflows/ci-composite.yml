@@ -189,7 +189,6 @@ jobs:
           vip_lv_version:               ${{ matrix['lv-version'] }}
           supported_bitness:            ${{ matrix.bitness }}
           relative_path:                ${{ github.workspace }}
-          vipc_path:                    "Tooling/deployment/runner_dependencies.vipc"
 
   version:
     name: Compute Version

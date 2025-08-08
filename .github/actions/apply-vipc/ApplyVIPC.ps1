@@ -4,7 +4,7 @@
     This version includes additional debug/verbose output.
 
 .EXAMPLE
-    .\applyvipc.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RelativePath "C:\release\labview-icon-editor-fork" -VIPCPath "Tooling\deployment\runner_dependencies.vipc" -VIP_LVVersion "2021" -Verbose
+    .\applyvipc.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RelativePath "C:\release\labview-icon-editor-fork" -VIP_LVVersion "2021" -Verbose
 #>
 
 [CmdletBinding()]  # Enables -Verbose and other common parameters
@@ -15,6 +15,21 @@ Param (
     [string]$RelativePath,
     [string]$VIPCPath
 )
+
+# Auto-detect the VIPC file if one isn't provided
+if (-not $VIPCPath) {
+    $vipcFiles = Get-ChildItem -Path $PSScriptRoot -Filter *.vipc
+    if ($vipcFiles.Count -eq 0) {
+        Write-Error "No .vipc file found in '$PSScriptRoot'."
+        exit 1
+    }
+    if ($vipcFiles.Count -gt 1) {
+        Write-Error "Multiple .vipc files found in '$PSScriptRoot'. Specify -VIPCPath."
+        exit 1
+    }
+    $VIPCPath = $vipcFiles[0].FullName
+    Write-Verbose "Auto-detected VIPCPath: $VIPCPath"
+}
 
 Write-Verbose "Script Name: $($MyInvocation.MyCommand.Definition)"
 Write-Verbose "Parameters provided:"
@@ -33,7 +48,11 @@ try {
     Write-Verbose "ResolvedRelativePath: $ResolvedRelativePath"
 
     Write-Verbose "Building full path for the .vipc file..."
-    $ResolvedVIPCPath = Join-Path -Path $ResolvedRelativePath -ChildPath $VIPCPath -ErrorAction Stop
+    if ([System.IO.Path]::IsPathRooted($VIPCPath)) {
+        $ResolvedVIPCPath = Resolve-Path -Path $VIPCPath -ErrorAction Stop
+    } else {
+        $ResolvedVIPCPath = Resolve-Path -Path (Join-Path -Path $ResolvedRelativePath -ChildPath $VIPCPath) -ErrorAction Stop
+    }
     Write-Verbose "ResolvedVIPCPath:     $ResolvedVIPCPath"
 
     # Verify that the .vipc file actually exists
