@@ -26,7 +26,7 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 - **Prerequisites**:
   1. **LabVIEW 2021 SP1 (both 32-bit and 64-bit)** and **LabVIEW 2023 (64-bit) for package building**.
   2. **PowerShell 7+** and **Git**.  
-  3. **Apply** `Tooling\deployment\runner_dependencies.vipc` **(to both 32-bit and 64-bit)**.
+  3. **Apply** `.github\actions\apply-vipc\runner_dependencies.vipc` **(to both 32-bit and 64-bit)**.
 
 ---
 
@@ -40,7 +40,7 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 2. **Clone** the [Icon Editor](https://github.com/ni/labview-icon-editor.git) to your development location.
 
 3. **Apply** dependencies:  
-   `Tooling\deployment\runner_dependencies.vipc` to **LabVIEW 2021 (32-bit) and LabVIEW 2021 (64-bit)**.
+   `.github\actions\apply-vipc\runner_dependencies.vipc` to **LabVIEW 2021 (32-bit) and LabVIEW 2021 (64-bit)**.
 
 4. **Open** PowerShell (Admin):
    Navigate to `.github\actions\set-development-mode`
@@ -62,7 +62,7 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
 ## 3. Distribution Guide (VI Package via PowerShell)
 
 1. **Apply Dependencies** in VIPM:
-   - Set LabVIEW to 2021 (32-bit), apply `Tooling\deployment\runner_dependencies.vipc`.
+   - Set LabVIEW to 2021 (32-bit), apply `.github\actions\apply-vipc\runner_dependencies.vipc`.
    - Repeat for 64-bit if necessary.
 
 2. **Disable LabVIEW Security Warnings** *(to prevent popups from "run when opened" VIs)*:
