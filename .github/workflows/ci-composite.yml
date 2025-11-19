@@ -277,5 +277,9 @@ jobs:
           display_information_json: ${{ steps.display-info.outputs.json }}
       - uses: ./.github/actions/close-labview
         with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 64
+      - uses: ./.github/actions/close-labview
+        with:
           minimum_supported_lv_version: 2023
           supported_bitness: 64
