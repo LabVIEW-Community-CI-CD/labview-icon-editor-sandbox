@@ -1,5 +1,5 @@
-name: "Revert Development Mode"
-description: "Runs RevertDevelopmentMode.ps1 to restore the repository after development."
+name: "Unit Tests Wrapper"
+description: "Runs unit_tests.ps1 to prepare and execute LabVIEW unit tests."
 runs:
   using: "composite"
   steps:
@@ -8,10 +8,10 @@ runs:
       with:
         fetch-depth: 0
 
-    - name: Run RevertDevelopmentMode.ps1
+    - name: Run unit_tests.ps1
       shell: pwsh
       run: |
-        & "${{ github.action_path }}/RevertDevelopmentMode.ps1" \
+        & "${{ github.action_path }}/unit_tests.ps1" \
           -RelativePath "${{ inputs.relative_path }}"
 inputs:
   relative_path:

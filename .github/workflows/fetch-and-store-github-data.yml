@@ -18,7 +18,7 @@ jobs:
     steps:
       # 1. Checkout the repository
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # 2. Set up Python (pin to a minor version, e.g., "3.9" or "3.9.16")
       - name: Set up Python
