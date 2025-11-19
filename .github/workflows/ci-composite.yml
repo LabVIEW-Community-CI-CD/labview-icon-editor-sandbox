@@ -134,7 +134,8 @@ jobs:
           patch: ${{ needs.version.outputs.PATCH }}
           build: ${{ needs.version.outputs.BUILD }}
           commit: ${{ github.sha }}
-      - uses: ./.github/actions/close-labview
+      - if: always()
+        uses: ./.github/actions/close-labview
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: 32
@@ -162,7 +163,8 @@ jobs:
           patch: ${{ needs.version.outputs.PATCH }}
           build: ${{ needs.version.outputs.BUILD }}
           commit: ${{ github.sha }}
-      - uses: ./.github/actions/close-labview
+      - if: always()
+        uses: ./.github/actions/close-labview
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: 64
@@ -275,11 +277,13 @@ jobs:
           commit: ${{ github.sha }}
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
-      - uses: ./.github/actions/close-labview
+      - if: always()
+        uses: ./.github/actions/close-labview
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: 64
-      - uses: ./.github/actions/close-labview
+      - if: always()
+        uses: ./.github/actions/close-labview
         with:
           minimum_supported_lv_version: 2023
           supported_bitness: 64

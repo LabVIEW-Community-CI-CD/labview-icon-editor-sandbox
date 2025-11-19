@@ -9,6 +9,31 @@ runs:
         fetch-depth: 0
         clean: false
 
+    - name: Pre-flight LabVIEW availability check
+      shell: pwsh
+      run: |
+        $logDir = Join-Path -Path "${{ inputs.relative_path }}" -ChildPath "builds/logs"
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        $logFile = Join-Path -Path $logDir -ChildPath "gcli-preflight.log"
+
+        $gcliArgs = @(
+          "--lv-ver", "${{ inputs.minimum_supported_lv_version }}",
+          "--arch", "${{ inputs.supported_bitness }}",
+          "--connect-timeout", "60000",
+          "--kill",
+          "--kill-timeout", "5000",
+          "--verbose",
+          "QuitLabVIEW"
+        )
+
+        Write-Host "Pre-flight command: g-cli $($gcliArgs -join ' ')"
+        & g-cli @gcliArgs 2>&1 | Tee-Object -FilePath $logFile | Out-Null
+
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "Pre-flight g-cli check failed. Inspect $logFile for details."
+          exit $LASTEXITCODE
+        }
+
     - name: Run build_vip.ps1
       shell: pwsh
       env:
@@ -42,6 +67,14 @@ runs:
       with:
         name: vi-package
         path: builds/VI Package/*.vip
+
+    - name: Upload g-cli logs (if present)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: gcli-logs
+        path: ${{ inputs.relative_path }}/builds/logs
+        if-no-files-found: ignore
 inputs:
   supported_bitness:
     description: '32 or 64'
