@@ -126,6 +126,28 @@ runs:
           Get-Content -Path $log.FullName | ForEach-Object { Write-Host $_ }
           Write-Host ("---- end g-cli build log ({0}) ----" -f $log.FullName)
         }
+    
+    - name: Prepare release notes artifact
+      id: release-notes
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $source = "${{ inputs.release_notes_file }}"
+        if (-not (Test-Path $source)) {
+          Write-Error "Release notes file not found at $source."
+          exit 1
+        }
+
+        $dir = Split-Path -Parent $source
+        $version = "{0}.{1}.{2}.{3}" -f "${{ inputs.major }}", "${{ inputs.minor }}", "${{ inputs.patch }}", "${{ inputs.build }}"
+        $destName = "release_notes_{0}.md" -f $version
+        $destPath = Join-Path -Path $dir -ChildPath $destName
+
+        Copy-Item -LiteralPath $source -Destination $destPath -Force
+        Write-Host ("Release notes artifact prepared at {0}" -f $destPath)
+
+        "artifact_path=$destPath" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+        "artifact_name=$destName" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
     - name: Locate built VI package
       id: locate-vip
@@ -155,10 +177,12 @@ runs:
         "vip_name=$($vip.Name)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
     - name: Upload release notes
+      id: upload-release-notes
       uses: actions/upload-artifact@v4
       with:
-        name: release-notes
-        path: ${{ inputs.release_notes_file }}
+        name: ${{ steps.release-notes.outputs.artifact_name }}
+        path: ${{ steps.release-notes.outputs.artifact_path }}
+        compression-level: 0
 
     - name: Upload VI Package
       uses: actions/upload-artifact@v4
@@ -174,6 +198,20 @@ runs:
         name: gcli-logs
         path: ${{ inputs.relative_path }}/builds/logs
         if-no-files-found: ignore
+
+    - name: Print release notes
+      if: always()
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $path = "${{ steps.release-notes.outputs.artifact_path }}"
+        if (-not (Test-Path $path)) {
+          Write-Host "Release notes file not found at $path."
+          exit 0
+        }
+        Write-Host "---- Release notes (${path}) ----"
+        Get-Content -Path $path | ForEach-Object { Write-Host $_ }
+        Write-Host "---- end release notes ----"
 inputs:
   supported_bitness:
     description: '32 or 64'
