@@ -34,7 +34,7 @@ runs:
         $vip = Get-ChildItem -Path $vipDir -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if (-not $vip) { Write-Error "No .vip file found in $vipDir"; exit 1 }
 
-        $notes = Get-ChildItem -Path $notesDir -Filter "release_notes_*.md" -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        $notes = Get-ChildItem -Path $notesDir -Filter "release_notes_*.md" -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if (-not $notes) { Write-Error "No release_notes_*.md found in $notesDir"; exit 1 }
 
         "vip_path=$($vip.FullName)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
