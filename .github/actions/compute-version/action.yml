@@ -73,7 +73,7 @@ runs:
           $global:LASTEXITCODE = 0
         }
         if ([string]::IsNullOrWhiteSpace($latestRaw)) {
-          $maj=0; $min=0; $pat=0
+          $maj=0; $min=1; $pat=0
         }
         else {
           $latest = $latestRaw.Trim().TrimStart('v') -replace '-build.*'
