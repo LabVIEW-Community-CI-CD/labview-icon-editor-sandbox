@@ -67,6 +67,11 @@ runs:
         BUILD_NUMBER: ${{ steps.inc_build.outputs.new_build_number }}
       run: |
         $latestRaw = git describe --tags --abbrev=0 2>$null
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "No existing tags were found; defaulting to 0.0.0."
+          $latestRaw = ''
+          $global:LASTEXITCODE = 0
+        }
         if ([string]::IsNullOrWhiteSpace($latestRaw)) {
           $maj=0; $min=0; $pat=0
         }
