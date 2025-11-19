@@ -66,8 +66,17 @@ runs:
         BUMP_TYPE:    ${{ steps.bump_type.outputs.bump_type }}
         BUILD_NUMBER: ${{ steps.inc_build.outputs.new_build_number }}
       run: |
-        $latest = (git describe --tags --abbrev=0 2>$null).TrimStart('v') -replace '-build.*'
-        if (-not $latest) { $maj=0; $min=0; $pat=0 } else { $maj,$min,$pat = $latest.Split('.') }
+        $latestRaw = git describe --tags --abbrev=0 2>$null
+        if ([string]::IsNullOrWhiteSpace($latestRaw)) {
+          $maj=0; $min=0; $pat=0
+        }
+        else {
+          $latest = $latestRaw.Trim().TrimStart('v') -replace '-build.*'
+          $parts = $latest.Split('.')
+          $maj = [int]$parts[0]
+          $min = if ($parts.Length -gt 1) { [int]$parts[1] } else { 0 }
+          $pat = if ($parts.Length -gt 2) { [int]$parts[2] } else { 0 }
+        }
         switch ($env:BUMP_TYPE) {
           'major' { $maj++; $min=0; $pat=0 }
           'minor' { $min++; $pat=0 }
