@@ -156,7 +156,11 @@ components remain unchanged and only the build number increases.
 
 5. **Build the Icon Editor VI Package**
    - Uses the `build-lvlibp` action to compile the packed libraries.
-   - Runs the `build-vi-package` action to generate the final `.vip` file.
+   - Generates a display-information JSON blob that now includes:
+     - semantic-version components (`major`, `minor`, `patch`, `build`),
+     - repository-derived metadata (company/author names, homepage URL, and description), and
+     - the markdown release notes captured from `Tooling/deployment/release_notes.md`.
+   - Runs the `build-vi-package` action to generate the final `.vip` file with those values embedded.
 
 6. **Capture & Upload Artifacts**
    - Uploads the generated `.vip` as an ephemeral artifact for the current Actions run.
