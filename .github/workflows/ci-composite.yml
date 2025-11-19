@@ -82,7 +82,7 @@ jobs:
 
   apply-deps-2023-x64:
     name: Apply VIPC (2023 x64)
-    needs: [apply-deps-2021-x86, changes]
+    needs: [close-lv-2021-before-2023, changes]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
@@ -95,6 +95,16 @@ jobs:
           vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
       - run: echo "No .vipc changes detected; skipping dependency application."
         if: needs.changes.outputs.vipc != 'true'
+
+  close-lv-2021-before-2023:
+    name: Close LabVIEW 2021 before 2023 tasks
+    needs: apply-deps-2021-x86
+    runs-on: self-hosted-windows-lv
+    steps:
+      - uses: ./.github/actions/close-labview
+        with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 64
 
   version:
     name: Compute Version
