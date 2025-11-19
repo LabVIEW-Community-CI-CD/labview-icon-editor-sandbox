@@ -101,6 +101,10 @@ catch {
     exit 1
 }
 
+# 3a) Ensure build log directory exists for troubleshooting
+$LogDirectory = Join-Path -Path $ResolvedRelativePath -ChildPath "builds/logs"
+New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
+
 # 3) Calculate the LabVIEW version string
 $lvNumericMajor    = $MinimumSupportedLVVersion - 2000
 $lvNumericVersion  = "$($lvNumericMajor).$LabVIEWMinorRevision"
@@ -146,31 +150,75 @@ else {
 # Re-convert to a JSON string with a comfortable nesting depth
 $UpdatedDisplayInformationJSON = $jsonObj | ConvertTo-Json -Depth 5
 
-# 5) Construct the command script
+# 5) Construct reusable g-cli arguments
+$gcliArgs = @(
+    "--lv-ver", $MinimumSupportedLVVersion.ToString(),
+    "--arch", $SupportedBitness,
+    "--connect-timeout", "120000",
+    "--kill",
+    "--kill-timeout", "20000",
+    "--verbose",
+    "vipb", "--",
+    "--buildspec", $ResolvedVIPBPath,
+    "-v", "$Major.$Minor.$Patch.$Build",
+    "--release-notes", $ResolvedReleaseNotesFile,
+    "--timeout", "300"
+)
 
-$script = @"
-g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness vipb -- --buildspec "$ResolvedVIPBPath" -v "$Major.$Minor.$Patch.$Build" --release-notes "$ResolvedReleaseNotesFile" --timeout 300
-"@
+$prettyCommand = "g-cli " + ($gcliArgs -join ' ')
+Write-Output "Base build command:"
+Write-Output $prettyCommand
 
-Write-Output "Executing the following commands:"
-Write-Output $script
+# 6) Execute the commands with retries and log capture
+$maxAttempts = 3
+$retryDelaySeconds = 15
+$success = $false
+$attemptLogs = @()
 
-# 6) Execute the commands
-try {
-    Invoke-Expression $script
+for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    $logFile = Join-Path -Path $LogDirectory -ChildPath ("gcli-build-attempt-{0}.log" -f $attempt)
+    $attemptLogs += $logFile
+    Write-Host "Starting g-cli build attempt $attempt of $maxAttempts. Logs: $logFile"
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "g-cli exited with code $LASTEXITCODE"
+    try {
+        & g-cli @gcliArgs 2>&1 | Tee-Object -FilePath $logFile
+    }
+    catch {
+        $_ | Out-String | Tee-Object -FilePath $logFile -Append | Out-Null
+        $LASTEXITCODE = 1
     }
 
-    Write-Host "Successfully built VI package: $ResolvedVIPBPath"
+    if ($LASTEXITCODE -eq 0) {
+        $success = $true
+        break
+    }
+
+    if ($attempt -lt $maxAttempts) {
+        Write-Warning "g-cli attempt $attempt failed with exit code $LASTEXITCODE. Retrying in $retryDelaySeconds seconds..."
+        Start-Sleep -Seconds $retryDelaySeconds
+    }
 }
-catch {
+
+if (-not $success) {
+    for ($i = 0; $i -lt $attemptLogs.Count; $i++) {
+        $log = $attemptLogs[$i]
+        if (Test-Path $log) {
+            Write-Host ("---- g-cli build log attempt {0} ({1}) ----" -f ($i + 1), $log)
+            Get-Content -Path $log | ForEach-Object { Write-Host $_ }
+            Write-Host ("---- end g-cli build log attempt {0} ----" -f ($i + 1))
+        }
+        else {
+            Write-Host ("g-cli build log for attempt {0} not found at {1}" -f ($i + 1), $log)
+        }
+    }
+
     $errorObject = [PSCustomObject]@{
-        error      = "An error occurred while executing the build commands."
-        exception  = $_.Exception.Message
-        stackTrace = $_.Exception.StackTrace
+        error      = "g-cli failed after $maxAttempts attempt(s)."
+        exitCode   = $LASTEXITCODE
+        logs       = $attemptLogs
     }
     $errorObject | ConvertTo-Json -Depth 10
     exit 1
 }
+
+Write-Host "Successfully built VI package: $ResolvedVIPBPath"

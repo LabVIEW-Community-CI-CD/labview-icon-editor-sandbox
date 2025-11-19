@@ -43,26 +43,49 @@ jobs:
             vipc:
               - '**/*.vipc'
 
-  apply-deps:
-    name: Apply VIPC Dependencies
+  apply-deps-2021-x64:
+    name: Apply VIPC (2021 x64)
     needs: changes
     runs-on: self-hosted-windows-lv
-    strategy:
-      matrix:
-        include:
-          - lv-version: "2021"
-            bitness: "32"
-          - lv-version: "2021"
-            bitness: "64"
-          - lv-version: "2023"
-            bitness: "64"
     steps:
       - uses: ./.github/actions/apply-vipc
         if: needs.changes.outputs.vipc == 'true'
         with:
-          minimum_supported_lv_version: ${{ matrix['lv-version'] }}
-          vip_lv_version:               ${{ matrix['lv-version'] }}
-          supported_bitness:            ${{ matrix.bitness }}
+          minimum_supported_lv_version: 2021
+          vip_lv_version:               2021
+          supported_bitness:            64
+          relative_path:                ${{ github.workspace }}
+          vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
+      - run: echo "No .vipc changes detected; skipping dependency application."
+        if: needs.changes.outputs.vipc != 'true'
+
+  apply-deps-2021-x86:
+    name: Apply VIPC (2021 x86)
+    needs: [apply-deps-2021-x64, changes]
+    runs-on: self-hosted-windows-lv
+    steps:
+      - uses: ./.github/actions/apply-vipc
+        if: needs.changes.outputs.vipc == 'true'
+        with:
+          minimum_supported_lv_version: 2021
+          vip_lv_version:               2021
+          supported_bitness:            32
+          relative_path:                ${{ github.workspace }}
+          vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
+      - run: echo "No .vipc changes detected; skipping dependency application."
+        if: needs.changes.outputs.vipc != 'true'
+
+  apply-deps-2023-x64:
+    name: Apply VIPC (2023 x64)
+    needs: [apply-deps-2021-x86, changes]
+    runs-on: self-hosted-windows-lv
+    steps:
+      - uses: ./.github/actions/apply-vipc
+        if: needs.changes.outputs.vipc == 'true'
+        with:
+          minimum_supported_lv_version: 2023
+          vip_lv_version:               2023
+          supported_bitness:            64
           relative_path:                ${{ github.workspace }}
           vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
       - run: echo "No .vipc changes detected; skipping dependency application."
@@ -87,41 +110,51 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  missing-in-project-check:
-    name: Test Missing-In-Project Action on Windows
-    needs: apply-deps
+  missing-in-project-2021-x64:
+    name: Test Missing-In-Project (2021 x64)
+    needs: apply-deps-2023-x64
     runs-on: self-hosted-windows-lv
-    strategy:
-      fail-fast: false
-      matrix:
-        lv-version: ["2021"]
-        bitness:    ["64","32"]
     steps:
       - uses: ./.github/actions/missing-in-project
         with:
-          lv-ver:       ${{ matrix.lv-version }}
-          arch:         ${{ matrix.bitness }}
+          lv-ver:       "2021"
+          arch:         "64"
           project-file: "lv_icon_editor.lvproj"
 
-  test:
-    name: Run Unit Tests
-    needs: [apply-deps, missing-in-project-check]
-    runs-on: ${{ matrix.os == 'windows' && 'self-hosted-windows-lv' || 'self-hosted-linux-lv' }}
-    strategy:
-      matrix:
-        os: [windows]
-        lv-version: ["2021"]
-        bitness: ["64","32"]
-      fail-fast: false
+  missing-in-project-2021-x86:
+    name: Test Missing-In-Project (2021 x86)
+    needs: missing-in-project-2021-x64
+    runs-on: self-hosted-windows-lv
+    steps:
+      - uses: ./.github/actions/missing-in-project
+        with:
+          lv-ver:       "2021"
+          arch:         "32"
+          project-file: "lv_icon_editor.lvproj"
+
+  test-2021-x64:
+    name: Run Unit Tests (2021 x64)
+    needs: missing-in-project-2021-x86
+    runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/run-unit-tests
         with:
-          minimum_supported_lv_version: ${{ matrix['lv-version'] }}
-          supported_bitness:            ${{ matrix.bitness }}
+          minimum_supported_lv_version: "2021"
+          supported_bitness:            "64"
+
+  test-2021-x86:
+    name: Run Unit Tests (2021 x86)
+    needs: test-2021-x64
+    runs-on: self-hosted-windows-lv
+    steps:
+      - uses: ./.github/actions/run-unit-tests
+        with:
+          minimum_supported_lv_version: "2021"
+          supported_bitness:            "32"
 
   build-ppl-x86:
     name: Build 32-bit Packed Library
-    needs: [test, version]
+    needs: [build-ppl-x64, version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/build-lvlibp
@@ -134,7 +167,8 @@ jobs:
           patch: ${{ needs.version.outputs.PATCH }}
           build: ${{ needs.version.outputs.BUILD }}
           commit: ${{ github.sha }}
-      - uses: ./.github/actions/close-labview
+      - if: always()
+        uses: ./.github/actions/close-labview
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: 32
@@ -149,7 +183,7 @@ jobs:
 
   build-ppl-x64:
     name: Build 64-bit Packed Library
-    needs: [test, version]
+    needs: [test-2021-x86, version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/build-lvlibp
@@ -162,7 +196,8 @@ jobs:
           patch: ${{ needs.version.outputs.PATCH }}
           build: ${{ needs.version.outputs.BUILD }}
           commit: ${{ github.sha }}
-      - uses: ./.github/actions/close-labview
+      - if: always()
+        uses: ./.github/actions/close-labview
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: 64
@@ -177,7 +212,8 @@ jobs:
 
   build-vip:
     name: Build VI Package
-    needs: [build-ppl-x86, build-ppl-x64, version]
+    # Chain after 32-bit build, which already depends on 64-bit, to enforce x64 -> x86 -> build-vip ordering
+    needs: [build-ppl-x86, version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: actions/checkout@v4
@@ -275,11 +311,13 @@ jobs:
           commit: ${{ github.sha }}
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
-      - uses: ./.github/actions/close-labview
+      - if: always()
+        uses: ./.github/actions/close-labview
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: 64
-      - uses: ./.github/actions/close-labview
+      - if: always()
+        uses: ./.github/actions/close-labview
         with:
           minimum_supported_lv_version: 2023
           supported_bitness: 64
