@@ -141,13 +141,14 @@ runs:
         $dir = Split-Path -Parent $source
         $version = "{0}.{1}.{2}.{3}" -f "${{ inputs.major }}", "${{ inputs.minor }}", "${{ inputs.patch }}", "${{ inputs.build }}"
         $destName = "release_notes_{0}.md" -f $version
+        $artifactName = "release_notes_{0}" -f $version
         $destPath = Join-Path -Path $dir -ChildPath $destName
 
         Copy-Item -LiteralPath $source -Destination $destPath -Force
         Write-Host ("Release notes artifact prepared at {0}" -f $destPath)
 
         "artifact_path=$destPath" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-        "artifact_name=$destName" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+        "artifact_name=$artifactName" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
     - name: Locate built VI package
       id: locate-vip
@@ -175,6 +176,7 @@ runs:
 
         "vip_path=$($vip.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
         "vip_name=$($vip.Name)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+        "vip_artifact=$([System.IO.Path]::GetFileNameWithoutExtension($vip.Name))" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
     - name: Upload release notes
       id: upload-release-notes
@@ -187,7 +189,7 @@ runs:
     - name: Upload VI Package
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.locate-vip.outputs.vip_name }}
+        name: ${{ steps.locate-vip.outputs.vip_artifact }}
         path: ${{ steps.locate-vip.outputs.vip_path }}
         if-no-files-found: error
 
