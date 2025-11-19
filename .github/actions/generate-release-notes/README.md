@@ -1,7 +1,7 @@
 # Generate Release Notes
 
 This composite action creates a Markdown file summarizing commits since the last tag.
-By default, it writes to `Tooling/deployment/release_notes.md`, which you can use when drafting changelogs or GitHub releases.
+The resulting file can be injected into the VI Package build process.
 
 ## Inputs
 

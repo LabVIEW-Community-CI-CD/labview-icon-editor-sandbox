@@ -14,6 +14,8 @@ runs:
       run: |
         & "${{ github.action_path }}/build_vip.ps1" `
           -SupportedBitness ${{ inputs.supported_bitness }} `
+          -RelativePath "${{ inputs.relative_path }}" `
+          -VIPBPath "${{ inputs.vipb_path }}" `
           -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} `
           -LabVIEWMinorRevision ${{ inputs.labview_minor_revision }} `
           -Major ${{ inputs.major }} `
@@ -30,9 +32,20 @@ runs:
         name: release-notes
         path: ${{ inputs.release_notes_file }}
 
+    - name: Upload VI Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: vi-package
+        path: builds/VI Package/*.vip
 inputs:
   supported_bitness:
     description: '32 or 64'
+    required: true
+  relative_path:
+    description: 'Workspace root path'
+    required: true
+  vipb_path:
+    description: 'Path to the VIPB file (relative to workspace)'
     required: true
   minimum_supported_lv_version:
     description: 'LabVIEW major version'

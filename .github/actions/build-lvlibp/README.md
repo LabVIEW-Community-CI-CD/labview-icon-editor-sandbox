@@ -15,13 +15,10 @@ Call **`Build_lvlibp.ps1`** to compile the editor packed library using g-cli.
 | `commit` | **Yes** | `abcdef` | Commit identifier. |
 
 ## Quick-start
-
-The following example builds using LabVIEW 2021.
-
 ```yaml
 - uses: ./.github/actions/build-lvlibp
   with:
-    minimum_supported_lv_version: 2021
+    minimum_supported_lv_version: 2024
     supported_bitness: 64
     relative_path: ${{ github.workspace }}
     major: 1
