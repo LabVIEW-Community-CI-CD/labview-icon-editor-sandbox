@@ -82,10 +82,23 @@ catch {
     exit 1
 }
 
-# 2) Create release notes if needed
+# 2) Create release notes if needed and resolve the paths
 if (-not (Test-Path $ReleaseNotesFile)) {
     Write-Host "Release notes file '$ReleaseNotesFile' does not exist. Creating it..."
     New-Item -ItemType File -Path $ReleaseNotesFile -Force | Out-Null
+}
+
+try {
+    $ResolvedReleaseNotesFile = Resolve-Path -Path $ReleaseNotesFile -ErrorAction Stop
+}
+catch {
+    $errorObject = [PSCustomObject]@{
+        error      = "Error resolving ReleaseNotesFile. Ensure the path exists and is accessible."
+        exception  = $_.Exception.Message
+        stackTrace = $_.Exception.StackTrace
+    }
+    $errorObject | ConvertTo-Json -Depth 10
+    exit 1
 }
 
 # 3) Calculate the LabVIEW version string
@@ -136,7 +149,7 @@ $UpdatedDisplayInformationJSON = $jsonObj | ConvertTo-Json -Depth 5
 # 5) Construct the command script
 
 $script = @"
-g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness vipb -- --buildspec "$ResolvedVIPBPath" -v "$Major.$Minor.$Patch.$Build" --release-notes "$ReleaseNotesFile" --timeout 300
+g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness vipb -- --buildspec "$ResolvedVIPBPath" -v "$Major.$Minor.$Patch.$Build" --release-notes "$ResolvedReleaseNotesFile" --timeout 300
 "@
 
 Write-Output "Executing the following commands:"
@@ -145,6 +158,11 @@ Write-Output $script
 # 6) Execute the commands
 try {
     Invoke-Expression $script
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "g-cli exited with code $LASTEXITCODE"
+    }
+
     Write-Host "Successfully built VI package: $ResolvedVIPBPath"
 }
 catch {
@@ -156,4 +174,3 @@ catch {
     $errorObject | ConvertTo-Json -Depth 10
     exit 1
 }
-
