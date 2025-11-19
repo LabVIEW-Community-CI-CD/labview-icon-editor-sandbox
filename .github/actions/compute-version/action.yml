@@ -27,13 +27,13 @@ runs:
   using: "composite"
   steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
     - name: Determine bump type
       id: bump_type
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         github-token: ${{ inputs.github_token }}
         script: |
@@ -66,8 +66,22 @@ runs:
         BUMP_TYPE:    ${{ steps.bump_type.outputs.bump_type }}
         BUILD_NUMBER: ${{ steps.inc_build.outputs.new_build_number }}
       run: |
-        $latest = (git describe --tags --abbrev=0 2>$null).TrimStart('v') -replace '-build.*'
-        if (-not $latest) { $maj=0; $min=1; $pat=0 } else { $maj,$min,$pat = $latest.Split('.') }
+        $latestRaw = git describe --tags --abbrev=0 2>$null
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "No existing tags were found; defaulting to 0.0.0."
+          $latestRaw = ''
+          $global:LASTEXITCODE = 0
+        }
+        if ([string]::IsNullOrWhiteSpace($latestRaw)) {
+          $maj=0; $min=0; $pat=0
+        }
+        else {
+          $latest = $latestRaw.Trim().TrimStart('v') -replace '-build.*'
+          $parts = $latest.Split('.')
+          $maj = [int]$parts[0]
+          $min = if ($parts.Length -gt 1) { [int]$parts[1] } else { 0 }
+          $pat = if ($parts.Length -gt 2) { [int]$parts[2] } else { 0 }
+        }
         switch ($env:BUMP_TYPE) {
           'major' { $maj++; $min=0; $pat=0 }
           'minor' { $min++; $pat=0 }
