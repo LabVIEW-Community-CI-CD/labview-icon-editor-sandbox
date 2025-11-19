@@ -1,5 +1,4 @@
-<
-#
+<#
 #    .SYNOPSIS
 #        Configures the repository for development mode.
 #
