@@ -200,6 +200,18 @@ for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
 }
 
 if (-not $success) {
+    for ($i = 0; $i -lt $attemptLogs.Count; $i++) {
+        $log = $attemptLogs[$i]
+        if (Test-Path $log) {
+            Write-Host ("---- g-cli build log attempt {0} ({1}) ----" -f ($i + 1), $log)
+            Get-Content -Path $log | ForEach-Object { Write-Host $_ }
+            Write-Host ("---- end g-cli build log attempt {0} ----" -f ($i + 1))
+        }
+        else {
+            Write-Host ("g-cli build log for attempt {0} not found at {1}" -f ($i + 1), $log)
+        }
+    }
+
     $errorObject = [PSCustomObject]@{
         error      = "g-cli failed after $maxAttempts attempt(s)."
         exitCode   = $LASTEXITCODE
