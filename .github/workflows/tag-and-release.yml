@@ -14,6 +14,9 @@ permissions:
 
 jobs:
   tag-and-release:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.sha }}
+      cancel-in-progress: true
     permissions:
       contents: write
       actions: write
