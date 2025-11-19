@@ -11,7 +11,12 @@ runs:
 
     - name: Run build_vip.ps1
       shell: pwsh
+      env:
+        DISPLAY_INFORMATION_JSON: |
+          ${{ inputs.display_information_json }}
       run: |
+        $displayInformationJson = $Env:DISPLAY_INFORMATION_JSON
+
         & "${{ github.action_path }}/build_vip.ps1" `
           -SupportedBitness ${{ inputs.supported_bitness }} `
           -RelativePath "${{ inputs.relative_path }}" `
@@ -24,7 +29,7 @@ runs:
           -Build ${{ inputs.build }} `
           -Commit "${{ inputs.commit }}" `
           -ReleaseNotesFile "${{ inputs.release_notes_file }}" `
-          -DisplayInformationJSON '${{ inputs.display_information_json }}'
+          -DisplayInformationJSON $displayInformationJson
 
     - name: Upload release notes
       uses: actions/upload-artifact@v4

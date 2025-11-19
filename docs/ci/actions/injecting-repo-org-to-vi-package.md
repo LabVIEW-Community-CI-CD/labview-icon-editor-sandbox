@@ -127,7 +127,12 @@ jobs:
 **Key points**:
 - **`${{ github.repository_owner }}`** is the **organization** (or user) that owns the repo.
 - **`${{ github.event.repository.name }}`** is the repository name.
-- The generated JSON is consumed by `modify-vipb-display-info` and `build-vi-package` to embed this metadata in the final package.
+- The generated JSON now includes:
+  - the semantic version components, company, product, and author names;
+  - the repository URL (with a fallback to `https://github.com/<owner>/<repo>`);
+  - descriptive text derived from the repository description when it exists, or a generated default when it does not;
+  - the contents of the workflow-generated `Tooling/deployment/release_notes.md` file as the **Release Notes - Change Log** field.
+- `modify-vipb-display-info` and `build-vi-package` consume this JSON to embed the metadata directly in the `.vip`.
 
 ---
 
