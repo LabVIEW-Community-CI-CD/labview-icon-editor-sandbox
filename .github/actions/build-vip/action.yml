@@ -9,6 +9,31 @@ runs:
         fetch-depth: 0
         clean: false
 
+    - name: Close LabVIEW 2021 before 2023 preflight
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $logDir = Join-Path -Path "${{ inputs.relative_path }}" -ChildPath "builds/logs"
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        $logFile = Join-Path -Path $logDir -ChildPath "gcli-close-2021.log"
+
+        $gcliArgs = @(
+          "--lv-ver", "2021",
+          "--arch", "64",
+          "--connect-timeout", "30000",
+          "--kill",
+          "--kill-timeout", "5000",
+          "--verbose",
+          "QuitLabVIEW"
+        )
+
+        Write-Host "Pre-step: ensure LabVIEW 2021 closed: g-cli $($gcliArgs -join ' ')"
+        & g-cli @gcliArgs 2>&1 | Tee-Object -FilePath $logFile | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "Failed to close LabVIEW 2021. Inspect $logFile for details."
+          exit $LASTEXITCODE
+        }
+
     - name: Pre-flight LabVIEW availability check
       shell: pwsh
       run: |

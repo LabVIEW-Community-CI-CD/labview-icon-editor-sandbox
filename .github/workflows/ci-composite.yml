@@ -1,7 +1,7 @@
 name: CI Pipeline (Composite)
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: true
 
 on:
@@ -25,6 +25,11 @@ on:
       - reopened
       - ready_for_review
   workflow_dispatch:
+    inputs:
+      dispatch_tag:
+        description: "Expected tag for this run (optional, for dispatched builds)"
+        required: false
+        type: string
 
 jobs:
   changes:
@@ -77,7 +82,7 @@ jobs:
 
   apply-deps-2023-x64:
     name: Apply VIPC (2023 x64)
-    needs: [apply-deps-2021-x86, changes]
+    needs: [close-lv-2021-before-2023, changes]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
@@ -90,6 +95,16 @@ jobs:
           vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
       - run: echo "No .vipc changes detected; skipping dependency application."
         if: needs.changes.outputs.vipc != 'true'
+
+  close-lv-2021-before-2023:
+    name: Close LabVIEW 2021 before 2023 tasks
+    needs: apply-deps-2021-x86
+    runs-on: self-hosted-windows-lv
+    steps:
+      - uses: ./.github/actions/close-labview
+        with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 64
 
   version:
     name: Compute Version
@@ -321,3 +336,68 @@ jobs:
         with:
           minimum_supported_lv_version: 2023
           supported_bitness: 64
+      - name: Validate tag matches computed version (if provided)
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.dispatch_tag != ''
+        shell: pwsh
+        env:
+          EXPECTED_TAG: v${{ needs.version.outputs.MAJOR }}.${{ needs.version.outputs.MINOR }}.${{ needs.version.outputs.PATCH }}.${{ needs.version.outputs.BUILD }}
+          REF_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          INPUT_TAG: ${{ github.event.inputs.dispatch_tag || '' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $provided = if (-not [string]::IsNullOrWhiteSpace($Env:INPUT_TAG)) { $Env:INPUT_TAG } else { $Env:REF_TAG }
+          if ([string]::IsNullOrWhiteSpace($provided)) {
+            Write-Error "No provided tag (ref/input) to validate against computed tag $Env:EXPECTED_TAG."
+          }
+          if ($provided -ne $Env:EXPECTED_TAG) {
+            Write-Error ("Provided tag '{0}' does not match computed tag '{1}'." -f $provided, $Env:EXPECTED_TAG)
+          } else {
+            Write-Host ("Tag validation ok: {0}" -f $provided)
+          }
+      - name: Locate release assets
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: release-assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vip = Get-ChildItem -Path "$Env:GITHUB_WORKSPACE/builds/VI Package" -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $vip) { Write-Error "No .vip file found for release upload."; exit 1 }
+
+          $notes = Get-ChildItem -Path "$Env:GITHUB_WORKSPACE/Tooling/deployment" -Filter "release_notes_*.md" -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $notes) { Write-Error "No versioned release notes file found for release upload."; exit 1 }
+
+          "vip_path=$($vip.FullName)"           | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          "vip_name=$($vip.Name)"               | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          "notes_path=$($notes.FullName)"       | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          "notes_name=$($notes.Name)"           | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+      - name: Upload .vip to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.release-assets.outputs.vip_path }}
+          asset_name: ${{ steps.release-assets.outputs.vip_name }}
+          asset_content_type: application/octet-stream
+      - name: Upload release notes to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.release-assets.outputs.notes_path }}
+          asset_name: ${{ steps.release-assets.outputs.notes_name }}
+          asset_content_type: text/markdown
