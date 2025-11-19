@@ -12,6 +12,7 @@ runs:
     - name: Pre-flight LabVIEW availability check
       shell: pwsh
       run: |
+        $ErrorActionPreference = 'Stop'
         $logDir = Join-Path -Path "${{ inputs.relative_path }}" -ChildPath "builds/logs"
         New-Item -ItemType Directory -Path $logDir -Force | Out-Null
         $logFile = Join-Path -Path $logDir -ChildPath "gcli-preflight.log"
@@ -41,6 +42,46 @@ runs:
           exit $LASTEXITCODE
         }
 
+    - name: Clean previous VI packages
+      id: clean-vip
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $vipDir = Join-Path -Path "${{ inputs.relative_path }}" -ChildPath "builds/VI Package"
+        if (-not (Test-Path $vipDir)) {
+          Write-Host "No existing VI Package directory at '$vipDir'. Creating it..."
+          New-Item -ItemType Directory -Path $vipDir -Force | Out-Null
+        }
+
+        $existingVip = Get-ChildItem -Path $vipDir -Filter *.vip -File -Recurse
+        if ($existingVip) {
+          Write-Host "Found existing .vip files before build:"
+          $existingVip | ForEach-Object { Write-Host " - $($_.FullName)" }
+          Write-Host "Deleting existing .vip files prior to build..."
+          $removed = 0
+          $failed = $false
+          foreach ($file in $existingVip) {
+            try {
+              Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Continue
+              $removed++
+            }
+            catch {
+              $failed = $true
+              Write-Warning ("Failed to delete {0}: {1}" -f $file.FullName, $_.Exception.Message)
+            }
+          }
+          Write-Host ("Deleted {0} .vip file(s) prior to build." -f $removed)
+          if ($failed) {
+            Write-Error "One or more old .vip files could not be removed; aborting before build."
+            exit 1
+          }
+        }
+        else {
+          Write-Host "No preexisting .vip files found at '$vipDir'."
+        }
+
+        "vip_dir=$vipDir" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+
     - name: Run build_vip.ps1
       shell: pwsh
       env:
@@ -63,6 +104,56 @@ runs:
           -ReleaseNotesFile "${{ inputs.release_notes_file }}" `
           -DisplayInformationJSON $displayInformationJson
 
+    - name: Dump g-cli build logs on failure
+      if: failure()
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $logDir = Join-Path -Path "${{ inputs.relative_path }}" -ChildPath "builds/logs"
+        if (-not (Test-Path $logDir)) {
+          Write-Host "No log directory found at $logDir."
+          exit 0
+        }
+
+        $logs = Get-ChildItem -Path $logDir -Filter "gcli-build-attempt-*.log" -File | Sort-Object Name
+        if (-not $logs) {
+          Write-Host "No g-cli build attempt logs found under $logDir."
+          exit 0
+        }
+
+        foreach ($log in $logs) {
+          Write-Host ("---- g-cli build log ({0}) ----" -f $log.FullName)
+          Get-Content -Path $log.FullName | ForEach-Object { Write-Host $_ }
+          Write-Host ("---- end g-cli build log ({0}) ----" -f $log.FullName)
+        }
+
+    - name: Locate built VI package
+      id: locate-vip
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $searchRoot = "${{ steps.clean-vip.outputs.vip_dir }}"
+        $vipFiles = Get-ChildItem -Path $searchRoot -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending
+
+        if (-not $vipFiles) {
+          Write-Error "No .vip file found under '$searchRoot'."
+          exit 1
+        }
+
+        if ($vipFiles.Count -gt 1) {
+          Write-Warning ("Multiple .vip files found; selecting most recent (by LastWriteTime). Files:`n{0}" -f ($vipFiles | ForEach-Object { " - $($_.FullName)" } | Out-String))
+          if ("${{ inputs.fail_on_multiple_vips }}" -eq "true") {
+            Write-Error "More than one .vip was produced after cleanup."
+            exit 1
+          }
+        }
+
+        $vip = $vipFiles[0]
+        Write-Host ("Selected .vip: {0}" -f $vip.FullName)
+
+        "vip_path=$($vip.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+        "vip_name=$($vip.Name)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+
     - name: Upload release notes
       uses: actions/upload-artifact@v4
       with:
@@ -72,8 +163,9 @@ runs:
     - name: Upload VI Package
       uses: actions/upload-artifact@v4
       with:
-        name: vi-package
-        path: builds/VI Package/*.vip
+        name: ${{ steps.locate-vip.outputs.vip_name }}
+        path: ${{ steps.locate-vip.outputs.vip_path }}
+        if-no-files-found: error
 
     - name: Upload g-cli logs (if present)
       if: always()
@@ -120,3 +212,7 @@ inputs:
   display_information_json:
     description: 'DisplayInformation JSON string'
     required: true
+  fail_on_multiple_vips:
+    description: 'If true, fail when multiple .vip files exist after the build step'
+    required: false
+    default: 'true'
