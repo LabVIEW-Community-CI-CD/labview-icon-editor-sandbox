@@ -4,16 +4,23 @@ runs:
   using: "composite"
   steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         clean: false
 
     - name: Run build_vip.ps1
       shell: pwsh
+      env:
+        DISPLAY_INFORMATION_JSON: |
+          ${{ inputs.display_information_json }}
       run: |
+        $displayInformationJson = $Env:DISPLAY_INFORMATION_JSON
+
         & "${{ github.action_path }}/build_vip.ps1" `
           -SupportedBitness ${{ inputs.supported_bitness }} `
+          -RelativePath "${{ inputs.relative_path }}" `
+          -VIPBPath "${{ inputs.vipb_path }}" `
           -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} `
           -LabVIEWMinorRevision ${{ inputs.labview_minor_revision }} `
           -Major ${{ inputs.major }} `
@@ -22,7 +29,7 @@ runs:
           -Build ${{ inputs.build }} `
           -Commit "${{ inputs.commit }}" `
           -ReleaseNotesFile "${{ inputs.release_notes_file }}" `
-          -DisplayInformationJSON '${{ inputs.display_information_json }}'
+          -DisplayInformationJSON $displayInformationJson
 
     - name: Upload release notes
       uses: actions/upload-artifact@v4
@@ -30,9 +37,20 @@ runs:
         name: release-notes
         path: ${{ inputs.release_notes_file }}
 
+    - name: Upload VI Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: vi-package
+        path: builds/VI Package/*.vip
 inputs:
   supported_bitness:
     description: '32 or 64'
+    required: true
+  relative_path:
+    description: 'Workspace root path'
+    required: true
+  vipb_path:
+    description: 'Path to the VIPB file (relative to workspace)'
     required: true
   minimum_supported_lv_version:
     description: 'LabVIEW major version'

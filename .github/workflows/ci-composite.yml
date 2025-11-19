@@ -1,8 +1,4 @@
 name: CI Pipeline (Composite)
-# Builds, tests, and packages the Icon Editor. See docs/ci-workflows.md for details.
-
-permissions:
-  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,191 +9,26 @@ on:
     branches:
       - main
       - develop
-      - release-alpha/*
-      - release-beta/*
-      - release-rc/*
+      - release/*
       - feature/*
       - hotfix/*
-      - issue-*
   pull_request:
     branches:
       - main
       - develop
-      - release-alpha/*
-      - release-beta/*
-      - release-rc/*
+      - release/*
       - feature/*
       - hotfix/*
-      - issue-*
     types:
       - opened
       - synchronize
       - reopened
       - ready_for_review
-  workflow_dispatch: # manual trigger
+  workflow_dispatch:
 
 jobs:
-  # Skip subsequent jobs unless the branch is associated with an issue in progress
-  issue-status:
-    name: Verify Issue Status
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: read
-    outputs:
-      proceed: ${{ steps.check.outputs.proceed }}
-    steps:
-      - name: Determine if CI should run
-        id: check
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const branch = context.payload.pull_request?.head.ref ??
-              context.ref.replace('refs/heads/', '');
-            const match = branch.match(/(?:^|\/)issue-(\d+)/);
-            if (!match) {
-              core.setOutput('proceed', 'false');
-              const msg = `Branch '${branch}' is not issue-specific. CI will be skipped.`;
-              core.info(msg);
-              fs.appendFileSync(
-                process.env.GITHUB_STEP_SUMMARY,
-                [
-                  '### Issue Status',
-                  '',
-                  `Branch ${branch} is not associated with an issue.`,
-                  'CI will be skipped.',
-                  ''
-                ].join('\n')
-              );
-              return;
-            }
-            const issueNumber = parseInt(match[1], 10);
-
-            // Skip CI when a 'NoCI' label is present
-            const prNumber = context.payload.pull_request?.number;
-            let hasNoCILabel = false;
-            if (prNumber) {
-              hasNoCILabel = context.payload.pull_request.labels.some(l => l.name === 'NoCI');
-            } else {
-              const { data: prs } = await github.rest.pulls.list({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                head: `${context.repo.owner}:${branch}`,
-                state: 'open'
-              });
-              hasNoCILabel = prs.some(pr => pr.labels.some(l => l.name === 'NoCI'));
-            }
-            if (hasNoCILabel) {
-              core.setOutput('proceed', 'false');
-              const msg = `Branch '${branch}' is labeled 'NoCI'. CI will be skipped.`;
-              core.info(msg);
-              fs.appendFileSync(
-                process.env.GITHUB_STEP_SUMMARY,
-                [
-                  '### Issue Status',
-                  '',
-                  msg,
-                  ''
-                ].join('\n')
-              );
-              return;
-            }
-
-            const query = `
-              query($owner:String!, $repo:String!, $number:Int!){
-                repository(owner:$owner, name:$repo){
-                  issue(number:$number){
-                    projectItems(first:10){
-                      nodes{
-                        fieldValueByName(name: "Status"){
-                          ... on ProjectV2ItemFieldSingleSelectValue{
-                            name
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            `;
-            const variables = {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              number: issueNumber
-            };
-              let result;
-              let nodes = [];
-              let status = 'Unknown';
-              let proceed = false;
-              let issueMissing = false;
-              let queryError = null;
-
-              try {
-                result = await github.graphql(query, variables);
-              } catch (error) {
-                queryError = error;
-                core.error(`GraphQL query failed: ${error.message}`);
-              }
-
-              if (!result?.repository?.issue) {
-                issueMissing = true;
-                core.info('result.repository.issue is null or missing');
-              }
-
-              nodes = result?.repository?.issue?.projectItems?.nodes ?? [];
-              core.info(`Number of project items: ${nodes.length}`);
-              core.debug(`Project item nodes: ${JSON.stringify(nodes)}`);
-
-              status =
-                nodes.map(n => n.fieldValueByName?.name).find(Boolean) ??
-                'Unknown';
-              proceed = status === 'In Progress';
-
-              core.info(`Issue #${issueNumber} status: ${status}`);
-              core.info(`Proceed with CI: ${proceed}`);
-              const summary = [
-                '### Issue Status',
-                '',
-                `- Branch: ${branch}`,
-                `- Issue: #${issueNumber}`,
-                `- Status: **${status}**`,
-                `- CI will ${proceed ? 'run' : 'be skipped'}`
-              ].join('\n');
-              fs.appendFileSync(
-                process.env.GITHUB_STEP_SUMMARY,
-                `${summary}\n`
-              );
-
-              if (status === 'Unknown') {
-                const reasons = [];
-                if (queryError) {
-                  reasons.push(`GraphQL query error: ${queryError.message}`);
-                } else {
-                  if (issueMissing) {
-                    reasons.push('issue not found or inaccessible');
-                  } else if (nodes.length === 0) {
-                    reasons.push('no project items found');
-                  } else if (!nodes.some(n => n.fieldValueByName?.name)) {
-                    reasons.push('missing "Status" field');
-                  }
-                }
-                const reasonText = `Status Unknown - ${reasons.join('; ')}`;
-                core.info(reasonText);
-                fs.appendFileSync(
-                  process.env.GITHUB_STEP_SUMMARY,
-                  `${reasonText}\n`
-                );
-              }
-
-              core.setOutput('proceed', proceed ? 'true' : 'false');
-
-  # Detect if VIPC files changed to decide whether dependencies must be installed
   changes:
     name: Detect VIPC changes
-    needs: issue-status
-    if: needs.issue-status.outputs.proceed == 'true'
     runs-on: ubuntu-latest
     outputs:
       vipc: ${{ steps.filter.outputs.vipc }}
@@ -215,7 +46,6 @@ jobs:
   apply-deps:
     name: Apply VIPC Dependencies
     needs: changes
-    if: needs.changes.outputs.vipc == 'true'
     runs-on: self-hosted-windows-lv
     strategy:
       matrix:
@@ -228,16 +58,18 @@ jobs:
             bitness: "64"
     steps:
       - uses: ./.github/actions/apply-vipc
+        if: needs.changes.outputs.vipc == 'true'
         with:
           minimum_supported_lv_version: ${{ matrix['lv-version'] }}
           vip_lv_version:               ${{ matrix['lv-version'] }}
           supported_bitness:            ${{ matrix.bitness }}
           relative_path:                ${{ github.workspace }}
+          vipc_path:                    "Tooling/deployment/runner_dependencies.vipc"
+      - run: echo "No .vipc changes detected; skipping dependency application."
+        if: needs.changes.outputs.vipc != 'true'
 
   version:
     name: Compute Version
-    needs: issue-status
-    if: needs.issue-status.outputs.proceed == 'true'
     runs-on: self-hosted-windows-lv
     outputs:
       VERSION:       ${{ steps.compute.outputs.VERSION }}
@@ -257,8 +89,7 @@ jobs:
 
   missing-in-project-check:
     name: Test Missing-In-Project Action on Windows
-    needs: [changes, apply-deps]
-    if: ${{ needs.changes.result == 'success' && (needs.apply-deps.result == 'success' || needs.apply-deps.result == 'skipped') }}
+    needs: apply-deps
     runs-on: self-hosted-windows-lv
     strategy:
       fail-fast: false
@@ -274,7 +105,7 @@ jobs:
 
   test:
     name: Run Unit Tests
-    needs: [changes, missing-in-project-check]
+    needs: [apply-deps, missing-in-project-check]
     runs-on: ${{ matrix.os == 'windows' && 'self-hosted-windows-lv' || 'self-hosted-linux-lv' }}
     strategy:
       matrix:
@@ -288,26 +119,15 @@ jobs:
           minimum_supported_lv_version: ${{ matrix['lv-version'] }}
           supported_bitness:            ${{ matrix.bitness }}
 
-  build-ppl:
-    name: Build ${{ matrix.bitness }}-bit Packed Library
+  build-ppl-x86:
+    name: Build 32-bit Packed Library
     needs: [test, version]
     runs-on: self-hosted-windows-lv
-    permissions:
-      contents: read
-      actions: write
-    strategy:
-      matrix:
-        bitness: [32, 64]
-        include:
-          - bitness: 32
-            suffix: x86
-          - bitness: 64
-            suffix: x64
     steps:
       - uses: ./.github/actions/build-lvlibp
         with:
           minimum_supported_lv_version: 2021
-          supported_bitness: ${{ matrix.bitness }}
+          supported_bitness: 32
           relative_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}
@@ -317,23 +137,48 @@ jobs:
       - uses: ./.github/actions/close-labview
         with:
           minimum_supported_lv_version: 2021
-          supported_bitness: ${{ matrix.bitness }}
+          supported_bitness: 32
       - uses: ./.github/actions/rename-file
         with:
           current_filename: ${{ github.workspace }}/resource/plugins/lv_icon.lvlibp
-          new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_${{ matrix.suffix }}.lvlibp
+          new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x86.lvlibp
       - uses: actions/upload-artifact@v4
         with:
-          name: lv_icon_${{ matrix.suffix }}.lvlibp
-          path: resource/plugins/lv_icon_${{ matrix.suffix }}.lvlibp
+          name: lv_icon_x86.lvlibp
+          path: resource/plugins/lv_icon_x86.lvlibp
 
-  build-vi-package:
-    name: Build VI Package
-    needs: [build-ppl, version]
+  build-ppl-x64:
+    name: Build 64-bit Packed Library
+    needs: [test, version]
     runs-on: self-hosted-windows-lv
-    permissions:
-      contents: read
-      actions: read
+    steps:
+      - uses: ./.github/actions/build-lvlibp
+        with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 64
+          relative_path: ${{ github.workspace }}
+          major: ${{ needs.version.outputs.MAJOR }}
+          minor: ${{ needs.version.outputs.MINOR }}
+          patch: ${{ needs.version.outputs.PATCH }}
+          build: ${{ needs.version.outputs.BUILD }}
+          commit: ${{ github.sha }}
+      - uses: ./.github/actions/close-labview
+        with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 64
+      - uses: ./.github/actions/rename-file
+        with:
+          current_filename: ${{ github.workspace }}/resource/plugins/lv_icon.lvlibp
+          new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x64.lvlibp
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lv_icon_x64.lvlibp
+          path: resource/plugins/lv_icon_x64.lvlibp
+
+  build-vip:
+    name: Build VI Package
+    needs: [build-ppl-x86, build-ppl-x64, version]
+    runs-on: self-hosted-windows-lv
     steps:
       - uses: actions/checkout@v4
         with:
@@ -343,13 +188,41 @@ jobs:
         # output_path defaults to Tooling/deployment/release_notes.md
       - uses: actions/download-artifact@v4
         with:
+          name: lv_icon_x86.lvlibp
           path: resource/plugins
-          pattern: lv_icon_*.lvlibp
-          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: lv_icon_x64.lvlibp
+          path: resource/plugins
       - name: Generate display information JSON
         id: display-info
         shell: pwsh
+        env:
+          RELEASE_NOTES_PATH: ${{ github.workspace }}/Tooling/deployment/release_notes.md
+          REPO_NAME: ${{ github.event.repository.name }}
+          REPO_DESCRIPTION: ${{ github.event.repository.description }}
+          REPO_URL: ${{ github.event.repository.html_url }}
+          COMPANY: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.repository }}
         run: |
+          $releaseNotes = if (Test-Path $Env:RELEASE_NOTES_PATH) {
+            Get-Content -Raw -Path $Env:RELEASE_NOTES_PATH
+          } else {
+            "Release notes file not generated."
+          }
+
+          $productName = if ([string]::IsNullOrWhiteSpace($Env:REPO_NAME)) {
+            $Env:REPOSITORY
+          } else {
+            $Env:REPO_NAME
+          }
+
+          $description = if ([string]::IsNullOrWhiteSpace($Env:REPO_DESCRIPTION)) {
+            "$($Env:REPO_NAME) VI Package build for $($Env:REPOSITORY)."
+          } else {
+            $Env:REPO_DESCRIPTION
+          }
+
           $info = @{
             "Package Version" = @{
               "major" = ${{ needs.version.outputs.MAJOR }}
@@ -357,23 +230,28 @@ jobs:
               "patch" = ${{ needs.version.outputs.PATCH }}
               "build" = ${{ needs.version.outputs.BUILD }}
             }
-            "Product Name" = ""
-            "Company Name" = "${{ github.repository_owner }}"
-            "Author Name (Person or Company)" = "${{ github.event.repository.name }}"
-            "Product Homepage (URL)" = ""
-            "Legal Copyright" = ""
-            "License Agreement Name" = ""
-            "Product Description Summary" = ""
-            "Product Description" = ""
-            "Release Notes - Change Log" = ""
+            "Product Name" = $productName
+            "Company Name" = $Env:COMPANY
+            "Author Name (Person or Company)" = $Env:REPOSITORY
+            "Product Homepage (URL)" = if ([string]::IsNullOrWhiteSpace($Env:REPO_URL)) {
+              "https://github.com/$($Env:REPOSITORY)"
+            } else {
+              $Env:REPO_URL
+            }
+            "Legal Copyright" = "© $(Get-Date -Format yyyy) $($Env:COMPANY)"
+            "License Agreement Name" = "See LICENSE.md"
+            "Product Description Summary" = $description
+            "Product Description" = $description
+            "Release Notes - Change Log" = $releaseNotes
           }
+
           $json = $info | ConvertTo-Json -Depth 5 -Compress
           "json=$json" >> $Env:GITHUB_OUTPUT
       - uses: ./.github/actions/modify-vipb-display-info
         with:
           supported_bitness: 64
           relative_path: ${{ github.workspace }}
-          vipb_path: .github/actions/build-vi-package/NI Icon editor.vipb
+          vipb_path: Tooling/deployment/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
           major: ${{ needs.version.outputs.MAJOR }}
@@ -383,9 +261,11 @@ jobs:
           commit: ${{ github.sha }}
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
-      - uses: ./.github/actions/build-vi-package
+      - uses: ./.github/actions/build-vip
         with:
           supported_bitness: 64
+          relative_path: ${{ github.workspace }}
+          vipb_path: Tooling/deployment/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
           major: ${{ needs.version.outputs.MAJOR }}
@@ -397,10 +277,9 @@ jobs:
           display_information_json: ${{ steps.display-info.outputs.json }}
       - uses: ./.github/actions/close-labview
         with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 64
+      - uses: ./.github/actions/close-labview
+        with:
           minimum_supported_lv_version: 2023
           supported_bitness: 64
-      - name: Upload VI Package
-        uses: actions/upload-artifact@v4
-        with:
-          name: vi-package
-          path: builds/VI Package/*.vip

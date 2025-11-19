@@ -1,6 +1,6 @@
 # Apply VIPC Dependencies 📦
 
-Ensure a runner has all required LabVIEW packages installed before building or testing. This composite action calls **`ApplyVIPC.ps1`** to apply a `.vipc` container through **g-cli**. The action automatically detects the `runner_dependencies.vipc` file located in this directory.
+Ensure a runner has all required LabVIEW packages installed before building or testing. This composite action calls **`ApplyVIPC.ps1`** to apply a `.vipc` container through **g-cli**.
 
 ---
 
@@ -31,6 +31,7 @@ Ensure a runner has all required LabVIEW packages installed before building or t
 | `vip_lv_version` | **Yes** | `2021` | LabVIEW version used to apply the `.vipc` file. Usually the same as `minimum_supported_lv_version`. |
 | `supported_bitness` | **Yes** | `32` or `64` | LabVIEW bitness to target. |
 | `relative_path` | **Yes** | `${{ github.workspace }}` | Root path of the repository on disk. |
+| `vipc_path` | **Yes** | `Tooling/deployment/runner_dependencies.vipc` | Path (relative to `relative_path`) of the container to apply. |
 
 ---
 
@@ -42,14 +43,12 @@ steps:
   - name: Install LabVIEW dependencies
     uses: ./.github/actions/apply-vipc
     with:
-      minimum_supported_lv_version: 2021
-      vip_lv_version: 2021
+      minimum_supported_lv_version: 2024
+      vip_lv_version: 2024
       supported_bitness: 64
       relative_path: ${{ github.workspace }}
+      vipc_path: Tooling/deployment/runner_dependencies.vipc
 ```
-
-The CI pipeline applies these dependencies across multiple LabVIEW versions—2021 (32-bit and 64-bit) and 2023 (64-bit)—as shown in
-[`.github/workflows/ci-composite.yml`](../../workflows/ci-composite.yml).
 
 ---
 
@@ -65,7 +64,7 @@ The CI pipeline applies these dependencies across multiple LabVIEW versions—20
 | Symptom | Hint |
 |---------|------|
 | *g-cli executable not found* | Ensure g-cli is installed and on `PATH`. |
-| *`.vipc` file not found* | Ensure `runner_dependencies.vipc` exists in this action directory. |
+| *`.vipc` file not found* | Check `relative_path` and `vipc_path` values. |
 | *LabVIEW version mismatch* | Make sure the installed LabVIEW version matches both version inputs. |
 
 ---

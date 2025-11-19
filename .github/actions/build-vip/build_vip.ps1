@@ -3,12 +3,17 @@
     Updates a VIPB file's display information and builds the VI package.
 
 .DESCRIPTION
-    Locates a VIPB file stored alongside this script, merges version details into
-    DisplayInformation JSON, and calls g-cli to create the final VI package.
+    Resolves paths, merges version details into DisplayInformation JSON, and
+    calls g-cli to modify the VIPB file and create the final VI package.
 
 .PARAMETER SupportedBitness
     LabVIEW bitness for the build ("32" or "64").
 
+.PARAMETER RelativePath
+    Path to the repository root.
+
+.PARAMETER VIPBPath
+    Relative path to the VIPB file to update.
 
 .PARAMETER MinimumSupportedLVVersion
     Minimum LabVIEW version supported by the package.
@@ -38,11 +43,13 @@
     JSON string representing the VIPB display information to update.
 
 .EXAMPLE
-    .\build_vip.ps1 -SupportedBitness "64" -MinimumSupportedLVVersion 2021 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
+    .\build_vip.ps1 -SupportedBitness "64" -RelativePath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -MinimumSupportedLVVersion 2021 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
 #>
 
 param (
     [string]$SupportedBitness,
+    [string]$RelativePath,
+    [string]$VIPBPath,
 
     [int]$MinimumSupportedLVVersion,
 
@@ -60,15 +67,14 @@ param (
     [string]$DisplayInformationJSON
 )
 
-# 1) Locate VIPB file in the action directory
+# 1) Resolve paths
 try {
-    $vipbFile = Get-ChildItem -Path $PSScriptRoot -Filter *.vipb -ErrorAction Stop | Select-Object -First 1
-    if (-not $vipbFile) { throw "No .vipb file found" }
-    $ResolvedVIPBPath = $vipbFile.FullName
+    $ResolvedRelativePath = Resolve-Path -Path $RelativePath -ErrorAction Stop
+    $ResolvedVIPBPath = Join-Path -Path $ResolvedRelativePath -ChildPath $VIPBPath -ErrorAction Stop
 }
 catch {
     $errorObject = [PSCustomObject]@{
-        error      = "No .vipb file found in the action directory."
+        error      = "Error resolving paths. Ensure RelativePath and VIPBPath are valid."
         exception  = $_.Exception.Message
         stackTrace = $_.Exception.StackTrace
     }
@@ -76,10 +82,23 @@ catch {
     exit 1
 }
 
-# 2) Create release notes if needed
+# 2) Create release notes if needed and resolve the paths
 if (-not (Test-Path $ReleaseNotesFile)) {
     Write-Host "Release notes file '$ReleaseNotesFile' does not exist. Creating it..."
     New-Item -ItemType File -Path $ReleaseNotesFile -Force | Out-Null
+}
+
+try {
+    $ResolvedReleaseNotesFile = Resolve-Path -Path $ReleaseNotesFile -ErrorAction Stop
+}
+catch {
+    $errorObject = [PSCustomObject]@{
+        error      = "Error resolving ReleaseNotesFile. Ensure the path exists and is accessible."
+        exception  = $_.Exception.Message
+        stackTrace = $_.Exception.StackTrace
+    }
+    $errorObject | ConvertTo-Json -Depth 10
+    exit 1
 }
 
 # 3) Calculate the LabVIEW version string
@@ -130,7 +149,7 @@ $UpdatedDisplayInformationJSON = $jsonObj | ConvertTo-Json -Depth 5
 # 5) Construct the command script
 
 $script = @"
-g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness vipb -- --buildspec "$ResolvedVIPBPath" -v "$Major.$Minor.$Patch.$Build" --release-notes "$ReleaseNotesFile" --timeout 300
+g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness vipb -- --buildspec "$ResolvedVIPBPath" -v "$Major.$Minor.$Patch.$Build" --release-notes "$ResolvedReleaseNotesFile" --timeout 300
 "@
 
 Write-Output "Executing the following commands:"
@@ -139,6 +158,11 @@ Write-Output $script
 # 6) Execute the commands
 try {
     Invoke-Expression $script
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "g-cli exited with code $LASTEXITCODE"
+    }
+
     Write-Host "Successfully built VI package: $ResolvedVIPBPath"
 }
 catch {
@@ -150,4 +174,3 @@ catch {
     $errorObject | ConvertTo-Json -Depth 10
     exit 1
 }
-
