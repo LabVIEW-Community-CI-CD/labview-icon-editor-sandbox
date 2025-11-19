@@ -63,7 +63,8 @@ try {
     $PluginsPath = Join-Path -Path $RelativePath -ChildPath 'resource\plugins'
     if (Test-Path $PluginsPath) {
         # Build and execute the removal command only if the plugins folder exists
-        $RemoveCommand = "Get-ChildItem -Path `\"$PluginsPath`\" -Filter '*.lvlibp' | Remove-Item -Force"
+        # Wrap the plugins path in single quotes to avoid issues with spaces or special characters
+        $RemoveCommand = "Get-ChildItem -Path '$PluginsPath' -Filter '*.lvlibp' | Remove-Item -Force"
         Execute-Script $RemoveCommand
     }
     else {
