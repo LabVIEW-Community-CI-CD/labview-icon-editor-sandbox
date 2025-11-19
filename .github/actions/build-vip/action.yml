@@ -9,6 +9,10 @@ runs:
         fetch-depth: 0
         clean: false
 
+    # NOTE: This step uses an inline PowerShell script instead of the standard close-labview action
+    # because it requires additional parameters (--connect-timeout, --kill, --kill-timeout, --verbose)
+    # and file logging for this critical step before 2023 packaging. The extra robustness ensures
+    # LabVIEW 2021 is fully closed before LabVIEW 2023 operations begin.
     - name: Close LabVIEW 2021 before 2023 preflight
       shell: pwsh
       run: |

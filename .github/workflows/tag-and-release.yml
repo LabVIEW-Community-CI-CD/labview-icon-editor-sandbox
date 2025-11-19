@@ -15,7 +15,7 @@ permissions:
 jobs:
   tag-and-release:
     concurrency:
-      group: ${{ github.workflow }}-${{ github.sha }}
+      group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     permissions:
       contents: write
@@ -104,48 +104,21 @@ jobs:
 
       - name: Locate release assets from artifacts
         id: locate-artifacts
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $root = Join-Path -Path $PWD -ChildPath "artifacts"
-          $vip = Get-ChildItem -Path $root -Recurse -Filter *.vip -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $vip) { Write-Error "No .vip found in downloaded artifacts."; exit 1 }
+        uses: ./.github/actions/locate-release-assets
+        with:
+          vip_dir: artifacts
+          notes_dir: artifacts
 
-          $notes = Get-ChildItem -Path $root -Recurse -Filter "release_notes_*.md" -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $notes) { Write-Error "No release_notes_*.md found in downloaded artifacts."; exit 1 }
-
-          "vip_path=$($vip.FullName)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          "vip_name=$($vip.Name)"         | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          "notes_path=$($notes.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          "notes_name=$($notes.Name)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-
-      - name: Create GitHub release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub release and upload assets
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.form-tag.outputs.tag }}
-          release_name: ${{ steps.form-tag.outputs.tag }}
+          name: ${{ steps.form-tag.outputs.tag }}
           draft: false
           prerelease: false
-
-      - name: Upload .vip to release
-        uses: actions/upload-release-asset@v1
+          body_path: ${{ steps.locate-artifacts.outputs.notes_path }}
+          files: |
+            ${{ steps.locate-artifacts.outputs.vip_path }}
+            ${{ steps.locate-artifacts.outputs.notes_path }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.locate-artifacts.outputs.vip_path }}
-          asset_name: ${{ steps.locate-artifacts.outputs.vip_name }}
-          asset_content_type: application/octet-stream
-
-      - name: Upload release notes to release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.locate-artifacts.outputs.notes_path }}
-          asset_name: ${{ steps.locate-artifacts.outputs.notes_name }}
-          asset_content_type: text/markdown
