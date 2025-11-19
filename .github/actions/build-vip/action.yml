@@ -30,6 +30,13 @@ runs:
         & g-cli @gcliArgs 2>&1 | Tee-Object -FilePath $logFile | Out-Null
 
         if ($LASTEXITCODE -ne 0) {
+          if (Test-Path $logFile) {
+            Write-Host "---- g-cli preflight log ($logFile) ----"
+            Get-Content -Path $logFile | ForEach-Object { Write-Host $_ }
+            Write-Host "---- end g-cli preflight log ----"
+          } else {
+            Write-Host "Pre-flight log file not found at $logFile."
+          }
           Write-Error "Pre-flight g-cli check failed. Inspect $logFile for details."
           exit $LASTEXITCODE
         }
