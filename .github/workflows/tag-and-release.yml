@@ -141,5 +141,5 @@ jobs:
               repo: context.repo.repo,
               release_id: release.data.id,
               draft: false,
-              make_latest: 'true',
+              make_latest: true,
             });
