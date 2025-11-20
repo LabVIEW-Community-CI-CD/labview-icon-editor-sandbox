@@ -98,7 +98,7 @@ function Setup {
             Write-Host "Created report directory: $reportDir"
         }
         catch {
-            Write-Warning "Could not create report directory $reportDir: $($_.Exception.Message)"
+            Write-Warning ("Could not create report directory {0}: {1}" -f $reportDir, $_.Exception.Message)
         }
     }
     if (Test-Path $ReportPath) {
