@@ -619,18 +619,18 @@ _Generated: 2025-11-20_
 - Exactly one of each required artifact is located.
 
 **Agent Procedure:**
-- Search the artifacts for exactly one `.vip` package and exactly one release-notes markdown file.
+- [x] Search the artifacts for exactly one `.vip` package and exactly one release-notes markdown file.
 **Evidence to Collect:** File list with counts; names of selected files.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 144
+**Notes:** Derived from SRS line 144; Tag-and-release workflow enforces exactly one .vip and one release_notes_*.md in artifacts, failing on missing or plural occurrences.
 
 ---
 

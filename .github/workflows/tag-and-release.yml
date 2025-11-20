@@ -149,11 +149,23 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $root = Join-Path -Path $PWD -ChildPath "artifacts"
-          $vip = Get-ChildItem -Path $root -Recurse -Filter *.vip -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $vip) { Write-Error "No .vip found in downloaded artifacts."; exit 1 }
+          $vipCandidates = Get-ChildItem -Path $root -Recurse -Filter *.vip -File
+          if (-not $vipCandidates) { Write-Error "No .vip found in downloaded artifacts."; exit 1 }
+          if ($vipCandidates.Count -ne 1) {
+            $names = $vipCandidates | ForEach-Object { $_.FullName }
+            Write-Error ("Expected exactly one .vip; found {0}:`n{1}" -f $vipCandidates.Count, ($names -join "`n"))
+            exit 1
+          }
+          $vip = $vipCandidates[0]
 
-          $notes = Get-ChildItem -Path $root -Recurse -Filter "release_notes_*.md" -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $notes) { Write-Error "No release_notes_*.md found in downloaded artifacts."; exit 1 }
+          $notesCandidates = Get-ChildItem -Path $root -Recurse -Filter "release_notes_*.md" -File
+          if (-not $notesCandidates) { Write-Error "No release_notes_*.md found in downloaded artifacts."; exit 1 }
+          if ($notesCandidates.Count -ne 1) {
+            $names = $notesCandidates | ForEach-Object { $_.FullName }
+            Write-Error ("Expected exactly one release_notes_*.md; found {0}:`n{1}" -f $notesCandidates.Count, ($names -join "`n"))
+            exit 1
+          }
+          $notes = $notesCandidates[0]
 
           $expectedVersion = "$(${{ steps.version.outputs.MAJOR }}).$(${{ steps.version.outputs.MINOR }}).$(${{ steps.version.outputs.PATCH }}).$(${{ steps.version.outputs.BUILD }})"
           if ($vip.Name -notmatch $expectedVersion) {
