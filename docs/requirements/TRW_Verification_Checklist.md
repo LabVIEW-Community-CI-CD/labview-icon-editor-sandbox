@@ -77,19 +77,19 @@ _Generated: 2025-11-20_
 - Downstream workflow proceeds only when upstream `event` is `push`; other events are skipped.
 
 **Agent Procedure:**
-- [ ] Ensure the job has an early `if:` guard: `github.event.workflow_run.event == 'push'`.
-- [ ] Trigger an upstream run caused by `push` and one by `pull_request`; observe behavior.
+- [x] Ensure the job has an early `if:` guard: `github.event.workflow_run.event == 'push'`.
+- [x] Trigger an upstream run caused by `push` and one by `pull_request`; observe behavior.
 **Evidence to Collect:** YAML snippet with `if: ${{ github.event.workflow_run.event == 'push' }}`.; Run logs/screens showing skip on non-push events.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 111
+**Notes:** Derived from SRS line 111; Guard present in `.github/workflows/tag-and-release.yml` to exit unless `workflow_run.event == 'push'`.
 
 ---
 
