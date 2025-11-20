@@ -172,6 +172,60 @@ jobs:
               core.setFailed(`IS_PRERELEASE mismatch: expected ${expectedPre}, got ${isPrerelease}.`);
             }
 
+  test-tag-existence-check:
+    name: Test tag existence check logic
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simulate tag existence/mismatch scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          origin="$tmp/origin.git"
+          work="$tmp/work"
+          git init --bare "$origin" >/dev/null
+          git init "$work" >/dev/null
+          cd "$work"
+          git config user.email "ci@example.com"
+          git config user.name "CI Bot"
+          echo "one" > file.txt
+          git add file.txt
+          git commit -m "commit1" >/dev/null
+          git remote add origin "$origin"
+          head_sha=$(git rev-parse HEAD)
+          tag="v1.0.0.0"
+
+          # Case 1: tag not present remotely
+          remote_sha=$(git ls-remote --tags origin "$tag" | awk '{print $1}' | head -1)
+          if [ -n "${remote_sha:-}" ]; then
+            echo "Expected no remote tag, but found: $remote_sha" >&2
+            exit 1
+          fi
+          echo "No remote tag found as expected."
+
+          # Push commit and tag to origin
+          git push origin HEAD:refs/heads/main >/dev/null
+          git tag "$tag"
+          git push origin "$tag" >/dev/null
+          remote_sha=$(git ls-remote --tags origin "$tag" | awk '{print $1}' | head -1)
+          if [ "$remote_sha" != "$head_sha" ]; then
+            echo "Remote tag SHA ($remote_sha) does not match head ($head_sha) after tagging." >&2
+            exit 1
+          fi
+          echo "Remote tag points to head as expected."
+
+          # Case 2: mismatch detection (remote tag on old commit)
+          echo "two" >> file.txt
+          git add file.txt
+          git commit -m "commit2" >/dev/null
+          new_head=$(git rev-parse HEAD)
+          remote_sha=$(git ls-remote --tags origin "$tag" | awk '{print $1}' | head -1)
+          if [ "$remote_sha" = "$new_head" ]; then
+            echo "Expected mismatch (remote tag should stay on old commit) but matched new head." >&2
+            exit 1
+          fi
+          echo "Mismatch detected as expected: remote tag $remote_sha vs new head $new_head."
   enforce-verify-checklist-needs:
     name: Enforce jobs depend on verify-checklist-sync
     runs-on: ubuntu-latest

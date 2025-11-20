@@ -68,13 +68,30 @@ jobs:
           Write-Host "Tag: $tag"
           "tag=$tag" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
+      - name: Check existing tag target (remote)
+        id: check-tag
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = "${{ steps.form-tag.outputs.tag }}"
+          $remoteSha = git ls-remote --tags origin $tag | ForEach-Object { ($_ -split '\s+')[0] } | Select-Object -First 1
+          if ($remoteSha) {
+            Write-Host ("Tag {0} exists on origin with SHA {1}" -f $tag, $remoteSha)
+          } else {
+            Write-Host ("Tag {0} not found on origin." -f $tag)
+          }
+          "remote_tag_sha=$remoteSha" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+
       - name: Fail if tag belongs to a different commit
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $tag = "${{ steps.form-tag.outputs.tag }}"
           $headSha = git rev-parse HEAD
-          $existingSha = git rev-list -n 1 $tag 2>$null
+          $existingSha = "${{ steps.check-tag.outputs.remote_tag_sha }}"
+          if (-not $existingSha) {
+            $existingSha = git rev-list -n 1 $tag 2>$null
+          }
           if ($existingSha) {
             if ($existingSha -ne $headSha) {
               Write-Error ("Tag {0} already exists and points to {1}, not {2}. Aborting." -f $tag, $existingSha, $headSha)

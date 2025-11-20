@@ -446,13 +446,13 @@ _Generated: 2025-11-20_
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 133
+**Notes:** Derived from SRS line 133; Tag-and-release workflow checks origin for existing tag and captures SHA via `git ls-remote` before creation.
 
 ---
 
