@@ -321,18 +321,18 @@ _Generated: 2025-11-20_
 - `MAJOR`, `MINOR`, `PATCH`, `BUILD_NUMBER`, `VERSION_STRING`, and `IS_PRERELEASE` are exported and visible to subsequent steps.
 
 **Agent Procedure:**
-- [ ] Run the version step and capture exported outputs.
+- [x] Run the version step and capture exported outputs.
 **Evidence to Collect:** Job output or `GITHUB_OUTPUT` file contents.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 124
+**Notes:** Derived from SRS line 124; Compute-version action exports MAJOR, MINOR, PATCH, BUILD_NUMBER, VERSION_STRING, and IS_PRERELEASE for downstream steps.
 
 ---
 
