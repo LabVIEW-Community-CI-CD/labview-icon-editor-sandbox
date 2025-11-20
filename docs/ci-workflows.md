@@ -66,7 +66,12 @@ Automating your Icon Editor builds and tests:
    - Uses **label-based** version bumping (major/minor/patch) on pull requests.
    - Generates `Tooling/deployment/release_notes.md` summarizing recent commits. Use this file to draft changelogs or release notes.
 
-6. **Disable Dev Mode** (optional)  
+6. **Tag and Release (post-CI)**
+   - The [Tag and Release workflow](../.github/workflows/tag-and-release.yml) runs automatically after a **successful push-based CI run**, tagging the commit with `v<MAJOR>.<MINOR>.<PATCH>.<BUILD>` from the computed version outputs.
+   - Downloads the `.vip` and `release_notes_*.md` artifacts from the upstream CI run, validates that they match the expected version, and attaches them to a draft GitHub release before publishing it.
+   - Because it is triggered by the completed CI run, no extra manual steps are required once CI passes on a push.
+
+7. **Disable Dev Mode** (optional)
    Reverts your environment to normal LabVIEW settings, removing local overrides.
 
 > [!NOTE]
@@ -92,7 +97,7 @@ Automating your Icon Editor builds and tests:
 Below are the **key GitHub Actions** provided in this repository:
 
 1. **[Development Mode Toggle](ci/actions/development-mode-toggle.md)**
-   - Invokes `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.  
+   - Invokes `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.
    - Usually triggered via `workflow_dispatch` for manual toggling.
 
 2. **[Build VI Package](ci/actions/build-vi-package.md)**
@@ -103,6 +108,11 @@ Below are the **key GitHub Actions** provided in this repository:
    - Produces the `.vip` file via a PowerShell script (e.g., `Build.ps1`).
    - By default, “Company Name” and “Author Name” in the generated `.vip` come from `github.repository_owner` and `github.event.repository.name`. Update the “Generate display information JSON” step in [`ci-composite.yml`](../.github/workflows/ci-composite.yml) if you need custom values.
    - Uploads the `.vip` artifact to GitHub’s build artifacts.
+
+3. **[Tag and Release](../.github/workflows/tag-and-release.yml)**
+   - Triggered by the completion of the composite CI workflow for push events; exits early for pull requests or failing runs.
+   - Recomputes the tag (`v<MAJOR>.<MINOR>.<PATCH>.<BUILD>`) from the same version outputs as CI, creates the tag if needed, and fails fast if the tag already exists on a different commit.
+   - Downloads artifacts from the upstream CI run (the `.vip` and `release_notes_*.md`), confirms they match the expected version, attaches them to a draft GitHub release, and then publishes it.
 
 #### Jobs in CI workflow
 
