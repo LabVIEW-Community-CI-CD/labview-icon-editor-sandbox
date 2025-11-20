@@ -360,6 +360,10 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $provided = if (-not [string]::IsNullOrWhiteSpace($Env:INPUT_TAG)) { $Env:INPUT_TAG } else { $Env:REF_TAG }
+          if ([string]::IsNullOrWhiteSpace($provided)) {
+            Write-Host 'No tag provided; skipping validation.'
+            exit 0
+          }
           if ($provided -ne $Env:EXPECTED_TAG) {
             Write-Error ("Provided tag '{0}' does not match computed tag '{1}'." -f $provided, $Env:EXPECTED_TAG)
           } else {
