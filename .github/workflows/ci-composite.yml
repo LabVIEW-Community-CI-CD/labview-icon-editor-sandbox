@@ -32,8 +32,65 @@ on:
         type: string
 
 jobs:
+  verify-checklist-sync:
+    name: Verify TRW checklist XLSX is synced with CSV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Regenerate checklist XLSX from CSV
+        run: python3 docs/requirements/sync_trw_csv_to_xlsx.py
+      - name: Fail if regeneration changes the workbook
+        run: |
+          if ! git diff --quiet -- docs/requirements/TRW_Verification_Checklist.xlsx; then
+            echo "The XLSX generated from CSV differs from the checked-in version." >&2
+            echo "Run docs/requirements/sync_trw_csv_to_xlsx.py and commit the updated XLSX." >&2
+            git diff -- docs/requirements/TRW_Verification_Checklist.xlsx
+            exit 1
+          fi
+
+  enforce-verify-checklist-needs:
+    name: Enforce jobs depend on verify-checklist-sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check job dependencies include verify-checklist-sync
+        run: |
+          python3 - <<'PY'
+          import sys
+          try:
+            import yaml  # type: ignore
+          except ImportError:
+            import subprocess
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pyyaml"])
+            import yaml  # type: ignore
+          from pathlib import Path
+
+          data = yaml.safe_load(Path(".github/workflows/ci-composite.yml").read_text())
+          jobs = data.get("jobs", {})
+          exempt = {"verify-checklist-sync", "enforce-verify-checklist-needs"}
+          missing = []
+          for name, job in jobs.items():
+            if name in exempt:
+              continue
+            needs = job.get("needs")
+            if needs is None:
+              missing.append(name)
+              continue
+            needs_list = [needs] if isinstance(needs, str) else list(needs)
+            if "verify-checklist-sync" not in needs_list:
+              missing.append(name)
+          if missing:
+            print("These jobs must declare needs: verify-checklist-sync ->", ", ".join(sorted(missing)), file=sys.stderr)
+            sys.exit(1)
+          PY
+
   changes:
     name: Detect VIPC changes
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
     runs-on: ubuntu-latest
     outputs:
       vipc: ${{ steps.filter.outputs.vipc }}
@@ -50,7 +107,7 @@ jobs:
 
   apply-deps-2021-x64:
     name: Apply VIPC (2021 x64)
-    needs: changes
+    needs: [verify-checklist-sync, changes]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
@@ -66,7 +123,7 @@ jobs:
 
   apply-deps-2021-x86:
     name: Apply VIPC (2021 x86)
-    needs: [apply-deps-2021-x64, changes]
+    needs: [verify-checklist-sync, apply-deps-2021-x64, changes]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
@@ -82,7 +139,7 @@ jobs:
 
   apply-deps-2023-x64:
     name: Apply VIPC (2023 x64)
-    needs: [close-lv-2021-before-2023, changes]
+    needs: [verify-checklist-sync, close-lv-2021-before-2023, changes]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
@@ -98,7 +155,7 @@ jobs:
 
   close-lv-2021-before-2023:
     name: Close LabVIEW 2021 before 2023 tasks
-    needs: apply-deps-2021-x86
+    needs: [verify-checklist-sync, apply-deps-2021-x86]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/close-labview
@@ -112,6 +169,7 @@ jobs:
 
   version:
     name: Compute Version
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
     runs-on: self-hosted-windows-lv
     outputs:
       VERSION:       ${{ steps.compute.outputs.VERSION }}
@@ -131,7 +189,7 @@ jobs:
 
   missing-in-project-2021-x64:
     name: Test Missing-In-Project (2021 x64)
-    needs: apply-deps-2023-x64
+    needs: [verify-checklist-sync, apply-deps-2023-x64]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/missing-in-project
@@ -142,7 +200,7 @@ jobs:
 
   missing-in-project-2021-x86:
     name: Test Missing-In-Project (2021 x86)
-    needs: missing-in-project-2021-x64
+    needs: [verify-checklist-sync, missing-in-project-2021-x64]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/missing-in-project
@@ -153,7 +211,7 @@ jobs:
 
   test-2021-x64:
     name: Run Unit Tests (2021 x64)
-    needs: missing-in-project-2021-x86
+    needs: [verify-checklist-sync, missing-in-project-2021-x86]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/run-unit-tests
@@ -169,7 +227,7 @@ jobs:
 
   test-2021-x86:
     name: Run Unit Tests (2021 x86)
-    needs: test-2021-x64
+    needs: [verify-checklist-sync, test-2021-x64]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/run-unit-tests
@@ -185,7 +243,7 @@ jobs:
 
   build-ppl-x86:
     name: Build 32-bit Packed Library
-    needs: [build-ppl-x64, version]
+    needs: [verify-checklist-sync, build-ppl-x64, version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/build-lvlibp
@@ -214,7 +272,7 @@ jobs:
 
   build-ppl-x64:
     name: Build 64-bit Packed Library
-    needs: [test-2021-x86, version]
+    needs: [verify-checklist-sync, test-2021-x86, version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/build-lvlibp
@@ -244,7 +302,7 @@ jobs:
   build-vip:
     name: Build VI Package
     # Chain after 32-bit build, which already depends on 64-bit, to enforce x64 -> x86 -> build-vip ordering
-    needs: [build-ppl-x86, version]
+    needs: [verify-checklist-sync, build-ppl-x86, version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: actions/checkout@v4
