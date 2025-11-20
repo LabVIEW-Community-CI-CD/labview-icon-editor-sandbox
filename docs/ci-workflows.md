@@ -67,9 +67,9 @@ Automating your Icon Editor builds and tests:
    - Generates `Tooling/deployment/release_notes.md` summarizing recent commits. Use this file to draft changelogs or release notes.
 
 6. **Tag and Release (post-CI)**
-   - The [Tag and Release workflow](../.github/workflows/tag-and-release.yml) runs automatically after a **successful push-based CI run**, tagging the commit with `v<MAJOR>.<MINOR>.<PATCH>.<BUILD>` from the computed version outputs.
+   - The [Tag and Release workflow](../.github/workflows/tag-and-release.yml) runs automatically after a **successful push-based CI run** on the `self-hosted-windows-lv` runner, tagging the commit with `v<MAJOR>.<MINOR>.<PATCH>.<BUILD>` from the computed version outputs. Pull request and failed runs exit early.
    - Downloads the `.vip` and `release_notes_*.md` artifacts from the upstream CI run, validates that they match the expected version, and attaches them to a draft GitHub release before publishing it.
-   - Because it is triggered by the completed CI run, no extra manual steps are required once CI passes on a push.
+   - If the tag already exists on the same commit, the workflow exits without error; if the tag points elsewhere, it fails immediately to avoid publishing the wrong commit. If artifact validation fails, re-run the upstream CI (to regenerate artifacts) before retrying Tag and Release.
 
 7. **Disable Dev Mode** (optional)
    Reverts your environment to normal LabVIEW settings, removing local overrides.
