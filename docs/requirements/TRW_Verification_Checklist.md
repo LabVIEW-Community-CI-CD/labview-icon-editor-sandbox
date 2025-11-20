@@ -560,18 +560,18 @@ _Generated: 2025-11-20_
 - Workflow downloads artifacts from upstream run.
 
 **Agent Procedure:**
-- Verify presence of artifact download step referencing the upstream `workflow_run` ID.
+- [x] Verify presence of artifact download step referencing the upstream `workflow_run` ID.
 **Evidence to Collect:** Logs of artifact download with run ID.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 142
+**Notes:** Derived from SRS line 142; Tag-and-release workflow downloads artifacts from the triggering `workflow_run` via actions/download-artifact using run-id.
 
 ---
 
