@@ -2,9 +2,9 @@
 
 _Generated: 2025-11-20_
 
-## TRW-001 — 9.1 Workflow Triggering & Scope
+## TRW-001  9.1 Workflow Triggering & Scope
 
-**Requirement:** The workflow **shall run only** in response to a `workflow_run` of the upstream workflow named **“CI Pipeline (Composite)”**.
+**Requirement:** The workflow **shall run only** in response to a `workflow_run` of the upstream workflow named **CI Pipeline (Composite)**.
 
 **Type / Priority:** Functional / High
 
@@ -33,7 +33,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-002 — 9.1 Workflow Triggering & Scope
+## TRW-002  9.1 Workflow Triggering & Scope
 
 **Requirement:** The workflow **shall proceed only** when the upstream `workflow_run.conclusion` equals `success`.
 
@@ -44,7 +44,7 @@ _Generated: 2025-11-20_
 **Primary Method (select):** Test
 
 **Acceptance Criteria:**
-- Workflow runs when `conclusion=success` and does not run (or exits early) when `conclusion≠success`.
+- Workflow runs when `conclusion=success` and does not run (or exits early) when `conclusionsuccess`.
 
 **Agent Procedure:**
 - Create a controlled upstream run with `conclusion=success` and another with `conclusion=failure` (e.g., dispatch or replay).
@@ -63,7 +63,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-003 — 9.1 Workflow Triggering & Scope
+## TRW-003  9.1 Workflow Triggering & Scope
 
 **Requirement:** The workflow **shall proceed only** when the upstream workflow was triggered by a `push` event.
 
@@ -93,9 +93,9 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-004 — 9.1 Workflow Triggering & Scope
+## TRW-004  9.1 Workflow Triggering & Scope
 
-**Requirement:** The workflow **shall evaluate the upstream `head_branch`** against a configurable allow‑list of patterns: `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*` (default), with support for extension via configuration.
+**Requirement:** The workflow **shall evaluate the upstream `head_branch`** against a configurable allowlist of patterns: `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*` (default), with support for extension via configuration.
 
 **Type / Priority:** Functional / High
 
@@ -124,9 +124,9 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-005 — 9.1 Workflow Triggering & Scope
+## TRW-005  9.1 Workflow Triggering & Scope
 
-**Requirement:** For branches outside the allow‑list, the workflow **shall terminate** with a **no‑op outcome** and perform **no tag or release operations**.
+**Requirement:** For branches outside the allowlist, the workflow **shall terminate** with a **noop outcome** and perform **no tag or release operations**.
 
 **Type / Priority:** Functional / High
 
@@ -154,7 +154,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-006 — 9.1 Workflow Triggering & Scope
+## TRW-006  9.1 Workflow Triggering & Scope
 
 **Requirement:** The workflow **shall define a concurrency group** that ensures only one run per commit SHA is active at a time; subsequent runs for the same SHA **shall cancel** or **queue** per configuration.
 
@@ -185,7 +185,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-010 — 9.2 Versioning & Bump Logic
+## TRW-010  9.2 Versioning & Bump Logic
 
 **Requirement:** The workflow **shall compute the next version** from: (a) last reachable tag; (b) parsed semantic version; and (c) commit count since that tag as **BUILD**.
 
@@ -216,7 +216,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-011 — 9.2 Versioning & Bump Logic
+## TRW-011  9.2 Versioning & Bump Logic
 
 **Requirement:** When no previous tag exists, the base version **shall default to `0.1.0`** prior to applying bump rules.
 
@@ -246,7 +246,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-012 — 9.2 Versioning & Bump Logic
+## TRW-012  9.2 Versioning & Bump Logic
 
 **Requirement:** In **PR CI context**, the bump type **shall be determined by PR labels**: `major`, `minor`, or `patch`; exactly one such label shall be present; if none, **default to `patch`**; if multiple, **fail** the computation with a clear diagnostic.
 
@@ -277,7 +277,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-013 — 9.2 Versioning & Bump Logic
+## TRW-013  9.2 Versioning & Bump Logic
 
 **Requirement:** In **push context on release branches**, the default bump type **shall be at least `patch`** unless overridden by explicit configuration.
 
@@ -292,7 +292,7 @@ _Generated: 2025-11-20_
 
 **Agent Procedure:**
 - Push commits to a release branch (e.g., `release-alpha/x`).
-- Observe default bump type selection (≥ patch) unless overridden in config.
+- Observe default bump type selection ( patch) unless overridden in config.
 **Evidence to Collect:** Logs showing selected bump type and branch context.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -307,7 +307,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-014 — 9.2 Versioning & Bump Logic
+## TRW-014  9.2 Versioning & Bump Logic
 
 **Requirement:** The workflow **shall emit outputs**: `MAJOR`, `MINOR`, `PATCH`, `BUILD_NUMBER`, `VERSION_STRING`, and `IS_PRERELEASE`.
 
@@ -336,9 +336,9 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-015 — 9.2 Versioning & Bump Logic
+## TRW-015  9.2 Versioning & Bump Logic
 
-**Requirement:** Pre‑release suffix rules **shall** be applied by branch: `release-alpha/*` → `alpha.<BUILD>`; `release-beta/*` → `beta.<BUILD>`; `release-rc/*` → `rc.<BUILD>`; other allowed stable branches → **no suffix**.
+**Requirement:** Prerelease suffix rules **shall** be applied by branch: `release-alpha/*`  `alpha.<BUILD>`; `release-beta/*`  `beta.<BUILD>`; `release-rc/*`  `rc.<BUILD>`; other allowed stable branches  **no suffix**.
 
 **Type / Priority:** Functional / High
 
@@ -366,9 +366,9 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-016 — 9.2 Versioning & Bump Logic
+## TRW-016  9.2 Versioning & Bump Logic
 
-**Requirement:** Stable branches **shall** produce versions **without** any pre‑release suffix; pre‑release branches **shall** include the configured suffix.
+**Requirement:** Stable branches **shall** produce versions **without** any prerelease suffix; prerelease branches **shall** include the configured suffix.
 
 **Type / Priority:** Functional / High
 
@@ -396,7 +396,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-020 — 9.3 Tag Naming & Uniqueness
+## TRW-020  9.3 Tag Naming & Uniqueness
 
 **Requirement:** The tag name format **shall be** `v<MAJOR>.<MINOR>.<PATCH>.<BUILD>`.
 
@@ -426,7 +426,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-021 — 9.3 Tag Naming & Uniqueness
+## TRW-021  9.3 Tag Naming & Uniqueness
 
 **Requirement:** Before creating a tag, the workflow **shall check** for an existing tag with the same name and, if present, **shall retrieve its target SHA**.
 
@@ -456,7 +456,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-022 — 9.3 Tag Naming & Uniqueness
+## TRW-022  9.3 Tag Naming & Uniqueness
 
 **Requirement:** If the tag exists and **resolves to the same commit** SHA as the current run, the workflow **shall treat the condition as success** and **shall not** create a duplicate tag; release creation may be skipped per configuration.
 
@@ -486,7 +486,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-023 — 9.3 Tag Naming & Uniqueness
+## TRW-023  9.3 Tag Naming & Uniqueness
 
 **Requirement:** If the tag exists and **resolves to a different commit**, the workflow **shall fail** with a clear conflict diagnostic and **shall not** move or overwrite the tag.
 
@@ -516,9 +516,9 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-024 — 9.3 Tag Naming & Uniqueness
+## TRW-024  9.3 Tag Naming & Uniqueness
 
-**Requirement:** The workflow **shall prevent** different branches from generating identical tags by incorporating BUILD and (where applicable) pre‑release suffix rules in §9.2.
+**Requirement:** The workflow **shall prevent** different branches from generating identical tags by incorporating BUILD and (where applicable) prerelease suffix rules in 9.2.
 
 **Type / Priority:** Quality/Design Constraint / High
 
@@ -546,7 +546,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-030 — 9.4 Artifact Requirements & Validation
+## TRW-030  9.4 Artifact Requirements & Validation
 
 **Requirement:** The workflow **shall rely on artifacts** uploaded by the upstream CI run associated with the triggering `workflow_run`.
 
@@ -575,7 +575,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-031 — 9.4 Artifact Requirements & Validation
+## TRW-031  9.4 Artifact Requirements & Validation
 
 **Requirement:** The workflow **shall download** the artifacts of the triggering `workflow_run`.
 
@@ -605,7 +605,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-032 — 9.4 Artifact Requirements & Validation
+## TRW-032  9.4 Artifact Requirements & Validation
 
 **Requirement:** The workflow **shall locate exactly one** `.vip` package and **exactly one** release notes Markdown file within the downloaded artifacts.
 
@@ -634,9 +634,9 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-033 — 9.4 Artifact Requirements & Validation
+## TRW-033  9.4 Artifact Requirements & Validation
 
-**Requirement:** The filenames of those artifacts **shall contain** the computed `VERSION_STRING` to enforce **version–artifact consistency**.
+**Requirement:** The filenames of those artifacts **shall contain** the computed `VERSION_STRING` to enforce **versionartifact consistency**.
 
 **Type / Priority:** Quality / High
 
@@ -648,22 +648,22 @@ _Generated: 2025-11-20_
 - Both filenames contain the computed version string.
 
 **Agent Procedure:**
-- Compare computed `VERSION_STRING` against artifact filenames.
+- [x] Compare computed `VERSION_STRING` against artifact filenames.
 **Evidence to Collect:** Screenshot or log of filename match check.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 145
+**Notes:** Derived from SRS line 145; Tag-and-release workflow validates both artifact filenames contain the computed version string.
 
 ---
 
-## TRW-034 — 9.4 Artifact Requirements & Validation
+## TRW-034  9.4 Artifact Requirements & Validation
 
 **Requirement:** If any required artifact is missing or pluralized, the workflow **shall fail** with an actionable diagnostic.
 
@@ -693,7 +693,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-040 — 9.5 Release Creation & Publishing
+## TRW-040  9.5 Release Creation & Publishing
 
 **Requirement:** The workflow **shall create a draft GitHub Release** and attach the `.vip` and release notes assets.
 
@@ -722,7 +722,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-041 — 9.5 Release Creation & Publishing
+## TRW-041  9.5 Release Creation & Publishing
 
 **Requirement:** The GitHub Release **shall set** the **prerelease flag** according to `IS_PRERELEASE`.
 
@@ -752,7 +752,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-042 — 9.5 Release Creation & Publishing
+## TRW-042  9.5 Release Creation & Publishing
 
 **Requirement:** When a release with the computed tag already exists, the workflow **shall update** that release record rather than create a new one.
 
@@ -781,7 +781,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-043 — 9.5 Release Creation & Publishing
+## TRW-043  9.5 Release Creation & Publishing
 
 **Requirement:** Upon successful validation, the workflow **shall publish** the release (transition from draft) and **shall mark it as latest** per repository policy.
 
@@ -810,7 +810,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-044 — 9.5 Release Creation & Publishing
+## TRW-044  9.5 Release Creation & Publishing
 
 **Requirement:** All operations **shall authenticate** using `GITHUB_TOKEN` with `contents: write`.
 
@@ -840,9 +840,9 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-050 — 9.6 Error Handling, Retries & Robustness
+## TRW-050  9.6 Error Handling, Retries & Robustness
 
-**Requirement:** Tag push operations **shall be retried** (minimum 3 attempts, ≥5s back‑off between attempts).
+**Requirement:** Tag push operations **shall be retried** (minimum 3 attempts, 5s backoff between attempts).
 
 **Type / Priority:** Quality/Reliability / Medium
 
@@ -869,9 +869,9 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-051 — 9.6 Error Handling, Retries & Robustness
+## TRW-051  9.6 Error Handling, Retries & Robustness
 
-**Requirement:** Release API operations **shall detect** a not‑found (404) response and **shall create** the release; other API errors **shall be handled gracefully** with diagnostics and non‑destructive behavior.
+**Requirement:** Release API operations **shall detect** a notfound (404) response and **shall create** the release; other API errors **shall be handled gracefully** with diagnostics and nondestructive behavior.
 
 **Type / Priority:** Quality/Reliability / High
 
@@ -898,9 +898,9 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-052 — 9.6 Error Handling, Retries & Robustness
+## TRW-052  9.6 Error Handling, Retries & Robustness
 
-**Requirement:** The workflow **shall be non‑destructive** with respect to existing tags; it **shall never move** an existing tag ref.
+**Requirement:** The workflow **shall be nondestructive** with respect to existing tags; it **shall never move** an existing tag ref.
 
 **Type / Priority:** Quality/Safety / High
 
@@ -927,9 +927,9 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-053 — 9.6 Error Handling, Retries & Robustness
+## TRW-053  9.6 Error Handling, Retries & Robustness
 
-**Requirement:** Re‑runs of the workflow for the same commit and computed version **shall be idempotent**, producing no duplicate tags or releases and no conflicting state.
+**Requirement:** Reruns of the workflow for the same commit and computed version **shall be idempotent**, producing no duplicate tags or releases and no conflicting state.
 
 **Type / Priority:** Quality / High
 
@@ -956,7 +956,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-060 — 9.7 Observability & Logging
+## TRW-060  9.7 Observability & Logging
 
 **Requirement:** The workflow **shall log** at start: commit SHA, head branch, upstream `workflow_run` ID, computed `VERSION_STRING`.
 
@@ -985,7 +985,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-061 — 9.7 Observability & Logging
+## TRW-061  9.7 Observability & Logging
 
 **Requirement:** The workflow **shall log** decision outcomes: bump type, suffix rule applied, tag existence outcome, artifact discovery results.
 
@@ -1014,7 +1014,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-062 — 9.7 Observability & Logging
+## TRW-062  9.7 Observability & Logging
 
 **Requirement:** All failure conditions **shall include** actionable diagnostics indicating detection point, probable cause, and remediation guidance.
 
@@ -1043,7 +1043,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-070 — 9.8 Efficiency & Runner Behavior
+## TRW-070  9.8 Efficiency & Runner Behavior
 
 **Requirement:** The workflow **shall perform a single repository checkout** per job.
 
@@ -1072,7 +1072,7 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-071 — 9.8 Efficiency & Runner Behavior
+## TRW-071  9.8 Efficiency & Runner Behavior
 
 **Requirement:** The workflow **shall ensure full Git history** is available for tag reachability and commit counting.
 
@@ -1101,9 +1101,9 @@ _Generated: 2025-11-20_
 
 ---
 
-## TRW-072 — 9.8 Efficiency & Runner Behavior
+## TRW-072  9.8 Efficiency & Runner Behavior
 
-**Requirement:** The workflow **shall not leave persistent configuration side effects** on self‑hosted runners (no global git config mutations beyond the job scope).
+**Requirement:** The workflow **shall not leave persistent configuration side effects** on selfhosted runners (no global git config mutations beyond the job scope).
 
 **Type / Priority:** Process/Safety / High
 
