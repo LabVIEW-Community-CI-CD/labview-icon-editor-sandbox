@@ -796,18 +796,18 @@ _Generated: 2025-11-20_
 - Release is published and marked latest (if applicable).
 
 **Agent Procedure:**
-- Transition a draft to published and set as latest per repo policy.
+- [x] Transition a draft to published and set as latest per repo policy.
 **Evidence to Collect:** Release status in UI/API.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 155
+**Notes:** Derived from SRS line 155; Publish step sets draft=false, make_latest=true, and carries prerelease flag from compute-version.
 
 ---
 
