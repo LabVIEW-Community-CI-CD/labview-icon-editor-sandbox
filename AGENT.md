@@ -291,6 +291,8 @@ agent:
 ## 14. Glossary
 - **Agent:** The automation that acts in this repo under the constraints of this spec.  
 - **Policy:** The set of rules in `./agent.yaml` controlling actions and limits.  
+
+- **CI Gate (Agent Config Check):** Changes to `./agent.yaml` or `docs/adr/ADR-*.md` shall pass the `Agent Config Check` workflow, which runs schema validation (`validate_agent_yaml.py`) and requirements-language linting to enforce ADR R-003/R-005 before merge.
 - **Dry-run:** Non-mutating simulation mode.  
 - **Managed:** Mode where the Agent may act per policy without extra approval.
 
