@@ -238,11 +238,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Close LabVIEW 2021 before 2023 packaging
+      - name: Close LabVIEW 2021 64-bit before 2023 packaging
         uses: ./.github/actions/close-labview
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: 64
+      - name: Close LabVIEW 2021 32-bit before 2023 packaging
+        uses: ./.github/actions/close-labview
+        with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 32
       - name: Generate release notes
         uses: ./.github/actions/generate-release-notes
         # output_path defaults to Tooling/deployment/release_notes.md
