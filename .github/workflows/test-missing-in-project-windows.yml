@@ -62,9 +62,10 @@ jobs:
           }
 
       # 4️⃣  Keep the binary‑generated list as a downloadable artifact
-      - name: Upload missing‑files artifact
+      - name: Upload missing-files artifact
         if: always() && steps.mip.outputs.passed != 'True'
         uses: actions/upload-artifact@v4
         with:
           name: missing-files-${{ matrix.lv-version }}-${{ matrix.bitness }}
           path: missing-files.txt
+          if-no-files-found: ignore

@@ -160,6 +160,12 @@ jobs:
         with:
           minimum_supported_lv_version: "2021"
           supported_bitness:            "64"
+      - if: always()
+        name: Close LabVIEW 2021 64-bit after unit tests
+        uses: ./.github/actions/close-labview
+        with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 64
 
   test-2021-x86:
     name: Run Unit Tests (2021 x86)
@@ -170,6 +176,12 @@ jobs:
         with:
           minimum_supported_lv_version: "2021"
           supported_bitness:            "32"
+      - if: always()
+        name: Close LabVIEW 2021 32-bit after unit tests
+        uses: ./.github/actions/close-labview
+        with:
+          minimum_supported_lv_version: 2021
+          supported_bitness: 32
 
   build-ppl-x86:
     name: Build 32-bit Packed Library
@@ -238,16 +250,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Close LabVIEW 2021 64-bit before 2023 packaging
-        uses: ./.github/actions/close-labview
-        with:
-          minimum_supported_lv_version: 2021
-          supported_bitness: 64
-      - name: Close LabVIEW 2021 32-bit before 2023 packaging
-        uses: ./.github/actions/close-labview
-        with:
-          minimum_supported_lv_version: 2021
-          supported_bitness: 32
       - name: Generate release notes
         uses: ./.github/actions/generate-release-notes
         # output_path defaults to Tooling/deployment/release_notes.md
@@ -340,11 +342,6 @@ jobs:
           commit: ${{ github.sha }}
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
-      - if: always()
-        uses: ./.github/actions/close-labview
-        with:
-          minimum_supported_lv_version: 2021
-          supported_bitness: 64
       - if: always()
         uses: ./.github/actions/close-labview
         with:
