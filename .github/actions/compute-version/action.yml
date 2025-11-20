@@ -42,11 +42,15 @@ runs:
           if (context.event_name === 'pull_request') {
             const labels = context.payload.pull_request.labels.map(l => l.name.toLowerCase());
             const found = labels.filter(l => allowed.includes(l));
+            core.info(`PR labels: ${labels.join(', ') || '(none)'}`);
             if (found.length > 1) {
-              core.setFailed(`Conflicting release labels detected: ${found.join(', ')}`);
+              core.setFailed(`Exactly one release label required (major/minor/patch); found: ${found.join(', ')}`);
               return;
             }
             bump = found[0] || 'patch';
+            core.info(`Selected bump type: ${bump}`);
+          } else {
+            core.info(`Non-PR event (${context.event_name}); bump type left as '${bump}'.`);
           }
           core.setOutput('bump_type', bump);
 
