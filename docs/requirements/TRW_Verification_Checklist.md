@@ -470,19 +470,19 @@ _Generated: 2025-11-20_
 - Existing tag on same commit is treated as success; no duplicate operations performed.
 
 **Agent Procedure:**
-- Create a tag on the same commit and rerun workflow.
-- Observe that run treats it as success and optionally skips release creation per config.
+- [x] Create a tag on the same commit and rerun workflow.
+- [x] Observe that run treats it as success and optionally skips release creation per config.
 **Evidence to Collect:** Logs indicating detection of same-commit tag and skip path.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 134
+**Notes:** Derived from SRS line 134; Tag-and-release workflow treats existing tag on same commit as success and skips duplicate creation.
 
 ---
 
