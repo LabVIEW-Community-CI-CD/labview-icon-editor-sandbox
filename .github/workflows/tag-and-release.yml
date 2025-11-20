@@ -111,15 +111,35 @@ jobs:
           "notes_path=$($notes.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
           "notes_name=$($notes.Name)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
-      - name: Create GitHub release and upload assets
+      - name: Create draft GitHub release and upload assets
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.form-tag.outputs.tag }}
           name: ${{ steps.form-tag.outputs.tag }}
-          draft: false
+          draft: true
           prerelease: false
           files: |
             ${{ steps.locate-artifacts.outputs.vip_path }}
             ${{ steps.locate-artifacts.outputs.notes_path }}
+
+      - name: Publish release after assets are attached
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = '${{ steps.form-tag.outputs.tag }}';
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag,
+            });
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+              draft: false,
+              make_latest: 'true',
+            });
