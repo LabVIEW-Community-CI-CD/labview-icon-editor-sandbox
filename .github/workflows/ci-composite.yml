@@ -64,54 +64,63 @@ jobs:
             should_fail: false
             ref: refs/heads/main
             event_name: pull_request
+            expected_is_prerelease: false
           - name: major-label
             labels: "major"
             expected: major
             should_fail: false
             ref: refs/heads/main
             event_name: pull_request
+            expected_is_prerelease: false
           - name: minor-label
             labels: "minor"
             expected: minor
             should_fail: false
             ref: refs/heads/main
             event_name: pull_request
+            expected_is_prerelease: false
           - name: patch-label
             labels: "patch"
             expected: patch
             should_fail: false
             ref: refs/heads/main
             event_name: pull_request
+            expected_is_prerelease: false
           - name: multiple-labels-fail
             labels: "major,patch"
             expected: ""
             should_fail: true
             ref: refs/heads/main
             event_name: pull_request
+            expected_is_prerelease: false
           - name: release-alpha-defaults-patch
             labels: ""
             expected: patch
             should_fail: false
             ref: refs/heads/release-alpha/1.2
             event_name: push
+            expected_is_prerelease: true
           - name: release-beta-defaults-patch
             labels: ""
             expected: patch
             should_fail: false
             ref: refs/heads/release-beta/1.2
             event_name: push
+            expected_is_prerelease: true
           - name: release-rc-defaults-patch
             labels: ""
             expected: patch
             should_fail: false
             ref: refs/heads/release-rc/1.2
             event_name: push
+            expected_is_prerelease: true
           - name: release-defaults-patch
             labels: ""
             expected: patch
             should_fail: false
             ref: refs/heads/release/1.2
             event_name: push
+            expected_is_prerelease: true
     steps:
       - uses: actions/github-script@v7
         env:
@@ -120,6 +129,7 @@ jobs:
           SHOULD_FAIL: ${{ matrix.should_fail }}
           REF: ${{ matrix.ref }}
           EVENT_NAME: ${{ matrix.event_name }}
+          EXPECTED_IS_PRERELEASE: ${{ matrix.expected_is_prerelease }}
         with:
           script: |
             const labels = (process.env.LABELS || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -127,6 +137,7 @@ jobs:
             const shouldFail = (process.env.SHOULD_FAIL || 'false').toLowerCase() === 'true';
             const ref = process.env.REF || '';
             const eventName = process.env.EVENT_NAME || 'pull_request';
+            const expectedPre = (process.env.EXPECTED_IS_PRERELEASE || 'false').toLowerCase() === 'true';
             const allowed = ['major', 'minor', 'patch'];
             const found = labels.filter(l => allowed.includes(l));
             core.info(`Labels: ${labels.join(', ') || '(none)'} | ref=${ref} | event=${eventName}`);
@@ -141,17 +152,24 @@ jobs:
             }
             const isRelease = /^refs\/heads\/release(-alpha|-beta|-rc)?\//.test(ref);
             let bump = found[0] || 'patch';
+            let isPrerelease = false;
             if (eventName !== 'pull_request' && isRelease && !found.length) {
               bump = 'patch';
               core.info('Release branch detected outside PR; bump forced to patch.');
+              isPrerelease = true;
+            } else if (eventName !== 'pull_request' && isRelease && found.length) {
+              isPrerelease = true;
             }
-            core.info(`Selected bump: ${bump}; expected: ${expected}`);
+            core.info(`Selected bump: ${bump}; expected: ${expected}; IS_PRERELEASE=${isPrerelease} (expected ${expectedPre})`);
             if (shouldFail) {
               core.setFailed(`Expected failure due to multiple labels, but only one/none were present (selected ${bump}).`);
               return;
             }
             if (bump !== expected) {
               core.setFailed(`Bump selection mismatch: expected ${expected}, got ${bump}.`);
+            }
+            if (isPrerelease !== expectedPre) {
+              core.setFailed(`IS_PRERELEASE mismatch: expected ${expectedPre}, got ${isPrerelease}.`);
             }
 
   enforce-verify-checklist-needs:
