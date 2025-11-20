@@ -7,14 +7,14 @@
 
 ## 0. Quick Start
 
-- **Configuration:** `./agent/agent.yaml` (see example below)
+- **Configuration:** `./agent.yaml` (see example below)
 - **Modes:** `dry-run` (default), `read-only`, `write-limited`, `managed`
 - **Main triggers:** PR events, Issue events, Scheduled runs, Slash commands, CI jobs
 - **Human-in-the-loop:** Any potentially destructive action **shall** be gated by an explicit approval (label, comment, or check) unless policy allows otherwise.
 - **Change control:** Proposed changes to Agent behavior **shall** follow the process in §9 (Change Management).
 
 ```yaml
-# ./agent/agent.yaml (example)
+# ./agent.yaml (example)
 agent:
   mode: dry-run                # dry-run | read-only | write-limited | managed
   allow:
@@ -128,7 +128,7 @@ agent:
 - **FR-006.** The Agent **shall** draft release notes from merged PRs, following the changelog convention.
 - **FR-007.** The Agent **shall** surface policy violations (missing license headers, secret scan hits) and block automation until resolved.
 - **FR-008.** The Agent **shall** provide a `/agent help` command listing supported actions and usage.
-- **FR-009.** The Agent **shall** persist configuration in `./agent/agent.yaml` and hot-reload on change (or at next run).
+- **FR-009.** The Agent **shall** persist configuration in `./agent.yaml` and hot-reload on change (or at next run).
 - **FR-010.** The Agent **shall** support “what changed and why” comments with references to checks, tools, and diffs.
 
 ### 4.2 Non-Functional Requirements (NFR-*)
@@ -248,7 +248,7 @@ agent:
 
 ## 9. Change Management & Baselines
 
-- **Baselines:** This file and `./agent/agent.yaml` form the **functional baseline** for the Agent.  
+- **Baselines:** This file and `./agent.yaml` form the **functional baseline** for the Agent.  
 - **Requesting change:** Open a PR with `docs:agent` label and include a Change Request (template in §15).  
 - **ADRs:** Record policy/architecture decisions in `./agent/adr/ADR-YYYYMMDD-*.md`.  
 - **Versioning:** Tag Agent versions with repo releases; include diff of requirements/behavior.  
@@ -290,7 +290,7 @@ agent:
 
 ## 14. Glossary
 - **Agent:** The automation that acts in this repo under the constraints of this spec.  
-- **Policy:** The set of rules in `./agent/agent.yaml` controlling actions and limits.  
+- **Policy:** The set of rules in `./agent.yaml` controlling actions and limits.  
 - **Dry-run:** Non-mutating simulation mode.  
 - **Managed:** Mode where the Agent may act per policy without extra approval.
 
@@ -317,7 +317,7 @@ How will we test and measure success? (link tests, dry-runs, dashboards)
 
 ## Updates
 - [ ] Update AGENT.md (this file)
-- [ ] Update ./agent/agent.yaml
+- [ ] Update ./agent.yaml
 - [ ] Add/Update tests
 - [ ] Update ADR if architectural
 ```
