@@ -766,18 +766,19 @@ _Generated: 2025-11-20_
 - Existing release is updated in place; no duplicate release is created.
 
 **Agent Procedure:**
-- If a release with the computed tag exists, update it rather than creating a new one.
+- [x] If a release with the computed tag exists, update it rather than creating a new one.
+**Evidence to Collect:** Release history showing updates, not new creation.
 **Evidence to Collect:** Release history showing updates, not new creation.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 154
+**Notes:** Derived from SRS line 154; Publish step reuses existing release if present, otherwise creates then updates the same record (no duplicates).
 
 ---
 
