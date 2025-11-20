@@ -138,19 +138,19 @@ _Generated: 2025-11-20_
 - No tags or releases created; logs indicate no-op by branch policy.
 
 **Agent Procedure:**
-- [ ] Execute a run from a branch not in the allow-list.
-- [ ] Confirm the workflow exits with a no-op and performs no tag or release operations.
+- [x] Execute a run from a branch not in the allow-list.
+- [x] Confirm the workflow exits with a no-op and performs no tag or release operations.
 **Evidence to Collect:** Run log capturing no-op decision.; Release/tags UI showing no changes.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 113
+**Notes:** Derived from SRS line 113; Branch allow-list gate in `.github/workflows/tag-and-release.yml` exits before tag/release steps for disallowed branches.
 
 ---
 
