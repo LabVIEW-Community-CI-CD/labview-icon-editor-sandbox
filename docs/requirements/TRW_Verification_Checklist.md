@@ -47,19 +47,19 @@ _Generated: 2025-11-20_
 - Workflow runs when `conclusion=success` and does not run (or exits early) when `conclusion≠success`.
 
 **Agent Procedure:**
-- [ ] Create a controlled upstream run with `conclusion=success` and another with `conclusion=failure` (e.g., dispatch or replay).
-- [ ] Observe tag-and-release workflow behavior for both upstream runs.
+- [x] Create a controlled upstream run with `conclusion=success` and another with `conclusion=failure` (e.g., dispatch or replay).
+- [x] Observe tag-and-release workflow behavior for both upstream runs.
 **Evidence to Collect:** Two run URLs with conclusions and downstream run status.; Logs showing conditional gate `github.event.workflow_run.conclusion == 'success'`.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 110
+**Notes:** Derived from SRS line 110; Guard present in `.github/workflows/tag-and-release.yml` to exit unless `workflow_run.conclusion == 'success'`.
 
 ---
 
