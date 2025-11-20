@@ -16,7 +16,7 @@ jobs:
   tag-and-release:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
+      cancel-in-progress: false
     permissions:
       contents: write
       actions: write
@@ -74,7 +74,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $tag = "${{ steps.form-tag.outputs.tag }}"
-          $latest = git describe --tags --abbrev=0 2>$null
+          $latest = git describe --tags --abbrev=0 --first-parent --match 'v*' 2>$null
           if ($latest -and $latest -eq $tag) {
             Write-Error ("Computed tag {0} matches latest existing tag. Aborting duplicate tagging." -f $tag)
           } else {
@@ -91,7 +91,7 @@ jobs:
           git tag $tag
           git push origin $tag
 
-      - name: Download artifacts from successful run
+      - name: Download all artifacts from successful run
         uses: actions/download-artifact@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
