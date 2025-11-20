@@ -677,19 +677,19 @@ _Generated: 2025-11-20_
 - Workflow fails when artifacts are missing/duplicated, with specific error code/message.
 
 **Agent Procedure:**
-- Simulate missing or pluralized artifacts by removing or duplicating files.
-- Run the workflow to observe failure with actionable diagnostics.
+- [x] Simulate missing or pluralized artifacts by removing or duplicating files.
+- [x] Run the workflow to observe failure with actionable diagnostics.
 **Evidence to Collect:** Failure logs including diagnostic details.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 146
+**Notes:** Derived from SRS line 146; Locate-artifacts step fails with detailed counts and file list when required artifacts are missing or duplicated.
 
 ---
 
