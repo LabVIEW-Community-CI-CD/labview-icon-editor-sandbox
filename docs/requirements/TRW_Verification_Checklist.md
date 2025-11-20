@@ -410,19 +410,19 @@ _Generated: 2025-11-20_
 - Tag string matches exact pattern `vX.Y.Z.N`.
 
 **Agent Procedure:**
-- Confirm tag format logic produces `v<MAJOR>.<MINOR>.<PATCH>.<BUILD>` (with optional suffix in version, not in tag).
-- Generate example tags from computed version.
+- [x] Confirm tag format logic produces `v<MAJOR>.<MINOR>.<PATCH>.<BUILD>` (with optional suffix in version, not in tag).
+- [x] Generate example tags from computed version.
 **Evidence to Collect:** Printed tag value; regex check result.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 132
+**Notes:** Derived from SRS line 132; Tag-and-release job forms tags as `v<MAJOR>.<MINOR>.<PATCH>.<BUILD>` without prerelease suffix.
 
 ---
 
