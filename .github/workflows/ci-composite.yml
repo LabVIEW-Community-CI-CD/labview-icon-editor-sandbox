@@ -355,9 +355,6 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $provided = if (-not [string]::IsNullOrWhiteSpace($Env:INPUT_TAG)) { $Env:INPUT_TAG } else { $Env:REF_TAG }
-          if ([string]::IsNullOrWhiteSpace($provided)) {
-            Write-Error "No provided tag (ref/input) to validate against computed tag $Env:EXPECTED_TAG."
-          }
           if ($provided -ne $Env:EXPECTED_TAG) {
             Write-Error ("Provided tag '{0}' does not match computed tag '{1}'." -f $provided, $Env:EXPECTED_TAG)
           } else {
