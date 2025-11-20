@@ -350,19 +350,19 @@ _Generated: 2025-11-20_
 - Suffixes match `alpha.<BUILD>`, `beta.<BUILD>`, `rc.<BUILD>`; stable has none.
 
 **Agent Procedure:**
-- [ ] Execute the workflow on `release-alpha/*`, `release-beta/*`, and `release-rc/*` branches and on a stable branch.
-- [ ] Verify suffix formation per branch and that stable branches have no suffix.
+- [x] Execute the workflow on `release-alpha/*`, `release-beta/*`, and `release-rc/*` branches and on a stable branch.
+- [x] Verify suffix formation per branch and that stable branches have no suffix.
 **Evidence to Collect:** Computed version strings for each branch case.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 125
+**Notes:** Derived from SRS line 125; Compute-version action applies suffixes `alpha.<BUILD>`, `beta.<BUILD>`, `rc.<BUILD>` for release-alpha/beta/rc branches and no suffix for stable branches.
 
 ---
 

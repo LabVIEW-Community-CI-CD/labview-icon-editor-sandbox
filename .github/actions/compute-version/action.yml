@@ -110,6 +110,7 @@ runs:
         BUMP_TYPE:    ${{ steps.bump_type.outputs.bump_type }}
         BUILD_NUMBER: ${{ steps.inc_build.outputs.new_build_number }}
         LAST_TAG:     ${{ steps.last_tag.outputs.last_tag }}
+        HEAD_BRANCH:  ${{ github.event.workflow_run.head_branch || github.ref_name }}
       run: |
         $latestRaw = git describe --tags --abbrev=0 2>$null
         if ($LASTEXITCODE -ne 0) {
@@ -133,7 +134,12 @@ runs:
           'minor' { $min++; $pat=0 }
           'patch' { $pat++ }
         }
-        $branch = $Env:GITHUB_REF -replace '^refs/heads/',''
+        $branch = if (-not [string]::IsNullOrWhiteSpace($Env:HEAD_BRANCH)) {
+          $Env:HEAD_BRANCH
+        } else {
+          $Env:GITHUB_REF -replace '^refs/heads/',''
+        }
+        Write-Host "Using branch for suffix rules: $branch"
         $suffix = ''
         if ($branch -like 'release-alpha/*') { $suffix = "alpha.$($Env:BUILD_NUMBER)" }
         elseif ($branch -like 'release-beta/*')  { $suffix = "beta.$($Env:BUILD_NUMBER)" }
