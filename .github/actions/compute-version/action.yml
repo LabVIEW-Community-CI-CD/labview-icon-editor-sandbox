@@ -8,6 +8,9 @@ outputs:
   VERSION:
     description: "Full version string"
     value: ${{ steps.next_version.outputs.VERSION }}
+  VERSION_STRING:
+    description: "Full version string (alias)"
+    value: ${{ steps.next_version.outputs.VERSION }}
   MAJOR:
     description: "Major version"
     value: ${{ steps.next_version.outputs.MAJOR }}
@@ -19,6 +22,9 @@ outputs:
     value: ${{ steps.next_version.outputs.PATCH }}
   BUILD:
     description: "Commit-based build number"
+    value: ${{ steps.inc_build.outputs.new_build_number }}
+  BUILD_NUMBER:
+    description: "Commit-based build number (alias)"
     value: ${{ steps.inc_build.outputs.new_build_number }}
   IS_PRERELEASE:
     description: "Whether the version is a prerelease"
