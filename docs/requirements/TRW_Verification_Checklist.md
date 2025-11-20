@@ -168,20 +168,20 @@ _Generated: 2025-11-20_
 - At most one active run per commit; either queued or cancelled per configuration.
 
 **Agent Procedure:**
-- [ ] Open workflow YAML and locate `concurrency:`.
-- [ ] Verify `group` includes the commit SHA (e.g., `${{ github.sha }}`) and `cancel-in-progress: true` (or per policy).
-- [ ] Trigger two runs for the same commit and observe deduping/queuing.
+- [x] Open workflow YAML and locate `concurrency:`.
+- [x] Verify `group` includes the commit SHA (e.g., `${{ github.sha }}`) and `cancel-in-progress: true` (or per policy).
+- [x] Trigger two runs for the same commit and observe deduping/queuing.
 **Evidence to Collect:** YAML snippet of `concurrency` block.; Run timeline screenshots showing queuing/cancellation.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 114
+**Notes:** Derived from SRS line 114; Concurrency configured in `.github/workflows/tag-and-release.yml` with `group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha }}` and `cancel-in-progress: true` to ensure one run per commit.
 
 ---
 
@@ -199,20 +199,20 @@ _Generated: 2025-11-20_
 - Version is computed from last tag, parsed semver, and commit count as build number.
 
 **Agent Procedure:**
-- [ ] Fetch full git history (`fetch-depth: 0`).
-- [ ] Resolve last reachable tag and parse semantic version; determine commit count since tag.
-- [ ] Compute next version candidate.
+- [x] Fetch full git history (`fetch-depth: 0`).
+- [x] Resolve last reachable tag and parse semantic version; determine commit count since tag.
+- [x] Compute next version candidate.
 **Evidence to Collect:** Logs with last tag, parsed parts, and commit count.; Printed `VERSION_STRING`.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 120
+**Notes:** Derived from SRS line 120; Compute-version action derives MAJOR/MINOR/PATCH from last reachable tag, defaults to 0.1.0 if none, and sets BUILD to commit count since that tag.
 
 ---
 

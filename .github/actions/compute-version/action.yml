@@ -50,12 +50,34 @@ runs:
           }
           core.setOutput('bump_type', bump);
 
+    - name: Find last reachable tag
+      id: last_tag
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $tag = git describe --tags --abbrev=0 2>$null
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tag)) {
+          Write-Host "No reachable tag found."
+          $tag = ''
+        } else {
+          Write-Host "Last reachable tag: $tag"
+        }
+        "last_tag=$tag" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+
     - name: Determine build number
       id: inc_build
       shell: pwsh
       run: |
+        $ErrorActionPreference = 'Stop'
         git fetch --unshallow 2>$null || Write-Host "Already a full clone."
-        $count = git rev-list --count HEAD
+        $lastTag = "${{ steps.last_tag.outputs.last_tag }}"
+        if ([string]::IsNullOrWhiteSpace($lastTag)) {
+          $count = git rev-list --count HEAD
+          Write-Host "No tag found; build number = commits from root => $count"
+        } else {
+          $count = git rev-list --count "$lastTag..HEAD"
+          Write-Host "Build number = commits since tag $lastTag => $count"
+        }
         Write-Host "Commit-based build number => $count"
         "new_build_number=$count" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
@@ -65,6 +87,7 @@ runs:
       env:
         BUMP_TYPE:    ${{ steps.bump_type.outputs.bump_type }}
         BUILD_NUMBER: ${{ steps.inc_build.outputs.new_build_number }}
+        LAST_TAG:     ${{ steps.last_tag.outputs.last_tag }}
       run: |
         $latestRaw = git describe --tags --abbrev=0 2>$null
         if ($LASTEXITCODE -ne 0) {
@@ -76,11 +99,12 @@ runs:
           $maj=0; $min=1; $pat=0
         }
         else {
-          $latest = $latestRaw.Trim().TrimStart('v') -replace '-build.*'
+          $latest = $env:LAST_TAG
+          $latest = $latest.Trim().TrimStart('v') -replace '-build.*'
           $parts = $latest.Split('.')
-          $maj = [int]$parts[0]
-          $min = if ($parts.Length -gt 1) { [int]$parts[1] } else { 0 }
-          $pat = if ($parts.Length -gt 2) { [int]$parts[2] } else { 0 }
+          $maj = if ($parts.Length -gt 0 -and $parts[0]) { [int]$parts[0] } else { 0 }
+          $min = if ($parts.Length -gt 1 -and $parts[1]) { [int]$parts[1] } else { 0 }
+          $pat = if ($parts.Length -gt 2 -and $parts[2]) { [int]$parts[2] } else { 0 }
         }
         switch ($env:BUMP_TYPE) {
           'major' { $maj++; $min=0; $pat=0 }
