@@ -133,13 +133,13 @@ jobs:
               const tag = '${{ steps.form-tag.outputs.tag }}';
               const release = await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
-                repo: context.repo.repo,
+                repo: context.repo.name,
                 tag: tag,
               });
 
               await github.rest.repos.updateRelease({
                 owner: context.repo.owner,
-                repo: context.repo.repo,
+                repo: context.repo.name,
                 release_id: release.data.id,
                 draft: false,
                 make_latest: true,
