@@ -64,7 +64,7 @@ For additional details and troubleshooting tips, see [INSTALL.md](INSTALL.md).
 3. **CI/CD Workflows** – GitHub Actions workflows are provided for common tasks:
    - **Build VI Package** – Compiles the source and produces a `.vip` artifact (VI Package).
    - **Development Mode Toggle** – Enables or disables a mode where LabVIEW loads the Icon Editor from source (for debugging vs. using the installed package).
-   - **Tag and Release** – After the CI pipeline succeeds on a push, tags the commit with the computed version and publishes a GitHub release that attaches the built `.vip` and generated release notes.
+   - **Tag and Release** – After the CI pipeline succeeds on a push, tags the commit with the computed version, validates the downloaded artifacts against that version, and publishes a GitHub release with the built `.vip` and generated release notes. Re-running the workflow on the same commit is idempotent; it fails fast if a tag already exists on a different commit.
    - **Run Unit Tests** (now part of the main CI pipeline) – Executes automated tests to verify the Icon Editor’s behavior in a clean LabVIEW environment.
    Additional details on these pipelines are in [CI Workflows](docs/ci-workflows.md) and the [CI Workflow (Multi-Channel Release Support)](docs/powershell-cli-github-action-instructions.md).
 
