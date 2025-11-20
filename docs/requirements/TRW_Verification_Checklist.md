@@ -500,19 +500,19 @@ _Generated: 2025-11-20_
 - Workflow fails with explicit diagnostic; tag is not moved or overwritten.
 
 **Agent Procedure:**
-- Create a tag with the same name but pointing to a different commit.
-- Run the workflow and observe failure and no overwrite.
+- [x] Create a tag with the same name but pointing to a different commit.
+- [x] Run the workflow and observe failure and no overwrite.
 **Evidence to Collect:** Logs with the two SHAs and failure status.; Tag ref still points to original commit.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 135
+**Notes:** Derived from SRS line 135; Tag-and-release workflow fails if existing tag points to a different commit and does not overwrite it.
 
 ---
 
