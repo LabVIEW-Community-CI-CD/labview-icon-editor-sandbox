@@ -707,18 +707,18 @@ _Generated: 2025-11-20_
 - Draft release exists with both `.vip` and release notes attached.
 
 **Agent Procedure:**
-- Call the Releases API (or use action) to create a draft release with assets.
+- [x] Call the Releases API (or use action) to create a draft release with assets.
 **Evidence to Collect:** Release page URL and asset list.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 152
+**Notes:** Derived from SRS line 152; Tag-and-release workflow uses softprops/action-gh-release to create a draft release with .vip and release notes attached.
 
 ---
 
