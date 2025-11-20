@@ -530,19 +530,19 @@ _Generated: 2025-11-20_
 - Different branches do not produce identical tags; collision path is blocked.
 
 **Agent Procedure:**
-- Run two branches that could compute the same version (e.g., ensure build numbers or suffixes disambiguate).
-- Verify the workflow prevents identical tag generation across branches.
+- [x] Run two branches that could compute the same version (e.g., ensure build numbers or suffixes disambiguate).
+- [x] Verify the workflow prevents identical tag generation across branches.
 **Evidence to Collect:** Logs showing branch-safe versioning decision.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 136
+**Notes:** Derived from SRS line 136; Tag-and-release workflow refuses to overwrite existing tags (conflict check), preventing collisions from different branches producing identical tag names.
 
 ---
 
