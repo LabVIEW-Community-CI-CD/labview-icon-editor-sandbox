@@ -260,20 +260,20 @@ _Generated: 2025-11-20_
 - Bump type follows labels; multiple label case fails; none defaults to `patch`.
 
 **Agent Procedure:**
-- [ ] Create a PR with label `major`, then with `minor`, then with `patch`.
-- [ ] Create a PR with multiple bump labels to observe failure.
-- [ ] Create a PR with no bump labels to observe default.
+- [x] Create a PR with label `major`, then with `minor`, then with `patch`.
+- [x] Create a PR with multiple bump labels to observe failure.
+- [x] Create a PR with no bump labels to observe default.
 **Evidence to Collect:** CI logs mapping label to bump type.; Failure log for multiple labels.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 122
+**Notes:** Derived from SRS line 122; Compute-version action selects bump from PR labels (major/minor/patch), defaults to patch when none, and fails with a clear diagnostic if multiple labels are present.
 
 ---
 
