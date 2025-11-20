@@ -43,6 +43,13 @@ try {
         exit 1
     }
     Write-Verbose "The .vipc file was found successfully."
+
+    # Ensure parent directory exists (idempotent if already present)
+    $vipcDir = Split-Path -Parent $ResolvedVIPCPath
+    if (-not (Test-Path $vipcDir)) {
+        Write-Verbose "Creating VIPC parent directory: $vipcDir"
+        New-Item -ItemType Directory -Path $vipcDir -Force | Out-Null
+    }
 }
 catch {
     Write-Error "Error resolving paths. Ensure RelativePath and VIPCPath are valid. Details: $($_.Exception.Message)"

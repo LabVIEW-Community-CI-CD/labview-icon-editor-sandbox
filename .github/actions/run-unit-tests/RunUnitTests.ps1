@@ -91,6 +91,16 @@ $ReportPath = Join-Path -Path $PSScriptRoot -ChildPath "UnitTestReport.xml"
 # --------------------------  SETUP  --------------------------
 function Setup {
     Write-Host "=== Setup ==="
+    $reportDir = Split-Path -Parent $ReportPath
+    if (-not (Test-Path $reportDir)) {
+        try {
+            New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
+            Write-Host "Created report directory: $reportDir"
+        }
+        catch {
+            Write-Warning "Could not create report directory $reportDir: $($_.Exception.Message)"
+        }
+    }
     if (Test-Path $ReportPath) {
         try {
             Remove-Item $ReportPath -Force -ErrorAction Stop
@@ -239,9 +249,25 @@ function Cleanup {
 }
 
 # -------------------  EXECUTION FLOW  -------------------
-Setup
-MainSequence
-#Cleanup
+try {
+    Setup
+    MainSequence
+}
+catch {
+    if ($Script:OriginalExitCode -eq 0) {
+        $Script:OriginalExitCode = 1
+    }
+    $Script:TestsHadFailures = $true
+    Write-Warning ("Unhandled exception during test run: {0}" -f $_.Exception.Message)
+}
+finally {
+    try {
+        Cleanup
+    }
+    catch {
+        Write-Warning ("Cleanup failed: {0}" -f $_.Exception.Message)
+    }
+}
 
 # -------------------  FINAL EXIT CODE  ------------------
 if ($Script:OriginalExitCode -ne 0) {

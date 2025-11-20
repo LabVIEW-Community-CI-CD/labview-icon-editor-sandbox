@@ -56,7 +56,10 @@ function Execute-Script {
 try {
     # Validate required paths
     Assert-PathExists $RelativePath "RelativePath"
-    Assert-PathExists "$RelativePath\resource\plugins" "Plugins folder"
+    if (-not (Test-Path "$RelativePath\resource\plugins")) {
+        Write-Host "Plugins folder missing; creating $RelativePath\resource\plugins" -ForegroundColor Yellow
+        New-Item -ItemType Directory -Path "$RelativePath\resource\plugins" -Force | Out-Null
+    }
 
     $ActionsPath = Split-Path -Parent $PSScriptRoot
     Assert-PathExists $ActionsPath "Actions folder"
@@ -65,7 +68,14 @@ try {
     Write-Host "Cleaning up old .lvlibp files in plugins folder..." -ForegroundColor Yellow
     $PluginFiles = Get-ChildItem -Path "$RelativePath\resource\plugins" -Filter '*.lvlibp' -ErrorAction SilentlyContinue
     if ($PluginFiles) {
-        $PluginFiles | Remove-Item -Force
+        foreach ($file in $PluginFiles) {
+            try {
+                Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
+            }
+            catch {
+                Write-Warning ("Failed to delete {0}: {1}" -f $file.FullName, $_.Exception.Message)
+            }
+        }
         Write-Host "Deleted .lvlibp files from plugins folder." -ForegroundColor Green
     } else {
         Write-Host "No .lvlibp files found to delete." -ForegroundColor Cyan
