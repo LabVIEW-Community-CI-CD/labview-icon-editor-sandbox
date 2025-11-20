@@ -70,6 +70,10 @@ Automating your Icon Editor builds and tests:
    - The [Tag and Release workflow](../.github/workflows/tag-and-release.yml) runs automatically after a **successful push-based CI run** on the `self-hosted-windows-lv` runner, tagging the commit with `v<MAJOR>.<MINOR>.<PATCH>.<BUILD>` from the computed version outputs. Pull request and failed runs exit early.
    - Downloads the `.vip` and `release_notes_*.md` artifacts from the upstream CI run, validates that they match the expected version, and attaches them to a draft GitHub release before publishing it.
    - If the tag already exists on the same commit, the workflow exits without error; if the tag points elsewhere, it fails immediately to avoid publishing the wrong commit. If artifact validation fails, re-run the upstream CI (to regenerate artifacts) before retrying Tag and Release.
+   - **Troubleshooting reruns:**
+     - Trigger Tag and Release only after a green push run on the same commit; otherwise artifacts will be missing or version mismatches will cause validation to fail.
+     - If GitHub already has the tag on a different commit, delete or retarget that tag (and remove any draft release created from it) before rerunning. The workflow fails fast to prevent releasing the wrong commit.
+     - When artifacts appear stale (mismatched version, incomplete uploads), rerun the upstream CI to republish artifacts for the same commit, then rerun Tag and Release.
 
 7. **Disable Dev Mode** (optional)
    Reverts your environment to normal LabVIEW settings, removing local overrides.
@@ -112,7 +116,7 @@ Below are the **key GitHub Actions** provided in this repository:
 3. **[Tag and Release](../.github/workflows/tag-and-release.yml)**
    - Triggered by the completion of the composite CI workflow for push events; exits early for pull requests or failing runs.
    - Recomputes the tag (`v<MAJOR>.<MINOR>.<PATCH>.<BUILD>`) from the same version outputs as CI, creates the tag if needed, and fails fast if the tag already exists on a different commit.
-   - Downloads artifacts from the upstream CI run (the `.vip` and `release_notes_*.md`), confirms they match the expected version, attaches them to a draft GitHub release, and then publishes it.
+   - Downloads artifacts from the upstream CI run (the `.vip` and `release_notes_*.md`), confirms they match the expected version, attaches them to a draft GitHub release, and then publishes it. When rerunning the workflow, ensure the upstream CI artifacts come from the same commit; otherwise validation fails. Clear or retarget any conflicting tag before rerunning if GitHub already has the version tag on another commit.
 
 #### Jobs in CI workflow
 
