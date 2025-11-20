@@ -45,11 +45,8 @@ function MainSequence {
     & $HelperPath -LVVersion $LVVersion -Arch $Arch -ProjectFile $ProjectFile
     $Script:HelperExitCode = $LASTEXITCODE
 
-    # Ensure LabVIEW is closed (redundant if helper did it)
-    & g-cli --lv-ver $LVVersion --arch $Arch QuitLabVIEW | Out-Null
-
     if ($Script:HelperExitCode -ne 0) {
-        Write-Error "Helper returned non‑zero exit code: $Script:HelperExitCode"
+        Write-Error "Helper returned non-zero exit code: $Script:HelperExitCode"
     }
 
     # -------- read missing_files.txt --------
@@ -100,12 +97,36 @@ function Cleanup {
     }
 }
 
-# ====================  EXECUTION FLOW  =====================
-Setup
-MainSequence
-Cleanup
+# Close LabVIEW but do not fail the job if it is already closed/missing
+function SafeQuitLabVIEW {
+    try {
+        & g-cli --lv-ver $LVVersion --arch $Arch QuitLabVIEW | Out-Null
+    }
+    catch {
+        Write-Warning ("Failed to close LabVIEW: {0}" -f $_.Exception.Message)
+    }
+}
 
-# ====================  GH‑ACTION OUTPUTS ===================
+# ====================  EXECUTION FLOW  =====================
+try {
+    Setup
+    MainSequence
+}
+catch {
+    $Script:ParsingFailed = $true
+    Write-Warning ("Execution failed before cleanup: {0}" -f $_.Exception.Message)
+}
+finally {
+    SafeQuitLabVIEW
+    try {
+        Cleanup
+    }
+    catch {
+        Write-Warning ("Cleanup failed: {0}" -f $_.Exception.Message)
+    }
+}
+
+# ====================  GH-ACTION OUTPUTS ===================
 $passed = ($Script:HelperExitCode -eq 0) -and ($Script:MissingFileLines.Count -eq 0) -and (-not $Script:ParsingFailed)
 $passedStr   = $passed.ToString().ToLower()
 $missingCsv  = ($Script:MissingFileLines -join ',')

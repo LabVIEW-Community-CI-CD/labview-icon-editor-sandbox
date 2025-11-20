@@ -20,27 +20,47 @@ param(
     [string]$SupportedBitness
 )
 
-# Construct the command
-$script = @"
-g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness QuitLabVIEW
-"@
+$ErrorActionPreference = 'Stop'
 
-Write-Output "Executing the following command:"
-Write-Output $script
+function Invoke-SafeQuitLabVIEW {
+    param(
+        [string]$Version,
+        [string]$Bitness
+    )
 
-# Execute the command and check for errors
-try {
-    Invoke-Expression $script
-
-    # Check the exit code of the executed command
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to close LabVIEW with exit code $LASTEXITCODE."
-        exit $LASTEXITCODE
+    if (-not (Get-Command g-cli -ErrorAction SilentlyContinue)) {
+        throw "g-cli.exe not found in PATH."
     }
-} catch {
-    Write-Error "An error occurred while trying to close LabVIEW."
-    exit 1
+
+    $args = @(
+        "--lv-ver", $Version,
+        "--arch",   $Bitness,
+        "QuitLabVIEW"
+    )
+
+    Write-Host ("Executing: g-cli {0}" -f ($args -join ' '))
+    $output   = & g-cli @args 2>&1
+    $exitCode = $LASTEXITCODE
+
+    # echo all output for log visibility
+    $output | ForEach-Object { Write-Host $_ }
+
+    if ($exitCode -eq 0) { return }
+
+    $joined = ($output -join ' ')
+    if ($joined -match 'not (currently )?running' -or $joined -match 'does not appear to be running') {
+        Write-Host "LabVIEW $Version ($Bitness-bit) was not running; nothing to close."
+        return
+    }
+
+    throw "g-cli QuitLabVIEW failed with exit code $exitCode."
 }
 
-Write-Host "Close LabVIEW $MinimumSupportedLVVersion ($SupportedBitness-bit)"
-
+try {
+    Invoke-SafeQuitLabVIEW -Version $MinimumSupportedLVVersion -Bitness $SupportedBitness
+    Write-Host "LabVIEW $MinimumSupportedLVVersion ($SupportedBitness-bit) closed or not running."
+}
+catch {
+    Write-Error $_.Exception.Message
+    exit 1
+}

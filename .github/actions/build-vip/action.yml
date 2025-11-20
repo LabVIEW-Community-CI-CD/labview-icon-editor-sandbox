@@ -9,35 +9,6 @@ runs:
         fetch-depth: 0
         clean: false
 
-    # NOTE: This step uses an inline PowerShell script instead of the standard close-labview action
-    # because it requires additional parameters (--connect-timeout, --kill, --kill-timeout, --verbose)
-    # and file logging for this critical step before 2023 packaging. The extra robustness ensures
-    # LabVIEW 2021 is fully closed before LabVIEW 2023 operations begin.
-    - name: Close LabVIEW 2021 before 2023 preflight
-      shell: pwsh
-      run: |
-        $ErrorActionPreference = 'Stop'
-        $logDir = Join-Path -Path "${{ inputs.relative_path }}" -ChildPath "builds/logs"
-        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-        $logFile = Join-Path -Path $logDir -ChildPath "gcli-close-2021.log"
-
-        $gcliArgs = @(
-          "--lv-ver", "2021",
-          "--arch", "64",
-          "--connect-timeout", "30000",
-          "--kill",
-          "--kill-timeout", "5000",
-          "--verbose",
-          "QuitLabVIEW"
-        )
-
-        Write-Host "Pre-step: ensure LabVIEW 2021 closed: g-cli $($gcliArgs -join ' ')"
-        & g-cli @gcliArgs 2>&1 | Tee-Object -FilePath $logFile | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-          Write-Error "Failed to close LabVIEW 2021. Inspect $logFile for details."
-          exit $LASTEXITCODE
-        }
-
     - name: Pre-flight LabVIEW availability check
       shell: pwsh
       run: |
@@ -76,38 +47,46 @@ runs:
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
-        $vipDir = Join-Path -Path "${{ inputs.relative_path }}" -ChildPath "builds/VI Package"
-        if (-not (Test-Path $vipDir)) {
-          Write-Host "No existing VI Package directory at '$vipDir'. Creating it..."
-          New-Item -ItemType Directory -Path $vipDir -Force | Out-Null
-        }
+        function Remove-ExistingVip {
+          param([string]$Dir)
 
-        $existingVip = Get-ChildItem -Path $vipDir -Filter *.vip -File -Recurse
-        if ($existingVip) {
+          if (-not (Test-Path $Dir)) {
+            Write-Host "No existing VI Package directory at '$Dir'. Creating it..."
+            New-Item -ItemType Directory -Path $Dir -Force | Out-Null
+            return $Dir
+          }
+
+          $existingVip = Get-ChildItem -Path $Dir -Filter *.vip -File -Recurse
+          if (-not $existingVip) {
+            Write-Host "No preexisting .vip files found at '$Dir'."
+            return $Dir
+          }
+
           Write-Host "Found existing .vip files before build:"
           $existingVip | ForEach-Object { Write-Host " - $($_.FullName)" }
           Write-Host "Deleting existing .vip files prior to build..."
-          $removed = 0
+
           $failed = $false
           foreach ($file in $existingVip) {
             try {
-              Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Continue
-              $removed++
+              Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
             }
             catch {
               $failed = $true
               Write-Warning ("Failed to delete {0}: {1}" -f $file.FullName, $_.Exception.Message)
             }
           }
-          Write-Host ("Deleted {0} .vip file(s) prior to build." -f $removed)
+
           if ($failed) {
-            Write-Error "One or more old .vip files could not be removed; aborting before build."
-            exit 1
+            throw "One or more old .vip files could not be removed; aborting before build."
           }
+
+          Write-Host ("Deleted {0} .vip file(s) prior to build." -f $existingVip.Count)
+          return $Dir
         }
-        else {
-          Write-Host "No preexisting .vip files found at '$vipDir'."
-        }
+
+        $vipDir = Join-Path -Path "${{ inputs.relative_path }}" -ChildPath "builds/VI Package"
+        $vipDir = Remove-ExistingVip -Dir $vipDir
 
         "vip_dir=$vipDir" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
@@ -214,13 +193,15 @@ runs:
         name: ${{ steps.release-notes.outputs.artifact_name }}
         path: ${{ steps.release-notes.outputs.artifact_path }}
         compression-level: 0
+        if-no-files-found: ignore
 
     - name: Upload VI Package
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: ${{ steps.locate-vip.outputs.vip_artifact }}
         path: ${{ steps.locate-vip.outputs.vip_path }}
-        if-no-files-found: error
+        if-no-files-found: ignore
 
     - name: Upload g-cli logs (if present)
       if: always()

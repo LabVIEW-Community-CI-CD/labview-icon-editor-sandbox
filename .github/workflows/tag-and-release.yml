@@ -46,19 +46,23 @@ jobs:
           Write-Host "Tag: $tag"
           "tag=$tag" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
-      - name: Fail if latest tag matches computed tag
+      - name: Fail if tag belongs to a different commit
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $tag = "${{ steps.form-tag.outputs.tag }}"
-          $latest = git describe --tags --abbrev=0 2>$null
-          if ($latest -and $latest -eq $tag) {
-            Write-Error ("Computed tag {0} matches latest existing tag. Aborting duplicate tagging." -f $tag)
-          } else {
-            Write-Host ("Computed tag {0} does not match latest tag {1}. Proceeding." -f $tag, ($latest ?? "<none>"))
+          $headSha = git rev-parse HEAD
+          $existingSha = git rev-list -n 1 $tag 2>$null
+          if ($existingSha) {
+            if ($existingSha -ne $headSha) {
+              Write-Error ("Tag {0} already exists and points to {1}, not {2}. Aborting." -f $tag, $existingSha, $headSha)
+            } else {
+              Write-Host ("Tag {0} already exists on this commit ({1}); skipping creation." -f $tag, $existingSha)
+              exit 0
+            }
           }
 
-      - name: Create tag (with retry)
+      - name: Create tag (with retry, idempotent)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -70,13 +74,21 @@ jobs:
             exit 0
           }
           git tag $tag
+          $pushed = $false
           for ($i=0; $i -lt 3; $i++) {
-            git push origin $tag && break
-            Start-Sleep -Seconds 5
-            if ($i -eq 2) {
-              Write-Error "Failed to push tag $tag after multiple attempts."
-              exit 1
+            git push origin $tag
+            if ($LASTEXITCODE -eq 0) {
+              $pushed = $true
+              break
             }
+            if ($i -lt 2) {
+              Write-Host "Push failed, retrying in 5 seconds... (attempt $($i + 1) of 3)"
+              Start-Sleep -Seconds 5
+            }
+          }
+          if (-not $pushed) {
+            Write-Error "Failed to push tag $tag after 3 attempts."
+            exit 1
           }
 
       - name: Download artifacts from successful run
@@ -111,15 +123,59 @@ jobs:
           "notes_path=$($notes.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
           "notes_name=$($notes.Name)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
-      - name: Create GitHub release and upload assets
+      - name: Create draft GitHub release and upload assets
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.form-tag.outputs.tag }}
           name: ${{ steps.form-tag.outputs.tag }}
-          draft: false
+          draft: true
           prerelease: false
           files: |
             ${{ steps.locate-artifacts.outputs.vip_path }}
             ${{ steps.locate-artifacts.outputs.notes_path }}
+
+      - name: Publish release after assets are attached
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = '${{ steps.form-tag.outputs.tag }}';
+            try {
+              // If release exists, update; otherwise create then update
+              let release;
+              try {
+                release = await github.rest.repos.getReleaseByTag({
+                  owner: context.repo.owner,
+                  repo: context.repo.name,
+                  tag: tag,
+                });
+              } catch (err) {
+                if (err.status === 404) {
+                  release = await github.rest.repos.createRelease({
+                    owner: context.repo.owner,
+                    repo: context.repo.name,
+                    tag_name: tag,
+                    name: tag,
+                    draft: true,
+                    prerelease: false,
+                  });
+                } else {
+                  throw err;
+                }
+              }
+
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.name,
+                release_id: release.data.id,
+                draft: false,
+                make_latest: true,
+              });
+              console.log(`Release for tag ${tag} published successfully.`);
+            } catch (error) {
+              console.error(`Failed to publish release for tag: ${tag}`);
+              console.error(error);
+              throw error;
+            }
