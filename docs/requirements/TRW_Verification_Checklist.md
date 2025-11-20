@@ -16,20 +16,20 @@ _Generated: 2025-11-20_
 - Only `workflow_run` is declared with `workflows: [CI Pipeline (Composite)]` and `types: [completed]`.
 
 **Agent Procedure:**
-- [ ] Open `.github/workflows/tag-and-release.yml`.
-- [ ] Verify `on.workflow_run.workflows` includes `CI Pipeline (Composite)` and `on.workflow_run.types` includes `completed`.
-- [ ] Confirm no other event triggers (`push`, `pull_request`, schedule) are defined for this workflow.
+- [x] Open `.github/workflows/tag-and-release.yml`.
+- [x] Verify `on.workflow_run.workflows` includes `CI Pipeline (Composite)` and `on.workflow_run.types` includes `completed`.
+- [x] Confirm no other event triggers (`push`, `pull_request`, schedule) are defined for this workflow.
 **Evidence to Collect:** Workflow YAML snippet showing the `on: workflow_run` section.; Screenshot or log of event payload proving trigger source.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 109
+**Notes:** Derived from SRS line 109; Verified `.github/workflows/tag-and-release.yml` allows only workflow_run from CI Pipeline (Composite) with type completed; no other triggers.
 
 ---
 
