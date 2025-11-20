@@ -71,7 +71,8 @@ jobs:
           }
           git tag $tag
           for ($i=0; $i -lt 3; $i++) {
-            git push origin $tag && break
+            git push origin $tag
+            if ($LASTEXITCODE -eq 0) { break }
             Start-Sleep -Seconds 5
             if ($i -eq 2) {
               Write-Error "Failed to push tag $tag after multiple attempts."
