@@ -589,18 +589,19 @@ _Generated: 2025-11-20_
 - Artifacts are retrieved to the runner workspace.
 
 **Agent Procedure:**
-- Enumerate artifacts available from `workflow_run` and download them.
+- [x] Enumerate artifacts available from `workflow_run` and download them.
+- [x] Verify downloaded artifact contents on runner.
 **Evidence to Collect:** Artifact list and local file tree snapshot.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 143
+**Notes:** Derived from SRS line 143; Tag-and-release workflow downloads artifacts from triggering `workflow_run` and lists contents under `artifacts/`.
 
 ---
 

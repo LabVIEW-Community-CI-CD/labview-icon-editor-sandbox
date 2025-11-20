@@ -137,6 +137,12 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           path: artifacts
 
+      - name: List downloaded artifacts
+        shell: pwsh
+        run: |
+          Write-Host "Artifacts downloaded to $(Join-Path $PWD 'artifacts'):"
+          Get-ChildItem -Path artifacts -Recurse | Select-Object FullName
+
       - name: Locate release assets from artifacts
         id: locate-artifacts
         shell: pwsh
