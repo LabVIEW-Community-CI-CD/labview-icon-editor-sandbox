@@ -70,14 +70,21 @@ jobs:
             exit 0
           }
           git tag $tag
+          $pushed = $false
           for ($i=0; $i -lt 3; $i++) {
             git push origin $tag
-            if ($LASTEXITCODE -eq 0) { break }
-            Start-Sleep -Seconds 5
-            if ($i -eq 2) {
-              Write-Error "Failed to push tag $tag after multiple attempts."
-              exit 1
+            if ($LASTEXITCODE -eq 0) {
+              $pushed = $true
+              break
             }
+            if ($i -lt 2) {
+              Write-Host "Push failed, retrying in 5 seconds... (attempt $($i + 1) of 3)"
+              Start-Sleep -Seconds 5
+            }
+          }
+          if (-not $pushed) {
+            Write-Error "Failed to push tag $tag after 3 attempts."
+            exit 1
           }
 
       - name: Download artifacts from successful run
