@@ -26,6 +26,28 @@ jobs:
           echo "Upstream CI run conclusion=${{ github.event.workflow_run.conclusion }}, event=${{ github.event.workflow_run.event }}. Skipping tag."
           exit 0
 
+      - name: Enforce allowed branches
+        shell: pwsh
+        env:
+          EXTRA_PATTERNS: ${{ env.ALLOWED_BRANCH_PATTERNS }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $branch = '${{ github.event.workflow_run.head_branch }}'
+          $patterns = @('main', 'develop', 'release-alpha/*', 'release-beta/*', 'release-rc/*')
+          if ($Env:EXTRA_PATTERNS) {
+            $patterns += $Env:EXTRA_PATTERNS.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+          }
+          $isAllowed = $false
+          foreach ($pat in $patterns) {
+            if ($branch -like $pat) { $isAllowed = $true; break }
+          }
+          if (-not $isAllowed) {
+            Write-Host ("Branch '{0}' not in allow-list patterns: {1}. Skipping tag-and-release." -f $branch, ($patterns -join ', '))
+            exit 0
+          } else {
+            Write-Host ("Branch '{0}' allowed by patterns: {1}." -f $branch, ($patterns -join ', '))
+          }
+
       - name: Checkout full history
         uses: actions/checkout@v4
         with:
