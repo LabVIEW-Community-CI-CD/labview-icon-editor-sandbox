@@ -107,20 +107,20 @@ _Generated: 2025-11-20_
 - Branches in allow-list proceed; others are blocked with a clear diagnostic.
 
 **Agent Procedure:**
-- [ ] Identify the allow-list patterns (e.g., `main`, `develop`, `release-*`).
-- [ ] Verify gate logic evaluates `github.event.workflow_run.head_branch` against the list.
-- [ ] Test with branches matching and not matching the list.
+- [x] Identify the allow-list patterns (e.g., `main`, `develop`, `release-*`).
+- [x] Verify gate logic evaluates `github.event.workflow_run.head_branch` against the list.
+- [x] Test with branches matching and not matching the list.
 **Evidence to Collect:** Config file or YAML `if` expression showing pattern check.; Run logs from both allowed and disallowed branches.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 112
+**Notes:** Derived from SRS line 112; Allow-list enforced in `.github/workflows/tag-and-release.yml` with defaults (main, develop, release-alpha/*, release-beta/*, release-rc/*) and optional extensions via `ALLOWED_BRANCH_PATTERNS`.
 
 ---
 
