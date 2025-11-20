@@ -42,7 +42,7 @@ jobs:
             if ($branch -like $pat) { $isAllowed = $true; break }
           }
           if (-not $isAllowed) {
-            Write-Host ("Branch '{0}' not in allow-list patterns: {1}. Skipping tag-and-release." -f $branch, ($patterns -join ', '))
+            Write-Host ("Branch '{0}' not in allow-list patterns: {1}. Skipping tag-and-release (no tag/release operations executed)." -f $branch, ($patterns -join ', '))
             exit 0
           } else {
             Write-Host ("Branch '{0}' allowed by patterns: {1}." -f $branch, ($patterns -join ', '))
