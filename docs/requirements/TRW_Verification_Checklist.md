@@ -291,19 +291,19 @@ _Generated: 2025-11-20_
 - Push on release branches yields at least a `patch` bump by default.
 
 **Agent Procedure:**
-- [ ] Push commits to a release branch (e.g., `release-alpha/x`).
-- [ ] Observe default bump type selection (≥ patch) unless overridden in config.
+- [x] Push commits to a release branch (e.g., `release-alpha/x`).
+- [x] Observe default bump type selection (≥ patch) unless overridden in config.
 **Evidence to Collect:** Logs showing selected bump type and branch context.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 123
+**Notes:** Derived from SRS line 123; Compute-version action defaults bump to patch on release branches (`release-alpha/*`, `release-beta/*`, `release-rc/*`, `release/*`) in non-PR contexts.
 
 ---
 

@@ -39,6 +39,11 @@ runs:
         script: |
           const allowed = ['major', 'minor', 'patch'];
           let bump = 'none';
+          const releasePatterns = [/^release-alpha\//, /^release-beta\//, /^release-rc\//, /^release\//];
+          const branchFromRef = (ref) => (ref || '').replace(/^refs\/heads\//, '');
+          const branch = branchFromRef(context.ref) ||
+                         (context.payload.workflow_run && context.payload.workflow_run.head_branch) ||
+                         branchFromRef(context.payload.ref);
           if (context.event_name === 'pull_request') {
             const labels = context.payload.pull_request.labels.map(l => l.name.toLowerCase());
             const found = labels.filter(l => allowed.includes(l));
@@ -50,7 +55,14 @@ runs:
             bump = found[0] || 'patch';
             core.info(`Selected bump type: ${bump}`);
           } else {
-            core.info(`Non-PR event (${context.event_name}); bump type left as '${bump}'.`);
+            core.info(`Non-PR event (${context.event_name}); branch=${branch || '(unknown)'}`);
+            const isRelease = branch && releasePatterns.some((re) => re.test(branch));
+            if (isRelease) {
+              bump = 'patch';
+              core.info('Release branch detected; defaulting bump type to patch.');
+            } else {
+              core.info(`Bump type left as '${bump}'.`);
+            }
           }
           core.setOutput('bump_type', bump);
 
