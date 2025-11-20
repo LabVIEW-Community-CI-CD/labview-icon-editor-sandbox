@@ -7,8 +7,8 @@ on:
       - completed
 
 permissions:
-  contents: read
-  actions: read
+  contents: write
+  actions: write
 
 jobs:
   tag-and-release:
