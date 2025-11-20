@@ -188,7 +188,7 @@ jobs:
           tag_name: ${{ steps.form-tag.outputs.tag }}
           name: ${{ steps.form-tag.outputs.tag }}
           draft: true
-          prerelease: false
+          prerelease: ${{ steps.version.outputs.IS_PRERELEASE }}
           files: |
             ${{ steps.locate-artifacts.outputs.vip_path }}
             ${{ steps.locate-artifacts.outputs.notes_path }}
@@ -199,6 +199,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const tag = '${{ steps.form-tag.outputs.tag }}';
+            const prerelease = '${{ steps.version.outputs.IS_PRERELEASE }}' === 'true';
             try {
               // If release exists, update; otherwise create then update
               let release;
@@ -216,7 +217,7 @@ jobs:
                     tag_name: tag,
                     name: tag,
                     draft: true,
-                    prerelease: false,
+                    prerelease,
                   });
                 } else {
                   throw err;
@@ -228,9 +229,10 @@ jobs:
                 repo: context.repo.name,
                 release_id: release.data.id,
                 draft: false,
+                prerelease,
                 make_latest: true,
               });
-              console.log(`Release for tag ${tag} published successfully.`);
+              console.log(`Release for tag ${tag} published successfully. Prerelease=${prerelease}`);
             } catch (error) {
               console.error(`Failed to publish release for tag: ${tag}`);
               console.error(error);

@@ -736,19 +736,19 @@ _Generated: 2025-11-20_
 - Release `prerelease` flag matches computed `IS_PRERELEASE`.
 
 **Agent Procedure:**
-- Ensure `prerelease` flag in release object follows `IS_PRERELEASE`.
-- Verify both true and false cases.
+- [x] Ensure `prerelease` flag in release object follows `IS_PRERELEASE`.
+- [x] Verify both true and false cases.
 **Evidence to Collect:** API response or UI screenshot for both cases.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 153
+**Notes:** Derived from SRS line 153; Releases are created/updated with `prerelease` set from compute-version output `IS_PRERELEASE`.
 
 ---
 
