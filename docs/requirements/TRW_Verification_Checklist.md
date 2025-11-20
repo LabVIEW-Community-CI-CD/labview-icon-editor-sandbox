@@ -230,19 +230,19 @@ _Generated: 2025-11-20_
 - When no prior tag exists, version defaults to configured base (e.g., `0.1.0`).
 
 **Agent Procedure:**
-- [ ] Delete tags locally/in test repo to simulate no previous tag.
-- [ ] Run version computation routine.
+- [x] Delete tags locally/in test repo to simulate no previous tag.
+- [x] Run version computation routine.
 **Evidence to Collect:** Log excerpt showing base version fallback path.; `VERSION_STRING` value in output.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 121
+**Notes:** Derived from SRS line 121; Compute-version action falls back to base version 0.1.0 when no prior tag exists before applying bump rules.
 
 ---
 

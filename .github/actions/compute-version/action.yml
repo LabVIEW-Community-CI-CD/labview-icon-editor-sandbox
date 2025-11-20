@@ -91,7 +91,7 @@ runs:
       run: |
         $latestRaw = git describe --tags --abbrev=0 2>$null
         if ($LASTEXITCODE -ne 0) {
-          Write-Host "No existing tags were found; defaulting to 0.0.0."
+          Write-Host "No existing tags were found; defaulting to base 0.1.0."
           $latestRaw = ''
           $global:LASTEXITCODE = 0
         }
