@@ -16,9 +16,9 @@ _Generated: 2025-11-20_
 - Only `workflow_run` is declared with `workflows: [CI Pipeline (Composite)]` and `types: [completed]`.
 
 **Agent Procedure:**
-- [x] Open `.github/workflows/tag-and-release.yml`.
-- [x] Verify `on.workflow_run.workflows` includes `CI Pipeline (Composite)` and `on.workflow_run.types` includes `completed`.
-- [x] Confirm no other event triggers (`push`, `pull_request`, schedule) are defined for this workflow.
+- Open `.github/workflows/tag-and-release.yml`.
+- Verify `on.workflow_run.workflows` includes `CI Pipeline (Composite)` and `on.workflow_run.types` includes `completed`.
+- Confirm no other event triggers (`push`, `pull_request`, schedule) are defined for this workflow.
 **Evidence to Collect:** Workflow YAML snippet showing the `on: workflow_run` section.; Screenshot or log of event payload proving trigger source.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -29,7 +29,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 109; Verified `.github/workflows/tag-and-release.yml` allows only workflow_run from CI Pipeline (Composite) with type completed; no other triggers.
+**Notes:** Derived from SRS line 109; Verified .github/workflows/tag-and-release.yml allows only workflow_run from CI Pipeline (Composite) with type completed; no other triggers.
 
 ---
 
@@ -47,8 +47,8 @@ _Generated: 2025-11-20_
 - Workflow runs when `conclusion=success` and does not run (or exits early) when `conclusion≠success`.
 
 **Agent Procedure:**
-- [x] Create a controlled upstream run with `conclusion=success` and another with `conclusion=failure` (e.g., dispatch or replay).
-- [x] Observe tag-and-release workflow behavior for both upstream runs.
+- Create a controlled upstream run with `conclusion=success` and another with `conclusion=failure` (e.g., dispatch or replay).
+- Observe tag-and-release workflow behavior for both upstream runs.
 **Evidence to Collect:** Two run URLs with conclusions and downstream run status.; Logs showing conditional gate `github.event.workflow_run.conclusion == 'success'`.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -59,7 +59,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 110; Guard present in `.github/workflows/tag-and-release.yml` to exit unless `workflow_run.conclusion == 'success'`.
+**Notes:** Derived from SRS line 110; Guard present in .github/workflows/tag-and-release.yml to exit unless workflow_run.conclusion == success.
 
 ---
 
@@ -77,8 +77,8 @@ _Generated: 2025-11-20_
 - Downstream workflow proceeds only when upstream `event` is `push`; other events are skipped.
 
 **Agent Procedure:**
-- [x] Ensure the job has an early `if:` guard: `github.event.workflow_run.event == 'push'`.
-- [x] Trigger an upstream run caused by `push` and one by `pull_request`; observe behavior.
+- Ensure the job has an early `if:` guard: `github.event.workflow_run.event == 'push'`.
+- Trigger an upstream run caused by `push` and one by `pull_request`; observe behavior.
 **Evidence to Collect:** YAML snippet with `if: ${{ github.event.workflow_run.event == 'push' }}`.; Run logs/screens showing skip on non-push events.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -89,7 +89,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 111; Guard present in `.github/workflows/tag-and-release.yml` to exit unless `workflow_run.event == 'push'`.
+**Notes:** Derived from SRS line 111; Guard present in .github/workflows/tag-and-release.yml to exit unless workflow_run.event == push.
 
 ---
 
@@ -107,9 +107,9 @@ _Generated: 2025-11-20_
 - Branches in allow-list proceed; others are blocked with a clear diagnostic.
 
 **Agent Procedure:**
-- [x] Identify the allow-list patterns (e.g., `main`, `develop`, `release-*`).
-- [x] Verify gate logic evaluates `github.event.workflow_run.head_branch` against the list.
-- [x] Test with branches matching and not matching the list.
+- Identify the allow-list patterns (e.g., `main`, `develop`, `release-*`).
+- Verify gate logic evaluates `github.event.workflow_run.head_branch` against the list.
+- Test with branches matching and not matching the list.
 **Evidence to Collect:** Config file or YAML `if` expression showing pattern check.; Run logs from both allowed and disallowed branches.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -120,7 +120,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 112; Allow-list enforced in `.github/workflows/tag-and-release.yml` with defaults (main, develop, release-alpha/*, release-beta/*, release-rc/*) and optional extensions via `ALLOWED_BRANCH_PATTERNS`.
+**Notes:** Derived from SRS line 112; Allow-list enforced in .github/workflows/tag-and-release.yml with defaults (main, develop, release-alpha/*, release-beta/*, release-rc/*) and optional extensions via ALLOWED_BRANCH_PATTERNS.
 
 ---
 
@@ -138,8 +138,8 @@ _Generated: 2025-11-20_
 - No tags or releases created; logs indicate no-op by branch policy.
 
 **Agent Procedure:**
-- [x] Execute a run from a branch not in the allow-list.
-- [x] Confirm the workflow exits with a no-op and performs no tag or release operations.
+- Execute a run from a branch not in the allow-list.
+- Confirm the workflow exits with a no-op and performs no tag or release operations.
 **Evidence to Collect:** Run log capturing no-op decision.; Release/tags UI showing no changes.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -150,7 +150,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 113; Branch allow-list gate in `.github/workflows/tag-and-release.yml` exits before tag/release steps for disallowed branches.
+**Notes:** Derived from SRS line 113; Branch allow-list gate in .github/workflows/tag-and-release.yml exits before tag/release steps for disallowed branches.
 
 ---
 
@@ -168,9 +168,9 @@ _Generated: 2025-11-20_
 - At most one active run per commit; either queued or cancelled per configuration.
 
 **Agent Procedure:**
-- [x] Open workflow YAML and locate `concurrency:`.
-- [x] Verify `group` includes the commit SHA (e.g., `${{ github.sha }}`) and `cancel-in-progress: true` (or per policy).
-- [x] Trigger two runs for the same commit and observe deduping/queuing.
+- Open workflow YAML and locate `concurrency:`.
+- Verify `group` includes the commit SHA (e.g., `${{ github.sha }}`) and `cancel-in-progress: true` (or per policy).
+- Trigger two runs for the same commit and observe deduping/queuing.
 **Evidence to Collect:** YAML snippet of `concurrency` block.; Run timeline screenshots showing queuing/cancellation.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -181,7 +181,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 114; Concurrency configured in `.github/workflows/tag-and-release.yml` with `group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha }}` and `cancel-in-progress: true` to ensure one run per commit.
+**Notes:** Derived from SRS line 114; Concurrency configured in .github/workflows/tag-and-release.yml with group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha }} and cancel-in-progress: true to ensure one run per commit.
 
 ---
 
@@ -199,9 +199,9 @@ _Generated: 2025-11-20_
 - Version is computed from last tag, parsed semver, and commit count as build number.
 
 **Agent Procedure:**
-- [x] Fetch full git history (`fetch-depth: 0`).
-- [x] Resolve last reachable tag and parse semantic version; determine commit count since tag.
-- [x] Compute next version candidate.
+- Fetch full git history (`fetch-depth: 0`).
+- Resolve last reachable tag and parse semantic version; determine commit count since tag.
+- Compute next version candidate.
 **Evidence to Collect:** Logs with last tag, parsed parts, and commit count.; Printed `VERSION_STRING`.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -230,8 +230,8 @@ _Generated: 2025-11-20_
 - When no prior tag exists, version defaults to configured base (e.g., `0.1.0`).
 
 **Agent Procedure:**
-- [x] Delete tags locally/in test repo to simulate no previous tag.
-- [x] Run version computation routine.
+- Delete tags locally/in test repo to simulate no previous tag.
+- Run version computation routine.
 **Evidence to Collect:** Log excerpt showing base version fallback path.; `VERSION_STRING` value in output.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -260,9 +260,9 @@ _Generated: 2025-11-20_
 - Bump type follows labels; multiple label case fails; none defaults to `patch`.
 
 **Agent Procedure:**
-- [x] Create a PR with label `major`, then with `minor`, then with `patch`.
-- [x] Create a PR with multiple bump labels to observe failure.
-- [x] Create a PR with no bump labels to observe default.
+- Create a PR with label `major`, then with `minor`, then with `patch`.
+- Create a PR with multiple bump labels to observe failure.
+- Create a PR with no bump labels to observe default.
 **Evidence to Collect:** CI logs mapping label to bump type.; Failure log for multiple labels.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -291,8 +291,8 @@ _Generated: 2025-11-20_
 - Push on release branches yields at least a `patch` bump by default.
 
 **Agent Procedure:**
-- [x] Push commits to a release branch (e.g., `release-alpha/x`).
-- [x] Observe default bump type selection (≥ patch) unless overridden in config.
+- Push commits to a release branch (e.g., `release-alpha/x`).
+- Observe default bump type selection (≥ patch) unless overridden in config.
 **Evidence to Collect:** Logs showing selected bump type and branch context.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -303,7 +303,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 123; Compute-version action defaults bump to patch on release branches (`release-alpha/*`, `release-beta/*`, `release-rc/*`, `release/*`) in non-PR contexts.
+**Notes:** Derived from SRS line 123; Compute-version action defaults bump to patch on release branches (release-alpha/*, release-beta/*, release-rc/*, release/*) in non-PR contexts.
 
 ---
 
@@ -321,7 +321,7 @@ _Generated: 2025-11-20_
 - `MAJOR`, `MINOR`, `PATCH`, `BUILD_NUMBER`, `VERSION_STRING`, and `IS_PRERELEASE` are exported and visible to subsequent steps.
 
 **Agent Procedure:**
-- [x] Run the version step and capture exported outputs.
+- Run the version step and capture exported outputs.
 **Evidence to Collect:** Job output or `GITHUB_OUTPUT` file contents.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -350,8 +350,8 @@ _Generated: 2025-11-20_
 - Suffixes match `alpha.<BUILD>`, `beta.<BUILD>`, `rc.<BUILD>`; stable has none.
 
 **Agent Procedure:**
-- [x] Execute the workflow on `release-alpha/*`, `release-beta/*`, and `release-rc/*` branches and on a stable branch.
-- [x] Verify suffix formation per branch and that stable branches have no suffix.
+- Execute the workflow on `release-alpha/*`, `release-beta/*`, and `release-rc/*` branches and on a stable branch.
+- Verify suffix formation per branch and that stable branches have no suffix.
 **Evidence to Collect:** Computed version strings for each branch case.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -362,7 +362,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 125; Compute-version action applies suffixes `alpha.<BUILD>`, `beta.<BUILD>`, `rc.<BUILD>` for release-alpha/beta/rc branches and no suffix for stable branches.
+**Notes:** Derived from SRS line 125; Compute-version action applies suffixes alpha.<BUILD>, beta.<BUILD>, rc.<BUILD> for release-alpha/beta/rc branches and no suffix for stable branches.
 
 ---
 
@@ -380,19 +380,19 @@ _Generated: 2025-11-20_
 - Stable branches produce suffix-free versions; prerelease branches include suffix.
 
 **Agent Procedure:**
-- [ ] Trigger runs on stable vs prerelease branches.
-- [ ] Confirm that only prerelease branches append a suffix.
+- Trigger runs on stable vs prerelease branches.
+- Confirm that only prerelease branches append a suffix.
 **Evidence to Collect:** Logs showing `IS_PRERELEASE` and final version strings.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 126
+**Notes:** Derived from SRS line 126; Compute-version action marks prerelease branches with suffix and sets IS_PRERELEASE=true; stable branches emit no suffix and IS_PRERELEASE=false.
 
 ---
 
@@ -410,8 +410,8 @@ _Generated: 2025-11-20_
 - Tag string matches exact pattern `vX.Y.Z.N`.
 
 **Agent Procedure:**
-- [ ] Confirm tag format logic produces `v<MAJOR>.<MINOR>.<PATCH>.<BUILD>` (with optional suffix in version, not in tag).
-- [ ] Generate example tags from computed version.
+- Confirm tag format logic produces `v<MAJOR>.<MINOR>.<PATCH>.<BUILD>` (with optional suffix in version, not in tag).
+- Generate example tags from computed version.
 **Evidence to Collect:** Printed tag value; regex check result.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -440,8 +440,8 @@ _Generated: 2025-11-20_
 - If tag exists, corresponding object SHA is retrieved.
 
 **Agent Procedure:**
-- [ ] Query repository for tag existence (via `git ls-remote --tags` or API).
-- [ ] Capture SHA if present.
+- Query repository for tag existence (via `git ls-remote --tags` or API).
+- Capture SHA if present.
 **Evidence to Collect:** Command output or API response showing tag and SHA.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -470,8 +470,8 @@ _Generated: 2025-11-20_
 - Existing tag on same commit is treated as success; no duplicate operations performed.
 
 **Agent Procedure:**
-- [ ] Create a tag on the same commit and rerun workflow.
-- [ ] Observe that run treats it as success and optionally skips release creation per config.
+- Create a tag on the same commit and rerun workflow.
+- Observe that run treats it as success and optionally skips release creation per config.
 **Evidence to Collect:** Logs indicating detection of same-commit tag and skip path.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -500,8 +500,8 @@ _Generated: 2025-11-20_
 - Workflow fails with explicit diagnostic; tag is not moved or overwritten.
 
 **Agent Procedure:**
-- [ ] Create a tag with the same name but pointing to a different commit.
-- [ ] Run the workflow and observe failure and no overwrite.
+- Create a tag with the same name but pointing to a different commit.
+- Run the workflow and observe failure and no overwrite.
 **Evidence to Collect:** Logs with the two SHAs and failure status.; Tag ref still points to original commit.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -530,8 +530,8 @@ _Generated: 2025-11-20_
 - Different branches do not produce identical tags; collision path is blocked.
 
 **Agent Procedure:**
-- [ ] Run two branches that could compute the same version (e.g., ensure build numbers or suffixes disambiguate).
-- [ ] Verify the workflow prevents identical tag generation across branches.
+- Run two branches that could compute the same version (e.g., ensure build numbers or suffixes disambiguate).
+- Verify the workflow prevents identical tag generation across branches.
 **Evidence to Collect:** Logs showing branch-safe versioning decision.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -560,7 +560,7 @@ _Generated: 2025-11-20_
 - Workflow downloads artifacts from upstream run.
 
 **Agent Procedure:**
-- [ ] Verify presence of artifact download step referencing the upstream `workflow_run` ID.
+- Verify presence of artifact download step referencing the upstream `workflow_run` ID.
 **Evidence to Collect:** Logs of artifact download with run ID.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -589,7 +589,7 @@ _Generated: 2025-11-20_
 - Artifacts are retrieved to the runner workspace.
 
 **Agent Procedure:**
-- [ ] Enumerate artifacts available from `workflow_run` and download them.
+- Enumerate artifacts available from `workflow_run` and download them.
 **Evidence to Collect:** Artifact list and local file tree snapshot.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -618,7 +618,7 @@ _Generated: 2025-11-20_
 - Exactly one of each required artifact is located.
 
 **Agent Procedure:**
-- [ ] Search the artifacts for exactly one `.vip` package and exactly one release-notes markdown file.
+- Search the artifacts for exactly one `.vip` package and exactly one release-notes markdown file.
 **Evidence to Collect:** File list with counts; names of selected files.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -647,7 +647,7 @@ _Generated: 2025-11-20_
 - Both filenames contain the computed version string.
 
 **Agent Procedure:**
-- [ ] Compare computed `VERSION_STRING` against artifact filenames.
+- Compare computed `VERSION_STRING` against artifact filenames.
 **Evidence to Collect:** Screenshot or log of filename match check.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -676,8 +676,8 @@ _Generated: 2025-11-20_
 - Workflow fails when artifacts are missing/duplicated, with specific error code/message.
 
 **Agent Procedure:**
-- [ ] Simulate missing or pluralized artifacts by removing or duplicating files.
-- [ ] Run the workflow to observe failure with actionable diagnostics.
+- Simulate missing or pluralized artifacts by removing or duplicating files.
+- Run the workflow to observe failure with actionable diagnostics.
 **Evidence to Collect:** Failure logs including diagnostic details.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -706,7 +706,7 @@ _Generated: 2025-11-20_
 - Draft release exists with both `.vip` and release notes attached.
 
 **Agent Procedure:**
-- [ ] Call the Releases API (or use action) to create a draft release with assets.
+- Call the Releases API (or use action) to create a draft release with assets.
 **Evidence to Collect:** Release page URL and asset list.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -735,8 +735,8 @@ _Generated: 2025-11-20_
 - Release `prerelease` flag matches computed `IS_PRERELEASE`.
 
 **Agent Procedure:**
-- [ ] Ensure `prerelease` flag in release object follows `IS_PRERELEASE`.
-- [ ] Verify both true and false cases.
+- Ensure `prerelease` flag in release object follows `IS_PRERELEASE`.
+- Verify both true and false cases.
 **Evidence to Collect:** API response or UI screenshot for both cases.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -765,7 +765,7 @@ _Generated: 2025-11-20_
 - Existing release is updated in place; no duplicate release is created.
 
 **Agent Procedure:**
-- [ ] If a release with the computed tag exists, update it rather than creating a new one.
+- If a release with the computed tag exists, update it rather than creating a new one.
 **Evidence to Collect:** Release history showing updates, not new creation.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -794,7 +794,7 @@ _Generated: 2025-11-20_
 - Release is published and marked latest (if applicable).
 
 **Agent Procedure:**
-- [ ] Transition a draft to published and set as latest per repo policy.
+- Transition a draft to published and set as latest per repo policy.
 **Evidence to Collect:** Release status in UI/API.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -823,8 +823,8 @@ _Generated: 2025-11-20_
 - `GITHUB_TOKEN` scopes allow required operations.
 
 **Agent Procedure:**
-- [ ] Confirm `GITHUB_TOKEN` permissions include `contents: write`.
-- [ ] Attempt an operation requiring those permissions and confirm success.
+- Confirm `GITHUB_TOKEN` permissions include `contents: write`.
+- Attempt an operation requiring those permissions and confirm success.
 **Evidence to Collect:** Permission settings and successful API call logs.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -853,7 +853,7 @@ _Generated: 2025-11-20_
 - Tag push is retried (e.g., 3 attempts, 5s delay) before final failure/success.
 
 **Agent Procedure:**
-- [ ] Attempt to push tag with a simulated transient error and verify retry mechanism (e.g., mock failure or use retryable command).
+- Attempt to push tag with a simulated transient error and verify retry mechanism (e.g., mock failure or use retryable command).
 **Evidence to Collect:** Logs showing retry count and delays.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -882,7 +882,7 @@ _Generated: 2025-11-20_
 - 404 triggers creation path; other errors are surfaced with graceful handling.
 
 **Agent Procedure:**
-- [ ] Invoke release API to fetch by tag; if 404, create release; handle other codes per policy.
+- Invoke release API to fetch by tag; if 404, create release; handle other codes per policy.
 **Evidence to Collect:** Logs for 404 branch and for non-404 error handling.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -911,7 +911,7 @@ _Generated: 2025-11-20_
 - Existing tags are never moved automatically.
 
 **Agent Procedure:**
-- [ ] Create an existing tag and attempt to move it; verify the workflow refuses to force-update.
+- Create an existing tag and attempt to move it; verify the workflow refuses to force-update.
 **Evidence to Collect:** Git command logs; tag ref remains unchanged.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -940,7 +940,7 @@ _Generated: 2025-11-20_
 - No duplicate tags/releases are created on re-runs; operations are idempotent.
 
 **Agent Procedure:**
-- [ ] Re-run the workflow for the same commit and inputs twice.
+- Re-run the workflow for the same commit and inputs twice.
 **Evidence to Collect:** Run history and resulting refs/releases (no duplicates).
 
 **Owner/Role:** Automation QA (Agent)  
@@ -969,7 +969,7 @@ _Generated: 2025-11-20_
 - All required context fields are logged in a structured way.
 
 **Agent Procedure:**
-- [ ] Check logs include commit SHA, branch, workflow_run ID, and version string.
+- Check logs include commit SHA, branch, workflow_run ID, and version string.
 **Evidence to Collect:** Log excerpts with the four fields present.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -998,7 +998,7 @@ _Generated: 2025-11-20_
 - Each decision point emits a structured log entry.
 
 **Agent Procedure:**
-- [ ] Confirm decision logs for bump, suffix rules, tag existence, and artifact discovery.
+- Confirm decision logs for bump, suffix rules, tag existence, and artifact discovery.
 **Evidence to Collect:** Collected log entries covering all decision items.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -1027,7 +1027,7 @@ _Generated: 2025-11-20_
 - Failures include actionable diagnostics (errors, causes, next steps).
 
 **Agent Procedure:**
-- [ ] Induce a few failure modes and check that detailed diagnostics are emitted.
+- Induce a few failure modes and check that detailed diagnostics are emitted.
 **Evidence to Collect:** Failure logs for representative cases.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -1056,7 +1056,7 @@ _Generated: 2025-11-20_
 - Only one checkout step is present.
 
 **Agent Procedure:**
-- [ ] Ensure repository uses a single `actions/checkout` per job.
+- Ensure repository uses a single `actions/checkout` per job.
 **Evidence to Collect:** Workflow YAML highlighting checkout usage.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -1085,7 +1085,7 @@ _Generated: 2025-11-20_
 - Full git history is available to the job.
 
 **Agent Procedure:**
-- [ ] Verify `fetch-depth: 0` or equivalent full-history fetch is configured.
+- Verify `fetch-depth: 0` or equivalent full-history fetch is configured.
 **Evidence to Collect:** Checkout step config and `git rev-list` depth proof.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -1114,7 +1114,7 @@ _Generated: 2025-11-20_
 - Runner state is clean post-run (no orphaned files/tokens/config).
 
 **Agent Procedure:**
-- [ ] Run on a self-hosted runner and verify no persistent configuration side effects remain after completion.
+- Run on a self-hosted runner and verify no persistent configuration side effects remain after completion.
 **Evidence to Collect:** Before/after runner state diff, cleanup logs.
 
 **Owner/Role:** Automation QA (Agent)  
