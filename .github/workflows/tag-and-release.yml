@@ -129,17 +129,24 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const tag = '${{ steps.form-tag.outputs.tag }}';
-            const release = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag,
-            });
+            try {
+              const tag = '${{ steps.form-tag.outputs.tag }}';
+              const release = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: tag,
+              });
 
-            await github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: release.data.id,
-              draft: false,
-              make_latest: true,
-            });
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release.data.id,
+                draft: false,
+                make_latest: true,
+              });
+              console.log(`Release for tag ${tag} published successfully.`);
+            } catch (error) {
+              console.error(`Failed to publish release for tag: ${{ steps.form-tag.outputs.tag }}`);
+              console.error(error);
+              throw error;
+            }
