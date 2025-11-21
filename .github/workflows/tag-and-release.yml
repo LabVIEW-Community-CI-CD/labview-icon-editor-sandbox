@@ -207,6 +207,28 @@ jobs:
           }
           Write-Host ("Total readiness artifacts copied: {0}" -f $copied)
 
+      - name: Copy docs quality artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'artifacts'
+          $dest = Join-Path $PWD 'reports'
+          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
+
+          $lychee = Get-ChildItem -Path $root -Recurse -Filter "report.json" -File | Where-Object { $_.FullName -like "*lychee-report*" } | Select-Object -First 1
+          if (-not $lychee) { Write-Error "No lychee report.json found in artifacts."; }
+          else {
+            Copy-Item -Path $lychee.FullName -Destination (Join-Path $dest 'lychee-report.json') -Force
+            Write-Host ("Copied lychee report from {0}" -f $lychee.FullName)
+          }
+
+          $adr = Get-ChildItem -Path $root -Recurse -Filter "adr-lint.log" -File | Select-Object -First 1
+          if (-not $adr) { Write-Error "No adr-lint.log found in artifacts."; }
+          else {
+            Copy-Item -Path $adr.FullName -Destination (Join-Path $dest 'adr-lint.log') -Force
+            Write-Host ("Copied ADR lint log from {0}" -f $adr.FullName)
+          }
+
       - name: Copy test report artifact
         shell: pwsh
         run: |
@@ -259,6 +281,8 @@ jobs:
           check "reports/test-completion-${{ steps.form-tag.outputs.tag }}.md"
           check "reports/test-results-${{ steps.form-tag.outputs.tag }}.json"
           check "reports/test-execution-log-${{ steps.form-tag.outputs.tag }}.md"
+          check "reports/lychee-report.json"
+          check "reports/adr-lint.log"
           check "reports/test-report.md"
           # readiness reports may be named by upstream run; ensure at least one exists
           if ! ls reports/test-data-readiness-*.md 1>/dev/null 2>&1; then echo "Missing data readiness report in reports/" >&2; missing=1; fi
@@ -315,6 +339,8 @@ jobs:
             ${{ steps.locate-artifacts.outputs.vip_path }}
             ${{ steps.locate-artifacts.outputs.notes_path }}
             ${{ steps.completion-report.outputs.report_path }}
+            reports/lychee-report.json
+            reports/adr-lint.log
             reports/test-report.md
             reports/test-results-${{ steps.form-tag.outputs.tag }}.json
             reports/test-execution-log-${{ steps.form-tag.outputs.tag }}.md

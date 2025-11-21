@@ -301,9 +301,54 @@ jobs:
           path: test-report.md
           if-no-files-found: error
 
+  docs-quality:
+    name: Docs link check and ADR lint
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Lint ADRs and agent language
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          python3 .github/scripts/lint_requirements_language.py 2>&1 | tee reports/adr-lint.log
+          exit "${PIPESTATUS[0]}"
+      - name: Prepare lychee output directory
+        run: mkdir -p lychee
+      - name: Lychee link checker
+        uses: lycheeverse/lychee-action@v1
+        with:
+          args: >
+            --verbose
+            --no-progress
+            --max-concurrency 4
+            --accept 200,204,206,429
+            --exclude-all-private
+            --format json
+            --output ./lychee/report.json
+            docs/**/*.md README.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload ADR lint log
+        uses: actions/upload-artifact@v4
+        with:
+          name: adr-lint
+          path: reports/adr-lint.log
+          if-no-files-found: error
+      - name: Upload lychee report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lychee-report
+          path: lychee/report.json
+          if-no-files-found: error
+
   changes:
     name: Detect VIPC changes
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates]
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality]
     runs-on: ubuntu-latest
     outputs:
       vipc: ${{ steps.filter.outputs.vipc }}
@@ -382,7 +427,7 @@ jobs:
 
   version:
     name: Compute Version
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates]
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality]
     runs-on: self-hosted-windows-lv
     outputs:
       VERSION:       ${{ steps.compute.outputs.VERSION }}
