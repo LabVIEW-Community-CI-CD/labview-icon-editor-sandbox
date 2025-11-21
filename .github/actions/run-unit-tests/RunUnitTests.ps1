@@ -79,7 +79,7 @@ if (-not $AbsoluteProjectPath) {
     # We failed to find exactly one .lvproj in any ancestor up to the level before root
     exit 3
 }
-Write-Host "Using LabVIEW project file: $AbsoluteProjectPath"
+Write-Information "Using LabVIEW project file: $AbsoluteProjectPath" -InformationAction Continue
 
 # Script-level variables to track exit states
 $Script:OriginalExitCode = 0

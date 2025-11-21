@@ -85,7 +85,7 @@ catch {
 
 # 2) Create release notes if needed
 if (-not (Test-Path $ReleaseNotesFile)) {
-    Write-Host "Release notes file '$ReleaseNotesFile' does not exist. Creating it..."
+    Write-Information "Release notes file '$ReleaseNotesFile' does not exist. Creating it..." -InformationAction Continue
     New-Item -ItemType File -Path $ReleaseNotesFile -Force | Out-Null
 }
 
@@ -342,7 +342,7 @@ try {
     $vipbXml.Save($xmlWriter)
     $xmlWriter.Close()
 
-    Write-Host "Successfully updated VIPB metadata: $ResolvedVIPBPath"
+Write-Information "Successfully updated VIPB metadata: $ResolvedVIPBPath" -InformationAction Continue
 }
 catch {
     $errorObject = [PSCustomObject]@{
