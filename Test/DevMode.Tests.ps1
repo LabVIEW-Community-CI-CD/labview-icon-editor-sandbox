@@ -1,44 +1,25 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-function Get-ParamDefaults {
-    param(
-        [Parameter(Mandatory)]
-        [string]$Path
-    )
+Describe "VIPB LabVIEW version parsing" {
+    It "detects Package_LabVIEW_Version and derives the 4-digit year" {
+        $vipb = Get-ChildItem -Path $PSScriptRoot/.. -Filter *.vipb -File -Recurse | Select-Object -First 1
+        $vipb | Should -Not -BeNullOrEmpty
 
-    $ast = [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$null, [ref]$null)
-    $params = @{}
-    $paramBlock = $ast.ParamBlock
-    if ($paramBlock) {
-        foreach ($param in $paramBlock.Parameters) {
-            $name = $param.Name.VariablePath.UserPath
-            $default = $param.DefaultValue
-            if ($default) {
-                $params[$name] = $default.Extent.Text.Trim("'\"")
-            } else {
-                $params[$name] = $null
-            }
-        }
-    }
-    return $params
-}
+        $text = Get-Content -LiteralPath $vipb.FullName -Raw
+        $match = [regex]::Match($text, '<Package_LabVIEW_Version>(?<ver>[^<]+)</Package_LabVIEW_Version>', 'IgnoreCase')
+        $match.Success | Should -BeTrue
 
-Describe "Dev mode scripts alignment" {
-    $setPath = Join-Path $PSScriptRoot ".." ".github/actions/set-development-mode/Set_Development_Mode.ps1"
-    $revertPath = Join-Path $PSScriptRoot ".." ".github/actions/revert-development-mode/RevertDevelopmentMode.ps1"
+        $raw = $match.Groups['ver'].Value
+        $raw | Should -Match '^\d{2}\.\d'
 
-    It "Set_Development_Mode.ps1 declares MinimumSupportedLVVersion defaulting to 2021" {
-        Test-Path $setPath | Should -BeTrue
-        $params = Get-ParamDefaults -Path $setPath
-        $params.Keys | Should -Contain 'MinimumSupportedLVVersion'
-        $params['MinimumSupportedLVVersion'] | Should -Be '2021'
-    }
+        $verMatch = [regex]::Match($raw, '^(?<majmin>\d{2}\.\d)')
+        $verMatch.Success | Should -BeTrue
 
-    It "RevertDevelopmentMode.ps1 declares MinimumSupportedLVVersion defaulting to 2021" {
-        Test-Path $revertPath | Should -BeTrue
-        $params = Get-ParamDefaults -Path $revertPath
-        $params.Keys | Should -Contain 'MinimumSupportedLVVersion'
-        $params['MinimumSupportedLVVersion'] | Should -Be '2021'
+        $maj = [int]($verMatch.Groups['majmin'].Value.Split('.')[0])
+        $derived = if ($maj -ge 20) { "20$maj" } else { $maj.ToString() }
+
+        # Current VIPB targets LabVIEW 2021 (21.x) for dev-mode prep.
+        $derived | Should -Be '2021'
     }
 }

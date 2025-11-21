@@ -14,12 +14,6 @@
       "default": "21.0"
     },
     {
-      "id": "devLvVersion",
-      "type": "promptString",
-      "description": "LabVIEW major.minor to toggle dev mode (e.g., 2021, 2023)",
-      "default": "2021"
-    },
-    {
       "id": "repoPath",
       "type": "promptString",
       "description": "Path to the repository root",
@@ -102,7 +96,7 @@
       "args": [
         "-NoProfile",
         "-Command",
-        "$ErrorActionPreference='Stop'; $repo=\"${input:repoPath}\"; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/set-development-mode/Set_Development_Mode.ps1\" -RepositoryPath $repo -MinimumSupportedLVVersion \"${input:devLvVersion}\""
+        "$ErrorActionPreference='Stop'; $repo=\"${input:repoPath}\"; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/set-development-mode/Set_Development_Mode.ps1\" -RepositoryPath $repo"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -116,7 +110,7 @@
       "args": [
         "-NoProfile",
         "-Command",
-        "$ErrorActionPreference='Stop'; $repo=\"${input:repoPath}\"; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/revert-development-mode/RevertDevelopmentMode.ps1\" -RepositoryPath $repo -MinimumSupportedLVVersion \"${input:devLvVersion}\""
+        "$ErrorActionPreference='Stop'; $repo=\"${input:repoPath}\"; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/revert-development-mode/RevertDevelopmentMode.ps1\" -RepositoryPath $repo"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
