@@ -12,8 +12,8 @@
 .PARAMETER SupportedBitness
     Bitness of the LabVIEW environment ("32" or "64").
 
-.PARAMETER RelativePath
-    Path to the repository root where the project file resides.
+.PARAMETER RepositoryPath
+    Path to the repository root where the project file resides (alias: RelativePath).
 
 .PARAMETER Major
     Major version component for the PPL.
@@ -31,12 +31,13 @@
     Commit hash or identifier recorded in the build.
 
 .EXAMPLE
-    .\Build_lvlibp.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RelativePath "C:\labview-icon-editor" -Major 1 -Minor 0 -Patch 0 -Build 0 -Commit "Placeholder"
+    .\Build_lvlibp.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RepositoryPath "C:\labview-icon-editor" -Major 1 -Minor 0 -Patch 0 -Build 0 -Commit "Placeholder"
 #>
 param(
     [string]$MinimumSupportedLVVersion,
     [string]$SupportedBitness,
-    [string]$RelativePath,
+    [Alias('RelativePath')]
+    [string]$RepositoryPath,
     [Int32]$Major,
     [Int32]$Minor,
     [Int32]$Patch,
@@ -53,7 +54,7 @@ $buildArgs = @(
     "lvbuildspec",
     "--",
     "-v", "$Major.$Minor.$Patch.$Build",
-    "-p", "$RelativePath\lv_icon_editor.lvproj",
+    "-p", "$RepositoryPath\lv_icon_editor.lvproj",
     "-b", "Editor Packed Library"
 )
 Write-Information ("Executing: g-cli {0}" -f ($buildArgs -join ' ')) -InformationAction Continue

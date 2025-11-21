@@ -73,7 +73,7 @@ jobs:
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: ${{ matrix.bitness }}
-          relative_path: ${{ github.workspace }}
+          repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}
           patch: ${{ needs.version.outputs.PATCH }}
@@ -99,7 +99,7 @@ jobs:
           vipb_path: .github/actions/build-vi-package/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
-          relative_path: ${{ github.workspace }}
+          repository_path: ${{ github.workspace }}
           supported_bitness: 64
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}

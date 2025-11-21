@@ -13,8 +13,8 @@
 .PARAMETER SupportedBitness
     Target bitness of the LabVIEW environment ("32" or "64").
 
-.PARAMETER RelativePath
-    Path to the repository root containing the project.
+.PARAMETER RepositoryPath
+    Path to the repository root containing the project (alias: RelativePath).
 
 .PARAMETER LabVIEW_Project
     Name of the LabVIEW project (without extension).
@@ -23,7 +23,7 @@
     Name of the build specification to prepare.
 
 .EXAMPLE
-    .\Prepare_LabVIEW_source.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RelativePath "C:\labview icon editor" -LabVIEW_Project "lv_icon_editor" -Build_Spec "Editor Packed Library"
+    .\Prepare_LabVIEW_source.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RepositoryPath "C:\labview icon editor" -LabVIEW_Project "lv_icon_editor" -Build_Spec "Editor Packed Library"
 #>
 
 param(

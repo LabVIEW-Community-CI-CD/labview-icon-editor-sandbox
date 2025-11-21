@@ -7,7 +7,7 @@ Call **`Build_lvlibp.ps1`** to compile the editor packed library using g-cli.
 |------|----------|---------|-------------|
 | `minimum_supported_lv_version` | **Yes** | `2021` | LabVIEW major version to use. |
 | `supported_bitness` | **Yes** | `32` or `64` | Target LabVIEW bitness. |
-| `relative_path` | **Yes** | `${{ github.workspace }}` | Repository root on disk. |
+| `repository_path` | **Yes** | `${{ github.workspace }}` | Repository root on disk. |
 | `major` | **Yes** | `1` | Major version component. |
 | `minor` | **Yes** | `0` | Minor version component. |
 | `patch` | **Yes** | `0` | Patch version component. |
@@ -20,7 +20,7 @@ Call **`Build_lvlibp.ps1`** to compile the editor packed library using g-cli.
   with:
     minimum_supported_lv_version: 2024
     supported_bitness: 64
-    relative_path: ${{ github.workspace }}
+    repository_path: ${{ github.workspace }}
     major: 1
     minor: 0
     patch: 0

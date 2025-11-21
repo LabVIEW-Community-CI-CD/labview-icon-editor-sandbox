@@ -4,7 +4,7 @@
     This version includes additional debug/verbose output.
 
 .EXAMPLE
-    .\applyvipc.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RelativePath "C:\release\labview-icon-editor-fork" -VIPCPath "Tooling\deployment\runner_dependencies.vipc" -VIP_LVVersion "2021" -Verbose
+    .\applyvipc.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RepositoryPath "C:\release\labview-icon-editor-fork" -VIPCPath "Tooling\deployment\runner_dependencies.vipc" -VIP_LVVersion "2021" -Verbose
 #>
 
 [CmdletBinding()]  # Enables -Verbose and other common parameters
@@ -22,19 +22,19 @@ Write-Verbose "Parameters provided:"
 Write-Verbose " - MinimumSupportedLVVersion: $MinimumSupportedLVVersion"
 Write-Verbose " - VIP_LVVersion:             $VIP_LVVersion"
 Write-Verbose " - SupportedBitness:          $SupportedBitness"
-Write-Verbose " - RelativePath:              $RelativePath"
+Write-Verbose " - RepositoryPath:            $RepositoryPath"
 Write-Verbose " - VIPCPath:                  $VIPCPath"
 
 # -------------------------
 # 1) Resolve Paths & Validate
 # -------------------------
 try {
-    Write-Verbose "Attempting to resolve the 'RelativePath'..."
-    $ResolvedRelativePath = Resolve-Path -Path $RepositoryPath -ErrorAction Stop
-    Write-Verbose "ResolvedRelativePath: $ResolvedRelativePath"
+    Write-Verbose "Attempting to resolve the repository path..."
+    $ResolvedRepositoryPath = Resolve-Path -Path $RepositoryPath -ErrorAction Stop
+    Write-Verbose "ResolvedRepositoryPath: $ResolvedRepositoryPath"
 
     Write-Verbose "Building full path for the .vipc file..."
-    $ResolvedVIPCPath = Join-Path -Path $ResolvedRelativePath -ChildPath $VIPCPath -ErrorAction Stop
+    $ResolvedVIPCPath = Join-Path -Path $ResolvedRepositoryPath -ChildPath $VIPCPath -ErrorAction Stop
     Write-Verbose "ResolvedVIPCPath:     $ResolvedVIPCPath"
 
     # Verify that the .vipc file actually exists
@@ -53,7 +53,7 @@ try {
     }
 }
 catch {
-    Write-Error "Error resolving paths. Ensure RelativePath and VIPCPath are valid. Details: $($_.Exception.Message)"
+    Write-Error "Error resolving paths. Ensure RepositoryPath and VIPCPath are valid. Details: $($_.Exception.Message)"
     exit 1
 }
 

@@ -12,6 +12,48 @@
       "type": "promptString",
       "description": "Minimum LabVIEW version (major.minor)",
       "default": "21.0"
+    },
+    {
+      "id": "repoPath",
+      "type": "promptString",
+      "description": "Path to the repository root",
+      "default": "${workspaceFolder}"
+    },
+    {
+      "id": "semverMajor",
+      "type": "promptString",
+      "description": "Major version",
+      "default": "0"
+    },
+    {
+      "id": "semverMinor",
+      "type": "promptString",
+      "description": "Minor version",
+      "default": "0"
+    },
+    {
+      "id": "semverPatch",
+      "type": "promptString",
+      "description": "Patch version",
+      "default": "0"
+    },
+    {
+      "id": "buildNumber",
+      "type": "promptString",
+      "description": "Build number",
+      "default": "1"
+    },
+    {
+      "id": "companyName",
+      "type": "promptString",
+      "description": "Company name for metadata",
+      "default": "LabVIEW-Community-CI-CD"
+    },
+    {
+      "id": "authorName",
+      "type": "promptString",
+      "description": "Author/Packager name for metadata",
+      "default": "LabVIEW Icon Editor CI"
     }
   ],
   "tasks": [
@@ -27,6 +69,35 @@
         "${input:vipPath}",
         "-MinLabVIEW",
         "${input:minLv}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build VI Package (Build.ps1)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "-File",
+        "${workspaceFolder}/.github/actions/build/run-local-build.ps1",
+        "-RepositoryPath",
+        "${input:repoPath}",
+        "-Major",
+        "${input:semverMajor}",
+        "-Minor",
+        "${input:semverMinor}",
+        "-Patch",
+        "${input:semverPatch}",
+        "-Build",
+        "${input:buildNumber}",
+        "-CompanyName",
+        "${input:companyName}",
+        "-AuthorName",
+        "${input:authorName}"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
