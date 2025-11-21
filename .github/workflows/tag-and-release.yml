@@ -60,6 +60,16 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log run context
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $commit = '${{ github.event.workflow_run.head_sha }}'
+          $branch = '${{ github.event.workflow_run.head_branch }}'
+          $runId  = '${{ github.event.workflow_run.id }}'
+          $version = '${{ steps.version.outputs.VERSION }}'
+          Write-Host ("Context -> commit: {0}, branch: {1}, workflow_run_id: {2}, version: {3}" -f $commit, $branch, $runId, $version)
+
       - name: Form tag
         id: form-tag
         shell: pwsh
