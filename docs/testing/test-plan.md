@@ -1,3 +1,16 @@
+---
+conformance:
+  standard: ISO/IEC/IEEE 29119-3
+  type: tailored
+  scope: project
+  rationale: >
+    Plan reuses the tailored policy/strategy and CI-generated §8 reports to keep project-level coverage, reporting, and release gates aligned with RTM/TRW.
+  stakeholder_approvals:
+    - Maintainer (policy owner)
+    - Automation QA (evidence curator)
+    - Release Manager
+---
+
 # Test Plan (ISO/IEC/IEEE 29119-3 §8)
 
 Scope: project-level plan for the LabVIEW Icon Editor repository. It reuses the Test Policy and Strategy and provides the release/PR exit criteria. Owners: Maintainer (sign-off) and Automation QA (evidence curator).

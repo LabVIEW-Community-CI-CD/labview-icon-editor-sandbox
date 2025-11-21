@@ -1,3 +1,16 @@
+---
+conformance:
+  standard: ISO/IEC/IEEE 29119-3
+  type: tailored
+  scope: project
+  rationale: >
+    Template reflects the tailored project-level §8 progress/completion reports emitted by CI for RTM/TRW-driven gates.
+  stakeholder_approvals:
+    - Maintainer (policy owner)
+    - Automation QA (evidence curator)
+    - Release Manager
+---
+
 # Test Report Template (ISO/IEC/IEEE 29119-3 §8 – Progress & Completion)
 
 Use this skeleton for CI-generated reports (`reports/test-status-<run>.md` for PRs, `reports/test-completion-<tag>.md` for releases). Tokens (`<...>`) are replaced by `generate_test_status.py`.

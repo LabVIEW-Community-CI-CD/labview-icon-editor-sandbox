@@ -1,3 +1,16 @@
+---
+conformance:
+  standard: ISO/IEC/IEEE 29119-3
+  type: tailored
+  scope: project
+  rationale: >
+    Strategy aligns to the tailored document set and CI-first execution model that enforce RTM/TRW-driven coverage and reporting at the project level.
+  stakeholder_approvals:
+    - Maintainer (policy owner)
+    - Automation QA (evidence curator)
+    - Release Manager
+---
+
 # Test Strategy (ISO/IEC/IEEE 29119-3 Tailored)
 
 Scope: project-level strategy for the LabVIEW Icon Editor in this repository. It operationalizes the Test Policy and drives the Test Plan for PRs and releases.

@@ -1,3 +1,16 @@
+---
+conformance:
+  standard: ISO/IEC/IEEE 29119-3
+  type: tailored
+  scope: project
+  rationale: >
+    Lean tailoring to a repository-scoped document set (policy, strategy, plan, CI-generated §8 reports) driven by RTM/TRW-based coverage gates.
+  stakeholder_approvals:
+    - Maintainer (policy owner)
+    - Automation QA (evidence curator)
+    - Release Manager
+---
+
 # Test Policy (ISO/IEC/IEEE 29119-3 Tailored)
 
 Scope: this policy applies to the LabVIEW Icon Editor project in this repository (project-level tailoring, not organization-wide). It sets the minimum bar for test planning, execution evidence, and reporting required for PRs and releases.
