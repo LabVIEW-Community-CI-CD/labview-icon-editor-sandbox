@@ -83,6 +83,7 @@ Scope: project-level strategy for the LabVIEW Icon Editor in this repository. It
 - Fields per entry: scenario, architecture, metric name, unit, baseline_value, tolerance_pct (default 0.10), source (test/script), tag, commit, timestamp_utc, notes.
 - Measurement runbook: for High/Critical RTM touches and pre-release, capture 3 samples per scenario/architecture (LabVIEW profiler or `Measure-Command`), record the median, and log the source test name in `source`.
 - Review rules: regressions beyond tolerance_pct require a Maintainer waiver; variances and waivers are called out in the completion report.
+- Report inputs: drop measured samples for the current run into `reports/performance-measurements.json` using `docs/testing/templates/performance-measurements.json`; release reports read this file to compare against baselines.
 
 ## Staffing (§7.2.9)
 - Maintainer: final authority for waivers and release/block decisions; ensures performance/portability waivers are documented in RTM and completion reports.

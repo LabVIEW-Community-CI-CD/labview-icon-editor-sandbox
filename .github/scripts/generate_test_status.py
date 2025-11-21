@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from datetime import datetime, timezone
@@ -21,6 +22,242 @@ from rtm_utils import (
 )
 
 REPORTS_DIR = ROOT / "reports"
+PERFORMANCE_BASELINES_PATH = ROOT / "docs" / "testing" / "performance-baselines.json"
+DEFAULT_PERFORMANCE_RESULTS_PATH = REPORTS_DIR / "performance-measurements.json"
+DEFAULT_PORTABILITY_RESULTS_PATH = REPORTS_DIR / "portability-status.json"
+DETAIL_LIMIT = 5
+
+
+def safe_load_json(path: Path) -> Tuple[object, List[str]]:
+    """Load JSON from path, returning data and any parsing issues as messages."""
+    notes: List[str] = []
+    rel = path
+    try:
+        rel = path.relative_to(ROOT)
+    except Exception:
+        pass
+    if not path.exists():
+        notes.append(f"{rel} not found")
+        return [], notes
+    try:
+        with open(path, encoding="utf-8") as handle:
+            return json.load(handle), notes
+    except Exception as exc:  # pragma: no cover - defensive logging
+        notes.append(f"Failed to parse {rel}: {exc}")
+        return [], notes
+
+
+def load_performance_baselines() -> Tuple[dict, List[str]]:
+    """Return indexed baselines keyed by (scenario, architecture, metric)."""
+    data, notes = safe_load_json(PERFORMANCE_BASELINES_PATH)
+    baselines = {}
+    if not isinstance(data, list):
+        if data:
+            notes.append("Baseline file is not a list; skipping performance baselines.")
+        return baselines, notes
+
+    for entry in data:
+        scenario = str(entry.get("scenario", "")).strip()
+        architecture = str(entry.get("architecture", "")).strip()
+        metric = str(entry.get("metric", "")).strip()
+        tolerance = entry.get("tolerance_pct", 0.10)
+        baseline_value = entry.get("baseline_value")
+        key = (scenario, architecture, metric)
+
+        try:
+            tolerance_f = float(tolerance)
+        except Exception:
+            notes.append(f"Invalid tolerance_pct for {key}; using 0.10.")
+            tolerance_f = 0.10
+
+        try:
+            baseline_f = float(baseline_value)
+        except Exception:
+            notes.append(f"Invalid baseline_value for {key}; entry skipped.")
+            continue
+
+        if not scenario or not architecture or not metric:
+            notes.append(f"Incomplete baseline entry {entry}; entry skipped.")
+            continue
+
+        baselines[key] = {
+            "baseline": baseline_f,
+            "tolerance": tolerance_f,
+            "unit": str(entry.get("unit", "")).strip(),
+        }
+    return baselines, notes
+
+
+def load_performance_measurements(path: Path) -> Tuple[List[dict], List[str]]:
+    """Return measurement entries as list of dicts."""
+    data, notes = safe_load_json(path)
+    if not isinstance(data, list):
+        if data:
+            notes.append("Performance measurements file is not a list; skipping.")
+        return [], notes
+    cleaned = []
+    for entry in data:
+        scenario = str(entry.get("scenario", "")).strip()
+        architecture = str(entry.get("architecture", "")).strip()
+        metric = str(entry.get("metric", "")).strip()
+        value = entry.get("value")
+        try:
+            value_f = float(value)
+        except Exception:
+            notes.append(f"Invalid measurement value for {scenario}/{architecture}/{metric}; entry skipped.")
+            continue
+        if not scenario or not architecture or not metric:
+            notes.append(f"Incomplete measurement entry {entry}; entry skipped.")
+            continue
+        cleaned.append(
+            {
+                "scenario": scenario,
+                "architecture": architecture,
+                "metric": metric,
+                "value": value_f,
+                "unit": str(entry.get("unit", "")).strip(),
+                "source": entry.get("source", ""),
+            }
+        )
+    return cleaned, notes
+
+
+def summarize_performance(measurement_path: Path) -> Tuple[List[str], bool]:
+    baselines, baseline_notes = load_performance_baselines()
+    measurements, measurement_notes = load_performance_measurements(measurement_path)
+    lines: List[str] = []
+    blocker = False
+
+    if measurement_notes and not measurements:
+        rel = measurement_path.relative_to(ROOT) if measurement_path.is_absolute() else measurement_path
+        lines.append(f"- Performance: no measurements provided (expected at {rel}).")
+        if baseline_notes:
+            lines.extend([f"  - {note}" for note in baseline_notes])
+        lines.extend([f"  - {note}" for note in measurement_notes])
+        return lines, blocker
+
+    if not baselines:
+        lines.append("- Performance: no baselines found; comparison skipped.")
+        if baseline_notes:
+            lines.extend([f"  - {note}" for note in baseline_notes])
+        return lines, blocker
+
+    failures: List[str] = []
+    warnings: List[str] = []
+    passes: List[str] = []
+    measured_keys = set()
+    max_delta = 0.0
+
+    for measurement in measurements:
+        key = (measurement["scenario"], measurement["architecture"], measurement["metric"])
+        measured_keys.add(key)
+        baseline = baselines.get(key)
+        if not baseline:
+            warnings.append(f"No baseline for {measurement['scenario']} [{measurement['architecture']}, {measurement['metric']}]")
+            continue
+
+        baseline_value = baseline["baseline"]
+        tolerance = baseline["tolerance"]
+        if baseline_value == 0:
+            warnings.append(f"Baseline value is 0 for {key}; cannot compute delta.")
+            continue
+
+        delta_pct = (measurement["value"] - baseline_value) / baseline_value
+        max_delta = max(max_delta, delta_pct)
+        if delta_pct > tolerance:
+            failures.append(
+                f"{measurement['scenario']} [{measurement['architecture']}, {measurement['metric']}] "
+                f"{measurement['value']}{measurement['unit'] or ''} vs {baseline_value}{baseline['unit'] or ''} "
+                f"(+{delta_pct:.0%} > {tolerance:.0%})"
+            )
+        else:
+            passes.append(
+                f"{measurement['scenario']} [{measurement['architecture']}, {measurement['metric']}] "
+                f"{measurement['value']}{measurement['unit'] or ''} vs {baseline_value}{baseline['unit'] or ''} "
+                f"(+{delta_pct:.0%}, tol {tolerance:.0%})"
+            )
+
+    missing_measurements = set(baselines.keys()) - measured_keys
+    if missing_measurements:
+        names = [f"{s}[{a},{m}]" for s, a, m in sorted(missing_measurements)]
+        warnings.append(f"Unmeasured baselines: {', '.join(names)}")
+
+    status = "FAIL" if failures else "WARN" if warnings else "PASS"
+    if measurements:
+        lines.append(
+            f"- Performance: {status} ({len(measurements)} measurements; "
+            f"{len(failures)} over tolerance; max delta +{max_delta:.0%})"
+        )
+    else:
+        lines.append("- Performance: no measurements provided; comparison skipped.")
+
+    detail_items = failures if failures else warnings if warnings else passes
+    if detail_items:
+        for item in detail_items[:DETAIL_LIMIT]:
+            lines.append(f"  - {item}")
+        if len(detail_items) > DETAIL_LIMIT:
+            lines.append(f"  - ... plus {len(detail_items) - DETAIL_LIMIT} more")
+
+    if baseline_notes:
+        lines.extend([f"  - {note}" for note in baseline_notes])
+    if measurement_notes and measurements:
+        lines.extend([f"  - {note}" for note in measurement_notes])
+
+    blocker = bool(failures)
+    return lines, blocker
+
+
+def load_portability_results(path: Path) -> Tuple[List[dict], List[str]]:
+    data, notes = safe_load_json(path)
+    if not isinstance(data, list):
+        if data:
+            notes.append("Portability results file is not a list; skipping.")
+        return [], notes
+    cleaned = []
+    for entry in data:
+        architecture = str(entry.get("architecture", "")).strip()
+        status = str(entry.get("status", "")).strip().lower()
+        notes_entry = str(entry.get("notes", "")).strip()
+        if not architecture or not status:
+            notes.append(f"Incomplete portability entry {entry}; entry skipped.")
+            continue
+        cleaned.append({"architecture": architecture, "status": status, "notes": notes_entry})
+    return cleaned, notes
+
+
+def summarize_portability(results_path: Path) -> Tuple[List[str], bool]:
+    results, notes = load_portability_results(results_path)
+    lines: List[str] = []
+    blocker = False
+
+    if not results:
+        rel = results_path.relative_to(ROOT) if results_path.is_absolute() else results_path
+        lines.append(f"- Portability: no results provided (expected at {rel}); ensure x64/x86 runs or record waiver.")
+        if notes:
+            lines.extend([f"  - {note}" for note in notes])
+        return lines, blocker
+
+    failures = [r for r in results if r["status"] == "fail"]
+    skipped = [r for r in results if r["status"] == "skipped"]
+    arches = ", ".join(sorted({r["architecture"] for r in results}))
+    status = "FAIL" if failures else "WARN" if skipped else "PASS"
+    lines.append(f"- Portability: {status} (architectures: {arches})")
+
+    detail_items: List[str] = []
+    for entry in failures[:DETAIL_LIMIT]:
+        note = f" - {entry['notes']}" if entry["notes"] else ""
+        detail_items.append(f"{entry['architecture']} failed{note}")
+    for entry in skipped[: max(0, DETAIL_LIMIT - len(detail_items))]:
+        note = f" - {entry['notes']}" if entry["notes"] else ""
+        detail_items.append(f"{entry['architecture']} skipped{note}")
+
+    if detail_items:
+        lines.extend([f"  - {item}" for item in detail_items])
+    if notes:
+        lines.extend([f"  - {note}" for note in notes])
+
+    blocker = bool(failures)
+    return lines, blocker
 
 
 def format_pct(cov: Coverage) -> str:
@@ -132,10 +369,20 @@ def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: Lis
     return path, lines
 
 
-def build_completion_report(meta: dict, high: Coverage, total: Coverage, suites: List[str], missing: List[str]) -> Tuple[Path, List[str]]:
+def build_completion_report(
+    meta: dict,
+    high: Coverage,
+    total: Coverage,
+    suites: List[str],
+    missing: List[str],
+    performance: List[str] | None = None,
+    portability: List[str] | None = None,
+) -> Tuple[Path, List[str]]:
     path = REPORTS_DIR / f"test-completion-{meta['tag']}.md"
     completion = "PASS" if high.pct() >= MIN_HIGH and total.pct() >= MIN_TOTAL else "FAIL"
     missing_sample, extra_missing = summarize_missing(missing)
+    performance = performance or []
+    portability = portability or []
 
     lines: List[str] = []
     lines.append("# Test Completion Report (ISO/IEC/IEEE 29119-3 §8)")
@@ -163,6 +410,10 @@ def build_completion_report(meta: dict, high: Coverage, total: Coverage, suites:
     if suites:
         lines.append(f"- Suites referenced: {', '.join(suites)}")
     lines.append("- Release will be blocked if thresholds are not met or if RTM gaps remain.")
+    if performance:
+        lines.extend(performance)
+    if portability:
+        lines.extend(portability)
     lines.append("")
 
     lines.append("## §8.3 Variances and Outstanding Work")
@@ -207,6 +458,14 @@ def parse_args() -> argparse.Namespace:
         "--tag",
         help="Release tag (required for completion mode).",
     )
+    parser.add_argument(
+        "--performance-results",
+        help=f"Path to performance measurements JSON (default: {DEFAULT_PERFORMANCE_RESULTS_PATH.relative_to(ROOT)})",
+    )
+    parser.add_argument(
+        "--portability-results",
+        help=f"Path to portability status JSON (default: {DEFAULT_PORTABILITY_RESULTS_PATH.relative_to(ROOT)})",
+    )
     return parser.parse_args()
 
 
@@ -226,9 +485,37 @@ def main() -> int:
     suites = detect_suites(rows)
     meta = build_meta(args)
 
+    performance_results_path = Path(
+        args.performance_results
+        or os.getenv("PERFORMANCE_RESULTS_PATH", "")
+        or DEFAULT_PERFORMANCE_RESULTS_PATH
+    )
+    portability_results_path = Path(
+        args.portability_results
+        or os.getenv("PORTABILITY_RESULTS_PATH", "")
+        or DEFAULT_PORTABILITY_RESULTS_PATH
+    )
+
+    performance_summary: List[str] = []
+    portability_summary: List[str] = []
+    perf_blocker = False
+    port_blocker = False
+
+    if args.mode == "completion":
+        performance_summary, perf_blocker = summarize_performance(performance_results_path)
+        portability_summary, port_blocker = summarize_portability(portability_results_path)
+
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     if args.mode == "completion":
-        path, lines = build_completion_report(meta, high, total, suites, missing)
+        path, lines = build_completion_report(
+            meta,
+            high,
+            total,
+            suites,
+            missing,
+            performance=performance_summary,
+            portability=portability_summary,
+        )
     else:
         path, lines = build_status_report(meta, high, total, suites, missing)
 
@@ -241,6 +528,12 @@ def main() -> int:
         exit_code = 1
     if high.pct() < MIN_HIGH or total.pct() < MIN_TOTAL:
         print("Coverage thresholds not met; report generated but failing pipeline.", file=sys.stderr)
+        exit_code = 1
+    if perf_blocker:
+        print("Performance regression detected beyond tolerance.", file=sys.stderr)
+        exit_code = 1
+    if port_blocker:
+        print("Portability failures detected.", file=sys.stderr)
         exit_code = 1
 
     return exit_code
