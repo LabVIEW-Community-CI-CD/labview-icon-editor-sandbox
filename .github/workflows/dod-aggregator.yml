@@ -223,7 +223,7 @@ jobs:
             "EXEC_LOG:${EXEC_LOG}" \
             "ADR_LINT:${ADR_LINT}" \
             "LINKCHECK:${LINKCHECK}"
-         do
+          do
             name="${pair%%:*}"
             outcome="${pair#*:}"
             if [ "$outcome" != "success" ]; then
