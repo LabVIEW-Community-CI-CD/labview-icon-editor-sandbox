@@ -74,7 +74,8 @@ jobs:
         id: form-tag
         shell: pwsh
         run: |
-          $tag = "v${{ steps.version.outputs.MAJOR }}.${{ steps.version.outputs.MINOR }}.${{ steps.version.outputs.PATCH }}.${{ steps.version.outputs.BUILD }}"
+          # SemVer tag format vX.Y.Z (build number moved to release notes/metadata)
+          $tag = "v${{ steps.version.outputs.MAJOR }}.${{ steps.version.outputs.MINOR }}.${{ steps.version.outputs.PATCH }}"
           Write-Host "Tag: $tag"
           "tag=$tag" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
           Write-Host ("Decision -> prerelease={0}" -f ('${{ steps.version.outputs.IS_PRERELEASE }}' -eq 'true'))

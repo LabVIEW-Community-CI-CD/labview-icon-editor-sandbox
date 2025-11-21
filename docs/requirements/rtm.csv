@@ -1,0 +1,5 @@
+id,title,priority,code_path,test_path,verification,owner,status
+TRW-001,Tag & Release triggers must only run on CI completion,High,.github/workflows/tag-and-release.yml,docs/requirements/TRW_Verification_Checklist.md,Inspection,Automation QA,Draft
+UT-001,Undo/Redo core shall maintain stack invariants,High,resource/plugins/NIIconEditor/Miscellaneous/Undo Redo/FGV_Undo Redo.vi,Test/Unit Tests/Undo Redo Core/Test Add and Undo All.vi,Test,QA,Draft
+UT-002,Editor Position shall persist window bounds,Medium,resource/plugins/NIIconEditor/Editor Position/Set Editor Position.vi,Test/Unit Tests/Editor Position/Test Window Position.vi,Test,QA,Draft
+TB-001,Text-based VI Icon split function shall tokenize words,Medium,vi.lib/LabVIEW Icon API/Set Text Icon/Split Text Into Words.vi,Test/Unit Tests/Text-Based VI Icon Tests/Test Split Text into Words.vi,Test,QA,Draft
