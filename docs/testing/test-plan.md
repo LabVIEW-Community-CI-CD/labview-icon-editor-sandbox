@@ -9,11 +9,44 @@ conformance:
     - Maintainer (policy owner)
     - Automation QA (evidence curator)
     - Release Manager
+document_control:
+  unique_id: TEST-PLAN-001
+  issuer: Automation QA
+  approval_authority: Maintainer
+  status: active
+  change_history:
+    - version: 1.0.0
+      date: 2025-11-20
+      description: Added §5.2 document control header, change log, and glossary reference.
+  intro: >
+    Project-level test plan that reuses the tailored policy/strategy and CI-generated §8 reports to govern PR and release readiness.
+  scope: >
+    Applies to the LabVIEW Icon Editor repository and the CI workflows that generate ISO 29119-3 §8 progress/completion reports.
+  references:
+    - docs/testing/policy.md
+    - docs/testing/strategy.md
+    - docs/testing/templates/test-report-template.md
+    - docs/requirements/rtm.csv
+    - docs/requirements/TRW_Verification_Checklist.md
+  glossary: docs/testing/glossary.md
 ---
 
 # Test Plan (ISO/IEC/IEEE 29119-3 §8)
 
 Scope: project-level plan for the LabVIEW Icon Editor repository. It reuses the Test Policy and Strategy and provides the release/PR exit criteria. Owners: Maintainer (sign-off) and Automation QA (evidence curator).
+
+## §5.2 Document Control
+| Field | Value |
+| --- | --- |
+| Unique ID | `TEST-PLAN-001` |
+| Issuer | Automation QA |
+| Approval Authority | Maintainer |
+| Status | Active |
+| Change History | 2025-11-20 v1.0.0 - Added §5.2 header, change log, and glossary linkage. |
+| Intro | Project-level test plan aligned to the tailored policy/strategy plus CI §8 reports. |
+| Scope | LabVIEW Icon Editor repository and CI workflows that emit ISO 29119-3 §8 progress/completion reports. |
+| References | `docs/testing/policy.md`; `docs/testing/strategy.md`; `docs/testing/templates/test-report-template.md`; `docs/requirements/rtm.csv`; `docs/requirements/TRW_Verification_Checklist.md` |
+| Glossary | [`docs/testing/glossary.md`](./glossary.md) |
 
 ## §8.1 Context and Items Under Test
 - Test items: LabVIEW Icon Editor project (`lv_icon_editor.lvproj`), supporting scripts (`.github/scripts/*.py`), and workflows under `.github/workflows/`.
@@ -44,3 +77,8 @@ Scope: project-level plan for the LabVIEW Icon Editor repository. It reuses the 
 ## §8.6 Tailoring Notes
 - Document set reduced to policy/strategy/plan plus CI-generated §8 reports; design/case/procedure specs are represented by RTM rows pointing to tests.
 - Waivers to coverage or traceability must be captured as ADRs and reflected in the next status/completion report.
+
+## Change History
+| Date | Version | Description |
+| --- | --- | --- |
+| 2025-11-20 | 1.0.0 | Added §5.2 document control header, change log, and glossary linkage. |

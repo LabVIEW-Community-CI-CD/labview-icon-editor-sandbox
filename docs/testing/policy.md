@@ -9,11 +9,43 @@ conformance:
     - Maintainer (policy owner)
     - Automation QA (evidence curator)
     - Release Manager
+document_control:
+  unique_id: TEST-POLICY-001
+  issuer: Automation QA
+  approval_authority: Maintainer
+  status: active
+  change_history:
+    - version: 1.0.0
+      date: 2025-11-20
+      description: Initialized §5.2 header, change log, and glossary link.
+  intro: >
+    Project-level test policy for the LabVIEW Icon Editor repository; sets the minimum gating rules for PRs/tags.
+  scope: >
+    Applies to all testing artifacts in this repository, including CI-generated §8 reports created by the workflows.
+  references:
+    - docs/testing/strategy.md
+    - docs/testing/test-plan.md
+    - docs/requirements/rtm.csv
+    - docs/requirements/TRW_Verification_Checklist.md
+  glossary: docs/testing/glossary.md
 ---
 
 # Test Policy (ISO/IEC/IEEE 29119-3 Tailored)
 
 Scope: this policy applies to the LabVIEW Icon Editor project in this repository (project-level tailoring, not organization-wide). It sets the minimum bar for test planning, execution evidence, and reporting required for PRs and releases.
+
+## §5.2 Document Control
+| Field | Value |
+| --- | --- |
+| Unique ID | `TEST-POLICY-001` |
+| Issuer | Automation QA |
+| Approval Authority | Maintainer |
+| Status | Active |
+| Change History | 2025-11-20 v1.0.0 - Initialized §5.2 controls and glossary reference. |
+| Intro | Project-level test policy for the LabVIEW Icon Editor repository; sets the minimum PR/tag gating rules. |
+| Scope | Applies to repository-scoped testing artifacts and CI-generated §8 reports. |
+| References | `docs/testing/strategy.md`; `docs/testing/test-plan.md`; `docs/requirements/rtm.csv`; `docs/requirements/TRW_Verification_Checklist.md` |
+| Glossary | [`docs/testing/glossary.md`](./glossary.md) |
 
 ## Tailoring Decisions (Clause 4.1.3)
 - Use RTM-driven, risk-weighted testing: priorities in `docs/requirements/rtm.csv` and TRW checkpoints in `docs/requirements/TRW_Verification_Checklist.md` drive coverage and exit criteria.
@@ -36,3 +68,8 @@ Scope: this policy applies to the LabVIEW Icon Editor project in this repository
 - RTM source: `docs/requirements/rtm.csv`; TRW checkpoints: `docs/requirements/TRW_Verification_Checklist.md`.
 - CI gates: `.github/workflows/dod-aggregator.yml`, `rtm-validate.yml`, `rtm-coverage.yml`, `docs-link-check.yml`, `test-report.yml`, `tag-and-release.yml`.
 - Templates: `docs/testing/templates/test-report-template.md` (ISO 29119-3 §8 progress/completion template).
+
+## Change History
+| Date | Version | Description |
+| --- | --- | --- |
+| 2025-11-20 | 1.0.0 | Initialized §5.2 document control header, glossary reference, and change log starter. |
