@@ -417,6 +417,27 @@ jobs:
           minimum_supported_lv_version: 2021
           supported_bitness: 32
 
+  publish-performance-and-portability:
+    name: Publish Performance/Portability JSON
+    needs: [verify-checklist-sync, test-2021-x86]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare reports JSON
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          cp docs/testing/templates/performance-measurements.json reports/performance-measurements.json
+          cp docs/testing/templates/portability-status.json reports/portability-status.json
+          ls -l reports
+      - name: Upload performance/portability reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-json
+          path: |
+            reports/performance-measurements.json
+            reports/portability-status.json
+
   build-ppl-x86:
     name: Build 32-bit Packed Library
     needs: [verify-checklist-sync, build-ppl-x64, version]

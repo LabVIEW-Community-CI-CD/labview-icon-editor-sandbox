@@ -147,16 +147,6 @@ jobs:
             exit 1
           }
 
-      - name: Generate ISO 29119-3 test completion report
-        id: completion-report
-        env:
-          TAG_NAME: ${{ steps.form-tag.outputs.tag }}
-          UPSTREAM_RUN_ID: ${{ github.event.workflow_run.id }}
-          UPSTREAM_RUN_URL: ${{ github.event.workflow_run.html_url }}
-        run: |
-          python .github/scripts/generate_test_status.py --mode completion --tag "${Env:TAG_NAME}"
-          echo ("report_path={0}" -f (Join-Path $PWD ("reports/test-completion-{0}.md" -f $Env:TAG_NAME))) | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-
       - name: Download artifacts from successful run
         uses: actions/download-artifact@v4
         with:
@@ -169,6 +159,43 @@ jobs:
         run: |
           Write-Host "Artifacts downloaded to $(Join-Path $PWD 'artifacts'):"
           Get-ChildItem -Path artifacts -Recurse | Select-Object FullName
+
+      - name: Prepare performance/portability inputs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'artifacts'
+          $dest = Join-Path $PWD 'reports'
+          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
+
+          $perf = Get-ChildItem -Path $root -Recurse -Filter "performance-measurements.json" -File | Select-Object -First 1
+          if ($perf) {
+            Copy-Item -Path $perf.FullName -Destination (Join-Path $dest 'performance-measurements.json') -Force
+            Write-Host "Found performance measurements: $($perf.FullName)"
+          } else {
+            Write-Host "No performance-measurements.json found in artifacts."
+          }
+
+          $port = Get-ChildItem -Path $root -Recurse -Filter "portability-status.json" -File | Select-Object -First 1
+          if ($port) {
+            Copy-Item -Path $port.FullName -Destination (Join-Path $dest 'portability-status.json') -Force
+            Write-Host "Found portability-status.json: $($port.FullName)"
+          } else {
+            Write-Host "No portability-status.json found in artifacts."
+          }
+
+          Write-Host "Reports directory contents:"
+          Get-ChildItem -Path $dest -Recurse | Select-Object FullName
+
+      - name: Generate ISO 29119-3 test completion report
+        id: completion-report
+        env:
+          TAG_NAME: ${{ steps.form-tag.outputs.tag }}
+          UPSTREAM_RUN_ID: ${{ github.event.workflow_run.id }}
+          UPSTREAM_RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          python .github/scripts/generate_test_status.py --mode completion --tag "${Env:TAG_NAME}"
+          echo ("report_path={0}" -f (Join-Path $PWD ("reports/test-completion-{0}.md" -f $Env:TAG_NAME))) | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
       - name: Locate release assets from artifacts
         id: locate-artifacts
