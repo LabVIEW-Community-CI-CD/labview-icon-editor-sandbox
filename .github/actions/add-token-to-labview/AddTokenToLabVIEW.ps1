@@ -27,11 +27,16 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$RepositoryPath = (Resolve-Path -LiteralPath $RepositoryPath).Path
+$iniTokenVi = Join-Path -Path $RepositoryPath -ChildPath 'Tooling\deployment\Create_LV_INI_Token.vi'
+if (-not (Test-Path -LiteralPath $iniTokenVi)) {
+    throw "Missing VI required to add INI token: $iniTokenVi"
+}
 
 $_gcliArgs = @(
     '--lv-ver', $MinimumSupportedLVVersion,
     '--arch', $SupportedBitness,
-    "$RepositoryPath\Tooling\deployment\Create_LV_INI_Token.vi",
+    $iniTokenVi,
     '--',
     'LabVIEW',
     'Localhost.LibraryPaths',
@@ -48,7 +53,8 @@ if (-not $gcli) {
 
 $output = & g-cli @_gcliArgs 2>&1
 if ($LASTEXITCODE -ne 0) {
-    throw ("g-cli failed with exit code {0}: {1}" -f $LASTEXITCODE, ($output -join '; '))
+    $joined = ($output -join '; ')
+    throw ("g-cli failed with exit code {0}: {1} | cmd: {2}" -f $LASTEXITCODE, $joined, ($_gcliArgs -join ' '))
 }
 
 Write-Information "Created localhost.library path in ini file." -InformationAction Continue

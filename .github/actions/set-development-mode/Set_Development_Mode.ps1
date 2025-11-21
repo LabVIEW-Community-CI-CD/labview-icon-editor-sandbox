@@ -31,6 +31,12 @@ $LabVIEW_Project = 'lv_icon_editor'
 $ScriptDirectory = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 Write-Information "Script Directory: $ScriptDirectory" -InformationAction Continue
 
+# Normalize repository path early and re-validate
+$RepositoryPath = (Resolve-Path -LiteralPath $RepositoryPath).Path
+if (-not (Test-Path -LiteralPath $RepositoryPath)) {
+    throw "RepositoryPath '$RepositoryPath' does not exist."
+}
+
 # Build paths to the helper scripts
 $AddTokenScript = Join-Path -Path $ScriptDirectory -ChildPath '..\add-token-to-labview\AddTokenToLabVIEW.ps1'
 $PrepareScript  = Join-Path -Path $ScriptDirectory -ChildPath '..\prepare-labview-source\Prepare_LabVIEW_source.ps1'
@@ -44,16 +50,32 @@ Write-Information "Close_LabVIEW script: $CloseScript" -InformationAction Contin
 function Invoke-ScriptSafe {
     param(
         [string]$ScriptPath,
+        [hashtable]$ArgumentMap,
         [string[]]$ArgumentList
     )
-    Write-Information ("Executing: {0} {1}" -f $ScriptPath, ($ArgumentList -join ' ')) -InformationAction Continue
+    if (-not $ScriptPath) { throw "ScriptPath is required" }
+    if (-not (Test-Path -LiteralPath $ScriptPath)) { throw "ScriptPath '$ScriptPath' not found" }
+
+    $render = if ($ArgumentMap) {
+        ($ArgumentMap.GetEnumerator() | ForEach-Object { "-$($_.Key) $($_.Value)" }) -join ' '
+    } else {
+        ($ArgumentList -join ' ')
+    }
+    Write-Information ("Executing: {0} {1}" -f $ScriptPath, $render) -InformationAction Continue
     try {
-        & $ScriptPath @ArgumentList
+        if ($ArgumentMap) {
+            & $ScriptPath @ArgumentMap
+        } elseif ($ArgumentList) {
+            & $ScriptPath @ArgumentList
+        } else {
+            & $ScriptPath
+        }
     }
     catch {
-        Write-Error "Error occurred while executing: $ScriptPath $($ArgumentList -join ' '). Exiting."
-        Write-Error ($_.Exception | Out-String)
-        Write-Error ($_.ToString())
+        $msg = "Error occurred while executing: $ScriptPath $($ArgumentList -join ' '). Exiting."
+        if ($_.Exception) { $msg += " Inner: $($_.Exception.Message)" }
+        if ($_.InvocationInfo) { $msg += " At: $($_.InvocationInfo.PositionMessage)" }
+        Write-Error $msg
         throw
     }
 }
@@ -95,6 +117,22 @@ try {
         Write-Information ("Using explicit LabVIEW version: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
     }
 
+    # Ensure the INI token VI exists before attempting g-cli
+    $iniTokenVi = Join-Path -Path $RepositoryPath -ChildPath 'Tooling\deployment\Create_LV_INI_Token.vi'
+    if (-not (Test-Path -LiteralPath $iniTokenVi)) {
+        throw "Missing Create_LV_INI_Token.vi at expected path: $iniTokenVi"
+    }
+
+    # Quick g-cli sanity (helps diagnose missing or broken installs)
+    $gcli = Get-Command g-cli -ErrorAction SilentlyContinue
+    if (-not $gcli) {
+        throw "g-cli is not available on PATH; install g-cli before running development-mode tasks."
+    }
+    $probe = & g-cli --help 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "g-cli --help failed with exit code $LASTEXITCODE. Output: $($probe -join '; ')"
+    }
+
     # Remove existing packed libraries (if the folder exists)
     $PluginsPath = Join-Path -Path $RepositoryPath -ChildPath 'resource\plugins'
     if (Test-Path $PluginsPath) {
@@ -107,18 +145,44 @@ try {
     }
 
     # 32-bit actions
-    Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','32','-RepositoryPath', $RepositoryPath)
+    Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentMap @{
+        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        SupportedBitness          = '32'
+        RepositoryPath            = $RepositoryPath
+    }
 
-    Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','32','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
+    Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentMap @{
+        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        SupportedBitness          = '32'
+        RepositoryPath            = $RepositoryPath
+        LabVIEW_Project           = $LabVIEW_Project
+        Build_Spec                = 'Editor Packed Library'
+    }
 
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','32')
+    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
+        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        SupportedBitness          = '32'
+    }
 
     # 64-bit actions
-    Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','64','-RepositoryPath', $RepositoryPath)
+    Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentMap @{
+        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        SupportedBitness          = '64'
+        RepositoryPath            = $RepositoryPath
+    }
 
-    Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','64','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
+    Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentMap @{
+        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        SupportedBitness          = '64'
+        RepositoryPath            = $RepositoryPath
+        LabVIEW_Project           = $LabVIEW_Project
+        Build_Spec                = 'Editor Packed Library'
+    }
 
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
+        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        SupportedBitness          = '64'
+    }
 
 }
 catch {
