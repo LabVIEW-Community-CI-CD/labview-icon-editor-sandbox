@@ -264,9 +264,46 @@ jobs:
             sys.exit(1)
           PY
 
+  rtm-gates:
+    name: RTM validation and coverage gate
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Validate RTM
+        run: python3 .github/scripts/validate_rtm.py
+      - name: Enforce RTM coverage thresholds
+        run: python3 .github/scripts/check_rtm_coverage.py
+      - name: Generate ISO 29119-3 test status (PR)
+        if: github.event_name == 'pull_request'
+        run: python3 .github/scripts/generate_test_status.py --mode status --run-id "${{ github.run_id }}"
+      - name: Upload PR test status artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-status-${{ github.run_id }}
+          path: |
+            reports/test-status-${{ github.run_id }}.md
+            reports/test-results-${{ github.run_id }}.json
+          if-no-files-found: error
+      - name: Generate test report (push/tag)
+        if: github.event_name != 'pull_request'
+        run: python3 .github/scripts/generate_test_report.py
+      - name: Upload test report artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ github.run_id }}
+          path: test-report.md
+          if-no-files-found: error
+
   changes:
     name: Detect VIPC changes
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates]
     runs-on: ubuntu-latest
     outputs:
       vipc: ${{ steps.filter.outputs.vipc }}
@@ -345,7 +382,7 @@ jobs:
 
   version:
     name: Compute Version
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates]
     runs-on: self-hosted-windows-lv
     outputs:
       VERSION:       ${{ steps.compute.outputs.VERSION }}

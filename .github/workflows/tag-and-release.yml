@@ -207,6 +207,20 @@ jobs:
           }
           Write-Host ("Total readiness artifacts copied: {0}" -f $copied)
 
+      - name: Copy test report artifact
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'artifacts'
+          $dest = Join-Path $PWD 'reports'
+          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
+          $report = Get-ChildItem -Path $root -Recurse -Filter "test-report.md" -File | Select-Object -First 1
+          if (-not $report) {
+            Write-Error "No test-report.md found in artifacts from upstream CI run."
+          }
+          Copy-Item -Path $report.FullName -Destination (Join-Path $dest 'test-report.md') -Force
+          Write-Host ("Copied test report from {0}" -f $report.FullName)
+
       - name: Generate ISO 29119-3 test completion report
         id: completion-report
         env:
@@ -245,6 +259,7 @@ jobs:
           check "reports/test-completion-${{ steps.form-tag.outputs.tag }}.md"
           check "reports/test-results-${{ steps.form-tag.outputs.tag }}.json"
           check "reports/test-execution-log-${{ steps.form-tag.outputs.tag }}.md"
+          check "reports/test-report.md"
           # readiness reports may be named by upstream run; ensure at least one exists
           if ! ls reports/test-data-readiness-*.md 1>/dev/null 2>&1; then echo "Missing data readiness report in reports/" >&2; missing=1; fi
           if ! ls reports/test-env-readiness-*.md 1>/dev/null 2>&1; then echo "Missing environment readiness report in reports/" >&2; missing=1; fi
@@ -300,6 +315,7 @@ jobs:
             ${{ steps.locate-artifacts.outputs.vip_path }}
             ${{ steps.locate-artifacts.outputs.notes_path }}
             ${{ steps.completion-report.outputs.report_path }}
+            reports/test-report.md
             reports/test-results-${{ steps.form-tag.outputs.tag }}.json
             reports/test-execution-log-${{ steps.form-tag.outputs.tag }}.md
             reports/test-data-readiness-*.md
