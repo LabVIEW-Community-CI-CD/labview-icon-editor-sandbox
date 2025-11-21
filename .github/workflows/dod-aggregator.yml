@@ -213,17 +213,19 @@ jobs:
           ENV_GATE: ${{ steps.env_gate_release.outcome }}
         run: |
           fail=0
-          for pair in \
-            "RTM_VALIDATE:${RTM_VALIDATE}" \
-            "RTM_COVERAGE:${RTM_COVERAGE}" \
-            "GENERATE_TCS:${GENERATE_TCS}" \
-            "DATA_READINESS:${DATA_READINESS}" \
-            "ENV_READINESS:${ENV_READINESS}" \
-            "ENV_GATE:${ENV_GATE}" \
-            "EXEC_LOG:${EXEC_LOG}" \
-            "ADR_LINT:${ADR_LINT}" \
+          outcomes=(
+            "RTM_VALIDATE:${RTM_VALIDATE}"
+            "RTM_COVERAGE:${RTM_COVERAGE}"
+            "GENERATE_TCS:${GENERATE_TCS}"
+            "DATA_READINESS:${DATA_READINESS}"
+            "ENV_READINESS:${ENV_READINESS}"
+            "ENV_GATE:${ENV_GATE}"
+            "EXEC_LOG:${EXEC_LOG}"
+            "ADR_LINT:${ADR_LINT}"
             "LINKCHECK:${LINKCHECK}"
-          do
+          )
+
+          for pair in "${outcomes[@]}"; do
             name="${pair%%:*}"
             outcome="${pair#*:}"
             if [ "$outcome" != "success" ]; then
