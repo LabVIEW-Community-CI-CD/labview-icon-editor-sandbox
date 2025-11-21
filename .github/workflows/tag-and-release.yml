@@ -77,6 +77,7 @@ jobs:
           $tag = "v${{ steps.version.outputs.MAJOR }}.${{ steps.version.outputs.MINOR }}.${{ steps.version.outputs.PATCH }}.${{ steps.version.outputs.BUILD }}"
           Write-Host "Tag: $tag"
           "tag=$tag" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          Write-Host ("Decision -> prerelease={0}" -f ('${{ steps.version.outputs.IS_PRERELEASE }}' -eq 'true'))
 
       - name: Check existing tag target (remote)
         id: check-tag
