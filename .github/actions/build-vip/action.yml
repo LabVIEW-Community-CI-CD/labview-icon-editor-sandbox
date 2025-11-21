@@ -1,5 +1,15 @@
 name: "Build VI Package"
 description: "Runs build_vip.ps1 to update a VIPB file and build the VI package."
+outputs:
+  vip_path:
+    description: "Full path to the built VI package"
+    value: ${{ steps.locate-vip.outputs.vip_path }}
+  vip_artifact:
+    description: "Artifact name (sans extension) for the built VI package"
+    value: ${{ steps.locate-vip.outputs.vip_artifact }}
+  release_notes_artifact:
+    description: "Artifact name for the generated release notes"
+    value: ${{ steps.release-notes.outputs.artifact_name }}
 runs:
   using: "composite"
   steps:

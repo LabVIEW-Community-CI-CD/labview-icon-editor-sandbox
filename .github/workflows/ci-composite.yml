@@ -736,7 +736,8 @@ jobs:
           commit: ${{ github.sha }}
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
-      - uses: ./.github/actions/build-vip
+      - id: build-vip
+        uses: ./.github/actions/build-vip
         with:
           supported_bitness: 64
           relative_path: ${{ github.workspace }}
@@ -750,6 +751,18 @@ jobs:
           commit: ${{ github.sha }}
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
+      - name: Analyze built VI package
+        id: analyze-vip
+        uses: ./.github/actions/analyze-vi-package
+        with:
+          vip_path: ${{ steps.build-vip.outputs.vip_path }}
+          min_labview: '21.0'
+      - name: Upload VI package analysis results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vip-analysis-junit
+          path: ${{ steps.analyze-vip.outputs.junit }}
       - if: always()
         uses: ./.github/actions/close-labview
         with:

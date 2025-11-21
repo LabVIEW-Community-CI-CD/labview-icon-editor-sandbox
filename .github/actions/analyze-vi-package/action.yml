@@ -14,8 +14,10 @@ runs:
     - id: analyze
       shell: pwsh
       run: |
-        Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
+        Set-StrictMode -Version Latest
+        $work = $PSScriptRoot
+        Set-Location $work
         # Ensure Pester 5+
         $needInstall = $true
         try {
