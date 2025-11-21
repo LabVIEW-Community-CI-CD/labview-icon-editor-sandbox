@@ -70,7 +70,8 @@ runs:
               bump = 'patch';
               core.info('Release branch detected; defaulting bump type to patch.');
             } else {
-              core.info(`Bump type left as '${bump}'.`);
+              bump = 'patch';
+              core.info('Defaulting bump type to patch for non-PR events.');
             }
           }
           core.setOutput('bump_type', bump);
@@ -131,6 +132,11 @@ runs:
         LAST_TAG:     ${{ steps.last_tag.outputs.last_tag }}
         HEAD_BRANCH:  ${{ github.event.workflow_run.head_branch || github.ref_name }}
       run: |
+        function TagExists([string]$tag) {
+          $sha = git rev-parse -q --verify "refs/tags/$tag" 2>$null
+          return -not [string]::IsNullOrWhiteSpace($sha)
+        }
+
         $latestRaw = git describe --tags --abbrev=0 2>$null
         if ($LASTEXITCODE -ne 0) {
           Write-Host "No existing tags were found; defaulting to base 0.1.0."
@@ -163,7 +169,16 @@ runs:
         if ($branch -like 'release-alpha/*') { $suffix = "alpha.$($Env:BUILD_NUMBER)" }
         elseif ($branch -like 'release-beta/*')  { $suffix = "beta.$($Env:BUILD_NUMBER)" }
         elseif ($branch -like 'release-rc/*')    { $suffix = "rc.$($Env:BUILD_NUMBER)" }
-        $version = if ($suffix) { "v$maj.$min.$pat-$suffix-build$($Env:BUILD_NUMBER)" } else { "v$maj.$min.$pat-build$($Env:BUILD_NUMBER)" }
+        $buildNumber = [int]$Env:BUILD_NUMBER
+        $version = if ($suffix) { "v$maj.$min.$pat-$suffix-build$buildNumber" } else { "v$maj.$min.$pat-build$buildNumber" }
+        # Ensure we do not reuse an existing tag (strip build suffix for the tag name). Bump patch until free.
+        $baseTag = $version -replace '-build\d+$',''
+        while (TagExists $baseTag) {
+          Write-Host ("Tag {0} already exists; auto-bumping patch." -f $baseTag)
+          $pat++
+          $version = if ($suffix) { "v$maj.$min.$pat-$suffix-build$buildNumber" } else { "v$maj.$min.$pat-build$buildNumber" }
+          $baseTag = $version -replace '-build\d+$',''
+        }
         $isPre  = if ($suffix) { 'true' } else { 'false' }
         Write-Host "Computed version => $version"
         "VERSION=$version"      | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
