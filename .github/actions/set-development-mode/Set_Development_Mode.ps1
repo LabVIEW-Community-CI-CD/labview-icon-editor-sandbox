@@ -26,32 +26,29 @@ $Build_Spec      = 'Editor Packed Library'
 
 # Determine the directory where this script is located
 $ScriptDirectory = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
-Write-Host "Script Directory: $ScriptDirectory"
+Write-Information "Script Directory: $ScriptDirectory" -InformationAction Continue
 
 # Build paths to the helper scripts
 $AddTokenScript = Join-Path -Path $ScriptDirectory -ChildPath '..\add-token-to-labview\AddTokenToLabVIEW.ps1'
 $PrepareScript  = Join-Path -Path $ScriptDirectory -ChildPath '..\prepare-labview-source\Prepare_LabVIEW_source.ps1'
 $CloseScript    = Join-Path -Path $ScriptDirectory -ChildPath '..\close-labview\Close_LabVIEW.ps1'
 
-Write-Host "AddTokenToLabVIEW script: $AddTokenScript"
-Write-Host "Prepare_LabVIEW_source script: $PrepareScript"
-Write-Host "Close_LabVIEW script: $CloseScript"
+Write-Information "AddTokenToLabVIEW script: $AddTokenScript" -InformationAction Continue
+Write-Information "Prepare_LabVIEW_source script: $PrepareScript" -InformationAction Continue
+Write-Information "Close_LabVIEW script: $CloseScript" -InformationAction Continue
 
 # Helper function to execute scripts and stop on error
 function Execute-Script {
     param(
-        [string]$ScriptCommand
+        [string]$ScriptPath,
+        [string[]]$ArgumentList
     )
-    Write-Host "Executing: $ScriptCommand"
+    Write-Information ("Executing: {0} {1}" -f $ScriptPath, ($ArgumentList -join ' ')) -InformationAction Continue
     try {
-        Invoke-Expression $ScriptCommand -ErrorAction Stop
-        if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
-            Write-Error "Error occurred while executing: $ScriptCommand. Exit code: $LASTEXITCODE"
-            exit $LASTEXITCODE
-        }
+        & $ScriptPath @ArgumentList
     }
     catch {
-        Write-Error "Error occurred while executing: $ScriptCommand. Exiting."
+        Write-Error "Error occurred while executing: $ScriptPath $($ArgumentList -join ' '). Exiting."
         Write-Error $_.Exception.Message
         exit 1
     }
@@ -63,32 +60,27 @@ try {
     if (Test-Path $PluginsPath) {
         # Build and execute the removal command only if the plugins folder exists
         # Wrap the plugins path in single quotes to avoid issues with spaces or special characters
-        $RemoveCommand = "Get-ChildItem -Path '$PluginsPath' -Filter '*.lvlibp' | Remove-Item -Force"
-        Execute-Script $RemoveCommand
+        $RemoveArgs = @('Get-ChildItem','-Path', $PluginsPath, '-Filter','*.lvlibp')
+        # Remove via pipeline to avoid IE
+        Get-ChildItem -Path $PluginsPath -Filter '*.lvlibp' -ErrorAction SilentlyContinue | Remove-Item -Force
     }
     else {
-        Write-Host "No 'resource\\plugins' directory found at $PluginsPath; skipping removal of packed libraries."
+        Write-Information "No 'resource\plugins' directory found at $PluginsPath; skipping removal of packed libraries." -InformationAction Continue
     }
 
     # 32-bit actions
-    $Command1 = "& `"$AddTokenScript`" -MinimumSupportedLVVersion 2021 -SupportedBitness 32 -RelativePath `"$RelativePath`""
-    Execute-Script $Command1
+    Execute-Script -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RelativePath', $RelativePath)
 
-    $Command2 = "& `"$PrepareScript`" -MinimumSupportedLVVersion 2021 -SupportedBitness 32 -RelativePath `"$RelativePath`" -LabVIEW_Project `"$LabVIEW_Project`" -Build_Spec 'Editor Packed Library'"
-    Execute-Script $Command2
+    Execute-Script -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RelativePath', $RelativePath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
 
-    $Command3 = "& `"$CloseScript`" -MinimumSupportedLVVersion 2021 -SupportedBitness 32"
-    Execute-Script $Command3
+    Execute-Script -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
 
     # 64-bit actions
-    $Command4 = "& `"$AddTokenScript`" -MinimumSupportedLVVersion 2021 -SupportedBitness 64 -RelativePath `"$RelativePath`""
-    Execute-Script $Command4
+    Execute-Script -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RelativePath', $RelativePath)
 
-    $Command5 = "& `"$PrepareScript`" -MinimumSupportedLVVersion 2021 -SupportedBitness 64 -RelativePath `"$RelativePath`" -LabVIEW_Project `"$LabVIEW_Project`" -Build_Spec 'Editor Packed Library'"
-    Execute-Script $Command5
+    Execute-Script -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RelativePath', $RelativePath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
 
-    $Command6 = "& `"$CloseScript`" -MinimumSupportedLVVersion 2021 -SupportedBitness 64"
-    Execute-Script $Command6
+    Execute-Script -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
 
 }
 catch {
@@ -96,4 +88,4 @@ catch {
     exit 1
 }
 
-Write-Host "All scripts executed successfully." -ForegroundColor Green
+Write-Information "All scripts executed successfully." -InformationAction Continue

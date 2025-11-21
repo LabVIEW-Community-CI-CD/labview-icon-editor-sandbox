@@ -32,23 +32,24 @@ param(
     [string]$Build_Spec
 )
 
-# Construct the command
-$script = @"
-g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness -v "$RelativePath\Tooling\RestoreSetupLVSource.vi" -- "$RelativePath\$LabVIEW_Project.lvproj" "$Build_Spec"
-"@
+$ErrorActionPreference = 'Stop'
 
-Write-Output "Executing the following command:"
-Write-Output $script
+$args = @(
+    '--lv-ver', $MinimumSupportedLVVersion,
+    '--arch', $SupportedBitness,
+    '-v', "$RelativePath\Tooling\RestoreSetupLVSource.vi",
+    '--',
+    "$RelativePath\$LabVIEW_Project.lvproj",
+    "$Build_Spec"
+)
 
-# Execute the command and check for errors
-try {
-    Invoke-Expression $script
+Write-Information ("Executing g-cli: {0}" -f ($args -join ' ')) -InformationAction Continue
+& g-cli @args
 
-    # Check the exit code of the executed command
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Unzip vi.lib/LabVIEW Icon API from LabVIEW $MinimumSupportedLVVersion ($SupportedBitness-bit) and remove localhost.library path from ini file"
-    }
-} catch {
-    Write-Host ""
+if ($LASTEXITCODE -eq 0) {
+    Write-Information "Unzipped vi.lib/LabVIEW Icon API and removed localhost.library path from ini file." -InformationAction Continue
     exit 0
 }
+
+Write-Warning "g-cli exited with $LASTEXITCODE during restore."
+exit $LASTEXITCODE

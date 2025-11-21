@@ -26,23 +26,23 @@ param(
     [string]$RelativePath
 )
 
-# Construct the command
-$script = @"
-g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness -v "$RelativePath\Tooling\deployment\Create_LV_INI_Token.vi" -- "LabVIEW" "Localhost.LibraryPaths" "$RelativePath"
-"@
+$ErrorActionPreference = 'Stop'
 
-Write-Output "Executing the following command:"
-Write-Output $script
+$args = @(
+    '--lv-ver', $MinimumSupportedLVVersion,
+    '--arch', $SupportedBitness,
+    '-v', "$RelativePath\Tooling\deployment\Create_LV_INI_Token.vi",
+    '--',
+    'LabVIEW',
+    'Localhost.LibraryPaths',
+    $RelativePath
+)
 
-# Execute the command and check for errors
-try {
-    Invoke-Expression $script
+Write-Information ("Invoking g-cli: {0}" -f ($args -join ' ')) -InformationAction Continue
+& g-cli @args
 
-    # Check the exit code of the executed command
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Create localhost.library path from ini file"
-    }
-} catch {
-    Write-Host ""
-    exit 0
+if ($LASTEXITCODE -eq 0) {
+    Write-Information "Created localhost.library path in ini file." -InformationAction Continue
+} else {
+    Write-Warning "g-cli exited with $LASTEXITCODE while adding INI token."
 }

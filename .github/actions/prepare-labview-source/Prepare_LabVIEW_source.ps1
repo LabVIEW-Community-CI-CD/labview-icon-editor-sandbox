@@ -45,34 +45,27 @@ param(
     [string]$Build_Spec
 )
 
-# Ensure paths with spaces are enclosed in double quotes
-$escapedRelativePath = "`"$RelativePath`""
-$escapedLabVIEWProjectPath = "`"$RelativePath\$LabVIEW_Project.lvproj`""
-$escapedBuildSpec = "`"$Build_Spec`""
+$ErrorActionPreference = 'Stop'
 
-# Construct the command
-$script = @"
-g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness -v `"$RelativePath\Tooling\PrepareIESource.vi`" -- LabVIEW Localhost.LibraryPaths `"$RelativePath\$LabVIEW_Project.lvproj`" $Build_Spec
-"@
+$args = @(
+    '--lv-ver', $MinimumSupportedLVVersion,
+    '--arch', $SupportedBitness,
+    '-v', "$RelativePath\Tooling\PrepareIESource.vi",
+    '--',
+    'LabVIEW',
+    'Localhost.LibraryPaths',
+    "$RelativePath\$LabVIEW_Project.lvproj",
+    $Build_Spec
+)
 
-Write-Output "Executing the following command:"
-Write-Output $script
+Write-Information ("Executing g-cli: {0}" -f ($args -join ' ')) -InformationAction Continue
+& g-cli @args
 
-try {
-    # Execute the command and check for errors
-    Invoke-Expression $script
-
-    # Check the exit code
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Success: Process completed."
-        Write-Host "Unzipping vi.lib/LabVIEW Icon API from LabVIEW $MinimumSupportedLVVersion ($SupportedBitness-bit)."
-        Write-Host "Removing localhost.library path from ini file."
-    } else {
-        throw "Error: Command execution failed with exit code $LASTEXITCODE."
-    }
-} catch {
-    Write-Error "An error occurred during execution: $_"
-    Write-Error "Please check the parameters and ensure the command is valid."
-    exit 1
+if ($LASTEXITCODE -eq 0) {
+    Write-Information "Success: Process completed. Unzipped vi.lib/LabVIEW Icon API and updated INI." -InformationAction Continue
+    exit 0
 }
+
+Write-Error "Command execution failed with exit code $LASTEXITCODE."
+exit $LASTEXITCODE
 

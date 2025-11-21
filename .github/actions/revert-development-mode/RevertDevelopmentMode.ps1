@@ -23,25 +23,19 @@ $LabVIEW_Project = 'lv_icon_editor'
 
 # Determine the directory where this script is located
 $ScriptDirectory = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
-Write-Host "Script Directory: $ScriptDirectory"
+Write-Information "Script Directory: $ScriptDirectory" -InformationAction Continue
 
 # Helper function to execute scripts and stop on error
 function Execute-Script {
     param(
-        [string]$ScriptCommand
+        [string]$ScriptPath,
+        [string[]]$ArgumentList
     )
-    Write-Host "Executing: $ScriptCommand"
+    Write-Information ("Executing: {0} {1}" -f $ScriptPath, ($ArgumentList -join ' ')) -InformationAction Continue
     try {
-        # Execute the command
-        Invoke-Expression $ScriptCommand -ErrorAction Stop
-
-        # Check for errors in the script execution
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "Error occurred while executing: $ScriptCommand. Exit code: $LASTEXITCODE"
-            exit $LASTEXITCODE
-        }
+        & $ScriptPath @ArgumentList
     } catch {
-        Write-Error "Error occurred while executing: $ScriptCommand. Exiting."
+        Write-Error "Error occurred while executing: $ScriptPath $($ArgumentList -join ' '). Exiting."
         Write-Error $_.Exception.Message
         exit 1
     }
@@ -54,29 +48,21 @@ try {
     $CloseScript = Join-Path -Path $ScriptDirectory -ChildPath 'Close_LabVIEW.ps1'
 
     # Restore setup for LabVIEW 2021 (32-bit)
-    $Command1 = "& `"$RestoreScript`" -MinimumSupportedLVVersion 2021 -SupportedBitness 32 -RelativePath `"$RelativePath`" -LabVIEW_Project `"$LabVIEW_Project`" -Build_Spec `'Editor Packed Library`'"
-
-    Execute-Script $Command1
+    Execute-Script -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RelativePath',$RelativePath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
 
     # Close LabVIEW 2021 (32-bit)
-    $Command2 = "& `"$CloseScript`" -MinimumSupportedLVVersion 2021 -SupportedBitness 32"
-
-    Execute-Script $Command2
+    Execute-Script -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
 
     # Restore setup for LabVIEW 2021 (64-bit)
-    $Command3 = "& `"$RestoreScript`" -MinimumSupportedLVVersion 2021 -SupportedBitness 64 -RelativePath `"$RelativePath`" -LabVIEW_Project `"$LabVIEW_Project`" -Build_Spec `'Editor Packed Library`'"
-
-    Execute-Script $Command3
+    Execute-Script -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RelativePath',$RelativePath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
 
     # Close LabVIEW 2021 (64-bit)
-    $Command4 = "& `"$CloseScript`" -MinimumSupportedLVVersion 2021 -SupportedBitness 64"
-
-    Execute-Script $Command4
+    Execute-Script -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
 
 } catch {
     Write-Error "An unexpected error occurred during script execution: $($_.Exception.Message)"
     exit 1
 }
 
-Write-Host "All scripts executed successfully." -ForegroundColor Green
+Write-Information "All scripts executed successfully." -InformationAction Continue
 
