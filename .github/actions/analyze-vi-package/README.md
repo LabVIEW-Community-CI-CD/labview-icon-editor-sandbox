@@ -12,6 +12,12 @@ This repo contains:
 pwsh -NoProfile -File ./Analyze-VIP.Tests.ps1 -VipPath "/mnt/data/work/ni_icon_editor-0.0.2.16.vip" -MinLabVIEW "21.0"
 ```
 
+## Local workflow-style run (mirrors CI job)
+```powershell
+# Using a directory, .vip file, or downloaded artifact .zip:
+pwsh -NoProfile -File .github/actions/analyze-vi-package/run-workflow-local.ps1 -ArtifactPath "builds/VI Package" -MinLabVIEW "21.0"
+```
+
 ## GitHub Actions usage
 ```yaml
 jobs:
@@ -24,4 +30,3 @@ jobs:
           vip_path: "/mnt/data/work/ni_icon_editor-0.0.2.16.vip"
           min_labview: "21.0"
 ```
-

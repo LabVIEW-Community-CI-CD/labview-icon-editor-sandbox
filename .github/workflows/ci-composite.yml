@@ -4,6 +4,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: true
 
+env:
+  MIN_LABVIEW_POLICY: "21.0"
+
 on:
   push:
     branches:
@@ -653,6 +656,10 @@ jobs:
     name: Build VI Package
     # Chain after 32-bit build, which already depends on 64-bit, to enforce x64 -> x86 -> build-vip ordering
     needs: [verify-checklist-sync, build-ppl-x86, version]
+    outputs:
+      vip_artifact: ${{ steps.build-vip.outputs.vip_artifact }}
+      vip_path: ${{ steps.build-vip.outputs.vip_path }}
+      release_notes_artifact: ${{ steps.release-notes.outputs.artifact_name }}
     runs-on: self-hosted-windows-lv
     steps:
       - uses: actions/checkout@v4
@@ -748,15 +755,37 @@ jobs:
           minor: ${{ needs.version.outputs.MINOR }}
           patch: ${{ needs.version.outputs.PATCH }}
           build: ${{ needs.version.outputs.BUILD }}
-          commit: ${{ github.sha }}
-          release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
-          display_information_json: ${{ steps.display-info.outputs.json }}
+      commit: ${{ github.sha }}
+      release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
+      display_information_json: ${{ steps.display-info.outputs.json }}
+
+  analyze-vip:
+    name: Analyze VI Package
+    needs: [build-vip]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-vip.outputs.vip_artifact }}
+          path: builds/VI Package
+      - name: Locate downloaded VI package
+        id: locate-downloaded-vip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = "builds/VI Package"
+          $vip = Get-ChildItem -Path $dir -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $vip) {
+            Write-Error "No .vip found under '$dir' after artifact download."
+          }
+          "vip_path=$($vip.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
       - name: Analyze built VI package
         id: analyze-vip
         uses: ./.github/actions/analyze-vi-package
         with:
-          vip_path: ${{ steps.build-vip.outputs.vip_path }}
-          min_labview: '21.0'
+          vip_path: ${{ steps.locate-downloaded-vip.outputs.vip_path }}
+          min_labview: ${{ env.MIN_LABVIEW_POLICY }}
       - name: Upload VI package analysis results
         if: always()
         uses: actions/upload-artifact@v4

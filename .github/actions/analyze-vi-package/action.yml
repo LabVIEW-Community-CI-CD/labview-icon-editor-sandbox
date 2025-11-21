@@ -15,32 +15,33 @@ runs:
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
-        Set-StrictMode -Version Latest
+        Set-StrictMode -Off
         $work = $PSScriptRoot
         Set-Location $work
-        # Ensure Pester 5+
-        $needInstall = $true
-        try {
-          $mod = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
-          if ($mod -and $mod.Version.Major -ge 5) { $needInstall = $false }
-        } catch {}
-        if ($needInstall) {
-          Install-Module Pester -Scope CurrentUser -Force -SkipPublisherCheck
+        # Ensure Pester 5.7.1 (align with local runner to avoid v6 alpha differences)
+        $desiredVersion = [version]'5.7.1'
+        Remove-Module Pester -ErrorAction SilentlyContinue
+        $mod = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -eq $desiredVersion } | Select-Object -First 1
+        if (-not $mod) {
+          Install-Module Pester -RequiredVersion $desiredVersion -Scope CurrentUser -Force -SkipPublisherCheck
+          $mod = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -eq $desiredVersion } | Select-Object -First 1
         }
+        if (-not $mod) {
+          throw "Pester $desiredVersion not available even after install."
+        }
+        Import-Module $mod.Path -Force
 
         $tests = Join-Path $work "Analyze-VIP.Tests.ps1"
         $results = Join-Path $work "pester-results.xml"
-        Invoke-Pester -Script @{
-            Path = $tests
-            Parameters = @{
-              VipPath = "${{ inputs.vip_path }}"
-              MinLabVIEW = "${{ inputs.min_labview }}"
-            }
-          } -CI -Output Detailed -PassThru -Configuration @{
-            Run = @{ PassThru = $true }
-            Output = @{ Verbosity = 'Detailed' }
-            TestResult = @{ Enabled = $true; OutputPath = $results }
-          }
+        $env:VIP_PATH = "${{ inputs.vip_path }}"
+        $env:MIN_LV_VERSION = "${{ inputs.min_labview }}"
+        $config = [PesterConfiguration]::Default
+        $config.Run.Path = @($tests)
+        $config.Run.PassThru = $true
+        $config.Output.Verbosity = 'Detailed'
+        $config.TestResult.Enabled = $true
+        $config.TestResult.OutputPath = $results
+        Invoke-Pester -Configuration $config
         "junit=$results" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 outputs:
   junit:
