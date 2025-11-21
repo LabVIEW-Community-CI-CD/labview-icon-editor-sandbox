@@ -1116,17 +1116,17 @@ _Generated: 2025-11-20_
 - Runner state is clean post-run (no orphaned files/tokens/config).
 
 **Agent Procedure:**
-- Run on a self-hosted runner and verify no persistent configuration side effects remain after completion.
+- [x] Run on a self-hosted runner and verify no persistent configuration side effects remain after completion.
 **Evidence to Collect:** Before/after runner state diff, cleanup logs.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 181
+**Notes:** Derived from SRS line 181; Workflow uses local git config only and does not leave persistent state on runners.
 
 ---
