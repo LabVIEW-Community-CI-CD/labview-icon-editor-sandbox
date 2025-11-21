@@ -20,11 +20,13 @@ python3 .github/scripts/validate_rtm.py
 
 python3 .github/scripts/check_rtm_coverage.py
 
+python3 .github/scripts/lint_requirements_language.py
+
 pwsh -File .github/actions/unit-tests/unit_tests.ps1 -RelativePath "$PWD"
 
 (optional) run Missing-In-Project action wrapper on runner to sanity-check LV project.
 
-CI (PR): Docs Link Check / lychee runs; Traceability Gate / rtm runs; Coverage Gate / coverage runs; unit tests via existing actions.
+CI (PR): Docs Link Check / lychee runs; Traceability Gate / rtm runs; Coverage Gate / coverage runs; ADR Lint / adr-lint runs; unit tests via existing actions.
 
 Release: merge to release-*/main -> CI; Tag and Release creates vX.Y.Z; upload artifacts (VIP, notes).
 
