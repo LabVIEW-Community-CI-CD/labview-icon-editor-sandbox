@@ -1,9 +1,9 @@
 #Requires -Version 7.0
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][string]$LVVersion,
-    [Parameter(Mandatory)][ValidateSet('32','64')][string]$Arch,
-    [Parameter(Mandatory)][string]$ProjectFile
+[Parameter(Mandatory)][string]$LVVersion,
+[Parameter(Mandatory)][ValidateSet('32','64')][string]$Arch,
+[Parameter(Mandatory)][string]$ProjectFile
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,7 +31,7 @@ function Setup {
     # remove an old results file to avoid stale data
     if (Test-Path $MissingFilePath) {
         Remove-Item $MissingFilePath -Force -ErrorAction SilentlyContinue
-        Write-Host "Deleted previous $MissingFilePath"
+        Write-Information "Deleted previous $MissingFilePath" -InformationAction Continue
     }
 }
 
@@ -65,8 +65,8 @@ function MainSequence {
 
     # ----------  TABULAR REPORT  ----------
     Write-Information "" -InformationAction Continue
-$col1   = "FilePath"
-$maxLen = if ($Script:MissingFileLines.Count) {
+    $col1   = "FilePath"
+    $maxLen = if ($Script:MissingFileLines.Count) {
                   ($Script:MissingFileLines | Measure-Object -Maximum Length).Maximum
               } else {
                   $col1.Length
