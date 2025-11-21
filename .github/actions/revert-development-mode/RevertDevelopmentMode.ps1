@@ -15,7 +15,8 @@
 
 param(
     [Parameter(Mandatory = $true)]
-    [string]$RelativePath
+    [Alias('RelativePath')]
+    [string]$RepositoryPath
 )
 
 # Define LabVIEW project name
@@ -48,13 +49,13 @@ try {
     $CloseScript = Join-Path -Path $ScriptDirectory -ChildPath 'Close_LabVIEW.ps1'
 
     # Restore setup for LabVIEW 2021 (32-bit)
-    Execute-Script -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RelativePath',$RelativePath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
+    Execute-Script -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RepositoryPath',$RepositoryPath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
 
     # Close LabVIEW 2021 (32-bit)
     Execute-Script -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
 
     # Restore setup for LabVIEW 2021 (64-bit)
-    Execute-Script -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RelativePath',$RelativePath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
+    Execute-Script -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RepositoryPath',$RepositoryPath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
 
     # Close LabVIEW 2021 (64-bit)
     Execute-Script -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')

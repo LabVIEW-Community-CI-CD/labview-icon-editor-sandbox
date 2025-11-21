@@ -12,7 +12,8 @@ Param (
     [string]$MinimumSupportedLVVersion,
     [string]$VIP_LVVersion,
     [string]$SupportedBitness,
-    [string]$RelativePath,
+    [Alias('RelativePath')]
+    [string]$RepositoryPath,
     [string]$VIPCPath
 )
 
@@ -29,7 +30,7 @@ Write-Verbose " - VIPCPath:                  $VIPCPath"
 # -------------------------
 try {
     Write-Verbose "Attempting to resolve the 'RelativePath'..."
-    $ResolvedRelativePath = Resolve-Path -Path $RelativePath -ErrorAction Stop
+    $ResolvedRelativePath = Resolve-Path -Path $RepositoryPath -ErrorAction Stop
     Write-Verbose "ResolvedRelativePath: $ResolvedRelativePath"
 
     Write-Verbose "Building full path for the .vipc file..."

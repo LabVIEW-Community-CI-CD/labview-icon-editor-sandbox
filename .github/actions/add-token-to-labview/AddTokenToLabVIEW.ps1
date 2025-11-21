@@ -23,23 +23,24 @@
 param(
     [string]$MinimumSupportedLVVersion,
     [string]$SupportedBitness,
-    [string]$RelativePath
+    [Alias('RelativePath')]
+    [string]$RepositoryPath
 )
 
 $ErrorActionPreference = 'Stop'
 
-$args = @(
+$_gcliArgs = @(
     '--lv-ver', $MinimumSupportedLVVersion,
     '--arch', $SupportedBitness,
-    '-v', "$RelativePath\Tooling\deployment\Create_LV_INI_Token.vi",
+    '-v', "$RepositoryPath\Tooling\deployment\Create_LV_INI_Token.vi",
     '--',
     'LabVIEW',
     'Localhost.LibraryPaths',
-    $RelativePath
+    $RepositoryPath
 )
 
-Write-Information ("Invoking g-cli: {0}" -f ($args -join ' ')) -InformationAction Continue
-& g-cli @args
+Write-Information ("Invoking g-cli: {0}" -f ($_gcliArgs -join ' ')) -InformationAction Continue
+& g-cli @_gcliArgs
 
 if ($LASTEXITCODE -eq 0) {
     Write-Information "Created localhost.library path in ini file." -InformationAction Continue

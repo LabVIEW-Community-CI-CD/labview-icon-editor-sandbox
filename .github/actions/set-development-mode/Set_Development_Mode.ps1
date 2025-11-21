@@ -17,12 +17,12 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateScript({ Test-Path $_ })]
-    [string]$RelativePath
+    [Alias('RelativePath')]
+    [string]$RepositoryPath
 )
 
 # Define LabVIEW project name
 $LabVIEW_Project = 'lv_icon_editor'
-$Build_Spec      = 'Editor Packed Library'
 
 # Determine the directory where this script is located
 $ScriptDirectory = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
@@ -56,7 +56,7 @@ function Execute-Script {
 
 try {
     # Remove existing packed libraries (if the folder exists)
-    $PluginsPath = Join-Path -Path $RelativePath -ChildPath 'resource\plugins'
+    $PluginsPath = Join-Path -Path $RepositoryPath -ChildPath 'resource\plugins'
     if (Test-Path $PluginsPath) {
         # Build and execute the removal command only if the plugins folder exists
         # Wrap the plugins path in single quotes to avoid issues with spaces or special characters
@@ -69,16 +69,16 @@ try {
     }
 
     # 32-bit actions
-    Execute-Script -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RelativePath', $RelativePath)
+    Execute-Script -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RepositoryPath', $RepositoryPath)
 
-    Execute-Script -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RelativePath', $RelativePath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
+    Execute-Script -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
 
     Execute-Script -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
 
     # 64-bit actions
-    Execute-Script -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RelativePath', $RelativePath)
+    Execute-Script -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RepositoryPath', $RepositoryPath)
 
-    Execute-Script -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RelativePath', $RelativePath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
+    Execute-Script -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
 
     Execute-Script -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
 

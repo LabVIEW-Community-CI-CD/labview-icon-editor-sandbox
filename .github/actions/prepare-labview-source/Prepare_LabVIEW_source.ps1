@@ -35,8 +35,9 @@ param(
     [string]$SupportedBitness,
 
     [Parameter(Mandatory = $true)]
+    [Alias('RelativePath')]
     [ValidateScript({ Test-Path $_ })]
-    [string]$RelativePath,
+    [string]$RepositoryPath,
 
     [Parameter(Mandatory = $true)]
     [string]$LabVIEW_Project,
@@ -47,19 +48,19 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$args = @(
+$gcliArgs = @(
     '--lv-ver', $MinimumSupportedLVVersion,
     '--arch', $SupportedBitness,
-    '-v', "$RelativePath\Tooling\PrepareIESource.vi",
+    '-v', "$RepositoryPath\Tooling\PrepareIESource.vi",
     '--',
     'LabVIEW',
     'Localhost.LibraryPaths',
-    "$RelativePath\$LabVIEW_Project.lvproj",
+    "$RepositoryPath\$LabVIEW_Project.lvproj",
     $Build_Spec
 )
 
-Write-Information ("Executing g-cli: {0}" -f ($args -join ' ')) -InformationAction Continue
-& g-cli @args
+Write-Information ("Executing g-cli: {0}" -f ($gcliArgs -join ' ')) -InformationAction Continue
+& g-cli @gcliArgs
 
 if ($LASTEXITCODE -eq 0) {
     Write-Information "Success: Process completed. Unzipped vi.lib/LabVIEW Icon API and updated INI." -InformationAction Continue

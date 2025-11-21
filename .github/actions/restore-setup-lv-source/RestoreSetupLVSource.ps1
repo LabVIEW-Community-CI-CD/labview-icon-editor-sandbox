@@ -27,24 +27,25 @@
 param(
     [string]$MinimumSupportedLVVersion,
     [string]$SupportedBitness,
-    [string]$RelativePath,
+    [Alias('RelativePath')]
+    [string]$RepositoryPath,
     [string]$LabVIEW_Project,
     [string]$Build_Spec
 )
 
 $ErrorActionPreference = 'Stop'
 
-$args = @(
+$gcliArgs = @(
     '--lv-ver', $MinimumSupportedLVVersion,
     '--arch', $SupportedBitness,
-    '-v', "$RelativePath\Tooling\RestoreSetupLVSource.vi",
+    '-v', "$RepositoryPath\Tooling\RestoreSetupLVSource.vi",
     '--',
-    "$RelativePath\$LabVIEW_Project.lvproj",
+    "$RepositoryPath\$LabVIEW_Project.lvproj",
     "$Build_Spec"
 )
 
-Write-Information ("Executing g-cli: {0}" -f ($args -join ' ')) -InformationAction Continue
-& g-cli @args
+Write-Information ("Executing g-cli: {0}" -f ($gcliArgs -join ' ')) -InformationAction Continue
+& g-cli @gcliArgs
 
 if ($LASTEXITCODE -eq 0) {
     Write-Information "Unzipped vi.lib/LabVIEW Icon API and removed localhost.library path from ini file." -InformationAction Continue
