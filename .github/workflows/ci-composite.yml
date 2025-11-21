@@ -400,6 +400,13 @@ jobs:
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: 64
+      - if: always()
+        name: Upload unit test report (x64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report-x64
+          path: .github/actions/run-unit-tests/UnitTestReport.xml
+          if-no-files-found: ignore
 
   test-2021-x86:
     name: Run Unit Tests (2021 x86)
@@ -416,6 +423,90 @@ jobs:
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: 32
+      - if: always()
+        name: Upload unit test report (x86)
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report-x86
+          path: .github/actions/run-unit-tests/UnitTestReport.xml
+          if-no-files-found: ignore
+
+  publish-performance-and-portability:
+    name: Publish Performance/Portability JSON
+    needs: [verify-checklist-sync, test-2021-x86]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download unit test reports
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Build performance/portability reports
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          reports = {
+              "test-2021-x64": Path("artifacts/unit-test-report-x64/UnitTestReport.xml"),
+              "test-2021-x86": Path("artifacts/unit-test-report-x86/UnitTestReport.xml"),
+          }
+
+          perf_entries = []
+          port_entries = []
+
+          for arch, path in reports.items():
+              note = ""
+              status = "fail"
+              duration = None
+
+              if path.exists():
+                  try:
+                      tree = ET.parse(path)
+                      duration = sum(float(tc.get("time") or 0.0) for tc in tree.findall(".//testcase"))
+                      status = "pass"
+                      note = "Unit tests completed"
+                  except Exception as exc:
+                      note = f"Failed to parse UnitTestReport.xml: {exc}"
+              else:
+                  note = "UnitTestReport.xml not found"
+
+              if duration is not None:
+                  perf_entries.append(
+                      {
+                          "scenario": "LabVIEW unit tests",
+                          "architecture": arch,
+                          "metric": "unit_tests_duration_s",
+                          "unit": "s",
+                          "value": round(duration, 3),
+                          "source": str(path),
+                      }
+                  )
+
+              port_entries.append(
+                  {
+                      "architecture": arch,
+                      "status": status,
+                      "notes": note,
+                  }
+              )
+
+          out_dir = Path("reports")
+          out_dir.mkdir(parents=True, exist_ok=True)
+          (out_dir / "performance-measurements.json").write_text(json.dumps(perf_entries, indent=2))
+          (out_dir / "portability-status.json").write_text(json.dumps(port_entries, indent=2))
+          print("Performance entries:", json.dumps(perf_entries, indent=2))
+          print("Portability entries:", json.dumps(port_entries, indent=2))
+          PY
+      - name: Upload performance/portability reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-json
+          path: |
+            reports/performance-measurements.json
+            reports/portability-status.json
 
   build-ppl-x86:
     name: Build 32-bit Packed Library

@@ -7,9 +7,9 @@ Scope: LabVIEW Icon Editor community project CM practices mapped to ISO 10007 cl
 - Roles: Maintainers own approvals; Release Manager owns tags/releases; Automation QA owns RTM integrity and CM evidence.
 - Baselines:
   - Product baselines: `lv_icon_editor.lvproj`, `resource/`, `vi.lib/` (checked-in LabVIEW code), `Test/`.
-  - Requirements baseline: `docs/requirements/rtm.csv`, `docs/requirements/TRW_Verification_Checklist.xlsx|.csv`.
+  - Requirements/test design baselines: `docs/requirements/rtm.csv` (with model_id/coverage_item_id/procedure_path), `docs/requirements/TRW_Verification_Checklist.*`, test models/specs/procedures under `docs/testing/models/`, `docs/testing/specs/`, `docs/testing/procedures/`, templates in `docs/testing/templates/`, status/completion/readiness logs in `reports/`.
   - Architecture/decision baseline: `docs/adr/adr-index.md`, `docs/adr/ADR-*.md`.
-  - Release baseline: SemVer tags `vX.Y.Z` plus uploaded VIP/package artifacts via `.github/workflows/tag-and-release.yml`.
+  - Release baseline: SemVer tags `vX.Y.Z` plus uploaded VIP/package artifacts via `.github/workflows/tag-and-release.yml` and attached test completion report.
 - Change vehicles: pull requests; emergency fixes via hotfix branches (`hotfix/*`) with same gates.
 
 ## 5.3 Configuration identification
@@ -31,19 +31,24 @@ Scope: LabVIEW Icon Editor community project CM practices mapped to ISO 10007 cl
 ## 5.5 Configuration status accounting
 - Status sources:
   - GitHub PR checks (DoD Aggregator summary, RTM, coverage, ADR lint, link check, unit tests).
-  - RTM artifacts: `docs/requirements/rtm.csv`, `docs/requirements/TRW_Verification_Checklist.xlsx`.
-  - Release records: GitHub Releases with VIP/package artifacts and notes (from `.github/workflows/tag-and-release.yml`).
-  - Test/coverage evidence: `test-results.json`, RTM coverage output (workflow logs/artifact).
+  - RTM and test artifacts: `docs/requirements/rtm.csv`, `docs/requirements/TRW_Verification_Checklist.*`, test models/specs/procedures (`docs/testing/models/`, `docs/testing/specs/`, `docs/testing/procedures/`), readiness logs (`reports/test-data-readiness-*.md`, `reports/test-env-readiness-*.md`), execution logs, structured results (`reports/test-results-*.json`), and status/completion reports.
+  - Release records: GitHub Releases with VIP/package artifacts and notes (from `.github/workflows/tag-and-release.yml`), completion report attached.
 - Reports:
   - DoD summary artifact (aggregated gate outcomes).
+  - Test execution, readiness, and structured results artifacts attached by CI.
   - Lychee report artifact (`lychee/*.json`).
   - Release notes (`Tooling/deployment/release_notes.md`).
 
 ## 5.6 Configuration audit
-- Functional/configuration audit prerquisites: DoD Aggregator must be green (valid RTM, coverage, ADR lint, link check).
-- Physical audit: release tag `vX.Y.Z` must exist and match HEAD; artifacts uploaded via tag-and-release workflow.
-- RTM audits: run `.github/scripts/validate_rtm.py` and `.github/scripts/check_rtm_coverage.py` locally before PR.
+- Functional/configuration audit prerequisites: DoD Aggregator must be green (valid RTM, coverage, ADR lint, link check); test readiness (data/env) and execution logs present.
+- Physical audit: release tag `vX.Y.Z` must exist and match HEAD; artifacts uploaded via tag-and-release workflow including completion report and structured results.
+- RTM/model/spec audits: run `.github/scripts/validate_rtm.py` and `.github/scripts/check_rtm_coverage.py` locally before PR; ensure RTM links to model_id, coverage_item_id, procedure_path; test models/specs/procedures present for touched RTM rows.
 - ADR audit: ensure `docs/adr/adr-index.md` updated and ADRs pass lint.
+- Release audit checklist (pre-release):
+  - Completion report generated and attached.
+  - Structured results, execution log, readiness reports (data/environment) attached.
+  - RTM/model/spec/procedure links valid for changed requirements.
+  - Release artifacts (.vip, release notes) aligned to computed version.
 
 ## Runbook (operational steps)
 Local:
@@ -59,6 +64,7 @@ CI/PR:
 
 Release:
 - Merge to release/*/main triggers CI; tag via `.github/workflows/tag-and-release.yml` to publish `vX.Y.Z` plus artifacts and release notes.
+ - Tag workflow checks for completion report presence and attached test artifacts (structured results, readiness, execution log) before release assets.
 
 ## References
 - Definition of Done: `docs/dod.md`
