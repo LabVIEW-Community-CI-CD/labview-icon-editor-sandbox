@@ -15,7 +15,12 @@
 
 param(
     [Parameter(Mandatory = $true)]
-    [string]$RepositoryPath
+    [string]$RepositoryPath,
+
+    # LabVIEW major.minor version to target (e.g., 2021, 2023)
+    [Parameter(Mandatory = $false)]
+    [ValidateNotNullOrEmpty()]
+    [string]$MinimumSupportedLVVersion = '2021'
 )
 
 # Define LabVIEW project name
@@ -47,17 +52,17 @@ try {
     $RestoreScript = Join-Path -Path $ScriptDirectory -ChildPath 'RestoreSetupLVSource.ps1'
     $CloseScript = Join-Path -Path $ScriptDirectory -ChildPath 'Close_LabVIEW.ps1'
 
-    # Restore setup for LabVIEW 2021 (32-bit)
-    Invoke-ScriptSafe -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RepositoryPath',$RepositoryPath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
+    # Restore setup for LabVIEW (32-bit)
+    Invoke-ScriptSafe -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion', $MinimumSupportedLVVersion,'-SupportedBitness','32','-RepositoryPath',$RepositoryPath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
 
-    # Close LabVIEW 2021 (32-bit)
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
+    # Close LabVIEW (32-bit)
+    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion', $MinimumSupportedLVVersion,'-SupportedBitness','32')
 
-    # Restore setup for LabVIEW 2021 (64-bit)
-    Invoke-ScriptSafe -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RepositoryPath',$RepositoryPath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
+    # Restore setup for LabVIEW (64-bit)
+    Invoke-ScriptSafe -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion', $MinimumSupportedLVVersion,'-SupportedBitness','64','-RepositoryPath',$RepositoryPath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
 
-    # Close LabVIEW 2021 (64-bit)
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
+    # Close LabVIEW (64-bit)
+    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion', $MinimumSupportedLVVersion,'-SupportedBitness','64')
 
 } catch {
     Write-Error "An unexpected error occurred during script execution: $($_.Exception.Message)"

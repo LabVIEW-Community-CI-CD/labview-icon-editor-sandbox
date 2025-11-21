@@ -14,6 +14,12 @@
       "default": "21.0"
     },
     {
+      "id": "devLvVersion",
+      "type": "promptString",
+      "description": "LabVIEW major.minor to toggle dev mode (e.g., 2021, 2023)",
+      "default": "2021"
+    },
+    {
       "id": "repoPath",
       "type": "promptString",
       "description": "Path to the repository root",
@@ -83,6 +89,34 @@
         "-NoProfile",
         "-Command",
         "$ErrorActionPreference='Stop'; $repo=\"${input:repoPath}\"; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; $commit = git -C $repo rev-parse HEAD 2>$null; if (-not $commit) { $commit = 'manual' }; & \"${workspaceFolder}/.github/actions/build/Build.ps1\" -RepositoryPath $repo -Major ${input:semverMajor} -Minor ${input:semverMinor} -Patch ${input:semverPatch} -Build ${input:buildNumber} -LabVIEWMinorRevision 3 -Commit $commit -CompanyName \"${input:companyName}\" -AuthorName \"${input:authorName}\""
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Set Dev Mode (LabVIEW)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$ErrorActionPreference='Stop'; $repo=\"${input:repoPath}\"; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/set-development-mode/Set_Development_Mode.ps1\" -RepositoryPath $repo -MinimumSupportedLVVersion \"${input:devLvVersion}\""
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Revert Dev Mode (LabVIEW)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$ErrorActionPreference='Stop'; $repo=\"${input:repoPath}\"; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/revert-development-mode/RevertDevelopmentMode.ps1\" -RepositoryPath $repo -MinimumSupportedLVVersion \"${input:devLvVersion}\""
       ],
       "options": {
         "cwd": "${workspaceFolder}"
