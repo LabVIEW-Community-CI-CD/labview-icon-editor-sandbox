@@ -40,8 +40,9 @@ function Invoke-ScriptSafe {
         & $ScriptPath @ArgumentList
     } catch {
         Write-Error "Error occurred while executing: $ScriptPath $($ArgumentList -join ' '). Exiting."
-        Write-Error $_.Exception.Message
-        exit 1
+        Write-Error ($_.Exception | Out-String)
+        Write-Error ($_.ToString())
+        throw
     }
 }
 

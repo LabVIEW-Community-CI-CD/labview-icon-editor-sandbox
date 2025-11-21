@@ -40,10 +40,15 @@ $_gcliArgs = @(
 )
 
 Write-Information ("Invoking g-cli: {0}" -f ($_gcliArgs -join ' ')) -InformationAction Continue
-& g-cli @_gcliArgs
 
-if ($LASTEXITCODE -eq 0) {
-    Write-Information "Created localhost.library path in ini file." -InformationAction Continue
-} else {
-    Write-Warning "g-cli exited with $LASTEXITCODE while adding INI token."
+$gcli = Get-Command g-cli -ErrorAction SilentlyContinue
+if (-not $gcli) {
+    throw "g-cli is not available on PATH; cannot add INI token."
 }
+
+$output = & g-cli @_gcliArgs 2>&1
+if ($LASTEXITCODE -ne 0) {
+    throw ("g-cli failed with exit code {0}: {1}" -f $LASTEXITCODE, ($output -join '; '))
+}
+
+Write-Information "Created localhost.library path in ini file." -InformationAction Continue

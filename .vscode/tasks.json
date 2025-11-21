@@ -95,8 +95,8 @@
       "command": "pwsh",
       "args": [
         "-NoProfile",
-        "-Command",
-        "& { $ErrorActionPreference=\"Stop\"; $repo = (git -C \"${workspaceFolder}\" rev-parse --show-toplevel 2>$null); if (-not $repo) { $repo = \"${workspaceFolder}\" }; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/set-development-mode/Set_Development_Mode.ps1\" -RepositoryPath $repo }"
+        "-File",
+        "${workspaceFolder}/.github/actions/set-development-mode/run-dev-mode.ps1"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -109,8 +109,8 @@
       "command": "pwsh",
       "args": [
         "-NoProfile",
-        "-Command",
-        "& { $ErrorActionPreference=\"Stop\"; $repo = (git -C \"${workspaceFolder}\" rev-parse --show-toplevel 2>$null); if (-not $repo) { $repo = \"${workspaceFolder}\" }; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/revert-development-mode/RevertDevelopmentMode.ps1\" -RepositoryPath $repo }"
+        "-File",
+        "${workspaceFolder}/.github/actions/revert-development-mode/run-dev-mode.ps1"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

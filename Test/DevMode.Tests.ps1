@@ -23,3 +23,24 @@ Describe "VIPB LabVIEW version parsing" {
         $derived | Should -Be '2021'
     }
 }
+
+Describe "run-dev-mode.ps1" {
+    $scriptPath = (Resolve-Path (Join-Path $PSScriptRoot '..\.github\actions\set-development-mode\run-dev-mode.ps1')).Path
+    $repoRoot   = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+
+    It "fails fast and surfaces g-cli --help errors" {
+        function global:g-cli { }
+        Mock -CommandName Get-Command -MockWith { [pscustomobject]@{ Name = 'g-cli'; Source = 'mock://g-cli' } }
+        Mock -CommandName g-cli -MockWith { $global:LASTEXITCODE = 99 }
+        $ex = $null
+        try {
+            & $scriptPath -RepositoryPath $repoRoot
+        } catch {
+            $ex = $_
+        }
+
+        $ex | Should -Not -BeNullOrEmpty
+        $ex.Exception.Message | Should -Match 'exit code 99|pipeline element'
+        Remove-Item function:g-cli -ErrorAction SilentlyContinue
+    }
+}

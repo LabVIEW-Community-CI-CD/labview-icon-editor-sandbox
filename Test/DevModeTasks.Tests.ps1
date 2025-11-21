@@ -13,15 +13,14 @@ Describe "VSCode Dev Mode Task wiring" {
             $task = $json.tasks | Where-Object { $_.label -eq $label } | Select-Object -First 1
             $task | Should -Not -BeNullOrEmpty
             $command = ($task.args -join ' ')
-            # Ensure we don't use single-quoted -Command wrappers that break $ErrorActionPreference or path resolution
             $command | Should -Match "-NoProfile"
-            $command | Should -Match "-Command"
-            $command | Should -Not -Match "Stop: The term 'Stop' is not recognized"
-            $command | Should -Match [regex]::Escape("$ErrorActionPreference=\"Stop\"")
-            $command | Should -Match "--RepositoryPath| -RepositoryPath|`-RepositoryPath"
-            $command | Should -Match "Set_Development_Mode.ps1|RevertDevelopmentMode.ps1"
-            # repo is now resolved via git top-level; no input prompt required
-            $command | Should -Match '\$\{workspaceFolder\}/\.github/actions/'
+            $command | Should -Match "-File"
+            $command | Should -Match "run-dev-mode.ps1"
+            # Ensure no inline -Command usage for these wrappers
+            $command | Should -Not -Match "-Command"
+            # Ensure we don't embed accidental g-cli flag fragments (e.g., double-dash in the wrapper args)
+            $command | Should -Not -Match "--lv-ver"
+            $command | Should -Not -Match "--arch"
         }
     }
 }
