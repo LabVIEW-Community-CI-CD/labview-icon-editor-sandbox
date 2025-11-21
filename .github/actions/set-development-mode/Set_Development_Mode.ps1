@@ -41,10 +41,12 @@ if (-not (Test-Path -LiteralPath $RepositoryPath)) {
 $AddTokenScript = Join-Path -Path $ScriptDirectory -ChildPath '..\add-token-to-labview\AddTokenToLabVIEW.ps1'
 $PrepareScript  = Join-Path -Path $ScriptDirectory -ChildPath '..\prepare-labview-source\Prepare_LabVIEW_source.ps1'
 $CloseScript    = Join-Path -Path $ScriptDirectory -ChildPath '..\close-labview\Close_LabVIEW.ps1'
+$MissingHelper  = Join-Path -Path $ScriptDirectory -ChildPath '..\missing-in-project\Invoke-MissingInProjectCLI.ps1'
 
 Write-Information "AddTokenToLabVIEW script: $AddTokenScript" -InformationAction Continue
 Write-Information "Prepare_LabVIEW_source script: $PrepareScript" -InformationAction Continue
 Write-Information "Close_LabVIEW script: $CloseScript" -InformationAction Continue
+Write-Information "Missing-in-project script: $MissingHelper" -InformationAction Continue
 
 # Helper function to execute scripts and stop on error
 function Invoke-ScriptSafe {
@@ -164,6 +166,13 @@ try {
         SupportedBitness          = '32'
     }
 
+    # Verify project integrity after 32-bit prep
+    Invoke-ScriptSafe -ScriptPath $MissingHelper -ArgumentMap @{
+        LVVersion   = $Package_LabVIEW_Version
+        Arch        = '32'
+        ProjectFile = "$RepositoryPath\lv_icon_editor.lvproj"
+    }
+
     # 64-bit actions
     Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentMap @{
         MinimumSupportedLVVersion = $Package_LabVIEW_Version
@@ -182,6 +191,13 @@ try {
     Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
         MinimumSupportedLVVersion = $Package_LabVIEW_Version
         SupportedBitness          = '64'
+    }
+
+    # Verify project integrity after 64-bit prep
+    Invoke-ScriptSafe -ScriptPath $MissingHelper -ArgumentMap @{
+        LVVersion   = $Package_LabVIEW_Version
+        Arch        = '64'
+        ProjectFile = "$RepositoryPath\lv_icon_editor.lvproj"
     }
 
 }

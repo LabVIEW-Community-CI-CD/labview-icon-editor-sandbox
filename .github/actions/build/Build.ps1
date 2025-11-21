@@ -169,6 +169,15 @@ try {
         VIPCPath                  = 'Tooling\deployment\runner_dependencies.vipc'
     }
 
+    # 2.1) Preflight missing items using existing missing-in-project helper (32-bit)
+    Write-Information "Preflight: checking for missing project items via missing-in-project..." -InformationAction Continue
+    $MissingHelper = Join-Path $ActionsPath "missing-in-project/Invoke-MissingInProjectCLI.ps1"
+    Invoke-ScriptSafe -ScriptPath $MissingHelper -ArgumentMap @{
+        LVVersion   = $lvVersion
+        Arch        = '32'
+        ProjectFile = "$RepositoryPath\lv_icon_editor.lvproj"
+    }
+
     # 3) Build LV Library (32-bit)
     Write-Verbose "Building LV library (32-bit)..."
     $BuildLvlibp = Join-Path $ActionsPath "build-lvlibp/Build_lvlibp.ps1"

@@ -8,6 +8,20 @@
       "default": "builds/VI Package/"
     },
     {
+      "label": "g-cli --help (dump)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/.github/scripts/dump-gcli-help.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
       "id": "minLv",
       "type": "promptString",
       "description": "Minimum LabVIEW version (major.minor)",

@@ -33,18 +33,29 @@ if (-not (Test-Path -LiteralPath $iniTokenVi)) {
     throw "Missing VI required to add INI token: $iniTokenVi"
 }
 
+# Determine target folder for Localhost.LibraryPaths (folder that contains the project)
+$project = Get-ChildItem -Path $RepositoryPath -Filter *.lvproj -File -Recurse | Select-Object -First 1
+$tokenTarget = if ($project) {
+    Split-Path -Parent $project.FullName
+} else {
+    $RepositoryPath
+}
+
 $_gcliArgs = @(
     '--lv-ver', $MinimumSupportedLVVersion,
     '--arch', $SupportedBitness,
+    'vi',
+    '--',
     $iniTokenVi,
     '--',
     'LabVIEW',
     'Localhost.LibraryPaths',
     $SupportedBitness,
-    $RepositoryPath
+    $tokenTarget
 )
 
 Write-Information ("Invoking g-cli: {0}" -f ($_gcliArgs -join ' ')) -InformationAction Continue
+Write-Information ("Localhost.LibraryPaths target: {0}" -f $tokenTarget) -InformationAction Continue
 
 $gcli = Get-Command g-cli -ErrorAction SilentlyContinue
 if (-not $gcli) {
