@@ -8,6 +8,9 @@ outputs:
   VERSION:
     description: "Full version string"
     value: ${{ steps.next_version.outputs.VERSION }}
+  IS_FIRST_RELEASE:
+    description: "true when no existing tag was found (initial release)"
+    value: ${{ steps.last_tag.outputs.is_first_release }}
   VERSION_STRING:
     description: "Full version string (alias)"
     value: ${{ steps.next_version.outputs.VERSION }}
@@ -77,14 +80,30 @@ runs:
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
-        $tag = git describe --tags --abbrev=0 2>$null
-        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tag)) {
-          Write-Host "No reachable tag found."
-          $tag = ''
+        $script = Join-Path -Path $PWD -ChildPath ".github/actions/compute-version/Get-LastTag.ps1"
+        if (Test-Path $script) {
+          $info = & $script -AsJson | ConvertFrom-Json
+          $tag = $info.LastTag
+          $isFirst = [bool]$info.IsFirstRelease
+        } else {
+          # Backward compatible fallback when helper script is unavailable (older branch)
+          try {
+            $tag = git describe --tags --abbrev=0 2>$null
+            if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tag)) {
+              $tag = ''
+            }
+          } catch {
+            $tag = ''
+          }
+          $isFirst = [string]::IsNullOrWhiteSpace($tag)
+        }
+        if ([string]::IsNullOrWhiteSpace($tag)) {
+          Write-Host "No reachable tag found (initial release)."
         } else {
           Write-Host "Last reachable tag: $tag"
         }
         "last_tag=$tag" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+        "is_first_release=$isFirst" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
     - name: Determine build number
       id: inc_build
