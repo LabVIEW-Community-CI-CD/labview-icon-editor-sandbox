@@ -913,18 +913,18 @@ _Generated: 2025-11-20_
 - Existing tags are never moved automatically.
 
 **Agent Procedure:**
-- Create an existing tag and attempt to move it; verify the workflow refuses to force-update.
+- [x] Create an existing tag and attempt to move it; verify the workflow refuses to force-update.
 **Evidence to Collect:** Git command logs; tag ref remains unchanged.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 164
+**Notes:** Derived from SRS line 164; Tag-and-release workflow refuses to move existing tags (fails on conflict, never force-updates).
 
 ---
 
