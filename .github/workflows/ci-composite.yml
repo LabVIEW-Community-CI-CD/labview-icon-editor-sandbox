@@ -1,8 +1,9 @@
 name: CI Pipeline (Composite)
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
-  cancel-in-progress: true
+  # Enforce one run at a time per branch/PR to avoid overlapping fixes on the same feature branch.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   MIN_LABVIEW_POLICY: "21.0"
@@ -790,6 +791,17 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Record analyze job start
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = "timings"
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          $path = Join-Path $dir "analyze-vip.txt"
+          "job=analyze-vip" | Out-File -FilePath $path -Encoding utf8
+          "server_time_start=$(Get-Date -Format o)" | Out-File -FilePath $path -Encoding utf8 -Append
+          "run_id=${{ github.run_id }}" | Out-File -FilePath $path -Encoding utf8 -Append
+          "ref=${{ github.ref }}" | Out-File -FilePath $path -Encoding utf8 -Append
       - uses: actions/download-artifact@v4
         with:
           name: ${{ needs.build-vip.outputs.vip_artifact }}
@@ -817,3 +829,20 @@ jobs:
         with:
           name: vip-analysis-junit
           path: ${{ steps.analyze-vip.outputs.junit }}
+      - name: Record analyze job end and upload timing
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = "timings/analyze-vip.txt"
+          if (-not (Test-Path $path)) {
+            Write-Error "Timing file missing at $path"
+          }
+          "server_time_end=$(Get-Date -Format o)" | Out-File -FilePath $path -Encoding utf8 -Append
+        # Upload timing as its own artifact for duration analysis
+      - name: Upload analyze timing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyze-vip-timing
+          path: timings/analyze-vip.txt
