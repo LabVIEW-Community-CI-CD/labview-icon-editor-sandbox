@@ -1,0 +1,33 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "vipPath",
+      "type": "promptString",
+      "description": "Path to the .vip file to analyze",
+      "default": "builds/VI Package/ni_icon_editor-0.0.2.15.vip"
+    },
+    {
+      "id": "minLv",
+      "type": "promptString",
+      "description": "Minimum LabVIEW version (major.minor)",
+      "default": "21.0"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "Analyze VI Package (Pester)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "& \"${workspaceFolder}/.github/actions/analyze-vi-package/run-local.ps1\" -VipPath \"${input:vipPath}\" -MinLabVIEW \"${input:minLv}\""
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
