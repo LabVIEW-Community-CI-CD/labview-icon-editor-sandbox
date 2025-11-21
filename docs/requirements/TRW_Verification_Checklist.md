@@ -1087,18 +1087,18 @@ _Generated: 2025-11-20_
 - Full git history is available to the job.
 
 **Agent Procedure:**
-- Verify `fetch-depth: 0` or equivalent full-history fetch is configured.
+- [x] Verify `fetch-depth: 0` or equivalent full-history fetch is configured.
 **Evidence to Collect:** Checkout step config and `git rev-list` depth proof.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 180
+**Notes:** Derived from SRS line 180; tag-and-release checkout uses fetch-depth: 0 to ensure full history for reachability and commit counting.
 
 ---
 
