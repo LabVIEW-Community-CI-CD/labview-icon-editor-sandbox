@@ -17,7 +17,11 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateScript({ Test-Path $_ })]
-    [string]$RepositoryPath
+    [string]$RepositoryPath,
+
+    # Optional override; if not provided we read Package_LabVIEW_Version from the repo .vipb
+    [Parameter(Mandatory = $false)]
+    [string]$Package_LabVIEW_Version
 )
 
 # Define LabVIEW project name
@@ -83,8 +87,12 @@ function Get-LabVIEWVersionFromVipb {
 }
 
 try {
-    $MinimumSupportedLVVersion = Get-LabVIEWVersionFromVipb -RootPath $RepositoryPath
-    Write-Information ("Detected LabVIEW version from VIPB: {0}" -f $MinimumSupportedLVVersion) -InformationAction Continue
+    if (-not $Package_LabVIEW_Version) {
+        $Package_LabVIEW_Version = Get-LabVIEWVersionFromVipb -RootPath $RepositoryPath
+        Write-Information ("Detected LabVIEW version from VIPB: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
+    } else {
+        Write-Information ("Using explicit LabVIEW version: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
+    }
 
     # Remove existing packed libraries (if the folder exists)
     $PluginsPath = Join-Path -Path $RepositoryPath -ChildPath 'resource\plugins'
@@ -98,18 +106,18 @@ try {
     }
 
     # 32-bit actions
-    Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RepositoryPath', $RepositoryPath)
+    Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','32','-RepositoryPath', $RepositoryPath)
 
-    Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
+    Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','32','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
 
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
+    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','32')
 
     # 64-bit actions
-    Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RepositoryPath', $RepositoryPath)
+    Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','64','-RepositoryPath', $RepositoryPath)
 
-    Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
+    Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','64','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
 
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','64')
 
 }
 catch {

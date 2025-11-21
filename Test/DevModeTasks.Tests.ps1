@@ -20,7 +20,7 @@ Describe "VSCode Dev Mode Task wiring" {
             $command -like "*`$ErrorActionPreference='Stop'*" | Should -BeTrue
             $command | Should -Match "--RepositoryPath| -RepositoryPath|`-RepositoryPath"
             $command | Should -Match "Set_Development_Mode.ps1|RevertDevelopmentMode.ps1"
-            $command | Should -Match '\$\{input:repoPath\}'
+            # repo is now resolved via git top-level; no input prompt required
             $command | Should -Match '\$\{workspaceFolder\}/\.github/actions/'
         }
     }

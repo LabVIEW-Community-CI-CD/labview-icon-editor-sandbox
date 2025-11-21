@@ -96,7 +96,7 @@
       "args": [
         "-NoProfile",
         "-Command",
-        "$ErrorActionPreference='Stop'; $repo=\"${input:repoPath}\"; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/set-development-mode/Set_Development_Mode.ps1\" -RepositoryPath $repo"
+        "& { $ErrorActionPreference='Stop'; $repo = (git -C \"${workspaceFolder}\" rev-parse --show-toplevel 2>$null); if (-not $repo) { $repo = \"${workspaceFolder}\" }; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/set-development-mode/Set_Development_Mode.ps1\" -RepositoryPath $repo }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -110,7 +110,7 @@
       "args": [
         "-NoProfile",
         "-Command",
-        "$ErrorActionPreference='Stop'; $repo=\"${input:repoPath}\"; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/revert-development-mode/RevertDevelopmentMode.ps1\" -RepositoryPath $repo"
+        "& { $ErrorActionPreference='Stop'; $repo = (git -C \"${workspaceFolder}\" rev-parse --show-toplevel 2>$null); if (-not $repo) { $repo = \"${workspaceFolder}\" }; if ([string]::IsNullOrWhiteSpace($repo)) { throw 'RepositoryPath is empty' }; & \"${workspaceFolder}/.github/actions/revert-development-mode/RevertDevelopmentMode.ps1\" -RepositoryPath $repo }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
