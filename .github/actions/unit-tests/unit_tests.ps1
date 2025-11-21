@@ -24,7 +24,7 @@ function Assert-PathExists {
         [string]$Description
     )
     if (-Not (Test-Path -Path $Path)) {
-        Write-Host "The $Description does not exist: $Path" -ForegroundColor Red
+        Write-Error "The $Description does not exist: $Path"
         exit 1
     }
 }
@@ -33,21 +33,14 @@ function Assert-PathExists {
 function Execute-Script {
     param(
         [string]$ScriptPath,
-        [string]$Arguments
+        [string[]]$ArgumentList
     )
-    Write-Host "Executing: $ScriptPath $Arguments" -ForegroundColor Cyan
+    Write-Information ("Executing: {0} {1}" -f $ScriptPath, ($ArgumentList -join ' ')) -InformationAction Continue
     try {
-        # Build and execute the command
-        $command = "& `"$ScriptPath`" $Arguments"
-        Invoke-Expression $command
+        & $ScriptPath @ArgumentList
 
-        # Check for errors in the script execution
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Error occurred while executing: $ScriptPath with arguments: $Arguments. Exit code: $LASTEXITCODE" -ForegroundColor Red
-            exit $LASTEXITCODE
-        }
     } catch {
-        Write-Host "Error occurred while executing: $ScriptPath with arguments: $Arguments. Exiting." -ForegroundColor Red
+        Write-Error "Error occurred while executing: $ScriptPath with arguments: $($ArgumentList -join ' '). Exiting."
         exit 1
     }
 }
@@ -57,7 +50,7 @@ try {
     # Validate required paths
     Assert-PathExists $RelativePath "RelativePath"
     if (-not (Test-Path "$RelativePath\resource\plugins")) {
-        Write-Host "Plugins folder missing; creating $RelativePath\resource\plugins" -ForegroundColor Yellow
+        Write-Information "Plugins folder missing; creating $RelativePath\resource\plugins" -InformationAction Continue
         New-Item -ItemType Directory -Path "$RelativePath\resource\plugins" -Force | Out-Null
     }
 
@@ -65,7 +58,7 @@ try {
     Assert-PathExists $ActionsPath "Actions folder"
 
     # Clean up .lvlibp files in the plugins folder
-    Write-Host "Cleaning up old .lvlibp files in plugins folder..." -ForegroundColor Yellow
+    Write-Information "Cleaning up old .lvlibp files in plugins folder..." -InformationAction Continue
     $PluginFiles = Get-ChildItem -Path "$RelativePath\resource\plugins" -Filter '*.lvlibp' -ErrorAction SilentlyContinue
     if ($PluginFiles) {
         foreach ($file in $PluginFiles) {
@@ -76,32 +69,36 @@ try {
                 Write-Warning ("Failed to delete {0}: {1}" -f $file.FullName, $_.Exception.Message)
             }
         }
-        Write-Host "Deleted .lvlibp files from plugins folder." -ForegroundColor Green
+        Write-Information "Deleted .lvlibp files from plugins folder." -InformationAction Continue
     } else {
-        Write-Host "No .lvlibp files found to delete." -ForegroundColor Cyan
+        Write-Information "No .lvlibp files found to delete." -InformationAction Continue
     }
     
     # Run Unit Tests
     $RunUnitTests = Join-Path $ActionsPath "run-unit-tests/RunUnitTests.ps1"
-    Execute-Script $RunUnitTests `
-        "-MinimumSupportedLVVersion 2021 -SupportedBitness 32 -RelativePath `"$RelativePath`""
+    Execute-Script -ScriptPath $RunUnitTests -ArgumentList @(
+        '-MinimumSupportedLVVersion','2021',
+        '-SupportedBitness','32',
+        '-RelativePath', $RelativePath
+    )
 
     # Close LabVIEW
     $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
-    Execute-Script $CloseLabVIEW `
-        "-MinimumSupportedLVVersion 2021 -SupportedBitness 32"
+    Execute-Script -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
 
     # Run Unit Tests
-    Execute-Script $RunUnitTests `
-        "-MinimumSupportedLVVersion 2021 -SupportedBitness 64 -RelativePath `"$RelativePath`""
+    Execute-Script -ScriptPath $RunUnitTests -ArgumentList @(
+        '-MinimumSupportedLVVersion','2021',
+        '-SupportedBitness','64',
+        '-RelativePath', $RelativePath
+    )
 
 	# Close LabVIEW
-    Execute-Script $CloseLabVIEW `
-        "-MinimumSupportedLVVersion 2021 -SupportedBitness 64"
+    Execute-Script -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
 		
-    Write-Host "All scripts executed successfully!" -ForegroundColor Green
+    Write-Information "All scripts executed successfully!" -InformationAction Continue
 } catch {
-    Write-Host "An unexpected error occurred during script execution: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Error "An unexpected error occurred during script execution: $($_.Exception.Message)"
     exit 1
 }
 

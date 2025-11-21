@@ -23,31 +23,31 @@ param(
     [Parameter(Mandatory)][string]$ProjectFile
 )
 $ErrorActionPreference = 'Stop'
-Write-Host "ℹ️  [GCLI] Starting Missing‑in‑Project check ..."
+Write-Information "ℹ️  [GCLI] Starting Missing‑in‑Project check ..." -InformationAction Continue
 
 # ---------- sanity checks ----------
 if (-not (Get-Command g-cli -ErrorAction SilentlyContinue)) {
-    Write-Host "❌  g-cli executable not found in PATH."
+    Write-Warning "❌  g-cli executable not found in PATH."
     $global:LASTEXITCODE = 127
     return
 }
 
 $viPath = Join-Path -Path $PSScriptRoot -ChildPath 'MissingInProjectCLI.vi'
 if (-not (Test-Path $viPath)) {
-    Write-Host "❌  VI not found: $viPath"
+    Write-Warning "❌  VI not found: $viPath"
     $global:LASTEXITCODE = 2
     return
 }
 if (-not (Test-Path $ProjectFile)) {
-    Write-Host "❌  Project file not found: $ProjectFile"
+    Write-Warning "❌  Project file not found: $ProjectFile"
     $global:LASTEXITCODE = 3
     return
 }
 
-Write-Host "ℹ️  VI path      : $viPath"
-Write-Host "ℹ️  Project file : $ProjectFile"
-Write-Host "ℹ️  LabVIEW ver  : $LVVersion  ($Arch-bit)"
-Write-Host "--------------------------------------------------"
+Write-Information "ℹ️  VI path      : $viPath" -InformationAction Continue
+Write-Information "ℹ️  Project file : $ProjectFile" -InformationAction Continue
+Write-Information "ℹ️  LabVIEW ver  : $LVVersion  ($Arch-bit)" -InformationAction Continue
+Write-Information "--------------------------------------------------" -InformationAction Continue
 
 # ---------- build argument list & invoke ----------
 $gcliArgs = @(
@@ -65,9 +65,9 @@ $exitCode   = $LASTEXITCODE
 $gcliOutput | ForEach-Object { Write-Output $_ }
 
 if ($exitCode -eq 0) {
-    Write-Host "✅  Missing‑in‑Project check passed (no missing files)."
+    Write-Information "✅  Missing‑in‑Project check passed (no missing files)." -InformationAction Continue
 } else {
-    Write-Host "❌  Missing‑in‑Project check FAILED – exit code $exitCode"
+    Write-Warning "❌  Missing‑in‑Project check FAILED – exit code $exitCode"
 }
 
 # close LabVIEW if still running (harmless if not)

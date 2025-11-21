@@ -94,42 +94,50 @@ switch ("$MinimumSupportedLVVersion-$SupportedBitness") {
     }
 }
 
-Write-Output "Applying dependencies for LabVIEW $VIP_LVVersion_B..."
+Write-Information "Applying dependencies for LabVIEW $VIP_LVVersion_B..." -InformationAction Continue
 Write-Verbose "VIP_LVVersion_A (for primary LVVersion): $VIP_LVVersion_A"
 Write-Verbose "VIP_LVVersion_B (for minimum LVVersion): $VIP_LVVersion_B"
 
 # -------------------------
 # 3) Construct the Script to Execute
 # -------------------------
-Write-Verbose "Constructing the g-cli command script..."
-$script = @"
-g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness -v "$($ResolvedRelativePath)\Tooling\Deployment\Applyvipc.vi" -- "$ResolvedVIPCPath" "$VIP_LVVersion_B"
-"@
+Write-Verbose "Constructing the g-cli command arguments..."
 
+$applyArgs = @(
+    "--lv-ver", $MinimumSupportedLVVersion,
+    "--arch", $SupportedBitness,
+    "-v", "$($ResolvedRelativePath)\Tooling\Deployment\Applyvipc.vi",
+    "--",
+    "$ResolvedVIPCPath",
+    "$VIP_LVVersion_B"
+)
+
+$secondaryArgs = $null
 if ($VIP_LVVersion -ne $MinimumSupportedLVVersion) {
-    Write-Verbose "VIP_LVVersion and MinimumSupportedLVVersion differ; adding commands for $VIP_LVVersion..."
-    $script += @"
-g-cli vipc -- -t 3000 -v "$VIP_LVVersion" "$ResolvedVIPCPath"
-"@
+    Write-Verbose "VIP_LVVersion and MinimumSupportedLVVersion differ; preparing secondary vipc application for $VIP_LVVersion..."
+    $secondaryArgs = @(
+        "vipc",
+        "--",
+        "-t", "3000",
+        "-v", "$VIP_LVVersion",
+        "$ResolvedVIPCPath"
+    )
 }
 
-# -------------------------
-# 4) Output the script for debugging
-# -------------------------
-Write-Output "Executing the following commands:"
-Write-Output $script
-Write-Verbose "Full script content (for debugging): `n$script"
+Write-Information ("Executing: g-cli {0}" -f ($applyArgs -join ' ')) -InformationAction Continue
+& g-cli @applyArgs
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed applying VIPC to $VIP_LVVersion_B (exit $LASTEXITCODE)."
+    exit $LASTEXITCODE
+}
 
-# -------------------------
-# 5) Execute the Script & Handle Errors (Try/Catch with Invoke-Expression)
-# -------------------------
-try {
-    Write-Verbose "Starting Invoke-Expression to run g-cli commands..."
-    Invoke-Expression $script
-    Write-Host "Successfully applied dependencies to LabVIEW: $VIP_LVVersion_B" `
-        " (and potentially $VIP_LVVersion_A if switched)."
+if ($secondaryArgs) {
+    Write-Information ("Executing secondary: g-cli {0}" -f ($secondaryArgs -join ' ')) -InformationAction Continue
+    & g-cli @secondaryArgs
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed secondary VIPC apply for $VIP_LVVersion (exit $LASTEXITCODE)."
+        exit $LASTEXITCODE
+    }
 }
-catch {
-    Write-Error "An error occurred while applying the .vipc dependencies. Details: $($_.Exception.Message)"
-    exit 1
-}
+
+Write-Information "Successfully applied dependencies to LabVIEW." -InformationAction Continue

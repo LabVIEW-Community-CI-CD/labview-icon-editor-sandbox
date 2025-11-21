@@ -47,23 +47,25 @@ param(
 Write-Output "PPL Version: $Major.$Minor.$Patch.$Build"
 Write-Output "Commit: $Commit"
 
-# Construct the command
-$script = @"
-g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness lvbuildspec -- -v "$Major.$Minor.$Patch.$Build" -p "$RelativePath\lv_icon_editor.lvproj" -b "Editor Packed Library"
-"@
-Write-Output "Executing the following command:"
-Write-Output $script
+$buildArgs = @(
+    "--lv-ver", $MinimumSupportedLVVersion,
+    "--arch", $SupportedBitness,
+    "lvbuildspec",
+    "--",
+    "-v", "$Major.$Minor.$Patch.$Build",
+    "-p", "$RelativePath\lv_icon_editor.lvproj",
+    "-b", "Editor Packed Library"
+)
+Write-Information ("Executing: g-cli {0}" -f ($buildArgs -join ' ')) -InformationAction Continue
 
-# Execute the command
-Invoke-Expression $script
+& g-cli @buildArgs
 
-# Check the exit code
 if ($LASTEXITCODE -ne 0) {
+    Write-Error "Build failed with exit code $LASTEXITCODE."
     g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness QuitLabVIEW
-    Write-Host "Build failed with exit code $LASTEXITCODE."
     exit 1
-} else {
-    Write-Host "Build succeeded."
-    exit 0
 }
+
+Write-Information "Build succeeded." -InformationAction Continue
+exit 0
 

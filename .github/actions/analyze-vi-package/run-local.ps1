@@ -29,12 +29,12 @@ Import-Module -Name $pesterModule.Path -Force
          Write-Host ("Using most recent .vip under {0}: {1}" -f $VipPath, $vipResolved)
      }
  } else {
-     $candidates = Get-ChildItem -Path $VipPath -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Extension -ieq '.vip' } | Sort-Object LastWriteTime -Descending
-     if ($candidates) {
-         $vipResolved = $candidates[0].FullName
-         Write-Host ("Using .vip matched by pattern {0}: {1}" -f $VipPath, $vipResolved)
-     }
- }
+    $candidates = Get-ChildItem -Path $VipPath -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Extension -ieq '.vip' } | Sort-Object LastWriteTime -Descending
+    if ($candidates) {
+        $vipResolved = $candidates[0].FullName
+        Write-Information ("Using .vip matched by pattern {0}: {1}" -f $VipPath, $vipResolved) -InformationAction Continue
+    }
+}
 
 if (-not $vipResolved) {
     throw "VIP not found. Provide a .vip path, a directory containing one, or a wildcard. Input was: $VipPath"
@@ -45,7 +45,7 @@ if (-not (Test-Path -LiteralPath $tests)) {
     throw "Test file not found at $tests"
 }
 
-Write-Host ("Running tests in {0} (VIP={1}, MinLV={2})" -f $tests, $vipResolved, $MinLabVIEW)
+Write-Information ("Running tests in {0} (VIP={1}, MinLV={2})" -f $tests, $vipResolved, $MinLabVIEW) -InformationAction Continue
 $testsResolved = (Resolve-Path -LiteralPath $tests).Path
 $env:VIP_PATH = $vipResolved
 $env:MIN_LV_VERSION = $MinLabVIEW

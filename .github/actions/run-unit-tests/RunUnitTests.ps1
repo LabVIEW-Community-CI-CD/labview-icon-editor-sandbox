@@ -35,7 +35,7 @@ param(
 # --------------------------------------------------------------------
 # 1) Locate exactly one .lvproj file by searching upward from $PSScriptRoot
 # --------------------------------------------------------------------
-Write-Host "Starting directory for .lvproj search: $PSScriptRoot"
+Write-Information "Starting directory for .lvproj search: $PSScriptRoot" -InformationAction Continue
 
 function Get-SingleLvproj {
     param(
@@ -45,7 +45,7 @@ function Get-SingleLvproj {
     $currentDir = $StartFolder
 
     while ($true) {
-        Write-Host "Searching '$currentDir' for *.lvproj files..."
+        Write-Information "Searching '$currentDir' for *.lvproj files..." -InformationAction Continue
         $lvprojFiles = Get-ChildItem -Path $currentDir -Filter '*.lvproj' -File -ErrorAction SilentlyContinue
 
         if ($lvprojFiles.Count -eq 1) {
@@ -55,7 +55,7 @@ function Get-SingleLvproj {
         elseif ($lvprojFiles.Count -gt 1) {
             # Found multiple .lvproj files
             Write-Error "Error: Multiple .lvproj files found in '$currentDir'. Please ensure only one .lvproj is present."
-            $lvprojFiles | ForEach-Object { Write-Host " - $_.FullName" }
+            $lvprojFiles | ForEach-Object { Write-Information (" - {0}" -f $_.FullName) -InformationAction Continue }
             return $null
         }
         
@@ -90,12 +90,12 @@ $ReportPath = Join-Path -Path $PSScriptRoot -ChildPath "UnitTestReport.xml"
 
 # --------------------------  SETUP  --------------------------
 function Setup {
-    Write-Host "=== Setup ==="
+    Write-Information "=== Setup ===" -InformationAction Continue
     $reportDir = Split-Path -Parent $ReportPath
     if (-not (Test-Path $reportDir)) {
         try {
             New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
-            Write-Host "Created report directory: $reportDir"
+            Write-Information "Created report directory: $reportDir" -InformationAction Continue
         }
         catch {
             Write-Warning ("Could not create report directory {0}: {1}" -f $reportDir, $_.Exception.Message)
@@ -104,25 +104,25 @@ function Setup {
     if (Test-Path $ReportPath) {
         try {
             Remove-Item $ReportPath -Force -ErrorAction Stop
-            Write-Host "Deleted existing UnitTestReport.xml."
+            Write-Information "Deleted existing UnitTestReport.xml." -InformationAction Continue
         }
         catch {
             Write-Warning "Could not remove UnitTestReport.xml: $($_.Exception.Message)"
         }
     }
     else {
-        Write-Host "No existing UnitTestReport.xml found. Continuing..."
+        Write-Information "No existing UnitTestReport.xml found. Continuing..." -InformationAction Continue
     }
 }
 
 # ------------------------  MAIN SEQUENCE  ----------------------
 function MainSequence {
-    Write-Host "`n=== MainSequence ==="
-    Write-Host "Running unit tests for LabVIEW $MinimumSupportedLVVersion ($SupportedBitness-bit)"
-    Write-Host "Project Path: $AbsoluteProjectPath"
-    Write-Host "Report will be saved at: $ReportPath"
+    Write-Information "`n=== MainSequence ===" -InformationAction Continue
+    Write-Information "Running unit tests for LabVIEW $MinimumSupportedLVVersion ($SupportedBitness-bit)" -InformationAction Continue
+    Write-Information "Project Path: $AbsoluteProjectPath" -InformationAction Continue
+    Write-Information "Report will be saved at: $ReportPath" -InformationAction Continue
 
-    Write-Host "`nExecuting g-cli command..."
+    Write-Information "`nExecuting g-cli command..." -InformationAction Continue
     & g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness lunit -- -r "$ReportPath" "$AbsoluteProjectPath"
 
     $script:OriginalExitCode = $LASTEXITCODE
@@ -211,7 +211,7 @@ function MainSequence {
                $col3.PadRight($maxStatus) + "  " +
                $col4.PadRight($maxTime) + "  " +
                $col5.PadRight($maxAssert))
-    Write-Host $header
+    Write-Information $header -InformationAction Continue
 
     # Output test results in color
     foreach ($res in $results) {
@@ -222,10 +222,10 @@ function MainSequence {
                  $res.Assertions.PadRight($maxAssert))
 
         if ($res.Status -eq "Passed") {
-            Write-Host $line -ForegroundColor Green
+            Write-Information $line -InformationAction Continue
         }
         elseif ($res.Status -eq "Skipped") {
-            Write-Host $line -ForegroundColor Yellow
+            Write-Information $line -InformationAction Continue
         }
         else {
             Write-Host $line -ForegroundColor Red
@@ -235,12 +235,12 @@ function MainSequence {
 
 # --------------------------  CLEANUP  --------------------------
 function Cleanup {
-    Write-Host "`n=== Cleanup ==="
+    Write-Information "`n=== Cleanup ===" -InformationAction Continue
     # If everything passed (and g-cli was OK), delete the report
     if (($script:OriginalExitCode -eq 0) -and (-not $script:TestsHadFailures)) {
         try {
             Remove-Item $ReportPath -Force -ErrorAction Stop
-            Write-Host "`nAll tests passed. Deleted UnitTestReport.xml."
+            Write-Information "`nAll tests passed. Deleted UnitTestReport.xml." -InformationAction Continue
         }
         catch {
             Write-Warning "Failed to delete $($ReportPath): $($_.Exception.Message)"

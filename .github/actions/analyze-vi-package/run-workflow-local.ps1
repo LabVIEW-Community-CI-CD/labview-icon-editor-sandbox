@@ -61,7 +61,7 @@ try {
     $tests = Join-Path $work "Analyze-VIP.Tests.ps1"
     $results = Join-Path $work "pester-results.xml"
 
-    Write-Host "Analyzing VIP: $resolvedVip"
+    Write-Information "Analyzing VIP: $resolvedVip" -InformationAction Continue
     $env:VIP_PATH = $resolvedVip
     $env:MIN_LV_VERSION = $MinLabVIEW
     $config = [PesterConfiguration]::Default
@@ -72,7 +72,7 @@ try {
     $config.TestResult.OutputPath = $results
     Invoke-Pester -Configuration $config | Out-Host
 
-    Write-Host "JUnit report: $results"
+    Write-Information "JUnit report: $results" -InformationAction Continue
 } finally {
     if ($script:tempDir -and (Test-Path $script:tempDir)) {
         Remove-Item -LiteralPath $script:tempDir -Recurse -Force -ErrorAction SilentlyContinue

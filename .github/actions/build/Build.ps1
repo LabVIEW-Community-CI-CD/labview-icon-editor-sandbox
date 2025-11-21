@@ -59,37 +59,29 @@ function Assert-PathExists {
     )
     Write-Verbose "Checking if '$Description' exists at path: $Path"
     if (-not (Test-Path -Path $Path)) {
-        Write-Host "The '$Description' does not exist: $Path" -ForegroundColor Red
+        Write-Error "The '$Description' does not exist: $Path"
         exit 1
     }
     Write-Verbose "Confirmed '$Description' exists at path: $Path"
 }
 
-# Helper function to run another script with arguments
+# Helper function to run another script with arguments safely
 function Execute-Script {
     param(
         [string]$ScriptPath,
-        [string]$Arguments
+        [string[]]$ArgumentList
     )
-    Write-Host "Executing: $ScriptPath $Arguments" -ForegroundColor Cyan
-    Write-Verbose "Constructing command line..."
-    
-    # The & symbol explicitly invokes the script file
-    $command = "& `"$ScriptPath`" $Arguments"
-    Write-Verbose "Command: $command"
-
+    Write-Information ("Executing: {0} {1}" -f $ScriptPath, ($ArgumentList -join ' ')) -InformationAction Continue
     try {
-        Invoke-Expression $command
+        & $ScriptPath @ArgumentList
         Write-Verbose "Command completed. Checking exit code..."
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "Error occurred while executing: `"$ScriptPath`" with arguments: `"$Arguments`". Exit code: $LASTEXITCODE" -ForegroundColor Red
+            Write-Error "Error occurred while executing `"$ScriptPath`" with arguments: $($ArgumentList -join ' '). Exit code: $LASTEXITCODE"
             exit $LASTEXITCODE
         }
-        Write-Verbose "Exit code is 0; no errors detected."
     }
     catch {
-        Write-Host "Error occurred while executing: `"$ScriptPath`" with arguments: `"$Arguments`". Exiting." -ForegroundColor Red
-        Write-Verbose "Exception details: $($_.Exception.Message)"
+        Write-Error "Error occurred while executing `"$ScriptPath`" with arguments: $($ArgumentList -join ' '). Exiting. Details: $($_.Exception.Message)"
         exit 1
     }
 }
@@ -115,21 +107,21 @@ try {
     Assert-PathExists $ActionsPath "Actions folder"
 
     # 1) Clean up old .lvlibp in the plugins folder
-    Write-Host "Cleaning up old .lvlibp files in plugins folder..." -ForegroundColor Yellow
+    Write-Information "Cleaning up old .lvlibp files in plugins folder..." -InformationAction Continue
     Write-Verbose "Looking for .lvlibp files in $($RelativePath)\resource\plugins..."
     try {
         $PluginFiles = Get-ChildItem -Path "$RelativePath\resource\plugins" -Filter '*.lvlibp' -ErrorAction Stop
         if ($PluginFiles) {
             Write-Verbose "Found $($PluginFiles.Count) file(s): $($PluginFiles | ForEach-Object { $_.Name } -join ', ')"
             $PluginFiles | Remove-Item -Force
-            Write-Host "Deleted .lvlibp files from plugins folder." -ForegroundColor Green
+            Write-Information "Deleted .lvlibp files from plugins folder." -InformationAction Continue
         }
         else {
-            Write-Host "No .lvlibp files found to delete." -ForegroundColor Cyan
+            Write-Information "No .lvlibp files found to delete." -InformationAction Continue
         }
     }
     catch {
-        Write-Host "Error occurred while retrieving .lvlibp files: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Error "Error occurred while retrieving .lvlibp files: $($_.Exception.Message)"
         Write-Verbose "Stack Trace: $($_.Exception.StackTrace)"
     }
 
@@ -145,24 +137,24 @@ try {
     # 3) Build LV Library (32-bit)
     Write-Verbose "Building LV library (32-bit)..."
     $BuildLvlibp = Join-Path $ActionsPath "build-lvlibp/Build_lvlibp.ps1"
-    Execute-Script $BuildLvlibp `
-        ("-MinimumSupportedLVVersion 2021 " +
-         "-SupportedBitness 32 " +
-         "-RelativePath `"$RelativePath`" " +
-         "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
-         "-Commit `"$Commit`"")
+    $argsLvlibp32 = @(
+        '-MinimumSupportedLVVersion','2021',
+        '-SupportedBitness','32',
+        '-RelativePath', $RelativePath,
+        '-Major', $Major, '-Minor', $Minor, '-Patch', $Patch, '-Build', $Build,
+        '-Commit', $Commit
+    )
+    Execute-Script -ScriptPath $BuildLvlibp -ArgumentList $argsLvlibp32
 
     # 4) Close LabVIEW (32-bit)
     Write-Verbose "Closing LabVIEW (32-bit)..."
     $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
-    Execute-Script $CloseLabVIEW `
-        "-MinimumSupportedLVVersion 2021 -SupportedBitness 32"
+    Execute-Script -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
 
     # 5) Rename .lvlibp -> lv_icon_x86.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x86.lvlibp..."
     $RenameFile = Join-Path $ActionsPath "rename-file/Rename-file.ps1"
-    Execute-Script $RenameFile `
-        "-CurrentFilename `"$RelativePath\resource\plugins\lv_icon.lvlibp`" -NewFilename 'lv_icon_x86.lvlibp'"
+    Execute-Script -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RelativePath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x86.lvlibp')
 
  #   # 6) Apply VIPC (64-bit)
  #   Write-Verbose "Now applying VIPC for 64-bit..."
@@ -176,23 +168,23 @@ try {
 
     # 7) Build LV Library (64-bit)
     Write-Verbose "Building LV library (64-bit)..."
-    Execute-Script $BuildLvlibp `
-        ("-MinimumSupportedLVVersion 2021 " +
-         "-SupportedBitness 64 " +
-         "-RelativePath `"$RelativePath`" " +
-         "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
-         "-Commit `"$Commit`"")
+    $argsLvlibp64 = @(
+        '-MinimumSupportedLVVersion','2021',
+        '-SupportedBitness','64',
+        '-RelativePath', $RelativePath,
+        '-Major', $Major, '-Minor', $Minor, '-Patch', $Patch, '-Build', $Build,
+        '-Commit', $Commit
+    )
+    Execute-Script -ScriptPath $BuildLvlibp -ArgumentList $argsLvlibp64
     
     # 7.1) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Execute-Script $CloseLabVIEW `
-        "-MinimumSupportedLVVersion 2021 -SupportedBitness 64"
+    Execute-Script -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
     
 
     # Rename .lvlibp -> lv_icon_x64.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x64.lvlibp..."
-    Execute-Script $RenameFile `
-        "-CurrentFilename `"$RelativePath\resource\plugins\lv_icon.lvlibp`" -NewFilename 'lv_icon_x64.lvlibp'"
+    Execute-Script -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RelativePath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x64.lvlibp')
 
     # -------------------------------------------------------------------------
     # 8) Construct the JSON for "Company Name" & "Author Name", plus version
