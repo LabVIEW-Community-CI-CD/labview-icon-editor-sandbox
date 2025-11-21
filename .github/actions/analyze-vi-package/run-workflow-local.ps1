@@ -1,8 +1,6 @@
 param(
-    # Path to the built artifact (directory containing .vip, or a .zip of the artifact).
-    [string]$ArtifactPath = "builds/VI Package",
-    # Optional explicit .vip path; if provided, ArtifactPath is ignored.
-    [string]$VipPath,
+    # Path to the built artifact (directory containing .vip, or a .zip of the artifact). Mirrors CI artifact path.
+    [string]$VipArtifactPath = "builds/VI Package",
     # Minimum LabVIEW version (major.minor)
     [string]$MinLabVIEW = "21.0"
 )
@@ -43,7 +41,7 @@ function Resolve-Vip {
 }
 
 try {
-    $resolvedVip = if ($VipPath) { Resolve-Vip -PathSpec $VipPath } else { Resolve-Vip -PathSpec $ArtifactPath }
+    $resolvedVip = Resolve-Vip -PathSpec $VipArtifactPath
 
     # Ensure Pester 5.7.1 (align with CI and run-local)
     $desiredVersion = [version]'5.7.1'

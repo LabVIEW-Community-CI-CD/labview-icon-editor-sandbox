@@ -110,7 +110,7 @@ Describe "VSCode Build Task wiring" {
                 ".github/actions/build/Build.ps1"
             )
             foreach ($req in $required) {
-                $command | Should -Match [regex]::Escape($req)
+                $command | Should -Match $req
             }
         }
     }

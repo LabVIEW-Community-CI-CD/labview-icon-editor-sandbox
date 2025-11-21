@@ -1,5 +1,5 @@
 param(
-    [Parameter(Mandatory)][string]$VipPath,
+    [Parameter(Mandatory)][string]$VipArtifactPath,
     [Parameter(Mandatory)][string]$MinLabVIEW = "21.0"
 )
 
@@ -20,24 +20,24 @@ Import-Module -Name $pesterModule.Path -Force
 
 # Resolve VIP path; allow direct file, directory (pick newest .vip), or wildcard
 $vipResolved = $null
-if (Test-Path -LiteralPath $VipPath -PathType Leaf) {
-    $vipResolved = (Resolve-Path -LiteralPath $VipPath).Path
-} elseif (Test-Path -LiteralPath $VipPath -PathType Container) {
-    $candidates = Get-ChildItem -Path $VipPath -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending
+if (Test-Path -LiteralPath $VipArtifactPath -PathType Leaf) {
+    $vipResolved = (Resolve-Path -LiteralPath $VipArtifactPath).Path
+} elseif (Test-Path -LiteralPath $VipArtifactPath -PathType Container) {
+    $candidates = Get-ChildItem -Path $VipArtifactPath -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending
     if ($candidates) {
         $vipResolved = $candidates[0].FullName
-        Write-Information ("Using most recent .vip under {0}: {1}" -f $VipPath, $vipResolved) -InformationAction Continue
+        Write-Information ("Using most recent .vip under {0}: {1}" -f $VipArtifactPath, $vipResolved) -InformationAction Continue
     }
 } else {
-    $candidates = Get-ChildItem -Path $VipPath -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Extension -ieq '.vip' } | Sort-Object LastWriteTime -Descending
+    $candidates = Get-ChildItem -Path $VipArtifactPath -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Extension -ieq '.vip' } | Sort-Object LastWriteTime -Descending
     if ($candidates) {
         $vipResolved = $candidates[0].FullName
-        Write-Information ("Using .vip matched by pattern {0}: {1}" -f $VipPath, $vipResolved) -InformationAction Continue
+        Write-Information ("Using .vip matched by pattern {0}: {1}" -f $VipArtifactPath, $vipResolved) -InformationAction Continue
     }
 }
 
 if (-not $vipResolved) {
-    throw "VIP not found. Provide a .vip path, a directory containing one, or a wildcard. Input was: $VipPath"
+    throw "VIP not found. Provide a .vip path, a directory containing one, or a wildcard. Input was: $VipArtifactPath"
 }
 
 $tests = Join-Path $PSScriptRoot 'Analyze-VIP.Tests.ps1'

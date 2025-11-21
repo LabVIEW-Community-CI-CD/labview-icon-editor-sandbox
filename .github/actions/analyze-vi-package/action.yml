@@ -1,8 +1,8 @@
 name: Analyze VI Package
 description: "Run Pester policy tests against a LabVIEW VI Package (.vip) by reading the package directly."
 inputs:
-  vip_path:
-    description: "Path to the .vip file to analyze"
+  vip_artifact_path:
+    description: "Path to the built .vip file to analyze (direct file path recommended)"
     required: true
   min_labview:
     description: "Minimum LabVIEW version (major.minor) the package must support (e.g., 21.0)"
@@ -33,7 +33,7 @@ runs:
 
         $tests = Join-Path $work "Analyze-VIP.Tests.ps1"
         $results = Join-Path $work "pester-results.xml"
-        $env:VIP_PATH = "${{ inputs.vip_path }}"
+        $env:VIP_PATH = "${{ inputs.vip_artifact_path }}"
         $env:MIN_LV_VERSION = "${{ inputs.min_labview }}"
         $config = [PesterConfiguration]::Default
         $config.Run.Path = @($tests)

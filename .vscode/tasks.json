@@ -2,9 +2,9 @@
   "version": "2.0.0",
   "inputs": [
     {
-      "id": "vipPath",
+      "id": "vipArtifactPath",
       "type": "promptString",
-      "description": "Path to the .vip file (or folder containing it) to analyze",
+      "description": "Path to the built .vip (file/folder/pattern)",
       "default": "builds/VI Package/"
     },
     {
@@ -65,8 +65,8 @@
         "-NoProfile",
         "-File",
         "${workspaceFolder}/.github/actions/analyze-vi-package/run-local.ps1",
-        "-VipPath",
-        "${input:vipPath}",
+        "-VipArtifactPath",
+        "${input:vipArtifactPath}",
         "-MinLabVIEW",
         "${input:minLv}"
       ],

@@ -865,7 +865,7 @@ jobs:
         id: analyze-vip
         uses: ./.github/actions/analyze-vi-package
         with:
-          vip_path: ${{ steps.locate-downloaded-vip.outputs.vip_path }}
+          vip_artifact_path: ${{ steps.locate-downloaded-vip.outputs.vip_path }}
           min_labview: ${{ env.MIN_LABVIEW_POLICY }}
       - name: Upload VI package analysis results
         if: always()
