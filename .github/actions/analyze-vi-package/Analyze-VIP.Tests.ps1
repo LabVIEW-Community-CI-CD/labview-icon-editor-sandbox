@@ -1,12 +1,7 @@
 # Analyze-VIP.Tests.ps1
 # Pester tests that assert policy requirements against a VI Package (.vip) by reading it directly.
 
-param(
-    # Path to the .vip under test
-[Parameter()][string]$VipPath = $env:VIP_PATH,
-# Minimum allowed LabVIEW major.minor (e.g., "21.0")
-[Parameter()][string]$MinLabVIEW = $(if ($env:MIN_LV_VERSION) { $env:MIN_LV_VERSION } else { "21.0" })
-)
+param()
 
 # Tests run in a dedicated scope; relax strict mode locally to avoid expansion of placeholder tokens like <application>.
 Set-StrictMode -Off
@@ -14,11 +9,11 @@ Set-StrictMode -Off
 Import-Module "$PSScriptRoot/VIPReader.psm1" -Force
 
 BeforeAll {
-    $script:vip = Read-VipSpec -Path $VipPath
+$script:vip = Read-VipSpec -Path $env:VIP_PATH
     $script:S = $vip.Sections
     $script:entries = $vip.ZipEntries
     $script:entryNames = $entries | ForEach-Object { [System.IO.Path]::GetFileName($_) }
-    function global:Get-VersionParts([string]$ver) {
+    function global:Get-VersionPart([string]$ver) {
         if (-not $ver) { return @() }
         return ($ver -split '\.').ForEach({ $_ -as [int] })
     }
@@ -124,8 +119,8 @@ Describe "Platform constraints" {
         $m.Success | Should -BeTrue
         $specified = $m.Groups[1].Value
         # Compare major.minor numerically
-        $minParts = (Get-VersionParts $MinLabVIEW)
-        $specParts = (Get-VersionParts $specified)
+        $minParts = (Get-VersionPart $env:MIN_LV_VERSION)
+        $specParts = (Get-VersionPart $specified)
         # Pad to equal length for comparison
         while ($minParts.Count -lt 2) { $minParts += 0 }
         while ($specParts.Count -lt 2) { $specParts += 0 }

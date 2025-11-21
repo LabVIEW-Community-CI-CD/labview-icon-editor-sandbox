@@ -26,7 +26,7 @@ function Rename-File {
         [string]$CurrentFilename,
         [string]$NewFilename
     )
-    
+
     # Check if the file exists
     if (-Not (Test-Path -Path $CurrentFilename)) {
         Write-Error "File '$CurrentFilename' does not exist."

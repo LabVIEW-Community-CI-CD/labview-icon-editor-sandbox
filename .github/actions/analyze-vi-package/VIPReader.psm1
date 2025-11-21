@@ -2,6 +2,10 @@
 # Helper functions to read a VI Package (.vip) directly (as a ZIP) and parse its 'spec' file.
 # No external tools required.
 
+<#
+.SYNOPSIS
+Reads a .vip file and returns parsed spec metadata plus entry list.
+#>
 function Read-VipSpec {
     [CmdletBinding()]
     param(
@@ -58,13 +62,17 @@ function Read-VipSpec {
 
     # Add the raw text and list of entries for convenience
     [pscustomobject]@{
-        Path      = (Resolve-Path $Path).Path
-        Text      = $text
-        Sections  = $sections
+        Path       = (Resolve-Path $Path).Path
+        Text       = $text
+        Sections   = $sections
         ZipEntries = (Get-VipEntryList -Path $Path)
     }
 }
 
+<#
+.SYNOPSIS
+Lists all entries inside a .vip archive (zip).
+#>
 function Get-VipEntryList {
     [CmdletBinding()]
     param(
@@ -84,6 +92,10 @@ function Get-VipEntryList {
     }
 }
 
+<#
+.SYNOPSIS
+Retrieves a specific field from the parsed spec sections.
+#>
 function Get-VipField {
     [CmdletBinding()]
     param(
@@ -101,4 +113,4 @@ function Get-VipField {
     return $sec[$Key]
 }
 
-Export-ModuleMember -Function Read-VipSpec, Get-VipEntries, Get-VipField
+Export-ModuleMember -Function Read-VipSpec, Get-VipEntryList, Get-VipField

@@ -7,7 +7,7 @@
       - Table-based test results
       - Color-coded pass/fail
       - Non-zero exit if g-cli fails or if any test fails
-      - Automatic search for exactly one *.lvproj file by moving up the folder hierarchy 
+      - Automatic search for exactly one *.lvproj file by moving up the folder hierarchy
         until just before the drive root.
 
 .PARAMETER MinimumSupportedLVVersion
@@ -21,6 +21,8 @@
     This script *requires* that g-cli and LabVIEW be compatible with the OS.
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","MinimumSupportedLVVersion",Justification="Used in nested functions and g-cli invocation")]
+[Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","SupportedBitness",Justification="Used in nested functions and g-cli invocation")]
 param(
     [Parameter(Mandatory=$true)]
     [string]
@@ -58,10 +60,10 @@ function Get-SingleLvproj {
             $lvprojFiles | ForEach-Object { Write-Information (" - {0}" -f $_.FullName) -InformationAction Continue }
             return $null
         }
-        
+
         # If none found, move one level up
         $parentDir = Split-Path -Path $currentDir -Parent
-        
+
         # If we've reached or are about to reach the drive root, stop searching
         $driveRoot = [System.IO.Path]::GetPathRoot($currentDir)
         if ($parentDir -eq $currentDir -or $parentDir -eq $driveRoot) {
@@ -89,7 +91,7 @@ $Script:TestsHadFailures = $false
 $ReportPath = Join-Path -Path $PSScriptRoot -ChildPath "UnitTestReport.xml"
 
 # --------------------------  SETUP  --------------------------
-function Setup {
+function Invoke-Setup {
     Write-Information "=== Setup ===" -InformationAction Continue
     $reportDir = Split-Path -Parent $ReportPath
     if (-not (Test-Path $reportDir)) {
@@ -116,7 +118,7 @@ function Setup {
 }
 
 # ------------------------  MAIN SEQUENCE  ----------------------
-function MainSequence {
+function Invoke-MainSequence {
     Write-Information "`n=== MainSequence ===" -InformationAction Continue
     Write-Information "Running unit tests for LabVIEW $MinimumSupportedLVVersion ($SupportedBitness-bit)" -InformationAction Continue
     Write-Information "Project Path: $AbsoluteProjectPath" -InformationAction Continue
@@ -234,7 +236,7 @@ Write-Information $header -InformationAction Continue
 }
 
 # --------------------------  CLEANUP  --------------------------
-function Cleanup {
+function Invoke-Cleanup {
     Write-Information "`n=== Cleanup ===" -InformationAction Continue
     # If everything passed (and g-cli was OK), delete the report
     if (($script:OriginalExitCode -eq 0) -and (-not $script:TestsHadFailures)) {
@@ -250,8 +252,8 @@ function Cleanup {
 
 # -------------------  EXECUTION FLOW  -------------------
 try {
-    Setup
-    MainSequence
+    Invoke-Setup
+    Invoke-MainSequence
 }
 catch {
     if ($Script:OriginalExitCode -eq 0) {
@@ -262,7 +264,7 @@ catch {
 }
 finally {
     try {
-        Cleanup
+        Invoke-Cleanup
     }
     catch {
         Write-Warning ("Cleanup failed: {0}" -f $_.Exception.Message)

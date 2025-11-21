@@ -1,10 +1,14 @@
 $ErrorActionPreference = 'Stop'
-
 function New-TempRepo {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param([string] $Name)
     $root = if ($Env:RUNNER_TEMP) { $Env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
-    $path = Join-Path $root $Name
-    if (Test-Path $path) { Remove-Item -Recurse -Force $path }
+    $path = Join-Path -Path $root -ChildPath $Name
+    if (Test-Path $path -PathType Any) {
+        if ($PSCmdlet.ShouldProcess($path, "Remove existing temp repo")) {
+            Remove-Item -Recurse -Force $path
+        }
+    }
     New-Item -ItemType Directory -Path $path | Out-Null
     Push-Location $path
     git init | Out-Null
@@ -16,7 +20,8 @@ function New-TempRepo {
     return $path
 }
 
-$scriptPath = Join-Path $PSScriptRoot ".." "Get-LastTag.ps1"
+$parentPath = Join-Path -Path $PSScriptRoot -ChildPath ".."
+$scriptPath = Join-Path -Path $parentPath -ChildPath "Get-LastTag.ps1"
 
 # No-tag scenario should be marked as first release
 $repo = New-TempRepo -Name ("compute-version-no-tags-" + [guid]::NewGuid())

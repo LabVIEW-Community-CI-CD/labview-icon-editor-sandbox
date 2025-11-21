@@ -9,8 +9,8 @@
 .PARAMETER SupportedBitness
     LabVIEW bitness for the build ("32" or "64").
 
-.PARAMETER RelativePath
-    Path to the repository root.
+.PARAMETER RepositoryPath
+    Path to the repository root (alias: RelativePath).
 
 .PARAMETER VIPBPath
     Relative path to the VIPB file to update.
@@ -43,12 +43,13 @@
     JSON string representing the VIPB display information to update.
 
 .EXAMPLE
-    .\build_vip.ps1 -SupportedBitness "64" -RelativePath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -MinimumSupportedLVVersion 2021 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
+    .\build_vip.ps1 -SupportedBitness "64" -RepositoryPath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -MinimumSupportedLVVersion 2021 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
 #>
 
 param (
     [string]$SupportedBitness,
-    [string]$RelativePath,
+    [Alias('RelativePath')]
+    [string]$RepositoryPath,
     [string]$VIPBPath,
 
     [int]$MinimumSupportedLVVersion,
@@ -69,12 +70,17 @@ param (
 
 # 1) Resolve paths
 try {
-    $ResolvedRelativePath = Resolve-Path -Path $RelativePath -ErrorAction Stop
-    $ResolvedVIPBPath = Join-Path -Path $ResolvedRelativePath -ChildPath $VIPBPath -ErrorAction Stop
+    $ResolvedRepositoryPath = Resolve-Path -Path $RepositoryPath -ErrorAction Stop
+    $ResolvedVIPBPath = Join-Path -Path $ResolvedRepositoryPath -ChildPath $VIPBPath -ErrorAction Stop
+    Write-Verbose "RepositoryPath resolved to $ResolvedRepositoryPath"
+    Write-Verbose "VIPBPath resolved to $ResolvedVIPBPath"
+    if ($Commit) {
+        Write-Verbose "Embedding commit metadata: $Commit" -Verbose:$VerbosePreference
+    }
 }
 catch {
     $errorObject = [PSCustomObject]@{
-        error      = "Error resolving paths. Ensure RelativePath and VIPBPath are valid."
+        error      = "Error resolving paths. Ensure RepositoryPath and VIPBPath are valid."
         exception  = $_.Exception.Message
         stackTrace = $_.Exception.StackTrace
     }
@@ -102,7 +108,7 @@ catch {
 }
 
 # 3a) Ensure build log directory exists for troubleshooting
-$LogDirectory = Join-Path -Path $ResolvedRelativePath -ChildPath "builds/logs"
+$LogDirectory = Join-Path -Path $ResolvedRepositoryPath -ChildPath "builds/logs"
 New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
 
 # 3) Calculate the LabVIEW version string
@@ -146,9 +152,6 @@ else {
     $jsonObj.'Package Version'.patch = $Patch
     $jsonObj.'Package Version'.build = $Build
 }
-
-# Re-convert to a JSON string with a comfortable nesting depth
-$UpdatedDisplayInformationJSON = $jsonObj | ConvertTo-Json -Depth 5
 
 # 5) Construct reusable g-cli arguments
 $gcliArgs = @(

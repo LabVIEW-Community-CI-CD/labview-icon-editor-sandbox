@@ -12,7 +12,7 @@
 
   Example usage:
     .\Build.ps1 `
-      -RelativePath "C:\release\labview-icon-editor-fork" `
+      -RepositoryPath "C:\release\labview-icon-editor-fork" `
       -Major 1 -Minor 0 -Patch 0 -Build 3 -Commit "Placeholder" `
       -CompanyName "Acme Corporation" `
       -AuthorName "John Doe (Acme Corp)" `
@@ -22,7 +22,8 @@
 [CmdletBinding()]  # Enables -Verbose, -Debug, etc.
 param(
     [Parameter(Mandatory = $true)]
-    [string]$RelativePath,
+    [Alias('RelativePath')]
+    [string]$RepositoryPath,
 
     [Parameter(Mandatory = $true)]
     [int]$Major = 1,
@@ -52,7 +53,7 @@ param(
 )
 
 # Helper function to verify a file/folder path exists
-function Assert-PathExists {
+function Test-PathExistence {
     param(
         [string]$Path,
         [string]$Description
@@ -66,7 +67,7 @@ function Assert-PathExists {
 }
 
 # Helper function to run another script with arguments safely
-function Execute-Script {
+function Invoke-ScriptSafe {
     param(
         [string]$ScriptPath,
         [string[]]$ArgumentList
@@ -89,7 +90,7 @@ function Execute-Script {
 try {
     Write-Verbose "Script: Build.ps1 starting."
     Write-Verbose "Parameters received:"
-    Write-Verbose " - RelativePath: $RelativePath"
+    Write-Verbose " - RepositoryPath: $RepositoryPath"
     Write-Verbose " - Major: $Major"
     Write-Verbose " - Minor: $Minor"
     Write-Verbose " - Patch: $Patch"
@@ -100,17 +101,17 @@ try {
     Write-Verbose " - AuthorName: $AuthorName"
 
     # Validate needed folders
-    Assert-PathExists $RelativePath "RelativePath"
-    Assert-PathExists "$RelativePath\resource\plugins" "Plugins folder"
+    Test-PathExistence $RepositoryPath "RepositoryPath"
+    Test-PathExistence "$RepositoryPath\resource\plugins" "Plugins folder"
 
     $ActionsPath = Split-Path -Parent $PSScriptRoot
-    Assert-PathExists $ActionsPath "Actions folder"
+    Test-PathExistence $ActionsPath "Actions folder"
 
     # 1) Clean up old .lvlibp in the plugins folder
     Write-Information "Cleaning up old .lvlibp files in plugins folder..." -InformationAction Continue
-    Write-Verbose "Looking for .lvlibp files in $($RelativePath)\resource\plugins..."
+    Write-Verbose "Looking for .lvlibp files in $($RepositoryPath)\resource\plugins..."
     try {
-        $PluginFiles = Get-ChildItem -Path "$RelativePath\resource\plugins" -Filter '*.lvlibp' -ErrorAction Stop
+        $PluginFiles = Get-ChildItem -Path "$RepositoryPath\resource\plugins" -Filter '*.lvlibp' -ErrorAction Stop
         if ($PluginFiles) {
             Write-Verbose "Found $($PluginFiles.Count) file(s): $($PluginFiles | ForEach-Object { $_.Name } -join ', ')"
             $PluginFiles | Remove-Item -Force
@@ -140,21 +141,21 @@ try {
     $argsLvlibp32 = @(
         '-MinimumSupportedLVVersion','2021',
         '-SupportedBitness','32',
-        '-RelativePath', $RelativePath,
+        '-RepositoryPath', $RepositoryPath,
         '-Major', $Major, '-Minor', $Minor, '-Patch', $Patch, '-Build', $Build,
         '-Commit', $Commit
     )
-    Execute-Script -ScriptPath $BuildLvlibp -ArgumentList $argsLvlibp32
+    Invoke-ScriptSafe -ScriptPath $BuildLvlibp -ArgumentList $argsLvlibp32
 
     # 4) Close LabVIEW (32-bit)
     Write-Verbose "Closing LabVIEW (32-bit)..."
     $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
-    Execute-Script -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
 
     # 5) Rename .lvlibp -> lv_icon_x86.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x86.lvlibp..."
     $RenameFile = Join-Path $ActionsPath "rename-file/Rename-file.ps1"
-    Execute-Script -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RelativePath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x86.lvlibp')
+    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RepositoryPath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x86.lvlibp')
 
  #   # 6) Apply VIPC (64-bit)
  #   Write-Verbose "Now applying VIPC for 64-bit..."
@@ -171,20 +172,19 @@ try {
     $argsLvlibp64 = @(
         '-MinimumSupportedLVVersion','2021',
         '-SupportedBitness','64',
-        '-RelativePath', $RelativePath,
+        '-RepositoryPath', $RepositoryPath,
         '-Major', $Major, '-Minor', $Minor, '-Patch', $Patch, '-Build', $Build,
         '-Commit', $Commit
     )
-    Execute-Script -ScriptPath $BuildLvlibp -ArgumentList $argsLvlibp64
-    
+    Invoke-ScriptSafe -ScriptPath $BuildLvlibp -ArgumentList $argsLvlibp64
+
     # 7.1) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Execute-Script -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
-    
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
 
     # Rename .lvlibp -> lv_icon_x64.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x64.lvlibp..."
-    Execute-Script -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RelativePath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x64.lvlibp')
+    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RepositoryPath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x64.lvlibp')
 
     # -------------------------------------------------------------------------
     # 8) Construct the JSON for "Company Name" & "Author Name", plus version
@@ -214,36 +214,36 @@ try {
     # 9) Modify VIPB Display Information
     Write-Verbose "Modify VIPB Display Information (64-bit)..."
     $ModifyVIPB = Join-Path $ActionsPath "modify-vipb-display-info/ModifyVIPBDisplayInfo.ps1"
-    Execute-Script $ModifyVIPB `
+    Invoke-ScriptSafe $ModifyVIPB `
         (
             # Use single-dash for all recognized parameters
             "-SupportedBitness 64 " +
-            "-RelativePath `"$RelativePath`" " +
+            "-RepositoryPath `"$RepositoryPath`" " +
             "-VIPBPath `"Tooling\deployment\NI Icon editor.vipb`" " +
             "-MinimumSupportedLVVersion 2023 " +
             "-LabVIEWMinorRevision $LabVIEWMinorRevision " +
             "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
             "-Commit `"$Commit`" " +
-            "-ReleaseNotesFile `"$RelativePath\Tooling\deployment\release_notes.md`" " +
+            "-ReleaseNotesFile `"$RepositoryPath\Tooling\deployment\release_notes.md`" " +
             # Pass our JSON
             "-DisplayInformationJSON '$DisplayInformationJSON' " +
             "-Verbose"
-        )   
+        )
 
     # 11) Build VI Package (64-bit) 2023
     Write-Verbose "Building VI Package (64-bit)..."
     $BuildVip = Join-Path $ActionsPath "build-vip/build_vip.ps1"
-    Execute-Script $BuildVip `
+    Invoke-ScriptSafe $BuildVip `
         (
             # Use single-dash for all recognized parameters
             "-SupportedBitness 64 " +
-            "-RelativePath `"$RelativePath`" " +
+            "-RepositoryPath `"$RepositoryPath`" " +
             "-VIPBPath `"Tooling\deployment\NI Icon editor.vipb`" " +
             "-MinimumSupportedLVVersion 2023 " +
             "-LabVIEWMinorRevision $LabVIEWMinorRevision " +
             "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
             "-Commit `"$Commit`" " +
-            "-ReleaseNotesFile `"$RelativePath\Tooling\deployment\release_notes.md`" " +
+            "-ReleaseNotesFile `"$RepositoryPath\Tooling\deployment\release_notes.md`" " +
             # Pass our JSON
             "-DisplayInformationJSON '$DisplayInformationJSON' " +
             "-Verbose"
@@ -251,7 +251,7 @@ try {
 
     # 12) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Execute-Script -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2023','-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2023','-SupportedBitness','64')
 
     Write-Information "All scripts executed successfully!" -InformationAction Continue
     Write-Verbose "Script: Build.ps1 completed without errors."

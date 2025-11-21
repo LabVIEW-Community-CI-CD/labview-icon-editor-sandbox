@@ -1,13 +1,17 @@
 #Requires -Version 7.0
-$ErrorActionPreference = 'Stop'
 
 # ---------- PARAMETERS ----------
+[Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","LVVersion",Justification="Used throughout helper invocations")]
+[Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","Arch",Justification="Used throughout helper invocations")]
+[Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","ProjectFile",Justification="Used throughout helper invocations")]
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$LVVersion,
     [Parameter(Mandatory)][ValidateSet('32','64')][string]$Arch,
     [Parameter(Mandatory)][string]$ProjectFile
 )
+
+$ErrorActionPreference = 'Stop'
 
 # ---------- GLOBAL STATE ----------
 $Script:HelperExitCode   = 0
@@ -40,7 +44,7 @@ function Setup {
 function MainSequence {
 
     Write-Information "`n=== MainSequence ===" -InformationAction Continue
-    Write-Information "Invoking missing‑file check via helper script …`n" -InformationAction Continue
+    Write-Information "Invoking missing-file check via helper script ...`n" -InformationAction Continue
 
     # call helper & capture any stdout (not strictly needed now)
     & $HelperPath -LVVersion $LVVersion -Arch $Arch -ProjectFile $ProjectFile
@@ -58,7 +62,7 @@ function MainSequence {
     }
     else {
         if ($Script:HelperExitCode -ne 0) {
-            # helper failed and didn't produce a file – we cannot parse anything
+            # helper failed and didn't produce a file - we cannot parse anything
             $Script:ParsingFailed = $true
             return
         }
@@ -93,7 +97,7 @@ function Cleanup {
     if ($Script:HelperExitCode -eq 0 -and $Script:MissingFileLines.Count -eq 0) {
         if (Test-Path $MissingFilePath) {
             Remove-Item $MissingFilePath -Force -ErrorAction SilentlyContinue
-            Write-Information "All good – removed $MissingFilePath" -InformationAction Continue
+            Write-Information "All good - removed $MissingFilePath" -InformationAction Continue
         }
     }
 }

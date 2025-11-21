@@ -11,8 +11,8 @@
 .PARAMETER SupportedBitness
     LabVIEW bitness for the build ("32" or "64").
 
-.PARAMETER RelativePath
-    Path to the repository root.
+.PARAMETER RepositoryPath
+    Path to the repository root (alias: RelativePath).
 
 .PARAMETER VIPBPath
     Relative path to the VIPB file to modify.
@@ -45,11 +45,13 @@
     JSON string representing the VIPB display information to update.
 
 .EXAMPLE
-    .\ModifyVIPBDisplayInfo.ps1 -SupportedBitness "64" -RelativePath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -MinimumSupportedLVVersion 2023 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
+    .\ModifyVIPBDisplayInfo.ps1 -SupportedBitness "64" -RepositoryPath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -MinimumSupportedLVVersion 2023 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
 #>
+[CmdletBinding(SupportsShouldProcess = $true)]
 param (
     [string]$SupportedBitness,
-    [string]$RelativePath,
+    [Alias('RelativePath')]
+    [string]$RepositoryPath,
     [string]$VIPBPath,
 
     [int]$MinimumSupportedLVVersion,
@@ -70,12 +72,12 @@ param (
 
 # 1) Resolve paths
 try {
-    $ResolvedRelativePath = Resolve-Path -Path $RelativePath -ErrorAction Stop
-    $ResolvedVIPBPath = Join-Path -Path $ResolvedRelativePath -ChildPath $VIPBPath -ErrorAction Stop
+    $ResolvedRepositoryPath = Resolve-Path -Path $RepositoryPath -ErrorAction Stop
+    $ResolvedVIPBPath = Join-Path -Path $ResolvedRepositoryPath -ChildPath $VIPBPath -ErrorAction Stop
 }
 catch {
     $errorObject = [PSCustomObject]@{
-        error      = "Error resolving paths. Ensure RelativePath and VIPBPath are valid."
+        error      = "Error resolving paths. Ensure RepositoryPath and VIPBPath are valid."
         exception  = $_.Exception.Message
         stackTrace = $_.Exception.StackTrace
     }
@@ -85,8 +87,10 @@ catch {
 
 # 2) Create release notes if needed
 if (-not (Test-Path $ReleaseNotesFile)) {
-    Write-Information "Release notes file '$ReleaseNotesFile' does not exist. Creating it..." -InformationAction Continue
-    New-Item -ItemType File -Path $ReleaseNotesFile -Force | Out-Null
+    if ($PSCmdlet.ShouldProcess($ReleaseNotesFile, "Create release notes file placeholder")) {
+        Write-Information "Release notes file '$ReleaseNotesFile' does not exist. Creating it..." -InformationAction Continue
+        New-Item -ItemType File -Path $ReleaseNotesFile -Force | Out-Null
+    }
 }
 
 try {
@@ -165,6 +169,7 @@ if ($missingFields.Count -gt 0) {
 
 # Helper to set or create XML child nodes safely
 function Set-VipbElementValue {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [System.Xml.XmlNode]$ParentNode,
         [string]$ElementName,
@@ -172,6 +177,10 @@ function Set-VipbElementValue {
     )
 
     if (-not $ParentNode) { return }
+
+    if (-not $PSCmdlet.ShouldProcess($ElementName, "Set VIPB element value")) {
+        return
+    }
 
     $element = $ParentNode.SelectSingleNode($ElementName)
     if (-not $element) {
@@ -277,15 +286,15 @@ if (-not [string]::IsNullOrWhiteSpace($licenseAgreementInput)) {
     $relativePath  = $licenseAgreementInput
 
     if (-not [System.IO.Path]::IsPathRooted($candidatePath)) {
-        $candidatePath = Join-Path -Path $ResolvedRelativePath -ChildPath $licenseAgreementInput
+        $candidatePath = Join-Path -Path $ResolvedRepositoryPath -ChildPath $licenseAgreementInput
     }
 
     if (Test-Path $candidatePath) {
         try {
             $resolvedLicensePath = (Resolve-Path -Path $candidatePath -ErrorAction Stop).Path
 
-            if ($resolvedLicensePath.StartsWith($ResolvedRelativePath, [System.StringComparison]::OrdinalIgnoreCase)) {
-                $relativePath = $resolvedLicensePath.Substring($ResolvedRelativePath.Length).TrimStart('\','/')
+            if ($resolvedLicensePath.StartsWith($ResolvedRepositoryPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+                $relativePath = $resolvedLicensePath.Substring($ResolvedRepositoryPath.Length).TrimStart('\','/')
             }
         }
         catch {
@@ -338,9 +347,11 @@ try {
     $writerSettings.NewLineHandling = [System.Xml.NewLineHandling]::Replace
     $writerSettings.NewLineChars = "`n"
 
-    $xmlWriter = [System.Xml.XmlWriter]::Create($ResolvedVIPBPath, $writerSettings)
-    $vipbXml.Save($xmlWriter)
-    $xmlWriter.Close()
+    if ($PSCmdlet.ShouldProcess($ResolvedVIPBPath, "Save updated VIPB metadata")) {
+        $xmlWriter = [System.Xml.XmlWriter]::Create($ResolvedVIPBPath, $writerSettings)
+        $vipbXml.Save($xmlWriter)
+        $xmlWriter.Close()
+    }
 
 Write-Information "Successfully updated VIPB metadata: $ResolvedVIPBPath" -InformationAction Continue
 }

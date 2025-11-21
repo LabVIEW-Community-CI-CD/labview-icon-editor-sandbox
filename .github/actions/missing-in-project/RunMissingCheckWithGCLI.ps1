@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Runs MissingInProjectCLI.vi via G‑CLI and streams the VI’s output.
+    Runs MissingInProjectCLI.vi via G-CLI and streams the VI's output.
 
 .PARAMETER LVVersion
     LabVIEW version (e.g. "2021").
@@ -12,8 +12,8 @@
     Full path to the .lvproj that should be inspected.
 
 .NOTES
-    • Leaves exit status in $LASTEXITCODE for the caller.
-    • Does NOT call 'exit' to avoid terminating a parent session.
+    - Leaves exit status in $LASTEXITCODE for the caller.
+    - Does NOT call 'exit' to avoid terminating a parent session.
 #>
 #Requires -Version 7.0
 [CmdletBinding()]
@@ -23,30 +23,30 @@ param(
     [Parameter(Mandatory)][string]$ProjectFile
 )
 $ErrorActionPreference = 'Stop'
-Write-Information "ℹ️  [GCLI] Starting Missing‑in‑Project check ..." -InformationAction Continue
+Write-Information "[GCLI] Starting Missing-in-Project check ..." -InformationAction Continue
 
 # ---------- sanity checks ----------
 if (-not (Get-Command g-cli -ErrorAction SilentlyContinue)) {
-    Write-Warning "❌  g-cli executable not found in PATH."
+    Write-Warning "g-cli executable not found in PATH."
     $global:LASTEXITCODE = 127
     return
 }
 
 $viPath = Join-Path -Path $PSScriptRoot -ChildPath 'MissingInProjectCLI.vi'
 if (-not (Test-Path $viPath)) {
-    Write-Warning "❌  VI not found: $viPath"
+    Write-Warning "VI not found: $viPath"
     $global:LASTEXITCODE = 2
     return
 }
 if (-not (Test-Path $ProjectFile)) {
-    Write-Warning "❌  Project file not found: $ProjectFile"
+    Write-Warning "Project file not found: $ProjectFile"
     $global:LASTEXITCODE = 3
     return
 }
 
-Write-Information "ℹ️  VI path      : $viPath" -InformationAction Continue
-Write-Information "ℹ️  Project file : $ProjectFile" -InformationAction Continue
-Write-Information "ℹ️  LabVIEW ver  : $LVVersion  ($Arch-bit)" -InformationAction Continue
+Write-Information "VI path      : $viPath" -InformationAction Continue
+Write-Information "Project file : $ProjectFile" -InformationAction Continue
+Write-Information "LabVIEW ver  : $LVVersion  ($Arch-bit)" -InformationAction Continue
 Write-Information "--------------------------------------------------" -InformationAction Continue
 
 # ---------- build argument list & invoke ----------
@@ -65,9 +65,9 @@ $exitCode   = $LASTEXITCODE
 $gcliOutput | ForEach-Object { Write-Output $_ }
 
 if ($exitCode -eq 0) {
-    Write-Information "✅  Missing‑in‑Project check passed (no missing files)." -InformationAction Continue
+    Write-Information "Missing-in-Project check passed (no missing files)." -InformationAction Continue
 } else {
-    Write-Warning "❌  Missing‑in‑Project check FAILED – exit code $exitCode"
+    Write-Warning "Missing-in-Project check FAILED - exit code $exitCode"
 }
 
 # close LabVIEW if still running (harmless if not)

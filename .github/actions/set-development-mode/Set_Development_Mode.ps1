@@ -38,7 +38,7 @@ Write-Information "Prepare_LabVIEW_source script: $PrepareScript" -InformationAc
 Write-Information "Close_LabVIEW script: $CloseScript" -InformationAction Continue
 
 # Helper function to execute scripts and stop on error
-function Execute-Script {
+function Invoke-ScriptSafe {
     param(
         [string]$ScriptPath,
         [string[]]$ArgumentList
@@ -59,8 +59,6 @@ try {
     $PluginsPath = Join-Path -Path $RepositoryPath -ChildPath 'resource\plugins'
     if (Test-Path $PluginsPath) {
         # Build and execute the removal command only if the plugins folder exists
-        # Wrap the plugins path in single quotes to avoid issues with spaces or special characters
-        $RemoveArgs = @('Get-ChildItem','-Path', $PluginsPath, '-Filter','*.lvlibp')
         # Remove via pipeline to avoid IE
         Get-ChildItem -Path $PluginsPath -Filter '*.lvlibp' -ErrorAction SilentlyContinue | Remove-Item -Force
     }
@@ -69,18 +67,18 @@ try {
     }
 
     # 32-bit actions
-    Execute-Script -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RepositoryPath', $RepositoryPath)
+    Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RepositoryPath', $RepositoryPath)
 
-    Execute-Script -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
+    Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
 
-    Execute-Script -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
+    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
 
     # 64-bit actions
-    Execute-Script -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RepositoryPath', $RepositoryPath)
+    Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RepositoryPath', $RepositoryPath)
 
-    Execute-Script -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
+    Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64','-RepositoryPath', $RepositoryPath,'-LabVIEW_Project', $LabVIEW_Project, '-Build_Spec', 'Editor Packed Library')
 
-    Execute-Script -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
 
 }
 catch {
