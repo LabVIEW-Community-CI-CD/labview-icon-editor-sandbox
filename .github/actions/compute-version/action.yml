@@ -133,8 +133,10 @@ runs:
         HEAD_BRANCH:  ${{ github.event.workflow_run.head_branch || github.ref_name }}
       run: |
         function TagExists([string]$tag) {
-          $sha = git rev-parse -q --verify "refs/tags/$tag" 2>$null
-          return -not [string]::IsNullOrWhiteSpace($sha)
+          $null = git rev-parse -q --verify "refs/tags/$tag" 2>$null
+          $exists = $LASTEXITCODE -eq 0
+          $global:LASTEXITCODE = 0
+          return $exists
         }
 
         $latestRaw = git describe --tags --abbrev=0 2>$null
