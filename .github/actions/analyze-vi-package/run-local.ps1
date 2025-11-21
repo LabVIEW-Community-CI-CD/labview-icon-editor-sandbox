@@ -40,4 +40,6 @@ if (-not (Test-Path -LiteralPath $tests)) {
 
 Write-Host ("Running tests in {0} (VIP={1}, MinLV={2})" -f $tests, $vipResolved, $MinLabVIEW)
 $testsResolved = (Resolve-Path -LiteralPath $tests).Path
-Invoke-Pester -Script @{ Path = $testsResolved; Parameters = @{ VipPath = $vipResolved; MinLabVIEW = $MinLabVIEW } } -CI -Output Detailed | Out-Host
+$env:VIP_PATH = $vipResolved
+$env:MIN_LV_VERSION = $MinLabVIEW
+Invoke-Pester -Path $testsResolved -CI -Output Detailed | Out-Host
