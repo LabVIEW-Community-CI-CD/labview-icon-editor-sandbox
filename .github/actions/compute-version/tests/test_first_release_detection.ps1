@@ -49,4 +49,4 @@ try {
     Remove-Item -Recurse -Force $repo2
 }
 
-Write-Host "First release detection tests passed."
+Write-Output "First release detection tests passed."

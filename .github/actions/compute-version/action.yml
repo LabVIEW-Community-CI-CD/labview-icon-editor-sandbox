@@ -99,9 +99,9 @@ runs:
           $isFirst = [string]::IsNullOrWhiteSpace($tag)
         }
         if ([string]::IsNullOrWhiteSpace($tag)) {
-          Write-Host "No reachable tag found (initial release)."
+          Write-Information "No reachable tag found (initial release)." -InformationAction Continue
         } else {
-          Write-Host "Last reachable tag: $tag"
+          Write-Information "Last reachable tag: $tag" -InformationAction Continue
         }
         "last_tag=$tag" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
         "is_first_release=$isFirst" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
@@ -111,16 +111,16 @@ runs:
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
-        git fetch --unshallow 2>$null || Write-Host "Already a full clone."
+        git fetch --unshallow 2>$null || Write-Information "Already a full clone." -InformationAction Continue
         $lastTag = "${{ steps.last_tag.outputs.last_tag }}"
         if ([string]::IsNullOrWhiteSpace($lastTag)) {
           $count = git rev-list --count HEAD
-          Write-Host "No tag found; build number = commits from root => $count"
+          Write-Information "No tag found; build number = commits from root => $count" -InformationAction Continue
         } else {
           $count = git rev-list --count "$lastTag..HEAD"
-          Write-Host "Build number = commits since tag $lastTag => $count"
+          Write-Information "Build number = commits since tag $lastTag => $count" -InformationAction Continue
         }
-        Write-Host "Commit-based build number => $count"
+        Write-Information "Commit-based build number => $count" -InformationAction Continue
         "new_build_number=$count" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
     - name: Compute version string
@@ -166,7 +166,7 @@ runs:
         } else {
           $Env:GITHUB_REF -replace '^refs/heads/',''
         }
-        Write-Host "Using branch for suffix rules: $branch"
+        Write-Information "Using branch for suffix rules: $branch" -InformationAction Continue
         $suffix = ''
         if ($branch -like 'release-alpha/*') { $suffix = "alpha.$($Env:BUILD_NUMBER)" }
         elseif ($branch -like 'release-beta/*')  { $suffix = "beta.$($Env:BUILD_NUMBER)" }
@@ -176,13 +176,13 @@ runs:
         # Ensure we do not reuse an existing tag (strip build suffix for the tag name). Bump patch until free.
         $baseTag = $version -replace '-build\d+$',''
         while (TagExists $baseTag) {
-          Write-Host ("Tag {0} already exists; auto-bumping patch." -f $baseTag)
+          Write-Information ("Tag {0} already exists; auto-bumping patch." -f $baseTag) -InformationAction Continue
           $pat++
           $version = if ($suffix) { "v$maj.$min.$pat-$suffix-build$buildNumber" } else { "v$maj.$min.$pat-build$buildNumber" }
           $baseTag = $version -replace '-build\d+$',''
         }
         $isPre  = if ($suffix) { 'true' } else { 'false' }
-        Write-Host "Computed version => $version"
+        Write-Information "Computed version => $version" -InformationAction Continue
         "VERSION=$version"      | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
         "MAJOR=$maj"            | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
         "MINOR=$min"            | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
