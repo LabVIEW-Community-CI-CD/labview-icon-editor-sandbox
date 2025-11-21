@@ -1,12 +1,13 @@
 #Requires -Version 7.0
+$ErrorActionPreference = 'Stop'
+
+# ---------- PARAMETERS ----------
 [CmdletBinding()]
 param(
-[Parameter(Mandatory)][string]$LVVersion,
-[Parameter(Mandatory)][ValidateSet('32','64')][string]$Arch,
-[Parameter(Mandatory)][string]$ProjectFile
+    [Parameter(Mandatory)][string]$LVVersion,
+    [Parameter(Mandatory)][ValidateSet('32','64')][string]$Arch,
+    [Parameter(Mandatory)][string]$ProjectFile
 )
-
-$ErrorActionPreference = 'Stop'
 
 # ---------- GLOBAL STATE ----------
 $Script:HelperExitCode   = 0
