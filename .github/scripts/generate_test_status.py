@@ -331,6 +331,7 @@ def build_structured_results(
 ) -> Path:
     """Emit structured results JSON (expected vs actual)."""
     results_path = REPORTS_DIR / f"test-results-{run_label}.json"
+    results_path.parent.mkdir(parents=True, exist_ok=True)
     results: List[dict] = []
     blocked = 0
     for row in rows:
@@ -620,6 +621,8 @@ def main() -> int:
     if args.mode == "completion":
         performance_summary, perf_blocker = summarize_performance(performance_results_path)
         portability_summary, port_blocker = summarize_portability(portability_results_path)
+
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
     results_path = build_structured_results(
         meta=meta,
