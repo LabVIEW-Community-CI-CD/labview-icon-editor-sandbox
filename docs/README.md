@@ -10,6 +10,13 @@ This directory collects guides and references for working with the LabVIEW Icon 
 - [PowerShell Dependency Scripts](powershell-dependency-scripts.md)
 - [CI Workflows Overview](ci-workflows.md)
 
+## Testing
+
+- [Test Policy](testing/policy.md)
+- [Test Strategy](testing/strategy.md)
+- [Test Plan](testing/test-plan.md)
+- [Test Report Template](testing/templates/test-report-template.md)
+
 ## CI and Advanced Topics
 
 - [Experiments Guide](ci/experiments.md)

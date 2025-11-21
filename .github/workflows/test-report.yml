@@ -16,8 +16,14 @@ jobs:
           python-version: "3.x"
       - name: Generate test report
         run: python3 .github/scripts/generate_test_report.py
+      - name: Generate ISO 29119-3 test status report
+        if: always()
+        run: python3 .github/scripts/generate_test_status.py --mode status --run-id "${{ github.run_id }}"
       - name: Upload test report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-report
-          path: test-report.md
+          path: |
+            test-report.md
+            reports/test-status-${{ github.run_id }}.md
