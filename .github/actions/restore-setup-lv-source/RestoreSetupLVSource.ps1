@@ -25,7 +25,9 @@
     .\RestoreSetupLVSource.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RepositoryPath "C:\labview-icon-editor" -LabVIEW_Project "lv_icon_editor" -Build_Spec "Editor Packed Library"
 #>
 param(
+    [Alias('Package_LabVIEW_Version')]
     [string]$MinimumSupportedLVVersion,
+    [ValidateSet('32','64')]
     [string]$SupportedBitness,
     [string]$RepositoryPath,
     [string]$LabVIEW_Project,

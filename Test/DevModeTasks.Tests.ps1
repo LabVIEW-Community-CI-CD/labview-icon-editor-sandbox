@@ -17,7 +17,7 @@ Describe "VSCode Dev Mode Task wiring" {
             $command | Should -Match "-NoProfile"
             $command | Should -Match "-Command"
             $command | Should -Not -Match "Stop: The term 'Stop' is not recognized"
-            $command -like "*`$ErrorActionPreference='Stop'*" | Should -BeTrue
+            $command | Should -Match [regex]::Escape("$ErrorActionPreference=\"Stop\"")
             $command | Should -Match "--RepositoryPath| -RepositoryPath|`-RepositoryPath"
             $command | Should -Match "Set_Development_Mode.ps1|RevertDevelopmentMode.ps1"
             # repo is now resolved via git top-level; no input prompt required

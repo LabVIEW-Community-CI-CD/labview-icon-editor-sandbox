@@ -28,6 +28,7 @@
 
 param(
     [Parameter(Mandatory = $true)]
+    [Alias('Package_LabVIEW_Version')]
     [string]$MinimumSupportedLVVersion,
 
     [Parameter(Mandatory = $true)]

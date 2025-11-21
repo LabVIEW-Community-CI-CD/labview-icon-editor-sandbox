@@ -21,7 +21,7 @@
 #>
 
 param(
-    [Parameter(Mandatory)][string]$MinimumSupportedLVVersion,
+    [Parameter(Mandatory)][Alias('Package_LabVIEW_Version')][string]$MinimumSupportedLVVersion,
     [Parameter(Mandatory)][ValidateSet('32','64')][string]$SupportedBitness,
     [Parameter(Mandatory)][string]$RepositoryPath
 )
@@ -31,12 +31,12 @@ $ErrorActionPreference = 'Stop'
 $_gcliArgs = @(
     '--lv-ver', $MinimumSupportedLVVersion,
     '--arch', $SupportedBitness,
-    'lv-g-cli',
-    '--',
     "$RepositoryPath\Tooling\deployment\Create_LV_INI_Token.vi",
+    '--',
     'LabVIEW',
     'Localhost.LibraryPaths',
-    $SupportedBitness
+    $SupportedBitness,
+    $RepositoryPath
 )
 
 Write-Information ("Invoking g-cli: {0}" -f ($_gcliArgs -join ' ')) -InformationAction Continue
