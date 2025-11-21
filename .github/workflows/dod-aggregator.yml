@@ -57,6 +57,7 @@ jobs:
           summary="dod-summary.txt"
           {
             echo "DoD Aggregator summary"
+            echo "Test Plan: docs/testing/test-plan.md (§7.2 context/risk/schedule)"
             echo "RTM paths: ${RTM_VALIDATE}"
             echo "RTM coverage: ${RTM_COVERAGE}"
             echo "ADR lint: ${ADR_LINT}"

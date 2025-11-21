@@ -46,11 +46,11 @@ This mapping records where the project satisfies each ISO/IEC/IEEE 29119-3 §5�
 ## §8 Test Plan (information items)
 | Information item | Satisfied in | Notes/waiver |
 | --- | --- | --- |
-| Context and items under test | [`Test Plan`](./test-plan.md) §8.1 Context and Items Under Test | Lists test items, inputs, and out-of-scope boundaries. |
+| Context and items under test | [`Test Plan`](./test-plan.md) §7.2.2 Context; §8.1 Context and Items Under Test | Lists scope constraints, test items, inputs, and out-of-scope boundaries. |
 | Approach and environment | [`Test Plan`](./test-plan.md) §8.2 Approach and Environment | References the strategy for method selection and environments. |
 | Deliverables | [`Test Plan`](./test-plan.md) §8.3 Deliverables | Includes CI-generated status/completion reports and supporting artifacts. |
 | Completion criteria | [`Test Plan`](./test-plan.md) §8.4 Completion Criteria | Coverage/traceability thresholds, documentation gates, and reporting triggers. |
-| Risks and contingencies | [`Test Plan`](./test-plan.md) §8.5 Risks, Assumptions, and Contingencies | RTM/TRW risk sources and runner outage contingency. |
+| Risks and contingencies | [`Test Plan`](./test-plan.md) §7.2.6 Risk Register; §8.5 Risks, Assumptions, and Contingencies | Product/project risks maintained in the register with runner outage contingency. |
 | Tailoring notes | [`Test Plan`](./test-plan.md) §8.6 Tailoring Notes | Design/case/procedure specs are represented by RTM rows pointing to tests. |
-| Schedule and resourcing | Waived | Continuous delivery cadence; PR-driven execution replaces a dated schedule. |
+| Schedule and resourcing | [`Test Plan`](./test-plan.md) §7.2.10 Schedule and Milestones; [`Test Strategy`](./strategy.md) Staffing (§7.2.9) | Dated milestones for sync/release windows plus staffing/owner expectations. |
 | Progress/completion reporting | [`Test Report Template`](./templates/test-report-template.md); generated reports in `reports/` | CI fills ISO §8 progress/completion reports for PRs and tags/releases. |

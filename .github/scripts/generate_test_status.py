@@ -362,6 +362,7 @@ def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: Lis
     lines.append("")
 
     lines.append("## §8.5 Evidence and Follow-ups")
+    lines.append("- Test Plan: docs/testing/test-plan.md (§7.2 context/risk/schedule; §8 exit expectations)")
     lines.append("- RTM: docs/requirements/rtm.csv; TRW: docs/requirements/TRW_Verification_Checklist.md")
     lines.append("- CI gates: dod-aggregator, rtm-validate, rtm-coverage, adr-lint, docs-link-check, unit tests.")
     lines.append("- Next action: fix blockers or proceed to merge if all gates are green.")
@@ -433,6 +434,7 @@ def build_completion_report(
     lines.append("")
 
     lines.append("## §8.5 Evidence and Attachments")
+    lines.append("- Test Plan: docs/testing/test-plan.md (§7.2 context/risk/schedule; §8 exit expectations)")
     lines.append("- RTM: docs/requirements/rtm.csv; TRW: docs/requirements/TRW_Verification_Checklist.md")
     lines.append("- CI gates: dod-aggregator, rtm-validate, rtm-coverage, adr-lint, docs-link-check, unit tests.")
     lines.append("- This report should be attached to the GitHub Release assets for traceability.")
