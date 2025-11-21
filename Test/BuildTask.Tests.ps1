@@ -1,14 +1,33 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$actionsPath = Join-Path $repoRoot ".github/actions"
+$repoRoot = $null
+$scriptPath = $PSCommandPath
+if (-not $scriptPath) { $scriptPath = $MyInvocation.MyCommand.Path }
+if (-not $scriptPath) { $scriptPath = $PSScriptRoot }
+
+if ($scriptPath) {
+    $testDir = Split-Path -Parent $scriptPath
+    $repoRoot = Split-Path -Parent $testDir
+}
+
+if (-not $repoRoot) {
+    # Fallback to current working directory when automatic variables are not populated
+    $repoRoot = (Get-Location).ProviderPath
+}
+
+Write-Host ("DEBUG init scriptPath={0} repoRoot={1} pwd={2}" -f $scriptPath, $repoRoot, (Get-Location).ProviderPath)
+$script:RepoRoot = $repoRoot
+$actionsPath = Join-Path $script:RepoRoot ".github/actions"
 $buildScript = Join-Path $actionsPath "build/Build.ps1"
-Import-Module "$PSScriptRoot/Support/BuildTaskMocks.psm1"
+Import-Module "$testDir/Support/BuildTaskMocks.psm1"
 
 Describe "VSCode Build Task wiring" {
     BeforeAll {
-        $script:mocks = Initialize-BuildTaskMocks -RepoPath $repoRoot
+        if (-not $script:RepoRoot) {
+            $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).ProviderPath
+        }
+        $script:mocks = Initialize-BuildTaskMocks -RepoPath $script:RepoRoot
     }
 
     AfterAll {
@@ -20,7 +39,7 @@ Describe "VSCode Build Task wiring" {
     Context "invoking Build.ps1 with task-like arguments" {
         It "binds all parameters correctly (no positional shifts)" {
             $params = @{
-                RepositoryPath       = $repoRoot
+                RepositoryPath       = $script:RepoRoot
                 Major                = 1
                 Minor                = 2
                 Patch                = 3
@@ -36,7 +55,7 @@ Describe "VSCode Build Task wiring" {
 
         It "uses git commit from PATH when not provided" {
             $params = @{
-                RepositoryPath       = $repoRoot
+                RepositoryPath       = $script:RepoRoot
                 Major                = 0
                 Minor                = 0
                 Patch                = 0
@@ -53,7 +72,7 @@ Describe "VSCode Build Task wiring" {
 
         It "passes company/author strings with spaces without shifting args" {
             $params = @{
-                RepositoryPath       = $repoRoot
+                RepositoryPath       = $script:RepoRoot
                 Major                = 0
                 Minor                = 0
                 Patch                = 0
@@ -65,6 +84,34 @@ Describe "VSCode Build Task wiring" {
             }
 
             { & $buildScript @params } | Should -Throw
+        }
+
+        It "has required flags in the VS Code task definition" {
+            Write-Host ("DEBUG repoRoot={0}" -f $script:RepoRoot)
+            Write-Host ("DEBUG in-it PSCommandPath={0} MyPath={1} PSScriptRoot={2} pwd={3}" -f $PSCommandPath, $MyInvocation.MyCommand.Path, $PSScriptRoot, (Get-Location).ProviderPath)
+            $script:RepoRoot | Should -Not -BeNullOrEmpty
+            $tasksPath = Join-Path $script:RepoRoot '.vscode/tasks.json'
+            $tasksPath | Should -Not -BeNullOrEmpty
+            Test-Path -LiteralPath $tasksPath | Should -BeTrue
+            $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
+            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build VI Package (Build.ps1)" } | Select-Object -First 1
+            $buildTask | Should -Not -BeNullOrEmpty
+            $command = ($buildTask.args -join ' ')
+            $required = @(
+                "-RepositoryPath",
+                "-Major",
+                "-Minor",
+                "-Patch",
+                "-Build",
+                "-LabVIEWMinorRevision",
+                "-Commit",
+                "-CompanyName",
+                "-AuthorName",
+                ".github/actions/build/Build.ps1"
+            )
+            foreach ($req in $required) {
+                $command | Should -Match [regex]::Escape($req)
+            }
         }
     }
 }
