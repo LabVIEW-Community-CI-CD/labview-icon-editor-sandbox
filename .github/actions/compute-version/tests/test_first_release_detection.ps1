@@ -21,7 +21,7 @@ $scriptPath = Join-Path $PSScriptRoot ".." "Get-LastTag.ps1"
 # No-tag scenario should be marked as first release
 $repo = New-TempRepo -Name ("compute-version-no-tags-" + [guid]::NewGuid())
 try {
-    $info = & $scriptPath -AsJson | ConvertFrom-Json
+    $info = & "$scriptPath" -AsJson | ConvertFrom-Json
     if (-not $info.IsFirstRelease) {
         throw "Expected IsFirstRelease when no tags exist."
     }
@@ -37,7 +37,7 @@ try {
 $repo2 = New-TempRepo -Name ("compute-version-with-tag-" + [guid]::NewGuid())
 try {
     git tag v0.1.0
-    $info = & $scriptPath -AsJson | ConvertFrom-Json
+    $info = & "$scriptPath" -AsJson | ConvertFrom-Json
     if ($info.IsFirstRelease) {
         throw "Did not expect IsFirstRelease after adding a tag."
     }

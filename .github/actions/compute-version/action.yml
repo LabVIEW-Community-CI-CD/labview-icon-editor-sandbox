@@ -81,9 +81,22 @@ runs:
       run: |
         $ErrorActionPreference = 'Stop'
         $script = Join-Path -Path $PWD -ChildPath ".github/actions/compute-version/Get-LastTag.ps1"
-        $info = & $script -AsJson | ConvertFrom-Json
-        $tag = $info.LastTag
-        $isFirst = [bool]$info.IsFirstRelease
+        if (Test-Path $script) {
+          $info = & $script -AsJson | ConvertFrom-Json
+          $tag = $info.LastTag
+          $isFirst = [bool]$info.IsFirstRelease
+        } else {
+          # Backward compatible fallback when helper script is unavailable (older branch)
+          try {
+            $tag = git describe --tags --abbrev=0 2>$null
+            if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tag)) {
+              $tag = ''
+            }
+          } catch {
+            $tag = ''
+          }
+          $isFirst = [string]::IsNullOrWhiteSpace($tag)
+        }
         if ([string]::IsNullOrWhiteSpace($tag)) {
           Write-Host "No reachable tag found (initial release)."
         } else {
