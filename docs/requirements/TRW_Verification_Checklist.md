@@ -1058,18 +1058,18 @@ _Generated: 2025-11-20_
 - Only one checkout step is present.
 
 **Agent Procedure:**
-- Ensure repository uses a single `actions/checkout` per job.
+- [x] Ensure repository uses a single `actions/checkout` per job.
 **Evidence to Collect:** Workflow YAML highlighting checkout usage.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 179
+**Notes:** Derived from SRS line 179; tag-and-release job contains a single actions/checkout step.
 
 ---
 
