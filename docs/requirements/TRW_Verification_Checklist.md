@@ -971,18 +971,18 @@ _Generated: 2025-11-20_
 - All required context fields are logged in a structured way.
 
 **Agent Procedure:**
-- Check logs include commit SHA, branch, workflow_run ID, and version string.
+- [x] Check logs include commit SHA, branch, workflow_run ID, and version string.
 **Evidence to Collect:** Log excerpts with the four fields present.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 171
+**Notes:** Derived from SRS line 171; Tag-and-release logs commit, branch, workflow_run ID, and version via the context logging step.
 
 ---
 
