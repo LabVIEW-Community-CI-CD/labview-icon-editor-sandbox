@@ -594,6 +594,51 @@ jobs:
             reports/performance-measurements.json
             reports/portability-status.json
 
+  ps-coverage:
+    name: PowerShell Tests & Coverage
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Pester 5.7.1
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -Scope CurrentUser -Force -RequiredVersion 5.7.1
+      - name: Run Pester with coverage
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $coverageTargets = @(
+            '.github/actions/**/*.ps1',
+            '.github/actions/**/*.psm1'
+          )
+          $pesterConfig = New-PesterConfiguration
+          $pesterConfig.Run.Container = New-PesterContainer -Path 'Test'
+          $pesterConfig.TestResult.Enabled = $true
+          $pesterConfig.TestResult.OutputPath = 'pester-results.xml'
+          $pesterConfig.CodeCoverage.Enabled = $true
+          $pesterConfig.CodeCoverage.Path = $coverageTargets
+          $pesterConfig.CodeCoverage.OutputPath = 'coverage.xml'
+          $pesterConfig.CodeCoverage.OutputFormat = 'JaCoCo'
+          $pesterConfig.Run.PassThru = $true
+          $pesterConfig.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $pesterConfig
+      - name: Upload Pester results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-results
+          path: pester-results.xml
+      - name: Upload Pester coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-coverage
+          path: coverage.xml
+
   build-ppl-x86:
     name: Build 32-bit Packed Library
     needs: [verify-checklist-sync, build-ppl-x64, version]
