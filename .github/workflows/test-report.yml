@@ -27,3 +27,4 @@ jobs:
           path: |
             test-report.md
             reports/test-status-${{ github.run_id }}.md
+            reports/test-results-${{ github.run_id }}.json

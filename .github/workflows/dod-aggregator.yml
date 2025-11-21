@@ -8,6 +8,10 @@ permissions:
 jobs:
   dod-aggregator:
     runs-on: ubuntu-latest
+    env:
+      LV2021_X64_STATUS: ${{ vars.LV2021_X64_STATUS || 'warning' }}
+      LV2021_X86_STATUS: ${{ vars.LV2021_X86_STATUS || 'warning' }}
+      LV_UTF_LICENSE_STATUS: ${{ vars.LV_UTF_LICENSE_STATUS || 'warning' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -15,6 +19,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+
+      - name: Set run id variable
+        id: runvars
+        run: echo "run_id=${GITHUB_RUN_ID:-local}" >> "$GITHUB_OUTPUT"
 
       - name: Validate RTM paths
         id: rtm_validate
@@ -29,6 +37,16 @@ jobs:
       - name: Generate test case specifications
         id: generate_tcs
         run: python3 .github/scripts/generate_test_case_spec.py
+
+      - name: Generate test data readiness report
+        id: data_readiness
+        run: python3 .github/scripts/generate_test_data_readiness.py --run-id "${{ steps.runvars.outputs.run_id }}"
+        continue-on-error: true
+
+      - name: Generate test environment readiness report
+        id: env_readiness
+        run: python3 .github/scripts/generate_test_env_readiness.py --run-id "${{ steps.runvars.outputs.run_id }}"
+        continue-on-error: true
 
       - name: Lint ADRs and agent config language
         id: adr_lint
@@ -65,10 +83,25 @@ jobs:
           echo "RTM paths: ${RTM_VALIDATE}"
           echo "RTM coverage: ${RTM_COVERAGE}"
           echo "Test case specs: ${{ steps.generate_tcs.outcome }}"
+          echo "Data readiness: ${{ steps.data_readiness.outcome }}"
+          echo "Env readiness: ${{ steps.env_readiness.outcome }}"
           echo "ADR lint: ${ADR_LINT}"
           echo "Docs link check: ${LINKCHECK}"
         } > "$summary"
         cat "$summary"
+
+      - name: Generate test execution log
+        if: always()
+        id: exec_log
+        env:
+          RTM_VALIDATE: ${{ steps.rtm_validate.outcome }}
+          RTM_COVERAGE: ${{ steps.rtm_coverage.outcome }}
+          GENERATE_TCS: ${{ steps.generate_tcs.outcome }}
+          DATA_READINESS: ${{ steps.data_readiness.outcome }}
+          ENV_READINESS: ${{ steps.env_readiness.outcome }}
+          ADR_LINT: ${{ steps.adr_lint.outcome }}
+          LINKCHECK: ${{ steps.linkcheck.outcome }}
+        run: python3 .github/scripts/generate_test_execution_log.py --run-id "${{ steps.runvars.outputs.run_id }}"
 
       - name: Upload DoD summary
         if: always()
@@ -93,12 +126,39 @@ jobs:
           path: docs/testing/procedures/*.md
           if-no-files-found: warn
 
+      - name: Upload test data readiness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-data-readiness
+          path: reports/test-data-readiness-*.md
+          if-no-files-found: warn
+
+      - name: Upload test environment readiness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-env-readiness
+          path: reports/test-env-readiness-*.md
+          if-no-files-found: warn
+
+      - name: Upload test execution log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-execution-log
+          path: reports/test-execution-log-*.md
+          if-no-files-found: warn
+
       - name: Fail if any gate failed
         if: always()
         env:
           RTM_VALIDATE: ${{ steps.rtm_validate.outcome }}
           RTM_COVERAGE: ${{ steps.rtm_coverage.outcome }}
           GENERATE_TCS: ${{ steps.generate_tcs.outcome }}
+          DATA_READINESS: ${{ steps.data_readiness.outcome }}
+          ENV_READINESS: ${{ steps.env_readiness.outcome }}
+          EXEC_LOG: ${{ steps.exec_log.outcome }}
           ADR_LINT: ${{ steps.adr_lint.outcome }}
           LINKCHECK: ${{ steps.linkcheck.outcome }}
         run: |
@@ -107,9 +167,12 @@ jobs:
             "RTM_VALIDATE:${RTM_VALIDATE}" \
             "RTM_COVERAGE:${RTM_COVERAGE}" \
             "GENERATE_TCS:${GENERATE_TCS}" \
+            "DATA_READINESS:${DATA_READINESS}" \
+            "ENV_READINESS:${ENV_READINESS}" \
+            "EXEC_LOG:${EXEC_LOG}" \
             "ADR_LINT:${ADR_LINT}" \
             "LINKCHECK:${LINKCHECK}"
-          do
+         do
             name="${pair%%:*}"
             outcome="${pair#*:}"
             if [ "$outcome" != "success" ]; then

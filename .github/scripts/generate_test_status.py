@@ -19,6 +19,7 @@ from rtm_utils import (
     compute_coverage,
     detect_suites,
     load_rtm,
+    resolve_test_path,
 )
 
 REPORTS_DIR = ROOT / "reports"
@@ -26,6 +27,7 @@ PERFORMANCE_BASELINES_PATH = ROOT / "docs" / "testing" / "performance-baselines.
 DEFAULT_PERFORMANCE_RESULTS_PATH = REPORTS_DIR / "performance-measurements.json"
 DEFAULT_PORTABILITY_RESULTS_PATH = REPORTS_DIR / "portability-status.json"
 DETAIL_LIMIT = 5
+RESULTS_SCHEMA = "test-results/v1"
 
 
 def safe_load_json(path: Path) -> Tuple[object, List[str]]:
@@ -264,6 +266,13 @@ def format_pct(cov: Coverage) -> str:
     return f"{cov.covered}/{cov.total} = {cov.pct():.0%}"
 
 
+def relpath(path: Path) -> Path:
+    try:
+        return path.relative_to(ROOT)
+    except Exception:
+        return path
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -308,13 +317,69 @@ def build_meta(args: argparse.Namespace) -> dict:
     }
 
 
+def build_structured_results(
+    meta: dict, rows: List[dict], high: Coverage, total: Coverage, missing: List[str], mode: str, run_label: str
+) -> Path:
+    """Emit structured results JSON (expected vs actual)."""
+    results_path = REPORTS_DIR / f"test-results-{run_label}.json"
+    results: List[dict] = []
+    blocked = 0
+    for row in rows:
+        has_test, resolved_path = resolve_test_path(row["test_path"])
+        status = "unknown"
+        note = "Execution data not supplied; structural mapping only."
+        if not row["test_path"].strip():
+            status = "blocked"
+            note = "Test path missing."
+        elif not has_test:
+            status = "blocked"
+            rel = relpath(resolved_path) if resolved_path else row["test_path"]
+            note = f"Test path not found: {rel}"
+        if status == "blocked":
+            blocked += 1
+        results.append(
+            {
+                "requirement_id": row["id"],
+                "title": row["title"],
+                "priority": row["priority"],
+                "test_path": row["test_path"],
+                "procedure_path": row.get("procedure_path", ""),
+                "model_id": row.get("model_id", ""),
+                "expected": "execute mapped test",
+                "actual": status,
+                "note": note,
+            }
+        )
+
+    payload = {
+        "schema": RESULTS_SCHEMA,
+        "generated_at": utc_now(),
+        "mode": mode,
+        "run_id": run_label,
+        "meta": meta,
+        "summary": {
+            "completion": "PASS" if high.pct() >= MIN_HIGH and total.pct() >= MIN_TOTAL else "FAIL",
+            "coverage": {
+                "high_critical": {"covered": high.covered, "total": high.total, "pct": high.pct()},
+                "overall": {"covered": total.covered, "total": total.total, "pct": total.pct()},
+            },
+            "blocked_cases": blocked,
+            "total_cases": len(results),
+            "rtm_missing": missing,
+        },
+        "results": results,
+    }
+    results_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return results_path
+
+
 def summarize_missing(missing: List[str]) -> Tuple[List[str], int]:
     if len(missing) <= 15:
         return missing, 0
     return missing[:15], len(missing) - 15
 
 
-def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: List[str], missing: List[str]) -> Tuple[Path, List[str]]:
+def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: List[str], missing: List[str], results_path: Path) -> Tuple[Path, List[str]]:
     path = REPORTS_DIR / f"test-status-{meta['run_id']}.md"
     completion = "PASS" if high.pct() >= MIN_HIGH and total.pct() >= MIN_TOTAL else "FAIL"
     missing_sample, extra_missing = summarize_missing(missing)
@@ -365,6 +430,7 @@ def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: Lis
     lines.append("- Test Plan: docs/testing/test-plan.md (§7.2 context/risk/schedule; §8 exit expectations)")
     lines.append("- RTM: docs/requirements/rtm.csv; TRW: docs/requirements/TRW_Verification_Checklist.md")
     lines.append("- CI gates: dod-aggregator, rtm-validate, rtm-coverage, adr-lint, docs-link-check, unit tests.")
+    lines.append(f"- Structured results: {relpath(results_path)}")
     lines.append("- Next action: fix blockers or proceed to merge if all gates are green.")
 
     return path, lines
@@ -378,6 +444,7 @@ def build_completion_report(
     missing: List[str],
     performance: List[str] | None = None,
     portability: List[str] | None = None,
+    results_path: Path | None = None,
 ) -> Tuple[Path, List[str]]:
     path = REPORTS_DIR / f"test-completion-{meta['tag']}.md"
     completion = "PASS" if high.pct() >= MIN_HIGH and total.pct() >= MIN_TOTAL else "FAIL"
@@ -437,6 +504,8 @@ def build_completion_report(
     lines.append("- Test Plan: docs/testing/test-plan.md (§7.2 context/risk/schedule; §8 exit expectations)")
     lines.append("- RTM: docs/requirements/rtm.csv; TRW: docs/requirements/TRW_Verification_Checklist.md")
     lines.append("- CI gates: dod-aggregator, rtm-validate, rtm-coverage, adr-lint, docs-link-check, unit tests.")
+    if results_path:
+        lines.append(f"- Structured results: {relpath(results_path)}")
     lines.append("- This report should be attached to the GitHub Release assets for traceability.")
 
     return path, lines
@@ -486,6 +555,7 @@ def main() -> int:
     high, total, missing = compute_coverage(rows)
     suites = detect_suites(rows)
     meta = build_meta(args)
+    run_label = meta["tag"] if args.mode == "completion" else meta["run_id"]
 
     performance_results_path = Path(
         args.performance_results
@@ -507,6 +577,16 @@ def main() -> int:
         performance_summary, perf_blocker = summarize_performance(performance_results_path)
         portability_summary, port_blocker = summarize_portability(portability_results_path)
 
+    results_path = build_structured_results(
+        meta=meta,
+        rows=rows,
+        high=high,
+        total=total,
+        missing=missing,
+        mode=args.mode,
+        run_label=str(run_label),
+    )
+
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     if args.mode == "completion":
         path, lines = build_completion_report(
@@ -517,9 +597,10 @@ def main() -> int:
             missing,
             performance=performance_summary,
             portability=portability_summary,
+            results_path=results_path,
         )
     else:
-        path, lines = build_status_report(meta, high, total, suites, missing)
+        path, lines = build_status_report(meta, high, total, suites, missing, results_path)
 
     path.write_text("\n".join(lines))
     print(f"Wrote {path.relative_to(ROOT)}")
