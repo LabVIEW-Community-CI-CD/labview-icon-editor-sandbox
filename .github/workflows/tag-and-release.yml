@@ -159,6 +159,20 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           path: artifacts
 
+      - name: Validate upstream analysis artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $analysisDir = Join-Path $PWD 'artifacts/vip-analysis-junit'
+          if (-not (Test-Path $analysisDir -PathType Container)) {
+            Write-Error "Expected analysis artifact folder at $analysisDir. Remediation: ensure analyze-vip job uploads vip-analysis-junit."
+          }
+          $junit = Get-ChildItem -Path $analysisDir -Filter *.xml -File | Select-Object -First 1
+          if (-not $junit) {
+            Write-Error "No JUnit XML found in $analysisDir. Remediation: ensure analyzer writes pester-results.xml and uploads it."
+          }
+          Write-Host ("Found analyzer result: {0}" -f $junit.FullName)
+
       - name: List downloaded artifacts
         shell: pwsh
         run: |
