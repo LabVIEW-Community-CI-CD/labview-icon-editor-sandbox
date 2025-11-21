@@ -2,8 +2,9 @@ name: CI Pipeline (Composite)
 
 concurrency:
   # Enforce one run at a time per branch/PR to avoid overlapping fixes on the same feature branch.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  # Deduplicate by commit (PR head SHA when available); cancel older runs for the same commit.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
 
 env:
   MIN_LABVIEW_POLICY: "21.0"
@@ -14,8 +15,6 @@ on:
       - main
       - develop
       - release/*
-      - feature/*
-      - hotfix/*
   pull_request:
     branches:
       - main
