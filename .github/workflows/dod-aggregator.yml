@@ -78,17 +78,17 @@ jobs:
         run: |
           summary="dod-summary.txt"
           {
-          echo "DoD Aggregator summary"
-          echo "Test Plan: docs/testing/test-plan.md (§7.2 context/risk/schedule)"
-          echo "RTM paths: ${RTM_VALIDATE}"
-          echo "RTM coverage: ${RTM_COVERAGE}"
-          echo "Test case specs: ${{ steps.generate_tcs.outcome }}"
-          echo "Data readiness: ${{ steps.data_readiness.outcome }}"
-          echo "Env readiness: ${{ steps.env_readiness.outcome }}"
-          echo "ADR lint: ${ADR_LINT}"
-          echo "Docs link check: ${LINKCHECK}"
-        } > "$summary"
-        cat "$summary"
+            echo "DoD Aggregator summary"
+            echo "Test Plan: docs/testing/test-plan.md (§7.2 context/risk/schedule)"
+            echo "RTM paths: ${RTM_VALIDATE}"
+            echo "RTM coverage: ${RTM_COVERAGE}"
+            echo "Test case specs: ${{ steps.generate_tcs.outcome }}"
+            echo "Data readiness: ${{ steps.data_readiness.outcome }}"
+            echo "Env readiness: ${{ steps.env_readiness.outcome }}"
+            echo "ADR lint: ${ADR_LINT}"
+            echo "Docs link check: ${LINKCHECK}"
+          } > "$summary"
+          cat "$summary"
 
       - name: Generate test execution log
         if: always()
