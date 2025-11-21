@@ -1,7 +1,6 @@
 # Wrapper to execute Build.ps1 with sane defaults for local/headless runs
 [CmdletBinding()]
 param(
-    [Alias('RelativePath')]
     [string]$RepositoryPath = $PWD,
     [int]$Major = 0,
     [int]$Minor = 0,

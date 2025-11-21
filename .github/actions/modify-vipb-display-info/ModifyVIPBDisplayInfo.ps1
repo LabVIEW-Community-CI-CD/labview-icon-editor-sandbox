@@ -12,7 +12,7 @@
     LabVIEW bitness for the build ("32" or "64").
 
 .PARAMETER RepositoryPath
-    Path to the repository root (alias: RelativePath).
+    Path to the repository root.
 
 .PARAMETER VIPBPath
     Relative path to the VIPB file to modify.
@@ -50,7 +50,6 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param (
     [string]$SupportedBitness,
-    [Alias('RelativePath')]
     [string]$RepositoryPath,
     [string]$VIPBPath,
 

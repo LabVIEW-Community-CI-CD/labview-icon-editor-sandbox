@@ -6,18 +6,17 @@
 #        Removes existing packed libraries, adds INI tokens, prepares LabVIEW
 #        sources for both 32-bit and 64-bit environments, and closes LabVIEW.
 #
-#    .PARAMETER RelativePath
+#    .PARAMETER RepositoryPath
 #        Path to the repository root.
 #
 #    .EXAMPLE
-#        .\Set_Development_Mode.ps1 -RelativePath "C:\\labview-icon-editor"
+#        .\Set_Development_Mode.ps1 -RepositoryPath "C:\\labview-icon-editor"
 #
 #>
 
 param(
     [Parameter(Mandatory = $true)]
     [ValidateScript({ Test-Path $_ })]
-    [Alias('RelativePath')]
     [string]$RepositoryPath
 )
 

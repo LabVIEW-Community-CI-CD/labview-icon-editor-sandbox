@@ -22,7 +22,6 @@
 [CmdletBinding()]  # Enables -Verbose, -Debug, etc.
 param(
     [Parameter(Mandatory = $true)]
-    [Alias('RelativePath')]
     [string]$RepositoryPath,
 
     [Parameter(Mandatory = $true)]

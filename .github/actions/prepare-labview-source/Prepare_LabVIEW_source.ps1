@@ -14,7 +14,7 @@
     Target bitness of the LabVIEW environment ("32" or "64").
 
 .PARAMETER RepositoryPath
-    Path to the repository root containing the project (alias: RelativePath).
+    Path to the repository root containing the project.
 
 .PARAMETER LabVIEW_Project
     Name of the LabVIEW project (without extension).
@@ -35,7 +35,6 @@ param(
     [string]$SupportedBitness,
 
     [Parameter(Mandatory = $true)]
-    [Alias('RelativePath')]
     [ValidateScript({ Test-Path $_ })]
     [string]$RepositoryPath,
 

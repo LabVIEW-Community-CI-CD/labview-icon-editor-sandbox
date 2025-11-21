@@ -7,7 +7,7 @@
     scripts to prepare and test the LabVIEW icon editor project.
 
 .PARAMETER RepositoryPath
-    Path to the repository root (alias: RelativePath).
+    Path to the repository root.
 
 .EXAMPLE
     .\unit_tests.ps1 -RepositoryPath "C:\labview-icon-editor"
@@ -15,7 +15,6 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [Alias('RelativePath')]
     [string]$RepositoryPath
 )
 

@@ -12,7 +12,6 @@ Param (
     [string]$MinimumSupportedLVVersion,
     [string]$VIP_LVVersion,
     [string]$SupportedBitness,
-    [Alias('RelativePath')]
     [string]$RepositoryPath,
     [string]$VIPCPath
 )
@@ -107,7 +106,7 @@ Write-Verbose "Constructing the g-cli command arguments..."
 $applyArgs = @(
     "--lv-ver", $MinimumSupportedLVVersion,
     "--arch", $SupportedBitness,
-    "-v", "$($ResolvedRelativePath)\Tooling\Deployment\Applyvipc.vi",
+    "-v", "$($ResolvedRepositoryPath)\Tooling\Deployment\Applyvipc.vi",
     "--",
     "$ResolvedVIPCPath",
     "$VIP_LVVersion_B"

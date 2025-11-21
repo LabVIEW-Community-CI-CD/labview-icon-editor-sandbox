@@ -6,16 +6,15 @@
     Restores the packaged LabVIEW sources for both 32-bit and 64-bit
     environments and closes any running LabVIEW instances.
 
-.PARAMETER RelativePath
+.PARAMETER RepositoryPath
     Path to the repository root.
 
 .EXAMPLE
-    .\RevertDevelopmentMode.ps1 -RelativePath "C:\labview-icon-editor"
+    .\RevertDevelopmentMode.ps1 -RepositoryPath "C:\labview-icon-editor"
 #>
 
 param(
     [Parameter(Mandatory = $true)]
-    [Alias('RelativePath')]
     [string]$RepositoryPath
 )
 

@@ -13,7 +13,7 @@
     Bitness of the LabVIEW environment ("32" or "64").
 
 .PARAMETER RepositoryPath
-    Path to the repository root where the project file resides (alias: RelativePath).
+    Path to the repository root where the project file resides.
 
 .PARAMETER Major
     Major version component for the PPL.
@@ -36,7 +36,6 @@
 param(
     [string]$MinimumSupportedLVVersion,
     [string]$SupportedBitness,
-    [Alias('RelativePath')]
     [string]$RepositoryPath,
     [Int32]$Major,
     [Int32]$Minor,
