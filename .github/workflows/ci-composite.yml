@@ -786,7 +786,7 @@ jobs:
 
   analyze-vip:
     name: Analyze VI Package
-    needs: [build-vip]
+    needs: [verify-checklist-sync, build-vip]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
