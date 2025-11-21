@@ -18,16 +18,16 @@ BeforeAll {
     $script:S = $vip.Sections
     $script:entries = $vip.ZipEntries
     $script:entryNames = $entries | ForEach-Object { [System.IO.Path]::GetFileName($_) }
-    function global:Parse-VersionParts([string]$ver) {
+    function global:Get-VersionParts([string]$ver) {
         if (-not $ver) { return @() }
         return ($ver -split '\.').ForEach({ $_ -as [int] })
     }
-    function global:Normalize-FileName([string]$name) {
+    function global:Set-NormalizedFileName([string]$name) {
         if (-not $name) { return '' }
         $base = [System.IO.Path]::GetFileName($name)
         return ([regex]::Replace($base, '[^a-zA-Z0-9]', '')).ToLowerInvariant()
     }
-    function global:Normalize-ScriptToken([string]$name) {
+    function global:Set-NormalizedScriptToken([string]$name) {
         if (-not $name) { return '' }
         $base = [System.IO.Path]::GetFileNameWithoutExtension($name).ToLowerInvariant()
         $base = $base -replace '^vip', ''
@@ -35,8 +35,8 @@ BeforeAll {
         $base = $base -replace '[^a-z0-9]', ''
         return $base
     }
-    $script:normalizedEntries = $entryNames | ForEach-Object { Normalize-FileName $_ }
-    $script:normalizedScriptEntries = $entryNames | ForEach-Object { Normalize-ScriptToken $_ }
+    $script:normalizedEntries = $entryNames | ForEach-Object { Set-NormalizedFileName $_ }
+    $script:normalizedScriptEntries = $entryNames | ForEach-Object { Set-NormalizedScriptToken $_ }
 }
 
 # Utility for version parsing (x.y or x.y.z.w)
@@ -124,8 +124,8 @@ Describe "Platform constraints" {
         $m.Success | Should -BeTrue
         $specified = $m.Groups[1].Value
         # Compare major.minor numerically
-        $minParts = (Parse-VersionParts $MinLabVIEW)
-        $specParts = (Parse-VersionParts $specified)
+        $minParts = (Get-VersionParts $MinLabVIEW)
+        $specParts = (Get-VersionParts $specified)
         # Pad to equal length for comparison
         while ($minParts.Count -lt 2) { $minParts += 0 }
         while ($specParts.Count -lt 2) { $specParts += 0 }

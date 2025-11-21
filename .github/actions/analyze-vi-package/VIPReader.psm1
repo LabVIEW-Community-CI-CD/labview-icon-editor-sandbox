@@ -61,11 +61,11 @@ function Read-VipSpec {
         Path      = (Resolve-Path $Path).Path
         Text      = $text
         Sections  = $sections
-        ZipEntries = (Get-VipEntries -Path $Path)
+        ZipEntries = (Get-VipEntryList -Path $Path)
     }
 }
 
-function Get-VipEntries {
+function Get-VipEntryList {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, Position=0)]
