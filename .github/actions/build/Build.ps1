@@ -59,21 +59,51 @@ function Test-PathExistence {
 function Invoke-ScriptSafe {
     param(
         [string]$ScriptPath,
+        [hashtable]$ArgumentMap,
         [string[]]$ArgumentList
     )
-    Write-Information ("Executing: {0} {1}" -f $ScriptPath, ($ArgumentList -join ' ')) -InformationAction Continue
+    if (-not $ScriptPath) { throw "ScriptPath is required" }
+    if (-not (Test-Path -LiteralPath $ScriptPath)) { throw "ScriptPath '$ScriptPath' not found" }
+
+    $render = if ($ArgumentMap) {
+        ($ArgumentMap.GetEnumerator() | ForEach-Object { "-$($_.Key) $($_.Value)" }) -join ' '
+    } else {
+        ($ArgumentList -join ' ')
+    }
+    Write-Information ("Executing: {0} {1}" -f $ScriptPath, $render) -InformationAction Continue
     try {
-        & $ScriptPath @ArgumentList
+        if ($ArgumentMap) {
+            & $ScriptPath @ArgumentMap
+        } elseif ($ArgumentList) {
+            & $ScriptPath @ArgumentList
+        } else {
+            & $ScriptPath
+        }
         Write-Verbose "Command completed. Checking exit code..."
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "Error occurred while executing `"$ScriptPath`" with arguments: $($ArgumentList -join ' '). Exit code: $LASTEXITCODE"
+            Write-Error "Error occurred while executing `"$ScriptPath`" with arguments: $render. Exit code: $LASTEXITCODE"
             exit $LASTEXITCODE
         }
     }
     catch {
-        Write-Error "Error occurred while executing `"$ScriptPath`" with arguments: $($ArgumentList -join ' '). Exiting. Details: $($_.Exception.Message)"
+        Write-Error "Error occurred while executing `"$ScriptPath`" with arguments: $render. Exiting. Details: $($_.Exception.Message)"
         exit 1
     }
+}
+
+function Get-LabVIEWVersionFromVipb {
+    param([Parameter(Mandatory)][string]$RootPath)
+    $vipb = Get-ChildItem -Path $RootPath -Filter *.vipb -File -Recurse | Select-Object -First 1
+    if (-not $vipb) { throw "No .vipb file found under $RootPath" }
+    $text = Get-Content -LiteralPath $vipb.FullName -Raw
+    $match = [regex]::Match($text, '<Package_LabVIEW_Version>(?<ver>[^<]+)</Package_LabVIEW_Version>', 'IgnoreCase')
+    if (-not $match.Success) { throw "Unable to locate Package_LabVIEW_Version in $($vipb.FullName)" }
+    $raw = $match.Groups['ver'].Value
+    $verMatch = [regex]::Match($raw, '^(?<majmin>\d{2}\.\d)')
+    if (-not $verMatch.Success) { throw "Unable to parse LabVIEW version from '$raw' in $($vipb.FullName)" }
+    $maj = [int]($verMatch.Groups['majmin'].Value.Split('.')[0])
+    $computed = if ($maj -ge 20) { "20$maj" } else { $maj.ToString() }
+    return $computed
 }
 
 try {
@@ -104,6 +134,10 @@ try {
         exit 1
     }
 
+    # Derive LabVIEW version from VIPB
+    $lvVersion = Get-LabVIEWVersionFromVipb -RootPath $RepositoryPath
+    Write-Information ("Using LabVIEW version from VIPB: {0}" -f $lvVersion) -InformationAction Continue
+
     # 1) Clean up old .lvlibp in the plugins folder
     Write-Information "Cleaning up old .lvlibp files in plugins folder..." -InformationAction Continue
     Write-Verbose "Looking for .lvlibp files in $($RepositoryPath)\resource\plugins..."
@@ -127,19 +161,19 @@ try {
     # 2) Apply VIPC (32-bit)
     Write-Information "Applying VIPC (dependencies) for 32-bit..." -InformationAction Continue
     $ApplyVIPC = Join-Path $ActionsPath "apply-vipc/ApplyVIPC.ps1"
-    Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentList @(
-        '-MinimumSupportedLVVersion','2021',
-        '-VIP_LVVersion','2021',
-        '-SupportedBitness','32',
-        '-RepositoryPath', $RepositoryPath,
-        '-VIPCPath','Tooling\deployment\runner_dependencies.vipc'
-    )
+    Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
+        MinimumSupportedLVVersion = $lvVersion
+        VIP_LVVersion             = $lvVersion
+        SupportedBitness          = '32'
+        RepositoryPath            = $RepositoryPath
+        VIPCPath                  = 'Tooling\deployment\runner_dependencies.vipc'
+    }
 
     # 3) Build LV Library (32-bit)
     Write-Verbose "Building LV library (32-bit)..."
     $BuildLvlibp = Join-Path $ActionsPath "build-lvlibp/Build_lvlibp.ps1"
     $argsLvlibp32 = @{
-        MinimumSupportedLVVersion = '2021'
+        MinimumSupportedLVVersion = $lvVersion
         SupportedBitness          = '32'
         RepositoryPath            = $RepositoryPath
         Major                     = $Major
@@ -153,7 +187,7 @@ try {
     # 4) Close LabVIEW (32-bit)
     Write-Verbose "Closing LabVIEW (32-bit)..."
     $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion', $lvVersion,'-SupportedBitness','32')
 
     # 5) Rename .lvlibp -> lv_icon_x86.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x86.lvlibp..."
@@ -162,18 +196,18 @@ try {
 
     # 6) Apply VIPC (64-bit)
     Write-Information "Applying VIPC (dependencies) for 64-bit..." -InformationAction Continue
-    Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentList @(
-        '-MinimumSupportedLVVersion','2021',
-        '-VIP_LVVersion','2021',
-        '-SupportedBitness','64',
-        '-RepositoryPath', $RepositoryPath,
-        '-VIPCPath','Tooling\deployment\runner_dependencies.vipc'
-    )
+    Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
+        MinimumSupportedLVVersion = $lvVersion
+        VIP_LVVersion             = $lvVersion
+        SupportedBitness          = '64'
+        RepositoryPath            = $RepositoryPath
+        VIPCPath                  = 'Tooling\deployment\runner_dependencies.vipc'
+    }
 
     # 7) Build LV Library (64-bit)
     Write-Verbose "Building LV library (64-bit)..."
     $argsLvlibp64 = @{
-        MinimumSupportedLVVersion = '2021'
+        MinimumSupportedLVVersion = $lvVersion
         SupportedBitness          = '64'
         RepositoryPath            = $RepositoryPath
         Major                     = $Major
@@ -186,7 +220,7 @@ try {
 
     # 7.1) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion', $lvVersion,'-SupportedBitness','64')
 
     # Rename .lvlibp -> lv_icon_x64.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x64.lvlibp..."

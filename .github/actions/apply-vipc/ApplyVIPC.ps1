@@ -9,11 +9,11 @@
 
 [CmdletBinding()]  # Enables -Verbose and other common parameters
 Param (
-    [string]$MinimumSupportedLVVersion,
-    [string]$VIP_LVVersion,
-    [string]$SupportedBitness,
-    [string]$RepositoryPath,
-    [string]$VIPCPath
+    [Parameter(Mandatory)][string]$MinimumSupportedLVVersion,
+    [Parameter(Mandatory)][string]$VIP_LVVersion,
+    [Parameter(Mandatory)][ValidateSet('32','64')][string]$SupportedBitness,
+    [Parameter(Mandatory)][string]$RepositoryPath,
+    [Parameter(Mandatory)][string]$VIPCPath
 )
 
 Write-Verbose "Script Name: $($MyInvocation.MyCommand.Definition)"
@@ -98,6 +98,13 @@ Write-Information "Applying dependencies for LabVIEW $VIP_LVVersion_B..." -Infor
 Write-Verbose "VIP_LVVersion_A (for primary LVVersion): $VIP_LVVersion_A"
 Write-Verbose "VIP_LVVersion_B (for minimum LVVersion): $VIP_LVVersion_B"
 
+# Sanity check g-cli exists
+$gcli = Get-Command g-cli -ErrorAction SilentlyContinue
+if (-not $gcli) {
+    Write-Error "g-cli is not available on PATH; cannot apply VIPC."
+    exit 1
+}
+
 # -------------------------
 # 3) Construct the Script to Execute
 # -------------------------
@@ -125,17 +132,19 @@ if ($VIP_LVVersion -ne $MinimumSupportedLVVersion) {
 }
 
 Write-Information ("Executing: g-cli {0}" -f ($applyArgs -join ' ')) -InformationAction Continue
-& g-cli @applyArgs
+$applyOut = & g-cli @applyArgs 2>&1
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Failed applying VIPC to $VIP_LVVersion_B (exit $LASTEXITCODE)."
+    $joined = ($applyOut -join '; ')
+    Write-Error "Failed applying VIPC to $VIP_LVVersion_B (exit $LASTEXITCODE). Output: $joined"
     exit $LASTEXITCODE
 }
 
 if ($secondaryArgs) {
     Write-Information ("Executing secondary: g-cli {0}" -f ($secondaryArgs -join ' ')) -InformationAction Continue
-    & g-cli @secondaryArgs
+    $secondaryOut = & g-cli @secondaryArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed secondary VIPC apply for $VIP_LVVersion (exit $LASTEXITCODE)."
+        $joined = ($secondaryOut -join '; ')
+        Write-Error "Failed secondary VIPC apply for $VIP_LVVersion (exit $LASTEXITCODE). Output: $joined"
         exit $LASTEXITCODE
     }
 }
