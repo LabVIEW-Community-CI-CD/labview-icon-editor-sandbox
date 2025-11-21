@@ -322,15 +322,16 @@ jobs:
       - name: Lychee link checker
         uses: lycheeverse/lychee-action@v1
         with:
+          format: json
+          output: ./lychee/report.json
           args: >
             --verbose
             --no-progress
             --max-concurrency 4
             --accept 200,204,206,429
             --exclude-all-private
-            --format json
-            --output ./lychee/report.json
             docs/**/*.md README.md
+          fail: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload ADR lint log
