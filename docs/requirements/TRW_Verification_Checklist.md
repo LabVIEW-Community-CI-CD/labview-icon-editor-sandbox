@@ -884,18 +884,18 @@ _Generated: 2025-11-20_
 - 404 triggers creation path; other errors are surfaced with graceful handling.
 
 **Agent Procedure:**
-- Invoke release API to fetch by tag; if 404, create release; handle other codes per policy.
+- [x] Invoke release API to fetch by tag; if 404, create release; handle other codes per policy.
 **Evidence to Collect:** Logs for 404 branch and for non-404 error handling.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 163
+**Notes:** Derived from SRS line 163; Publish step handles 404 by creating release, surfaces other errors without destructive actions.
 
 ---
 
