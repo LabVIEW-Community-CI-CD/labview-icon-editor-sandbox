@@ -58,10 +58,11 @@ $buildArgs = @(
 )
 Write-Information ("Executing: g-cli {0}" -f ($buildArgs -join ' ')) -InformationAction Continue
 
-& g-cli @buildArgs
+$output = & g-cli @buildArgs 2>&1
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Build failed with exit code $LASTEXITCODE."
+    $joined = ($output -join '; ')
+    Write-Error "Build failed with exit code $LASTEXITCODE. Output: $joined"
     g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness QuitLabVIEW
     exit 1
 }

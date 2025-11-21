@@ -92,9 +92,17 @@ try {
     # Validate needed folders
     Test-PathExistence $RepositoryPath "RepositoryPath"
     Test-PathExistence "$RepositoryPath\resource\plugins" "Plugins folder"
+    Test-PathExistence "$RepositoryPath\lv_icon_editor.lvproj" "LabVIEW project"
 
     $ActionsPath = Split-Path -Parent $PSScriptRoot
     Test-PathExistence $ActionsPath "Actions folder"
+
+    # Ensure VIPC dependencies exist (mirrors CI prep)
+    $vipcPath = Join-Path $RepositoryPath "Tooling\deployment\runner_dependencies.vipc"
+    if (-not (Test-Path -LiteralPath $vipcPath)) {
+        Write-Error "Missing runner_dependencies.vipc at $vipcPath. Cannot apply dependencies; run packaging prep or fetch the VIPC."
+        exit 1
+    }
 
     # 1) Clean up old .lvlibp in the plugins folder
     Write-Information "Cleaning up old .lvlibp files in plugins folder..." -InformationAction Continue
@@ -116,14 +124,16 @@ try {
         Write-Verbose "Stack Trace: $($_.Exception.StackTrace)"
     }
 
-#    # 2) Apply VIPC (32-bit)
-#    Write-Verbose "Now applying VIPC for 32-bit..."
-#    Execute-Script $ApplyVIPC `
-#        ("-MinimumSupportedLVVersion 2021 " +
-#         "-VIP_LVVersion 2021 " +
-#         "-SupportedBitness 32 " +
-#         "-RelativePath `"$RelativePath`" " +
-#         "-VIPCPath `"Tooling\deployment\runner_dependencies.vipc`"")
+    # 2) Apply VIPC (32-bit)
+    Write-Information "Applying VIPC (dependencies) for 32-bit..." -InformationAction Continue
+    $ApplyVIPC = Join-Path $ActionsPath "apply-vipc/ApplyVIPC.ps1"
+    Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentList @(
+        '-MinimumSupportedLVVersion','2021',
+        '-VIP_LVVersion','2021',
+        '-SupportedBitness','32',
+        '-RepositoryPath', $RepositoryPath,
+        '-VIPCPath','Tooling\deployment\runner_dependencies.vipc'
+    )
 
     # 3) Build LV Library (32-bit)
     Write-Verbose "Building LV library (32-bit)..."
@@ -150,15 +160,15 @@ try {
     $RenameFile = Join-Path $ActionsPath "rename-file/Rename-file.ps1"
     Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RepositoryPath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x86.lvlibp')
 
- #   # 6) Apply VIPC (64-bit)
- #   Write-Verbose "Now applying VIPC for 64-bit..."
-#   $ApplyVIPC = Join-Path $ActionsPath "apply-vipc/ApplyVIPC.ps1"
-#   Execute-Script $ApplyVIPC `
- #       ("-MinimumSupportedLVVersion 2021 " +
- #        "-VIP_LVVersion 2021 " +
- #        "-SupportedBitness 64 " +
- #        "-RelativePath `"$RelativePath`" " +
- #        "-VIPCPath `"Tooling\deployment\runner_dependencies.vipc`"")
+    # 6) Apply VIPC (64-bit)
+    Write-Information "Applying VIPC (dependencies) for 64-bit..." -InformationAction Continue
+    Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentList @(
+        '-MinimumSupportedLVVersion','2021',
+        '-VIP_LVVersion','2021',
+        '-SupportedBitness','64',
+        '-RepositoryPath', $RepositoryPath,
+        '-VIPCPath','Tooling\deployment\runner_dependencies.vipc'
+    )
 
     # 7) Build LV Library (64-bit)
     Write-Verbose "Building LV library (64-bit)..."
