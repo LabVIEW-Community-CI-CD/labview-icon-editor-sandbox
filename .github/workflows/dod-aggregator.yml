@@ -1,0 +1,99 @@
+name: DoD Aggregator / dod
+on:
+  pull_request:
+    branches: [ main, develop, release/*, feature/*, hotfix/* ]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  dod-aggregator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Validate RTM paths
+        id: rtm_validate
+        run: python3 .github/scripts/validate_rtm.py
+        continue-on-error: true
+
+      - name: Enforce RTM coverage thresholds
+        id: rtm_coverage
+        run: python3 .github/scripts/check_rtm_coverage.py
+        continue-on-error: true
+
+      - name: Lint ADRs and agent config language
+        id: adr_lint
+        run: python3 .github/scripts/lint_requirements_language.py
+        continue-on-error: true
+
+      - name: Lychee link checker
+        id: linkcheck
+        uses: lycheeverse/lychee-action@v1
+        with:
+          args: >
+            --verbose
+            --no-progress
+            --max-concurrency 4
+            --accept 200,204,206,429
+            --exclude-all-private
+            docs/**/*.md README.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Build DoD summary
+        if: always()
+        env:
+          RTM_VALIDATE: ${{ steps.rtm_validate.outcome }}
+          RTM_COVERAGE: ${{ steps.rtm_coverage.outcome }}
+          ADR_LINT: ${{ steps.adr_lint.outcome }}
+          LINKCHECK: ${{ steps.linkcheck.outcome }}
+        run: |
+          summary="dod-summary.txt"
+          {
+            echo "DoD Aggregator summary"
+            echo "RTM paths: ${RTM_VALIDATE}"
+            echo "RTM coverage: ${RTM_COVERAGE}"
+            echo "ADR lint: ${ADR_LINT}"
+            echo "Docs link check: ${LINKCHECK}"
+          } > "$summary"
+          cat "$summary"
+
+      - name: Upload DoD summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dod-summary
+          path: dod-summary.txt
+
+      - name: Fail if any gate failed
+        if: always()
+        env:
+          RTM_VALIDATE: ${{ steps.rtm_validate.outcome }}
+          RTM_COVERAGE: ${{ steps.rtm_coverage.outcome }}
+          ADR_LINT: ${{ steps.adr_lint.outcome }}
+          LINKCHECK: ${{ steps.linkcheck.outcome }}
+        run: |
+          fail=0
+          for pair in \
+            "RTM_VALIDATE:${RTM_VALIDATE}" \
+            "RTM_COVERAGE:${RTM_COVERAGE}" \
+            "ADR_LINT:${ADR_LINT}" \
+            "LINKCHECK:${LINKCHECK}"
+          do
+            name="${pair%%:*}"
+            outcome="${pair#*:}"
+            if [ "$outcome" != "success" ]; then
+              echo "$name outcome: $outcome"
+              fail=1
+            fi
+          done
+          if [ $fail -ne 0 ]; then
+            echo "DoD Aggregator failed because one or more gates failed." >&2
+            exit 1
+          fi
