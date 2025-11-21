@@ -1,5 +1,5 @@
 # Definition of Done (DoD) - Aggregated Gates
-- **DoD Aggregator / dod**: One gate; fails if RTM validation, RTM coverage, ADR lint, or docs link check fail; uploads DoD summary artifact.
+- **DoD Aggregator / dod**: One gate; fails if RTM validation, RTM coverage, ADR lint, or docs link check fail; on `release/*` refs it hard-fails when LabVIEW env status vars (LV2021 x64/x86, UTF license) are not `success`; uploads DoD summary artifact.
 - **PR Coverage Gate / coverage**: >=100% High/Critical RTM test presence and >=75% overall RTM test presence (tailored RTM via `.github/scripts/check_rtm_coverage.py`).
 - **Traceability Gate / rtm**: Each Critical requirement has >=1 Test and Code link.
 - **ADR Lint / adr-lint**: No banned phrases; decisions up to date.
@@ -30,9 +30,9 @@ Save measured samples for the run in `reports/performance-measurements.json` (se
 
 (optional) run Missing-In-Project action wrapper on runner to sanity-check LV project.
 
-CI (PR): DoD Aggregator / dod runs (RTM validation + RTM coverage + ADR Lint + Docs Link Check); Traceability Gate / rtm runs; Coverage Gate / coverage runs; ADR Lint / adr-lint runs; Docs Link Check / lychee runs; unit tests via existing actions.
+CI (PR): DoD Aggregator / dod runs (RTM validation + RTM coverage + ADR Lint + Docs Link Check; on `release/*` it additionally hard-fails if LV2021 x64/x86 or UTF license status vars are not `success`); Traceability Gate / rtm runs; Coverage Gate / coverage runs; ADR Lint / adr-lint runs; Docs Link Check / lychee runs; unit tests via existing actions.
 
-Release: merge to release-*/main -> CI; Tag and Release creates vX.Y.Z; upload artifacts (VIP, notes).
+Release: merge to release-*/main -> CI (requires LV status vars = `success`); Tag and Release creates vX.Y.Z; upload artifacts (VIP, notes).
 
 Artifacts to attach: test results (test-results.json), RTM coverage gate log (workflow), DoD summary artifact (DoD Aggregator), Tooling/deployment/release_notes.md, TRW_Verification_Checklist.xlsx, performance baselines (`docs/testing/performance-baselines.json`) when updated.
 
@@ -56,4 +56,4 @@ Expected artifacts: lychee report, RTM CSV, XLSX, unit test results, RTM coverag
 
 EXIT CRITERIA
 
-All gates green on PR to release/* and final tag vX.Y.Z produced; artifacts present; no broken links; RTM validated; performance samples recorded or waived per baseline policy.
+All gates green on PR to release/* and final tag vX.Y.Z produced; artifacts present; no broken links; RTM validated; LabVIEW env status vars = `success`; performance samples recorded or waived per baseline policy.
