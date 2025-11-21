@@ -9,6 +9,7 @@ RTM = ROOT / "docs" / "requirements" / "rtm.csv"
 def main():
     missing_paths = []
     missing_models = []
+    missing_procedures = []
     with open(RTM, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         required = {
@@ -18,6 +19,7 @@ def main():
             "code_path",
             "test_path",
             "model_id",
+            "procedure_path",
             "verification",
             "owner",
             "status",
@@ -28,11 +30,13 @@ def main():
         for row in reader:
             if not row.get("model_id", "").strip():
                 missing_models.append(row.get("id", "(missing id)"))
-            for key in ["code_path", "test_path"]:
+            if not row.get("procedure_path", "").strip():
+                missing_procedures.append(row.get("id", "(missing id)"))
+            for key in ["code_path", "test_path", "procedure_path"]:
                 rel = row[key].strip()
                 if rel and not (ROOT / rel).exists():
                     missing_paths.append((row["id"], key, rel))
-    if missing_paths or missing_models:
+    if missing_paths or missing_models or missing_procedures:
         if missing_paths:
             print("Missing RTM paths:", file=sys.stderr)
             for item in missing_paths:
@@ -40,6 +44,10 @@ def main():
         if missing_models:
             print("Missing RTM model_ids:", file=sys.stderr)
             for ident in missing_models:
+                print(f"  {ident}", file=sys.stderr)
+        if missing_procedures:
+            print("Missing RTM procedure_paths:", file=sys.stderr)
+            for ident in missing_procedures:
                 print(f"  {ident}", file=sys.stderr)
         return 1
     print("RTM OK")

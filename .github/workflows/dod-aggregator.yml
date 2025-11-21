@@ -26,6 +26,10 @@ jobs:
         run: python3 .github/scripts/check_rtm_coverage.py
         continue-on-error: true
 
+      - name: Generate test case specifications
+        id: generate_tcs
+        run: python3 .github/scripts/generate_test_case_spec.py
+
       - name: Lint ADRs and agent config language
         id: adr_lint
         run: python3 .github/scripts/lint_requirements_language.py
@@ -56,14 +60,15 @@ jobs:
         run: |
           summary="dod-summary.txt"
           {
-            echo "DoD Aggregator summary"
-            echo "Test Plan: docs/testing/test-plan.md (§7.2 context/risk/schedule)"
-            echo "RTM paths: ${RTM_VALIDATE}"
-            echo "RTM coverage: ${RTM_COVERAGE}"
-            echo "ADR lint: ${ADR_LINT}"
-            echo "Docs link check: ${LINKCHECK}"
-          } > "$summary"
-          cat "$summary"
+          echo "DoD Aggregator summary"
+          echo "Test Plan: docs/testing/test-plan.md (§7.2 context/risk/schedule)"
+          echo "RTM paths: ${RTM_VALIDATE}"
+          echo "RTM coverage: ${RTM_COVERAGE}"
+          echo "Test case specs: ${{ steps.generate_tcs.outcome }}"
+          echo "ADR lint: ${ADR_LINT}"
+          echo "Docs link check: ${LINKCHECK}"
+        } > "$summary"
+        cat "$summary"
 
       - name: Upload DoD summary
         if: always()
@@ -72,11 +77,28 @@ jobs:
           name: dod-summary
           path: dod-summary.txt
 
+      - name: Upload test case specifications
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-case-specs
+          path: docs/testing/specs/*.md
+          if-no-files-found: warn
+
+      - name: Upload test procedures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-procedures
+          path: docs/testing/procedures/*.md
+          if-no-files-found: warn
+
       - name: Fail if any gate failed
         if: always()
         env:
           RTM_VALIDATE: ${{ steps.rtm_validate.outcome }}
           RTM_COVERAGE: ${{ steps.rtm_coverage.outcome }}
+          GENERATE_TCS: ${{ steps.generate_tcs.outcome }}
           ADR_LINT: ${{ steps.adr_lint.outcome }}
           LINKCHECK: ${{ steps.linkcheck.outcome }}
         run: |
@@ -84,6 +106,7 @@ jobs:
           for pair in \
             "RTM_VALIDATE:${RTM_VALIDATE}" \
             "RTM_COVERAGE:${RTM_COVERAGE}" \
+            "GENERATE_TCS:${GENERATE_TCS}" \
             "ADR_LINT:${ADR_LINT}" \
             "LINKCHECK:${LINKCHECK}"
           do
