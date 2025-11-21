@@ -28,6 +28,7 @@ DEFAULT_PERFORMANCE_RESULTS_PATH = REPORTS_DIR / "performance-measurements.json"
 DEFAULT_PORTABILITY_RESULTS_PATH = REPORTS_DIR / "portability-status.json"
 DETAIL_LIMIT = 5
 RESULTS_SCHEMA = "test-results/v1"
+INCIDENT_ENV_VAR = "TEST_INCIDENT_URLS"
 
 
 def safe_load_json(path: Path) -> Tuple[object, List[str]]:
@@ -273,6 +274,14 @@ def relpath(path: Path) -> Path:
         return path
 
 
+def incident_urls_from_env() -> List[str]:
+    raw = os.getenv(INCIDENT_ENV_VAR, "").strip()
+    if not raw:
+        return []
+    parts = [p.strip() for p in raw.replace("\n", ",").split(",")]
+    return [p for p in parts if p]
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -379,7 +388,7 @@ def summarize_missing(missing: List[str]) -> Tuple[List[str], int]:
     return missing[:15], len(missing) - 15
 
 
-def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: List[str], missing: List[str], results_path: Path) -> Tuple[Path, List[str]]:
+def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: List[str], missing: List[str], results_path: Path, incidents: List[str]) -> Tuple[Path, List[str]]:
     path = REPORTS_DIR / f"test-status-{meta['run_id']}.md"
     completion = "PASS" if high.pct() >= MIN_HIGH and total.pct() >= MIN_TOTAL else "FAIL"
     missing_sample, extra_missing = summarize_missing(missing)
@@ -431,6 +440,12 @@ def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: Lis
     lines.append("- RTM: docs/requirements/rtm.csv; TRW: docs/requirements/TRW_Verification_Checklist.md")
     lines.append("- CI gates: dod-aggregator, rtm-validate, rtm-coverage, adr-lint, docs-link-check, unit tests.")
     lines.append(f"- Structured results: {relpath(results_path)}")
+    if incidents:
+        lines.append("- Test incidents:")
+        for url in incidents:
+            lines.append(f"  - {url}")
+    else:
+        lines.append("- Test incidents: none recorded for this run.")
     lines.append("- Next action: fix blockers or proceed to merge if all gates are green.")
 
     return path, lines
@@ -445,6 +460,7 @@ def build_completion_report(
     performance: List[str] | None = None,
     portability: List[str] | None = None,
     results_path: Path | None = None,
+    incidents: List[str] | None = None,
 ) -> Tuple[Path, List[str]]:
     path = REPORTS_DIR / f"test-completion-{meta['tag']}.md"
     completion = "PASS" if high.pct() >= MIN_HIGH and total.pct() >= MIN_TOTAL else "FAIL"
@@ -506,6 +522,12 @@ def build_completion_report(
     lines.append("- CI gates: dod-aggregator, rtm-validate, rtm-coverage, adr-lint, docs-link-check, unit tests.")
     if results_path:
         lines.append(f"- Structured results: {relpath(results_path)}")
+    if incidents:
+        lines.append("- Test incidents:")
+        for url in incidents:
+            lines.append(f"  - {url}")
+    else:
+        lines.append("- Test incidents: none recorded for this run/tag.")
     lines.append("- This report should be attached to the GitHub Release assets for traceability.")
 
     return path, lines
@@ -573,6 +595,8 @@ def main() -> int:
     perf_blocker = False
     port_blocker = False
 
+    incidents = incident_urls_from_env()
+
     if args.mode == "completion":
         performance_summary, perf_blocker = summarize_performance(performance_results_path)
         portability_summary, port_blocker = summarize_portability(portability_results_path)
@@ -598,9 +622,10 @@ def main() -> int:
             performance=performance_summary,
             portability=portability_summary,
             results_path=results_path,
+            incidents=incidents,
         )
     else:
-        path, lines = build_status_report(meta, high, total, suites, missing, results_path)
+        path, lines = build_status_report(meta, high, total, suites, missing, results_path, incidents)
 
     path.write_text("\n".join(lines))
     print(f"Wrote {path.relative_to(ROOT)}")
