@@ -942,18 +942,18 @@ _Generated: 2025-11-20_
 - No duplicate tags/releases are created on re-runs; operations are idempotent.
 
 **Agent Procedure:**
-- Re-run the workflow for the same commit and inputs twice.
+- [x] Re-run the workflow for the same commit and inputs twice.
 **Evidence to Collect:** Run history and resulting refs/releases (no duplicates).
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 165
+**Notes:** Derived from SRS line 165; Tag-and-release workflow skips existing same-commit tags and upserts releases, preventing duplicates on rerun.
 
 ---
 
