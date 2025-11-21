@@ -14,3 +14,7 @@
 - See `../adr/` (e.g., ADR-2025-001).
 ## Correspondences
 - RTM <-> Code <-> Tests: `../requirements/rtm.csv`.
+## Viewpoints & Model Kinds
+- **Stakeholder perspectives / viewpoints**: Operational (Users), Developer/Build (Maintainers), QA/Release (Automation QA/Release Manager).
+- **Model kinds / view methods**: C4 Context/Container/Component/Deployment views; test models in `../testing/models/*`; RTM correspondences in `../requirements/rtm.csv`.
+- **Rationale**: Makes explicit the frames used to address concerns and trace decisions to views, per 42010. See ADR index and `../adr/ADR-2025-001.md`.
