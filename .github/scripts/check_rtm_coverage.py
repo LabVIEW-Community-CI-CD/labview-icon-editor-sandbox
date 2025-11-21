@@ -15,6 +15,7 @@ EXPECTED_HEADER = {
     "priority",
     "code_path",
     "test_path",
+    "model_id",
     "verification",
     "owner",
     "status",
