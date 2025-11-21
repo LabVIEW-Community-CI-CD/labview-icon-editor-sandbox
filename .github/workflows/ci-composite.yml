@@ -666,6 +666,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Generate release notes
+        id: release-notes
         uses: ./.github/actions/generate-release-notes
         # output_path defaults to Tooling/deployment/release_notes.md
       - uses: actions/download-artifact@v4
@@ -755,9 +756,33 @@ jobs:
           minor: ${{ needs.version.outputs.MINOR }}
           patch: ${{ needs.version.outputs.PATCH }}
           build: ${{ needs.version.outputs.BUILD }}
-      commit: ${{ github.sha }}
-      release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
-      display_information_json: ${{ steps.display-info.outputs.json }}
+          commit: ${{ github.sha }}
+          release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
+          display_information_json: ${{ steps.display-info.outputs.json }}
+      - if: always()
+        uses: ./.github/actions/close-labview
+        with:
+          minimum_supported_lv_version: 2023
+          supported_bitness: 64
+      - name: Validate tag matches computed version (if provided)
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.dispatch_tag != ''
+        shell: pwsh
+        env:
+          EXPECTED_TAG: v${{ needs.version.outputs.MAJOR }}.${{ needs.version.outputs.MINOR }}.${{ needs.version.outputs.PATCH }}.${{ needs.version.outputs.BUILD }}
+          REF_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          INPUT_TAG: ${{ github.event.inputs.dispatch_tag || '' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $provided = if (-not [string]::IsNullOrWhiteSpace($Env:INPUT_TAG)) { $Env:INPUT_TAG } else { $Env:REF_TAG }
+          if ([string]::IsNullOrWhiteSpace($provided)) {
+            Write-Host 'No tag provided; skipping validation.'
+            exit 0
+          }
+          if ($provided -ne $Env:EXPECTED_TAG) {
+            Write-Error ("Provided tag '{0}' does not match computed tag '{1}'." -f $provided, $Env:EXPECTED_TAG)
+          } else {
+            Write-Host ("Tag validation ok: {0}" -f $provided)
+          }
 
   analyze-vip:
     name: Analyze VI Package
@@ -792,27 +817,3 @@ jobs:
         with:
           name: vip-analysis-junit
           path: ${{ steps.analyze-vip.outputs.junit }}
-      - if: always()
-        uses: ./.github/actions/close-labview
-        with:
-          minimum_supported_lv_version: 2023
-          supported_bitness: 64
-      - name: Validate tag matches computed version (if provided)
-        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.dispatch_tag != ''
-        shell: pwsh
-        env:
-          EXPECTED_TAG: v${{ needs.version.outputs.MAJOR }}.${{ needs.version.outputs.MINOR }}.${{ needs.version.outputs.PATCH }}.${{ needs.version.outputs.BUILD }}
-          REF_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
-          INPUT_TAG: ${{ github.event.inputs.dispatch_tag || '' }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $provided = if (-not [string]::IsNullOrWhiteSpace($Env:INPUT_TAG)) { $Env:INPUT_TAG } else { $Env:REF_TAG }
-          if ([string]::IsNullOrWhiteSpace($provided)) {
-            Write-Host 'No tag provided; skipping validation.'
-            exit 0
-          }
-          if ($provided -ne $Env:EXPECTED_TAG) {
-            Write-Error ("Provided tag '{0}' does not match computed tag '{1}'." -f $provided, $Env:EXPECTED_TAG)
-          } else {
-            Write-Host ("Tag validation ok: {0}" -f $provided)
-          }
