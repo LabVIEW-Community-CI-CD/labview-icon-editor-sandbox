@@ -105,7 +105,7 @@ jobs:
           }
           if ($existingSha) {
             if ($existingSha -ne $headSha) {
-              Write-Error ("Tag {0} already exists and points to {1}, not {2}. Aborting." -f $tag, $existingSha, $headSha)
+              Write-Error ("Tag {0} already exists and points to {1}, not {2}. Aborting. Remediation: pick a new tag name or retarget the desired commit manually; do not force-move the existing tag." -f $tag, $existingSha, $headSha)
             } else {
               Write-Host ("Tag {0} already exists on this commit ({1}); skipping creation." -f $tag, $existingSha)
               exit 0
@@ -137,7 +137,7 @@ jobs:
             }
           }
           if (-not $pushed) {
-            Write-Error "Failed to push tag $tag after 3 attempts."
+            Write-Error "Failed to push tag $tag after 3 attempts. Remediation: check network connectivity/credentials and tag protection settings, then retry."
             exit 1
           }
 
@@ -161,29 +161,29 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $root = Join-Path -Path $PWD -ChildPath "artifacts"
           $vipCandidates = Get-ChildItem -Path $root -Recurse -Filter *.vip -File
-          if (-not $vipCandidates) { Write-Error "No .vip found in downloaded artifacts."; exit 1 }
+          if (-not $vipCandidates) { Write-Error "No .vip found in downloaded artifacts. Remediation: ensure upstream workflow publishes a single .vip artifact."; exit 1 }
           if ($vipCandidates.Count -ne 1) {
             $names = $vipCandidates | ForEach-Object { $_.FullName }
-            Write-Error ("Expected exactly one .vip; found {0}:`n{1}" -f $vipCandidates.Count, ($names -join "`n"))
+            Write-Error ("Expected exactly one .vip; found {0}:`n{1}`nRemediation: remove duplicates and publish a single .vip artifact." -f $vipCandidates.Count, ($names -join "`n"))
             exit 1
           }
           $vip = $vipCandidates[0]
 
           $notesCandidates = Get-ChildItem -Path $root -Recurse -Filter "release_notes_*.md" -File
-          if (-not $notesCandidates) { Write-Error "No release_notes_*.md found in downloaded artifacts."; exit 1 }
+          if (-not $notesCandidates) { Write-Error "No release_notes_*.md found in downloaded artifacts. Remediation: ensure upstream workflow publishes release notes markdown named release_notes_*.md."; exit 1 }
           if ($notesCandidates.Count -ne 1) {
             $names = $notesCandidates | ForEach-Object { $_.FullName }
-            Write-Error ("Expected exactly one release_notes_*.md; found {0}:`n{1}" -f $notesCandidates.Count, ($names -join "`n"))
+            Write-Error ("Expected exactly one release_notes_*.md; found {0}:`n{1}`nRemediation: remove duplicates and publish a single release_notes_*.md artifact." -f $notesCandidates.Count, ($names -join "`n"))
             exit 1
           }
           $notes = $notesCandidates[0]
 
           $expectedVersion = "$(${{ steps.version.outputs.MAJOR }}).$(${{ steps.version.outputs.MINOR }}).$(${{ steps.version.outputs.PATCH }}).$(${{ steps.version.outputs.BUILD }})"
           if ($vip.Name -notmatch $expectedVersion) {
-            Write-Error ("Located .vip '{0}' does not contain expected version '{1}'." -f $vip.Name, $expectedVersion)
+            Write-Error ("Located .vip '{0}' does not contain expected version '{1}'. Remediation: ensure artifact filename includes the computed version." -f $vip.Name, $expectedVersion)
           }
           if ($notes.Name -notmatch $expectedVersion) {
-            Write-Error ("Located release notes '{0}' do not contain expected version '{1}'." -f $notes.Name, $expectedVersion)
+            Write-Error ("Located release notes '{0}' do not contain expected version '{1}'. Remediation: ensure notes filename includes the computed version." -f $notes.Name, $expectedVersion)
           }
 
           "vip_path=$($vip.FullName)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append

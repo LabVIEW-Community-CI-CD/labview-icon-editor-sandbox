@@ -1029,18 +1029,18 @@ _Generated: 2025-11-20_
 - Failures include actionable diagnostics (errors, causes, next steps).
 
 **Agent Procedure:**
-- Induce a few failure modes and check that detailed diagnostics are emitted.
+- [x] Induce a few failure modes and check that detailed diagnostics are emitted.
 **Evidence to Collect:** Failure logs for representative cases.
 
 **Owner/Role:** Automation QA (Agent)  
 **Phase/Gate:** CI Integration  
-**Status:** Not Started  
+**Status:** Completed  
 **Last Updated:** 2025-11-20
 
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 173
+**Notes:** Derived from SRS line 173; Workflow emits actionable diagnostics with detection point, cause, and remediation for tag conflicts, push retries, and artifact validation.
 
 ---
 
