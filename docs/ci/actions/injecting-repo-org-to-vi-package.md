@@ -158,7 +158,7 @@ The previous build system used a `Build.ps1` script. For historical reference, y
 
 ```powershell
 \.github\actions\build\Build.ps1 `
-  -RelativePath "C:\labview-icon-editor-fork" `
+  -RepositoryPath "C:\labview-icon-editor-fork" `
   -Major 2 -Minor 1 -Patch 0 -Build 5 `
   -Commit "abc12345" `
   -CompanyName "Acme Corporation" `

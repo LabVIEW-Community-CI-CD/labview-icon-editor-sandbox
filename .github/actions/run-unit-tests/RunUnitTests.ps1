@@ -211,7 +211,7 @@ function MainSequence {
                $col3.PadRight($maxStatus) + "  " +
                $col4.PadRight($maxTime) + "  " +
                $col5.PadRight($maxAssert))
-    Write-Information $header -InformationAction Continue
+Write-Information $header -InformationAction Continue
 
     # Output test results in color
     foreach ($res in $results) {
@@ -228,7 +228,7 @@ function MainSequence {
             Write-Information $line -InformationAction Continue
         }
         else {
-            Write-Host $line -ForegroundColor Red
+            Write-Warning $line
         }
     }
 }

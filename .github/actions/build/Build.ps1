@@ -251,14 +251,13 @@ try {
 
     # 12) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Execute-Script $CloseLabVIEW `
-        "-MinimumSupportedLVVersion 2023 -SupportedBitness 64"
+    Execute-Script -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2023','-SupportedBitness','64')
 
-    Write-Host "All scripts executed successfully!" -ForegroundColor Green
+    Write-Information "All scripts executed successfully!" -InformationAction Continue
     Write-Verbose "Script: Build.ps1 completed without errors."
 }
 catch {
-    Write-Host "An unexpected error occurred during script execution: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Error "An unexpected error occurred during script execution: $($_.Exception.Message)"
     Write-Verbose "Stack Trace: $($_.Exception.StackTrace)"
     exit 1
 }

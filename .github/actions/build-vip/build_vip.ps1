@@ -84,7 +84,7 @@ catch {
 
 # 2) Create release notes if needed and resolve the paths
 if (-not (Test-Path $ReleaseNotesFile)) {
-    Write-Host "Release notes file '$ReleaseNotesFile' does not exist. Creating it..."
+    Write-Information "Release notes file '$ReleaseNotesFile' does not exist. Creating it..." -InformationAction Continue
     New-Item -ItemType File -Path $ReleaseNotesFile -Force | Out-Null
 }
 
@@ -178,7 +178,7 @@ $attemptLogs = @()
 for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
     $logFile = Join-Path -Path $LogDirectory -ChildPath ("gcli-build-attempt-{0}.log" -f $attempt)
     $attemptLogs += $logFile
-    Write-Host "Starting g-cli build attempt $attempt of $maxAttempts. Logs: $logFile"
+    Write-Information "Starting g-cli build attempt $attempt of $maxAttempts. Logs: $logFile" -InformationAction Continue
 
     try {
         & g-cli @gcliArgs 2>&1 | Tee-Object -FilePath $logFile
@@ -203,12 +203,12 @@ if (-not $success) {
     for ($i = 0; $i -lt $attemptLogs.Count; $i++) {
         $log = $attemptLogs[$i]
         if (Test-Path $log) {
-            Write-Host ("---- g-cli build log attempt {0} ({1}) ----" -f ($i + 1), $log)
-            Get-Content -Path $log | ForEach-Object { Write-Host $_ }
-            Write-Host ("---- end g-cli build log attempt {0} ----" -f ($i + 1))
+            Write-Information ("---- g-cli build log attempt {0} ({1}) ----" -f ($i + 1), $log) -InformationAction Continue
+            Get-Content -Path $log | ForEach-Object { Write-Information $_ -InformationAction Continue }
+            Write-Information ("---- end g-cli build log attempt {0} ----" -f ($i + 1)) -InformationAction Continue
         }
         else {
-            Write-Host ("g-cli build log for attempt {0} not found at {1}" -f ($i + 1), $log)
+            Write-Warning ("g-cli build log for attempt {0} not found at {1}" -f ($i + 1), $log)
         }
     }
 
@@ -221,4 +221,4 @@ if (-not $success) {
     exit 1
 }
 
-Write-Host "Successfully built VI package: $ResolvedVIPBPath"
+Write-Information "Successfully built VI package: $ResolvedVIPBPath" -InformationAction Continue

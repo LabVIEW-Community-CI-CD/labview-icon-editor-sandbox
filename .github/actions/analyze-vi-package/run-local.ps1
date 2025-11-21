@@ -19,16 +19,16 @@ if (-not $pesterModule) {
 Import-Module -Name $pesterModule.Path -Force
 
 # Resolve VIP path; allow direct file, directory (pick newest .vip), or wildcard
- $vipResolved = $null
- if (Test-Path -LiteralPath $VipPath -PathType Leaf) {
-     $vipResolved = (Resolve-Path -LiteralPath $VipPath).Path
- } elseif (Test-Path -LiteralPath $VipPath -PathType Container) {
-     $candidates = Get-ChildItem -Path $VipPath -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending
-     if ($candidates) {
-         $vipResolved = $candidates[0].FullName
-         Write-Host ("Using most recent .vip under {0}: {1}" -f $VipPath, $vipResolved)
-     }
- } else {
+$vipResolved = $null
+if (Test-Path -LiteralPath $VipPath -PathType Leaf) {
+    $vipResolved = (Resolve-Path -LiteralPath $VipPath).Path
+} elseif (Test-Path -LiteralPath $VipPath -PathType Container) {
+    $candidates = Get-ChildItem -Path $VipPath -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending
+    if ($candidates) {
+        $vipResolved = $candidates[0].FullName
+        Write-Information ("Using most recent .vip under {0}: {1}" -f $VipPath, $vipResolved) -InformationAction Continue
+    }
+} else {
     $candidates = Get-ChildItem -Path $VipPath -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Extension -ieq '.vip' } | Sort-Object LastWriteTime -Descending
     if ($candidates) {
         $vipResolved = $candidates[0].FullName

@@ -56,7 +56,7 @@ Local:
 2) `python3 .github/scripts/validate_rtm.py`
 3) `python3 .github/scripts/check_rtm_coverage.py`
 4) `python3 .github/scripts/lint_requirements_language.py`
-5) `pwsh -File .github/actions/unit-tests/unit_tests.ps1 -RelativePath \"$PWD\"`
+5) `pwsh -File .github/actions/unit-tests/unit_tests.ps1 -RepositoryPath \"$PWD\"`
 
 CI/PR:
 - DoD Aggregator / `dod-aggregator.yml` runs RTM validation, RTM coverage, ADR lint, docs link check; uploads DoD summary artifact.
