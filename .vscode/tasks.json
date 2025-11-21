@@ -82,22 +82,7 @@
       "args": [
         "-NoProfile",
         "-Command",
-        "-File",
-        "${workspaceFolder}/.github/actions/build/run-local-build.ps1",
-        "-RepositoryPath",
-        "${input:repoPath}",
-        "-Major",
-        "${input:semverMajor}",
-        "-Minor",
-        "${input:semverMinor}",
-        "-Patch",
-        "${input:semverPatch}",
-        "-Build",
-        "${input:buildNumber}",
-        "-CompanyName",
-        "${input:companyName}",
-        "-AuthorName",
-        "${input:authorName}"
+        "& { $ErrorActionPreference='Stop'; $commit = git -C \"${input:repoPath}\" rev-parse HEAD 2>$null; if (-not $commit) { $commit = 'manual' }; & \"${workspaceFolder}/.github/actions/build/Build.ps1\" -RepositoryPath \"${input:repoPath}\" -Major ${input:semverMajor} -Minor ${input:semverMinor} -Patch ${input:semverPatch} -Build ${input:buildNumber} -LabVIEWMinorRevision 3 -Commit $commit -CompanyName \"${input:companyName}\" -AuthorName \"${input:authorName}\" }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

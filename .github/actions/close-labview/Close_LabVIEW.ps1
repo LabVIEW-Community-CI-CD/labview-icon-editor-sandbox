@@ -16,7 +16,10 @@
     .\Close_LabVIEW.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64"
 #>
 param(
+    [Parameter(Mandatory)]
     [string]$MinimumSupportedLVVersion,
+    [Parameter(Mandatory)]
+    [ValidateSet("32","64")]
     [string]$SupportedBitness
 )
 

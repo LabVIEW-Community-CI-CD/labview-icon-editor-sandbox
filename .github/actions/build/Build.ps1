@@ -24,21 +24,11 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$RepositoryPath,
 
-    [Parameter(Mandatory = $true)]
     [int]$Major = 1,
-
-    [Parameter(Mandatory = $true)]
-    [int]$Minor,
-
-    [Parameter(Mandatory = $true)]
-    [int]$Patch,
-
-    [Parameter(Mandatory = $true)]
-    [int]$Build,
-
-    [Parameter(Mandatory = $true)]
+    [int]$Minor = 0,
+    [int]$Patch = 0,
+    [int]$Build = 1,
     [string]$Commit,
-
     # LabVIEW "minor" revision (0 or 3)
     [Parameter(Mandatory = $false)]
     [int]$LabVIEWMinorRevision = 3,
@@ -112,7 +102,8 @@ try {
     try {
         $PluginFiles = Get-ChildItem -Path "$RepositoryPath\resource\plugins" -Filter '*.lvlibp' -ErrorAction Stop
         if ($PluginFiles) {
-            Write-Verbose "Found $($PluginFiles.Count) file(s): $($PluginFiles | ForEach-Object { $_.Name } -join ', ')"
+            $pluginNames = $PluginFiles | ForEach-Object { $_.Name }
+            Write-Verbose "Found $($PluginFiles.Count) file(s): $($pluginNames -join ', ')"
             $PluginFiles | Remove-Item -Force
             Write-Information "Deleted .lvlibp files from plugins folder." -InformationAction Continue
         }
@@ -137,14 +128,17 @@ try {
     # 3) Build LV Library (32-bit)
     Write-Verbose "Building LV library (32-bit)..."
     $BuildLvlibp = Join-Path $ActionsPath "build-lvlibp/Build_lvlibp.ps1"
-    $argsLvlibp32 = @(
-        '-MinimumSupportedLVVersion','2021',
-        '-SupportedBitness','32',
-        '-RepositoryPath', $RepositoryPath,
-        '-Major', $Major, '-Minor', $Minor, '-Patch', $Patch, '-Build', $Build,
-        '-Commit', $Commit
-    )
-    Invoke-ScriptSafe -ScriptPath $BuildLvlibp -ArgumentList $argsLvlibp32
+    $argsLvlibp32 = @{
+        MinimumSupportedLVVersion = '2021'
+        SupportedBitness          = '32'
+        RepositoryPath            = $RepositoryPath
+        Major                     = $Major
+        Minor                     = $Minor
+        Patch                     = $Patch
+        Build                     = $Build
+        Commit                    = $Commit
+    }
+    & $BuildLvlibp @argsLvlibp32
 
     # 4) Close LabVIEW (32-bit)
     Write-Verbose "Closing LabVIEW (32-bit)..."
@@ -168,14 +162,17 @@ try {
 
     # 7) Build LV Library (64-bit)
     Write-Verbose "Building LV library (64-bit)..."
-    $argsLvlibp64 = @(
-        '-MinimumSupportedLVVersion','2021',
-        '-SupportedBitness','64',
-        '-RepositoryPath', $RepositoryPath,
-        '-Major', $Major, '-Minor', $Minor, '-Patch', $Patch, '-Build', $Build,
-        '-Commit', $Commit
-    )
-    Invoke-ScriptSafe -ScriptPath $BuildLvlibp -ArgumentList $argsLvlibp64
+    $argsLvlibp64 = @{
+        MinimumSupportedLVVersion = '2021'
+        SupportedBitness          = '64'
+        RepositoryPath            = $RepositoryPath
+        Major                     = $Major
+        Minor                     = $Minor
+        Patch                     = $Patch
+        Build                     = $Build
+        Commit                    = $Commit
+    }
+    & $BuildLvlibp @argsLvlibp64
 
     # 7.1) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
