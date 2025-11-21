@@ -195,13 +195,46 @@ runs:
         compression-level: 0
         if-no-files-found: ignore
 
-    - name: Upload VI Package
+    - name: Upload VI Package (attempt 1)
       if: success()
+      id: upload-vip-1
+      continue-on-error: true
       uses: actions/upload-artifact@v4
       with:
         name: ${{ steps.locate-vip.outputs.vip_artifact }}
         path: ${{ steps.locate-vip.outputs.vip_path }}
         if-no-files-found: ignore
+
+    - name: Upload VI Package (backoff before retry)
+      if: steps.upload-vip-1.outcome != 'success'
+      shell: pwsh
+      run: Start-Sleep -Seconds 10
+
+    - name: Upload VI Package (attempt 2)
+      if: steps.upload-vip-1.outcome != 'success'
+      id: upload-vip-2
+      continue-on-error: true
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.locate-vip.outputs.vip_artifact }}
+        path: ${{ steps.locate-vip.outputs.vip_path }}
+        if-no-files-found: ignore
+
+    - name: Upload VI Package (final attempt)
+      if: steps.upload-vip-1.outcome != 'success' && steps.upload-vip-2.outcome != 'success'
+      id: upload-vip-3
+      continue-on-error: true
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.locate-vip.outputs.vip_artifact }}
+        path: ${{ steps.locate-vip.outputs.vip_path }}
+        if-no-files-found: ignore
+
+    - name: Fail if VIP upload failed
+      if: steps.upload-vip-1.outcome != 'success' && steps.upload-vip-2.outcome != 'success' && steps.upload-vip-3.outcome != 'success'
+      shell: pwsh
+      run: |
+        Write-Error "VIP artifact upload failed after 3 attempts (check network/ECONNRESET)."
 
     - name: Upload g-cli logs (if present)
       if: always()

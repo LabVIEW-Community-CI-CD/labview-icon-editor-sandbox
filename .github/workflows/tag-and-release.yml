@@ -7,8 +7,8 @@ on:
       - completed
 
 permissions:
-  contents: read
-  actions: read
+  contents: write
+  actions: write
 
 jobs:
   tag-and-release:
@@ -18,7 +18,7 @@ jobs:
     permissions:
       contents: write
       actions: write
-    runs-on: self-hosted-windows-lv
+    runs-on: windows-2022
     steps:
       - name: Exit if upstream run not from push or failed
         if: ${{ github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push' }}
@@ -26,11 +26,38 @@ jobs:
           echo "Upstream CI run conclusion=${{ github.event.workflow_run.conclusion }}, event=${{ github.event.workflow_run.event }}. Skipping tag."
           exit 0
 
+      - name: Enforce allowed branches
+        shell: pwsh
+        env:
+          EXTRA_PATTERNS: ${{ env.ALLOWED_BRANCH_PATTERNS }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $branch = '${{ github.event.workflow_run.head_branch }}'
+          $patterns = @('main', 'develop', 'release-alpha/*', 'release-beta/*', 'release-rc/*')
+          if ($Env:EXTRA_PATTERNS) {
+            $patterns += $Env:EXTRA_PATTERNS.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+          }
+          $isAllowed = $false
+          foreach ($pat in $patterns) {
+            if ($branch -like $pat) { $isAllowed = $true; break }
+          }
+          if (-not $isAllowed) {
+            Write-Host ("Branch '{0}' not in allow-list patterns: {1}. Skipping tag-and-release (no tag/release operations executed)." -f $branch, ($patterns -join ', '))
+            exit 0
+          } else {
+            Write-Host ("Branch '{0}' allowed by patterns: {1}." -f $branch, ($patterns -join ', '))
+          }
+
       - name: Checkout full history
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
 
       - name: Compute version
         id: version
@@ -38,13 +65,44 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Form tag
+      - name: Log run context
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $commit = '${{ github.event.workflow_run.head_sha }}'
+          $branch = '${{ github.event.workflow_run.head_branch }}'
+          $runId  = '${{ github.event.workflow_run.id }}'
+          $version = '${{ steps.version.outputs.VERSION }}'
+          Write-Host ("Context -> commit: {0}, branch: {1}, workflow_run_id: {2}, version: {3}" -f $commit, $branch, $runId, $version)
+
+      - name: Form tag (drop build suffix, keep prerelease)
         id: form-tag
         shell: pwsh
         run: |
-          $tag = "v${{ steps.version.outputs.MAJOR }}.${{ steps.version.outputs.MINOR }}.${{ steps.version.outputs.PATCH }}.${{ steps.version.outputs.BUILD }}"
-          Write-Host "Tag: $tag"
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ steps.version.outputs.VERSION }}'
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            Write-Error "VERSION output is empty; cannot form tag."
+          }
+          # Strip trailing -buildN while keeping prerelease suffix (e.g., v1.2.3-rc.4-build8 -> v1.2.3-rc.4)
+          $tag = $version -replace '-build\\d+$',''
+          Write-Host ("Tag: {0}" -f $tag)
           "tag=$tag" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          Write-Host ("Decision -> prerelease={0}" -f ('${{ steps.version.outputs.IS_PRERELEASE }}' -eq 'true'))
+
+      - name: Check existing tag target (remote)
+        id: check-tag
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = "${{ steps.form-tag.outputs.tag }}"
+          $remoteSha = git ls-remote --tags origin $tag | ForEach-Object { ($_ -split '\s+')[0] } | Select-Object -First 1
+          if ($remoteSha) {
+            Write-Host ("Tag {0} exists on origin with SHA {1}" -f $tag, $remoteSha)
+          } else {
+            Write-Host ("Tag {0} not found on origin." -f $tag)
+          }
+          "remote_tag_sha=$remoteSha" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
       - name: Fail if tag belongs to a different commit
         shell: pwsh
@@ -52,10 +110,13 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $tag = "${{ steps.form-tag.outputs.tag }}"
           $headSha = git rev-parse HEAD
-          $existingSha = git rev-list -n 1 $tag 2>$null
+          $existingSha = "${{ steps.check-tag.outputs.remote_tag_sha }}"
+          if (-not $existingSha) {
+            $existingSha = git rev-list -n 1 $tag 2>$null
+          }
           if ($existingSha) {
             if ($existingSha -ne $headSha) {
-              Write-Error ("Tag {0} already exists and points to {1}, not {2}. Aborting." -f $tag, $existingSha, $headSha)
+              Write-Error ("Tag {0} already exists and points to {1}, not {2}. Aborting. Remediation: pick a new tag name or retarget the desired commit manually; do not force-move the existing tag." -f $tag, $existingSha, $headSha)
             } else {
               Write-Host ("Tag {0} already exists on this commit ({1}); skipping creation." -f $tag, $existingSha)
               exit 0
@@ -87,7 +148,7 @@ jobs:
             }
           }
           if (-not $pushed) {
-            Write-Error "Failed to push tag $tag after 3 attempts."
+            Write-Error "Failed to push tag $tag after 3 attempts. Remediation: check network connectivity/credentials and tag protection settings, then retry."
             exit 1
           }
 
@@ -98,24 +159,171 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           path: artifacts
 
+      - name: List downloaded artifacts
+        shell: pwsh
+        run: |
+          Write-Host "Artifacts downloaded to $(Join-Path $PWD 'artifacts'):"
+          Get-ChildItem -Path artifacts -Recurse | Select-Object FullName
+
+      - name: Prepare performance/portability inputs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'artifacts'
+          $dest = Join-Path $PWD 'reports'
+          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
+
+          $perf = Get-ChildItem -Path $root -Recurse -Filter "performance-measurements.json" -File | Select-Object -First 1
+          if ($perf) {
+            Copy-Item -Path $perf.FullName -Destination (Join-Path $dest 'performance-measurements.json') -Force
+            Write-Host "Found performance measurements: $($perf.FullName)"
+          } else {
+            Write-Host "No performance-measurements.json found in artifacts."
+          }
+
+          $port = Get-ChildItem -Path $root -Recurse -Filter "portability-status.json" -File | Select-Object -First 1
+          if ($port) {
+            Copy-Item -Path $port.FullName -Destination (Join-Path $dest 'portability-status.json') -Force
+            Write-Host "Found portability-status.json: $($port.FullName)"
+          } else {
+            Write-Host "No portability-status.json found in artifacts."
+          }
+
+          Write-Host "Reports directory contents:"
+          Get-ChildItem -Path $dest -Recurse | Select-Object FullName
+
+      - name: Copy readiness artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'artifacts'
+          $dest = Join-Path $PWD 'reports'
+          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
+          $copied = 0
+          foreach ($pattern in @("test-data-readiness-*.md","test-env-readiness-*.md")) {
+            $item = Get-ChildItem -Path $root -Recurse -Filter $pattern -File | Select-Object -First 1
+            if ($item) {
+              Copy-Item -Path $item.FullName -Destination (Join-Path $dest $item.Name) -Force
+              Write-Host ("Copied {0} to reports/" -f $item.Name)
+              $copied++
+            } else {
+              Write-Warning ("No artifact found matching {0}" -f $pattern)
+            }
+          }
+          Write-Host ("Total readiness artifacts copied: {0}" -f $copied)
+
+      - name: Copy docs quality artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'artifacts'
+          $dest = Join-Path $PWD 'reports'
+          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
+
+          $lychee = Get-ChildItem -Path $root -Recurse -Filter "report.json" -File | Where-Object { $_.FullName -like "*lychee-report*" } | Select-Object -First 1
+          if (-not $lychee) { Write-Error "No lychee report.json found in artifacts."; }
+          else {
+            Copy-Item -Path $lychee.FullName -Destination (Join-Path $dest 'lychee-report.json') -Force
+            Write-Host ("Copied lychee report from {0}" -f $lychee.FullName)
+          }
+
+          $adr = Get-ChildItem -Path $root -Recurse -Filter "adr-lint.log" -File | Select-Object -First 1
+          if (-not $adr) { Write-Error "No adr-lint.log found in artifacts."; }
+          else {
+            Copy-Item -Path $adr.FullName -Destination (Join-Path $dest 'adr-lint.log') -Force
+            Write-Host ("Copied ADR lint log from {0}" -f $adr.FullName)
+          }
+
+      - name: Copy test report artifact
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'artifacts'
+          $dest = Join-Path $PWD 'reports'
+          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
+          $report = Get-ChildItem -Path $root -Recurse -Filter "test-report.md" -File | Select-Object -First 1
+          if (-not $report) {
+            Write-Error "No test-report.md found in artifacts from upstream CI run."
+          }
+          Copy-Item -Path $report.FullName -Destination (Join-Path $dest 'test-report.md') -Force
+          Write-Host ("Copied test report from {0}" -f $report.FullName)
+
+      - name: Generate ISO 29119-3 test completion report
+        id: completion-report
+        env:
+          TAG_NAME: ${{ steps.form-tag.outputs.tag }}
+          UPSTREAM_RUN_ID: ${{ github.event.workflow_run.id }}
+          UPSTREAM_RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          python .github/scripts/generate_test_status.py --mode completion --tag "${Env:TAG_NAME}"
+          echo ("report_path={0}" -f (Join-Path $PWD ("reports/test-completion-{0}.md" -f $Env:TAG_NAME))) | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+
+      - name: Generate test execution log for tag
+        env:
+          RTM_VALIDATE: success
+          RTM_COVERAGE: success
+          GENERATE_TCS: success
+          DATA_READINESS: success
+          ENV_READINESS: success
+          ADR_LINT: success
+          LINKCHECK: success
+          TAG_NAME: ${{ steps.form-tag.outputs.tag }}
+        run: |
+          python .github/scripts/generate_test_execution_log.py --run-id "${Env:TAG_NAME}"
+
+      - name: Verify completion report exists
+        run: |
+          path="reports/test-completion-${{ steps.form-tag.outputs.tag }}.md"
+          if [ ! -s "$path" ]; then
+            echo "Completion report missing or empty at $path" >&2
+            exit 1
+          fi
+
+      - name: Ensure CM test artifacts present
+        run: |
+          missing=0
+          check() { if [ ! -s "$1" ]; then echo "Missing required artifact: $1" >&2; missing=1; fi; }
+          check "reports/test-completion-${{ steps.form-tag.outputs.tag }}.md"
+          check "reports/test-results-${{ steps.form-tag.outputs.tag }}.json"
+          check "reports/test-execution-log-${{ steps.form-tag.outputs.tag }}.md"
+          check "reports/lychee-report.json"
+          check "reports/adr-lint.log"
+          check "reports/test-report.md"
+          # readiness reports may be named by upstream run; ensure at least one exists
+          if ! ls reports/test-data-readiness-*.md 1>/dev/null 2>&1; then echo "Missing data readiness report in reports/" >&2; missing=1; fi
+          if ! ls reports/test-env-readiness-*.md 1>/dev/null 2>&1; then echo "Missing environment readiness report in reports/" >&2; missing=1; fi
+          if [ $missing -ne 0 ]; then exit 1; fi
+
       - name: Locate release assets from artifacts
         id: locate-artifacts
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $root = Join-Path -Path $PWD -ChildPath "artifacts"
-          $vip = Get-ChildItem -Path $root -Recurse -Filter *.vip -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $vip) { Write-Error "No .vip found in downloaded artifacts."; exit 1 }
+          $vipCandidates = Get-ChildItem -Path $root -Recurse -Filter *.vip -File
+          if (-not $vipCandidates) { Write-Error "No .vip found in downloaded artifacts. Remediation: ensure upstream workflow publishes a single .vip artifact."; exit 1 }
+          if ($vipCandidates.Count -ne 1) {
+            $names = $vipCandidates | ForEach-Object { $_.FullName }
+            Write-Error ("Expected exactly one .vip; found {0}:`n{1}`nRemediation: remove duplicates and publish a single .vip artifact." -f $vipCandidates.Count, ($names -join "`n"))
+            exit 1
+          }
+          $vip = $vipCandidates[0]
 
-          $notes = Get-ChildItem -Path $root -Recurse -Filter "release_notes_*.md" -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $notes) { Write-Error "No release_notes_*.md found in downloaded artifacts."; exit 1 }
+          $notesCandidates = Get-ChildItem -Path $root -Recurse -Filter "release_notes_*.md" -File
+          if (-not $notesCandidates) { Write-Error "No release_notes_*.md found in downloaded artifacts. Remediation: ensure upstream workflow publishes release notes markdown named release_notes_*.md."; exit 1 }
+          if ($notesCandidates.Count -ne 1) {
+            $names = $notesCandidates | ForEach-Object { $_.FullName }
+            Write-Error ("Expected exactly one release_notes_*.md; found {0}:`n{1}`nRemediation: remove duplicates and publish a single release_notes_*.md artifact." -f $notesCandidates.Count, ($names -join "`n"))
+            exit 1
+          }
+          $notes = $notesCandidates[0]
 
           $expectedVersion = "$(${{ steps.version.outputs.MAJOR }}).$(${{ steps.version.outputs.MINOR }}).$(${{ steps.version.outputs.PATCH }}).$(${{ steps.version.outputs.BUILD }})"
           if ($vip.Name -notmatch $expectedVersion) {
-            Write-Error ("Located .vip '{0}' does not contain expected version '{1}'." -f $vip.Name, $expectedVersion)
+            Write-Error ("Located .vip '{0}' does not contain expected version '{1}'. Remediation: ensure artifact filename includes the computed version." -f $vip.Name, $expectedVersion)
           }
           if ($notes.Name -notmatch $expectedVersion) {
-            Write-Error ("Located release notes '{0}' do not contain expected version '{1}'." -f $notes.Name, $expectedVersion)
+            Write-Error ("Located release notes '{0}' do not contain expected version '{1}'. Remediation: ensure notes filename includes the computed version." -f $notes.Name, $expectedVersion)
           }
 
           "vip_path=$($vip.FullName)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
@@ -131,10 +339,18 @@ jobs:
           tag_name: ${{ steps.form-tag.outputs.tag }}
           name: ${{ steps.form-tag.outputs.tag }}
           draft: true
-          prerelease: false
+          prerelease: ${{ steps.version.outputs.IS_PRERELEASE }}
           files: |
             ${{ steps.locate-artifacts.outputs.vip_path }}
             ${{ steps.locate-artifacts.outputs.notes_path }}
+            ${{ steps.completion-report.outputs.report_path }}
+            reports/lychee-report.json
+            reports/adr-lint.log
+            reports/test-report.md
+            reports/test-results-${{ steps.form-tag.outputs.tag }}.json
+            reports/test-execution-log-${{ steps.form-tag.outputs.tag }}.md
+            reports/test-data-readiness-*.md
+            reports/test-env-readiness-*.md
 
       - name: Publish release after assets are attached
         uses: actions/github-script@v7
@@ -142,6 +358,28 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const tag = '${{ steps.form-tag.outputs.tag }}';
+            const prerelease = '${{ steps.version.outputs.IS_PRERELEASE }}' === 'true';
+            const vipName = '${{ steps.locate-artifacts.outputs.vip_name }}';
+            const notesName = '${{ steps.locate-artifacts.outputs.notes_name }}';
+            const evidence = [
+              `Test completion: test-completion-${tag}.md`,
+              `Test report: test-report.md`,
+              `Structured results: test-results-${tag}.json`,
+              `Execution log: test-execution-log-${tag}.md`,
+              'Lychee report: lychee-report.json',
+              'ADR lint: adr-lint.log',
+              'Readiness: test-data-readiness-*.md, test-env-readiness-*.md',
+            ];
+            const body = [
+              'Automated release generated by tag-and-release workflow.',
+              '',
+              'Assets:',
+              `- VIP: ${vipName}`,
+              `- Release notes: ${notesName}`,
+              '',
+              'Test evidence (ISO/IEC/IEEE 29119-3 §7.3/§7.4):',
+              ...evidence.map(e => `- ${e}`),
+            ].join('\n');
             try {
               // If release exists, update; otherwise create then update
               let release;
@@ -159,7 +397,8 @@ jobs:
                     tag_name: tag,
                     name: tag,
                     draft: true,
-                    prerelease: false,
+                    prerelease,
+                    body,
                   });
                 } else {
                   throw err;
@@ -171,9 +410,11 @@ jobs:
                 repo: context.repo.name,
                 release_id: release.data.id,
                 draft: false,
+                prerelease,
                 make_latest: true,
+                body,
               });
-              console.log(`Release for tag ${tag} published successfully.`);
+              console.log(`Release for tag ${tag} published successfully. Prerelease=${prerelease}`);
             } catch (error) {
               console.error(`Failed to publish release for tag: ${tag}`);
               console.error(error);

@@ -1,0 +1,15 @@
+name: Compute Version Selftest
+on:
+  pull_request:
+    branches: [ main, develop, release/*, feature/*, hotfix/* ]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  first-release-detection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run first-release detection tests
+        shell: pwsh
+        run: pwsh .github/actions/compute-version/tests/test_first_release_detection.ps1
