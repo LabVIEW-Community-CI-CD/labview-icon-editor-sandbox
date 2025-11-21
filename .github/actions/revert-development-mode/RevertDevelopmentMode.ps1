@@ -15,6 +15,7 @@
 
 param(
     [Parameter(Mandatory = $true)]
+    [ValidateScript({ Test-Path $_ })]
     [string]$RepositoryPath,
 
     # Optional override; if not provided we read Package_LabVIEW_Version from the repo .vipb
@@ -29,19 +30,41 @@ $LabVIEW_Project = 'lv_icon_editor'
 $ScriptDirectory = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 Write-Information "Script Directory: $ScriptDirectory" -InformationAction Continue
 
+# Normalize repository path early and re-validate
+$RepositoryPath = (Resolve-Path -LiteralPath $RepositoryPath).Path
+if (-not (Test-Path -LiteralPath $RepositoryPath)) {
+    throw "RepositoryPath '$RepositoryPath' does not exist."
+}
+
 # Helper function to execute scripts and stop on error
 function Invoke-ScriptSafe {
     param(
         [string]$ScriptPath,
+        [hashtable]$ArgumentMap,
         [string[]]$ArgumentList
     )
-    Write-Information ("Executing: {0} {1}" -f $ScriptPath, ($ArgumentList -join ' ')) -InformationAction Continue
+    if (-not $ScriptPath) { throw "ScriptPath is required" }
+    if (-not (Test-Path -LiteralPath $ScriptPath)) { throw "ScriptPath '$ScriptPath' not found" }
+
+    $render = if ($ArgumentMap) {
+        ($ArgumentMap.GetEnumerator() | ForEach-Object { "-$($_.Key) $($_.Value)" }) -join ' '
+    } else {
+        ($ArgumentList -join ' ')
+    }
+    Write-Information ("Executing: {0} {1}" -f $ScriptPath, $render) -InformationAction Continue
     try {
-        & $ScriptPath @ArgumentList
+        if ($ArgumentMap) {
+            & $ScriptPath @ArgumentMap
+        } elseif ($ArgumentList) {
+            & $ScriptPath @ArgumentList
+        } else {
+            & $ScriptPath
+        }
     } catch {
-        Write-Error "Error occurred while executing: $ScriptPath $($ArgumentList -join ' '). Exiting."
-        Write-Error ($_.Exception | Out-String)
-        Write-Error ($_.ToString())
+        $msg = "Error occurred while executing: $ScriptPath $($ArgumentList -join ' '). Exiting."
+        if ($_.Exception) { $msg += " Inner: $($_.Exception.Message)" }
+        if ($_.InvocationInfo) { $msg += " At: $($_.InvocationInfo.PositionMessage)" }
+        Write-Error $msg
         throw
     }
 }
@@ -82,20 +105,38 @@ try {
         Write-Information ("Using explicit LabVIEW version: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
     }
     # Build the script paths
-    $RestoreScript = Join-Path -Path $ScriptDirectory -ChildPath 'RestoreSetupLVSource.ps1'
-    $CloseScript = Join-Path -Path $ScriptDirectory -ChildPath 'Close_LabVIEW.ps1'
+    $RestoreScript = Join-Path -Path $ScriptDirectory -ChildPath '..\restore-setup-lv-source\RestoreSetupLVSource.ps1'
+    $CloseScript   = Join-Path -Path $ScriptDirectory -ChildPath '..\close-labview\Close_LabVIEW.ps1'
 
     # Restore setup for LabVIEW (32-bit)
-    Invoke-ScriptSafe -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','32','-RepositoryPath',$RepositoryPath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
+    Invoke-ScriptSafe -ScriptPath $RestoreScript -ArgumentMap @{
+        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        SupportedBitness          = '32'
+        RepositoryPath            = $RepositoryPath
+        LabVIEW_Project           = $LabVIEW_Project
+        Build_Spec                = 'Editor Packed Library'
+    }
 
     # Close LabVIEW (32-bit)
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','32')
+    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
+        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        SupportedBitness          = '32'
+    }
 
     # Restore setup for LabVIEW (64-bit)
-    Invoke-ScriptSafe -ScriptPath $RestoreScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','64','-RepositoryPath',$RepositoryPath,'-LabVIEW_Project',$LabVIEW_Project,'-Build_Spec','Editor Packed Library')
+    Invoke-ScriptSafe -ScriptPath $RestoreScript -ArgumentMap @{
+        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        SupportedBitness          = '64'
+        RepositoryPath            = $RepositoryPath
+        LabVIEW_Project           = $LabVIEW_Project
+        Build_Spec                = 'Editor Packed Library'
+    }
 
     # Close LabVIEW (64-bit)
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentList @('-MinimumSupportedLVVersion',$Package_LabVIEW_Version,'-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
+        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        SupportedBitness          = '64'
+    }
 
 } catch {
     Write-Error "An unexpected error occurred during script execution: $($_.Exception.Message)"
