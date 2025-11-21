@@ -4,8 +4,8 @@
     {
       "id": "vipPath",
       "type": "promptString",
-      "description": "Path to the .vip file to analyze",
-      "default": "builds/VI Package/ni_icon_editor-0.0.2.15.vip"
+      "description": "Path to the .vip file (or folder containing it) to analyze",
+      "default": "builds/VI Package/"
     },
     {
       "id": "minLv",
@@ -21,8 +21,12 @@
       "command": "pwsh",
       "args": [
         "-NoProfile",
-        "-Command",
-        "& \"${workspaceFolder}/.github/actions/analyze-vi-package/run-local.ps1\" -VipPath \"${input:vipPath}\" -MinLabVIEW \"${input:minLv}\""
+        "-File",
+        "${workspaceFolder}/.github/actions/analyze-vi-package/run-local.ps1",
+        "-VipPath",
+        "${input:vipPath}",
+        "-MinLabVIEW",
+        "${input:minLv}"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

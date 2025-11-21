@@ -4,12 +4,19 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-Set-StrictMode -Version Latest
 
-$p = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
-if (-not $p -or $p.Version.Major -lt 5) {
-    Install-Module Pester -Scope CurrentUser -Force -SkipPublisherCheck
+# Ensure Pester 5.x (pin to 5.7.1 to avoid v6 alpha semantics)
+$desiredVersion = '5.7.1'
+Remove-Module Pester -ErrorAction SilentlyContinue
+$pesterModule = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -eq [version]$desiredVersion } | Select-Object -First 1
+if (-not $pesterModule) {
+    Install-Module -Name Pester -RequiredVersion $desiredVersion -Scope CurrentUser -Force -SkipPublisherCheck
+    $pesterModule = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -eq [version]$desiredVersion } | Select-Object -First 1
 }
+if (-not $pesterModule) {
+    throw "Pester $desiredVersion not available even after installation."
+}
+Import-Module -Name $pesterModule.Path -Force
 
 # Resolve VIP path; allow direct file, directory (pick newest .vip), or wildcard
  $vipResolved = $null

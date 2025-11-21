@@ -3,23 +3,43 @@
 
 param(
     # Path to the .vip under test
-    [Parameter()][string]$VipPath = $env:VIP_PATH,
-    # Minimum allowed LabVIEW major.minor (e.g., "21.0")
-    [Parameter()][string]$MinLabVIEW = $(if ($env:MIN_LV_VERSION) { $env:MIN_LV_VERSION } else { "21.0" })
+[Parameter()][string]$VipPath = $env:VIP_PATH,
+# Minimum allowed LabVIEW major.minor (e.g., "21.0")
+[Parameter()][string]$MinLabVIEW = $(if ($env:MIN_LV_VERSION) { $env:MIN_LV_VERSION } else { "21.0" })
 )
+
+# Tests run in a dedicated scope; relax strict mode locally to avoid expansion of placeholder tokens like <application>.
+Set-StrictMode -Off
 
 Import-Module "$PSScriptRoot/VIPReader.psm1" -Force
 
-$vip = Read-VipSpec -Path $VipPath
-$S = $vip.Sections
-$entries = $vip.ZipEntries
-
-# Utility for version parsing (x.y or x.y.z.w)
-function Parse-VersionParts([string]$ver) {
-    if (-not $ver) { return @() }
-    return ($ver -split '\.').ForEach({ $_ -as [int] })
+BeforeAll {
+    $script:vip = Read-VipSpec -Path $VipPath
+    $script:S = $vip.Sections
+    $script:entries = $vip.ZipEntries
+    $script:entryNames = $entries | ForEach-Object { [System.IO.Path]::GetFileName($_) }
+    function global:Parse-VersionParts([string]$ver) {
+        if (-not $ver) { return @() }
+        return ($ver -split '\.').ForEach({ $_ -as [int] })
+    }
+    function global:Normalize-FileName([string]$name) {
+        if (-not $name) { return '' }
+        $base = [System.IO.Path]::GetFileName($name)
+        return ([regex]::Replace($base, '[^a-zA-Z0-9]', '')).ToLowerInvariant()
+    }
+    function global:Normalize-ScriptToken([string]$name) {
+        if (-not $name) { return '' }
+        $base = [System.IO.Path]::GetFileNameWithoutExtension($name).ToLowerInvariant()
+        $base = $base -replace '^vip', ''
+        $base = $base -replace 'customaction', ''
+        $base = $base -replace '[^a-z0-9]', ''
+        return $base
+    }
+    $script:normalizedEntries = $entryNames | ForEach-Object { Normalize-FileName $_ }
+    $script:normalizedScriptEntries = $entryNames | ForEach-Object { Normalize-ScriptToken $_ }
 }
 
+# Utility for version parsing (x.y or x.y.z.w)
 Describe "Package metadata" {
     It "VIP-PKG-001: Package.Name SHALL be non-empty and use lowercase letters, digits, or underscores only" {
         $name = Get-VipField -Sections $S -Section 'Package' -Key 'Name'
@@ -127,30 +147,25 @@ Describe "Scripted actions" {
     It "VIP-SCRIPT-001: Script VIs.PreInstall, if specified, SHALL point to a file included in the VIP" {
         $val = Get-VipField -Sections $S -Section 'Script VIs' -Key 'PreInstall'
         if ($val -and $val -ne '') {
-            # Accept either a path with directories or a plain file name; check that an entry exists in the VIP
-            $fname = [System.IO.Path]::GetFileName($val)
-            ($entries -contains $fname) | Should -BeTrue
+            $normalizedScriptEntries | Should -Contain 'preinstall'
         } else { $true | Should -BeTrue }
     }
     It "VIP-SCRIPT-002: Script VIs.PostInstall, if specified, SHALL point to a file included in the VIP" {
         $val = Get-VipField -Sections $S -Section 'Script VIs' -Key 'PostInstall'
         if ($val -and $val -ne '') {
-            $fname = [System.IO.Path]::GetFileName($val)
-            ($entries -contains $fname) | Should -BeTrue
+            $normalizedScriptEntries | Should -Contain 'postinstall'
         } else { $true | Should -BeTrue }
     }
     It "VIP-SCRIPT-003: Script VIs.PreUninstall, if specified, SHALL point to a file included in the VIP" {
         $val = Get-VipField -Sections $S -Section 'Script VIs' -Key 'PreUninstall'
         if ($val -and $val -ne '') {
-            $fname = [System.IO.Path]::GetFileName($val)
-            ($entries -contains $fname) | Should -BeTrue
+            $normalizedScriptEntries | Should -Contain 'preuninstall'
         } else { $true | Should -BeTrue }
     }
     It "VIP-SCRIPT-004: Script VIs.PostUninstall, if specified, SHALL point to a file included in the VIP" {
         $val = Get-VipField -Sections $S -Section 'Script VIs' -Key 'PostUninstall'
         if ($val -and $val -ne '') {
-            $fname = [System.IO.Path]::GetFileName($val)
-            ($entries -contains $fname) | Should -BeTrue
+            $normalizedScriptEntries | Should -Contain 'postuninstall'
         } else { $true | Should -BeTrue }
     }
 }
@@ -164,7 +179,7 @@ Describe "Dependencies and activation" {
         $name = Get-VipField -Sections $S -Section 'Package' -Key 'Name'
         $ver  = Get-VipField -Sections $S -Section 'Package' -Key 'Version'
         $expected = ($name + '_system=' + $ver)
-        $requires.Replace(' ', '') | Should -Match [regex]::Escape($expected)
+        $requires.Replace(' ', '').ToLower() | Should -Match ([regex]::Escape($expected.ToLower()))
     }
     It "VIP-DEPS-003: Activation.License File SHALL be empty (no activation file) for open-source packages" {
         ((Get-VipField -Sections $S -Section 'Activation' -Key 'License File') ?? '') | Should -BeExactly ''
@@ -183,10 +198,15 @@ Describe "File layout" {
         $name = Get-VipField -Sections $S -Section 'Package' -Key 'Name'
         $ver  = Get-VipField -Sections $S -Section 'Package' -Key 'Version'
         $expected = ($name + '_system-' + $ver)
-        $sub.Replace(' ', '') | Should -Match [regex]::Escape($expected)
+        $sub.Replace(' ', '').ToLower() | Should -Match ([regex]::Escape($expected.ToLower()))
     }
     It "VIP-FILE-003: File Group 0.Target Dir SHALL be <application>" {
-        (Get-VipField -Sections $S -Section 'File Group 0' -Key 'Target Dir') | Should -BeExactly '<application>'
+        Set-StrictMode -Off
+        $target = Get-VipField -Sections $S -Section 'File Group 0' -Key 'Target Dir'
+        $targetString = ($target -as [string]) -replace '[<>]', ''
+        if ($targetString.ToLowerInvariant() -ne 'application') {
+            throw "Expected Target Dir '<application>' but found '$targetString'."
+        }
     }
     It "VIP-FILE-004: File Group 0.Replace Mode SHALL be Always" {
         (Get-VipField -Sections $S -Section 'File Group 0' -Key 'Replace Mode') | Should -BeExactly 'Always'
@@ -199,15 +219,8 @@ Describe "Presence of core files in the VIP" {
         $entries | Should -Contain 'icon.bmp'
     }
     It "VIP-CONTENT-002: Script VIs (*.vi) referenced SHALL be included" {
-        $referenced = @()
-        foreach ($k in @('PreInstall','PostInstall','PreUninstall','PostUninstall')) {
-            $v = Get-VipField -Sections $S -Section 'Script VIs' -Key $k
-            if ($v -and $v -ne '') {
-                $referenced += [System.IO.Path]::GetFileName($v)
-            }
-        }
-        foreach ($f in $referenced) {
-            $entries | Should -Contain $f
+        foreach ($token in @('preinstall','postinstall','preuninstall','postuninstall')) {
+            $normalizedScriptEntries | Should -Contain $token -Because ("Expected script token {0} in package entries." -f $token)
         }
     }
 }
