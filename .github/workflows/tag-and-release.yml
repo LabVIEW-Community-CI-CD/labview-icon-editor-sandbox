@@ -197,6 +197,14 @@ jobs:
           python .github/scripts/generate_test_status.py --mode completion --tag "${Env:TAG_NAME}"
           echo ("report_path={0}" -f (Join-Path $PWD ("reports/test-completion-{0}.md" -f $Env:TAG_NAME))) | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
+      - name: Verify completion report exists
+        run: |
+          path="reports/test-completion-${{ steps.form-tag.outputs.tag }}.md"
+          if [ ! -s "$path" ]; then
+            echo "Completion report missing or empty at $path" >&2
+            exit 1
+          fi
+
       - name: Locate release assets from artifacts
         id: locate-artifacts
         shell: pwsh

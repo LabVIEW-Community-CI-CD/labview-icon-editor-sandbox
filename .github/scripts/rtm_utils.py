@@ -17,6 +17,7 @@ EXPECTED_HEADER = {
     "code_path",
     "test_path",
     "model_id",
+    "coverage_item_id",
     "procedure_path",
     "verification",
     "owner",

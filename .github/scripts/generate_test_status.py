@@ -388,7 +388,15 @@ def summarize_missing(missing: List[str]) -> Tuple[List[str], int]:
     return missing[:15], len(missing) - 15
 
 
-def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: List[str], missing: List[str], results_path: Path, incidents: List[str]) -> Tuple[Path, List[str]]:
+def build_status_report(
+    meta: dict,
+    high: Coverage,
+    total: Coverage,
+    suites: List[str],
+    missing: List[str],
+    results_path: Path,
+    incidents: List[str],
+) -> Tuple[Path, List[str]]:
     path = REPORTS_DIR / f"test-status-{meta['run_id']}.md"
     completion = "PASS" if high.pct() >= MIN_HIGH and total.pct() >= MIN_TOTAL else "FAIL"
     missing_sample, extra_missing = summarize_missing(missing)
@@ -408,7 +416,7 @@ def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: Lis
     lines.append(f"- Template: docs/testing/templates/test-report-template.md")
     lines.append("")
 
-    lines.append("## §8.2 Summary and Coverage")
+    lines.append("## §8.2 Progress vs Plan")
     lines.append(
         f"- Completion: **{completion}** "
         f"(High/Critical {format_pct(high)}; Overall {format_pct(total)}; "
@@ -416,10 +424,16 @@ def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: Lis
     )
     if suites:
         lines.append(f"- Suites referenced: {', '.join(suites)}")
+    lines.append("- Plan reference: docs/testing/test-plan.md (§7.2 context/risk/schedule)")
     lines.append("- Coverage source: docs/requirements/rtm.csv (priorities drive thresholds)")
     lines.append("")
 
-    lines.append("## §8.3 Variances and Blocking Issues")
+    lines.append("## §8.3 Measures")
+    lines.append("- Performance: not measured in status runs; see completion reports for comparisons.")
+    lines.append("- Portability: status run references RTM suites; execution outcomes recorded in structured results.")
+    lines.append("")
+
+    lines.append("## §8.4 Issues and Risks")
     if missing_sample:
         lines.append("- RTM gaps:")
         lines.extend([f"  - {item}" for item in missing_sample])
@@ -427,25 +441,23 @@ def build_status_report(meta: dict, high: Coverage, total: Coverage, suites: Lis
             lines.append(f"  - ... plus {extra_missing} more")
     else:
         lines.append("- RTM gaps: none detected")
-    lines.append("- Other blockers: none reported in this automation step")
-    lines.append("")
-
-    lines.append("## §8.4 Risks and Mitigations")
-    lines.append("- Risk signal: RTM `priority` plus any open TRW checklist actions.")
-    lines.append("- Mitigation: close RTM gaps or record ADR-backed waiver before merge.")
-    lines.append("")
-
-    lines.append("## §8.5 Evidence and Follow-ups")
-    lines.append("- Test Plan: docs/testing/test-plan.md (§7.2 context/risk/schedule; §8 exit expectations)")
-    lines.append("- RTM: docs/requirements/rtm.csv; TRW: docs/requirements/TRW_Verification_Checklist.md")
-    lines.append("- CI gates: dod-aggregator, rtm-validate, rtm-coverage, adr-lint, docs-link-check, unit tests.")
-    lines.append(f"- Structured results: {relpath(results_path)}")
     if incidents:
         lines.append("- Test incidents:")
         for url in incidents:
             lines.append(f"  - {url}")
     else:
         lines.append("- Test incidents: none recorded for this run.")
+    lines.append("")
+
+    lines.append("## §8.5 Residual Risks and Mitigations")
+    lines.append("- Risk signal: RTM `priority` plus any open TRW checklist actions.")
+    lines.append("- Mitigation: close RTM gaps or record ADR-backed waiver before merge.")
+    lines.append("")
+
+    lines.append("## §8.6 Deliverables and Reuse")
+    lines.append("- Evidence: test-plan, RTM, TRW checklist, structured results, execution log, readiness reports.")
+    lines.append("- Structured results: " + str(relpath(results_path)))
+    lines.append("- Reuse: existing LabVIEW unit suites per RTM; incidents feed follow-up regression tests.")
     lines.append("- Next action: fix blockers or proceed to merge if all gates are green.")
 
     return path, lines
@@ -485,7 +497,7 @@ def build_completion_report(
     lines.append(f"- Template: docs/testing/templates/test-report-template.md")
     lines.append("")
 
-    lines.append("## §8.2 Readiness and Coverage")
+    lines.append("## §8.2 Progress vs Plan")
     lines.append(
         f"- Completion: **{completion}** "
         f"(High/Critical {format_pct(high)}; Overall {format_pct(total)}; "
@@ -493,14 +505,22 @@ def build_completion_report(
     )
     if suites:
         lines.append(f"- Suites referenced: {', '.join(suites)}")
+    lines.append("- Plan reference: docs/testing/test-plan.md (§7.2 context/risk/schedule)")
     lines.append("- Release will be blocked if thresholds are not met or if RTM gaps remain.")
-    if performance:
-        lines.extend(performance)
-    if portability:
-        lines.extend(portability)
     lines.append("")
 
-    lines.append("## §8.3 Variances and Outstanding Work")
+    lines.append("## §8.3 Measures")
+    if performance:
+        lines.extend(performance)
+    else:
+        lines.append("- Performance: no measurements provided.")
+    if portability:
+        lines.extend(portability)
+    else:
+        lines.append("- Portability: no portability results provided.")
+    lines.append("")
+
+    lines.append("## §8.4 Issues and Variances")
     if missing_sample:
         lines.append("- RTM gaps at tag cut:")
         lines.extend([f"  - {item}" for item in missing_sample])
@@ -508,26 +528,26 @@ def build_completion_report(
             lines.append(f"  - ... plus {extra_missing} more")
     else:
         lines.append("- RTM gaps: none detected at tag time")
-    lines.append("- Additional issues: none reported in this automation step")
+    if incidents:
+        lines.append("- Test incidents at tag time:")
+        for url in incidents:
+            lines.append(f"  - {url}")
+    else:
+        lines.append("- Test incidents: none recorded for this tag.")
     lines.append("")
 
-    lines.append("## §8.4 Risks and Contingencies")
+    lines.append("## §8.5 Residual Risks and Contingencies")
     lines.append("- Risk signal: RTM `priority` and TRW checklist items carrying residual actions.")
     lines.append("- Contingency: postpone publish or cut hotfix branch if new High/Critical gaps appear.")
     lines.append("")
 
-    lines.append("## §8.5 Evidence and Attachments")
+    lines.append("## §8.6 Evidence, Attachments, and Reuse")
     lines.append("- Test Plan: docs/testing/test-plan.md (§7.2 context/risk/schedule; §8 exit expectations)")
     lines.append("- RTM: docs/requirements/rtm.csv; TRW: docs/requirements/TRW_Verification_Checklist.md")
     lines.append("- CI gates: dod-aggregator, rtm-validate, rtm-coverage, adr-lint, docs-link-check, unit tests.")
     if results_path:
         lines.append(f"- Structured results: {relpath(results_path)}")
-    if incidents:
-        lines.append("- Test incidents:")
-        for url in incidents:
-            lines.append(f"  - {url}")
-    else:
-        lines.append("- Test incidents: none recorded for this run/tag.")
+    lines.append("- Reuse: regression suites reused; incidents feed follow-up fixes before publish.")
     lines.append("- This report should be attached to the GitHub Release assets for traceability.")
 
     return path, lines
