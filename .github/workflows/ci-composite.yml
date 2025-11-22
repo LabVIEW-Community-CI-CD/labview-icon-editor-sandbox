@@ -555,6 +555,7 @@ jobs:
           supported_bitness: 64
       - if: always()
         name: Upload unit test report (x64)
+        if: always() && exists('.github/actions/run-unit-tests/UnitTestReport.xml')
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-unit-test-report-64bit
@@ -578,6 +579,7 @@ jobs:
           supported_bitness: 32
       - if: always()
         name: Upload unit test report (x86)
+        if: always() && exists('.github/actions/run-unit-tests/UnitTestReport.xml')
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-unit-test-report-32bit
