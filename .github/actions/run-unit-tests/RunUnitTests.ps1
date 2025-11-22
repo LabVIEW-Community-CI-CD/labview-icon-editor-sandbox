@@ -10,7 +10,7 @@
       - Automatic search for exactly one *.lvproj file by moving up the folder hierarchy
         until just before the drive root.
 
-.PARAMETER MinimumSupportedLVVersion
+.PARAMETER Package_LabVIEW_Version
     LabVIEW minimum supported version (e.g., "2021").
 
 .PARAMETER SupportedBitness
@@ -21,12 +21,13 @@
     This script *requires* that g-cli and LabVIEW be compatible with the OS.
 #>
 
-[Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","MinimumSupportedLVVersion",Justification="Used in nested functions and g-cli invocation")]
+[Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","Package_LabVIEW_Version",Justification="Used in nested functions and g-cli invocation")]
 [Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","SupportedBitness",Justification="Used in nested functions and g-cli invocation")]
 param(
     [Parameter(Mandatory=$true)]
+    [Alias('MinimumSupportedLVVersion')]
     [string]
-    $MinimumSupportedLVVersion,
+    $Package_LabVIEW_Version,
 
     [Parameter(Mandatory=$true)]
     [ValidateSet("32","64")]
@@ -120,12 +121,12 @@ function Invoke-Setup {
 # ------------------------  MAIN SEQUENCE  ----------------------
 function Invoke-MainSequence {
     Write-Information "`n=== MainSequence ===" -InformationAction Continue
-    Write-Information "Running unit tests for LabVIEW $MinimumSupportedLVVersion ($SupportedBitness-bit)" -InformationAction Continue
+    Write-Information "Running unit tests for LabVIEW $Package_LabVIEW_Version ($SupportedBitness-bit)" -InformationAction Continue
     Write-Information "Project Path: $AbsoluteProjectPath" -InformationAction Continue
     Write-Information "Report will be saved at: $ReportPath" -InformationAction Continue
 
     Write-Information "`nExecuting g-cli command..." -InformationAction Continue
-    & g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness lunit -- -r "$ReportPath" "$AbsoluteProjectPath"
+    & g-cli --lv-ver $Package_LabVIEW_Version --arch $SupportedBitness lunit -- -r "$ReportPath" "$AbsoluteProjectPath"
 
     $script:OriginalExitCode = $LASTEXITCODE
     if ($script:OriginalExitCode -ne 0) {

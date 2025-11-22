@@ -54,6 +54,16 @@
       "default": "64"
     },
     {
+      "id": "lvlibpBitness",
+      "type": "pickString",
+      "description": "Bitness for building the lvlibp",
+      "options": [
+        "32",
+        "64"
+      ],
+      "default": "64"
+    },
+    {
       "id": "semverMajor",
       "type": "promptString",
       "description": "Major version",
@@ -189,6 +199,36 @@
       "problemMatcher": []
     },
     {
+      "label": "Build lvlibp (LabVIEW)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/.github/actions/build-lvlibp/Build_lvlibp.ps1",
+        "-Package_LabVIEW_Version",
+        "2021",
+        "-SupportedBitness",
+        "${input:lvlibpBitness}",
+        "-RepositoryPath",
+        "${workspaceFolder}",
+        "-Major",
+        "0",
+        "-Minor",
+        "0",
+        "-Patch",
+        "0",
+        "-Build",
+        "0",
+        "-Commit",
+        "manual"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Show LocalHost.LibraryPaths (LabVIEW)",
       "type": "shell",
       "command": "pwsh",
@@ -199,7 +239,8 @@
         "-RepositoryPath",
         "${workspaceFolder}",
         "-SupportedBitness",
-        "${input:libraryPathsBitness}"
+        "${input:libraryPathsBitness}",
+        "-FailOnMissing"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

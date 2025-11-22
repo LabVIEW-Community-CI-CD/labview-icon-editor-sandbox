@@ -168,7 +168,7 @@ try {
     Write-Information "Applying VIPC (dependencies) for 32-bit..." -InformationAction Continue
     $ApplyVIPC = Join-Path $ActionsPath "apply-vipc/ApplyVIPC.ps1"
     Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
-        MinimumSupportedLVVersion = $lvVersion
+        Package_LabVIEW_Version   = $lvVersion
         VIP_LVVersion             = $lvVersion
         SupportedBitness          = '32'
         RepositoryPath            = $RepositoryPath
@@ -188,7 +188,7 @@ try {
     Write-Verbose "Building LV library (32-bit)..."
     $BuildLvlibp = Join-Path $ActionsPath "build-lvlibp/Build_lvlibp.ps1"
     $argsLvlibp32 = @{
-        MinimumSupportedLVVersion = $lvVersion
+        Package_LabVIEW_Version   = $lvVersion
         SupportedBitness          = '32'
         RepositoryPath            = $RepositoryPath
         Major                     = $Major
@@ -202,7 +202,7 @@ try {
     # 4) Close LabVIEW (32-bit)
     Write-Verbose "Closing LabVIEW (32-bit)..."
     $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion', $lvVersion,'-SupportedBitness','32')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-Package_LabVIEW_Version', $lvVersion,'-SupportedBitness','32')
 
     # 5) Rename .lvlibp -> lv_icon_x86.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x86.lvlibp..."
@@ -212,7 +212,7 @@ try {
     # 6) Apply VIPC (64-bit)
     Write-Information "Applying VIPC (dependencies) for 64-bit..." -InformationAction Continue
     Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
-        MinimumSupportedLVVersion = $lvVersion
+        Package_LabVIEW_Version   = $lvVersion
         VIP_LVVersion             = $lvVersion
         SupportedBitness          = '64'
         RepositoryPath            = $RepositoryPath
@@ -222,7 +222,7 @@ try {
     # 7) Build LV Library (64-bit)
     Write-Verbose "Building LV library (64-bit)..."
     $argsLvlibp64 = @{
-        MinimumSupportedLVVersion = $lvVersion
+        Package_LabVIEW_Version   = $lvVersion
         SupportedBitness          = '64'
         RepositoryPath            = $RepositoryPath
         Major                     = $Major
@@ -235,7 +235,7 @@ try {
 
     # 7.1) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion', $lvVersion,'-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-Package_LabVIEW_Version', $lvVersion,'-SupportedBitness','64')
 
     # Rename .lvlibp -> lv_icon_x64.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x64.lvlibp..."
@@ -275,7 +275,7 @@ try {
             "-SupportedBitness 64 " +
             "-RepositoryPath `"$RepositoryPath`" " +
             "-VIPBPath `"Tooling\deployment\NI Icon editor.vipb`" " +
-            "-MinimumSupportedLVVersion 2023 " +
+            "-Package_LabVIEW_Version 2023 " +
             "-LabVIEWMinorRevision $LabVIEWMinorRevision " +
             "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
             "-Commit `"$Commit`" " +
@@ -294,7 +294,7 @@ try {
             "-SupportedBitness 64 " +
             "-RepositoryPath `"$RepositoryPath`" " +
             "-VIPBPath `"Tooling\deployment\NI Icon editor.vipb`" " +
-            "-MinimumSupportedLVVersion 2023 " +
+            "-Package_LabVIEW_Version 2023 " +
             "-LabVIEWMinorRevision $LabVIEWMinorRevision " +
             "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
             "-Commit `"$Commit`" " +
@@ -306,7 +306,7 @@ try {
 
     # 12) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2023','-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-Package_LabVIEW_Version','2023','-SupportedBitness','64')
 
     Write-Information "All scripts executed successfully!" -InformationAction Continue
     Write-Verbose "Script: Build.ps1 completed without errors."

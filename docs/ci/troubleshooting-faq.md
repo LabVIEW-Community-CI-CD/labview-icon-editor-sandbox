@@ -204,7 +204,7 @@ Below are 13 possible issues you might encounter, along with suggested steps to 
 - The script has no parameter named `lv-ver` or `arch`, so passing `--lv-ver` or `--arch` triggers a parsing error.
 
 **Solution**:
-1. Remove or replace `--lv-ver` and `--arch` with valid single-dash parameters your script actually declares, such as `-MinimumSupportedLVVersion 2021` and `-SupportedBitness 64`.  
+1. Remove or replace `--lv-ver` and `--arch` with valid single-dash parameters your script actually declares, such as `-Package_LabVIEW_Version 2021` and `-SupportedBitness 64`.  
 2. If you really want `--lv-ver`, you must update the script’s `param()` block to accept that alias.
 
 ---

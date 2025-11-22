@@ -2,7 +2,9 @@ param(
     [string]$RepositoryPath,
     [Parameter(Mandatory = $true)]
     [ValidateSet('32','64')]
-    [string]$SupportedBitness
+    [string]$SupportedBitness,
+    [switch]$FailOnMissing,
+    [string]$IniPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,19 +47,24 @@ function Get-LabVIEWVersionFromVipb {
 
 $lvVersion = Get-LabVIEWVersionFromVipb -RootPath $RepositoryPath
 
-$iniCandidates = if ($SupportedBitness -eq '64') {
-    @(
-        "C:\Program Files\National Instruments\LabVIEW $lvVersion\LabVIEW.ini",
-        "$env:ProgramData\National Instruments\LabVIEW $lvVersion\LabVIEW.ini"
-    )
+$allowCustom = [bool]$env:ALLOW_NONCANONICAL_LV_INI_PATH
+$canonical = if ($SupportedBitness -eq '64') {
+    "C:\Program Files\National Instruments\LabVIEW $lvVersion\LabVIEW.ini"
 } else {
-    @(
-        "C:\Program Files (x86)\National Instruments\LabVIEW $lvVersion\LabVIEW.ini",
-        "$env:ProgramData\National Instruments\LabVIEW $lvVersion (32-bit)\LabVIEW.ini"
-    )
+    "C:\Program Files (x86)\National Instruments\LabVIEW $lvVersion\LabVIEW.ini"
 }
 
-$iniPath = $iniCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+$iniCandidates = @()
+if ($IniPath) {
+    if (-not $allowCustom -and $IniPath -ne $canonical) {
+        throw "Non-canonical LabVIEW.ini path provided: $IniPath. Expected: $canonical"
+    }
+    $iniCandidates += $IniPath
+} else {
+    $iniCandidates += $canonical
+}
+
+$iniPath = $iniCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 
 Write-Host "LabVIEW version : $lvVersion"
 Write-Host "Bitness         : $SupportedBitness-bit"
@@ -65,22 +72,44 @@ Write-Host "INI candidates  : $($iniCandidates -join '; ')"
 Write-Host "INI path        : $iniPath"
 
 if (-not $iniPath) {
-    Write-Warning "LabVIEW.ini not found in any candidate location."
+    Write-Error "LabVIEW.ini not found at canonical path: $canonical"
     exit 1
+}
+
+if (-not $allowCustom -and $iniPath -ne $canonical) {
+    throw "Non-canonical LabVIEW.ini resolved: $iniPath. Expected: $canonical"
 }
 
 $lines = Get-Content -LiteralPath $iniPath
 $entries = $lines | Where-Object { $_ -match '^LocalHost\.LibraryPaths\d+=' }
 
 if (-not $entries -or $entries.Count -eq 0) {
-    Write-Warning "No LocalHost.LibraryPaths entries found in $iniPath"
+    $msg = "No LocalHost.LibraryPaths entries found in $iniPath"
+    Write-Warning $msg
+    if ($FailOnMissing) {
+        Write-Host "Hint: Run the VSCode task 'Set Dev Mode (LabVIEW)' for bitness $SupportedBitness, or call .github/actions/set-development-mode/run-dev-mode.ps1 -SupportedBitness $SupportedBitness to populate the INI." -ForegroundColor Yellow
+        Write-Error $msg
+        exit 2
+    }
     exit 0
 }
 
 $index = 1
+$repoPathNormalized = [System.IO.Path]::GetFullPath($RepositoryPath).TrimEnd('\','/')
+$mismatched = @()
 foreach ($entry in $entries) {
     Write-Host ("[{0}] {1}" -f $index, $entry)
+    $value = ($entry -split '=',2)[1]
+    $valuePath = [System.IO.Path]::GetFullPath($value).TrimEnd('\','/')
+    if ($valuePath -ne $repoPathNormalized) {
+        $mismatched += $value
+    }
     $index++
+}
+
+if ($mismatched.Count -gt 0) {
+    $example = $mismatched | Select-Object -First 1
+    Write-Warning ("Found LocalHost.LibraryPaths entries that do not point to this repo (example: {0}). Consider running 'Revert Dev Mode (LabVIEW)' then 'Set Dev Mode (LabVIEW)' for bitness {1} to refresh the path." -f $example, $SupportedBitness)
 }
 
 exit 0

@@ -9,7 +9,7 @@
 
 [CmdletBinding()]  # Enables -Verbose and other common parameters
 Param (
-    [Parameter(Mandatory)][string]$MinimumSupportedLVVersion,
+[Parameter(Mandatory)][Alias('Package_LabVIEW_Version')][string]$MinimumSupportedLVVersion,
     [Parameter(Mandatory)][string]$VIP_LVVersion,
     [Parameter(Mandatory)][ValidateSet('32','64')][string]$SupportedBitness,
     [Parameter(Mandatory)][string]$RepositoryPath,

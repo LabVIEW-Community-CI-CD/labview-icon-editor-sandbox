@@ -70,3 +70,31 @@ Describe "AddTokenToLabVIEW guard" {
         $warnings | Where-Object { $_ -like '*Removed*stale LocalHost.LibraryPaths*' } | Should -Not -BeNullOrEmpty
     }
 }
+
+Describe "read-library-paths guidance" {
+    It "warns when entries do not point to the current repo" {
+        $scriptPath = (Resolve-Path (Join-Path $PSScriptRoot '..\scripts\read-library-paths.ps1')).Path
+        $repoRoot   = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+
+        $iniPath = Join-Path $TestDrive 'LabVIEW.ini'
+        Set-Content -LiteralPath $iniPath -Value @(
+            'LocalHost.LibraryPaths1=C:\some\other\path',
+            ('LocalHost.LibraryPaths2={0}' -f (Join-Path $repoRoot 'other'))
+        )
+
+        $env:ALLOW_NONCANONICAL_LV_INI_PATH = '1'
+        $warnings = & { & $scriptPath -RepositoryPath $repoRoot -SupportedBitness 64 -IniPath $iniPath 3>&1 } 2>$null
+        Remove-Item Env:ALLOW_NONCANONICAL_LV_INI_PATH -ErrorAction SilentlyContinue
+        $warnings | Where-Object { $_ -like '*do not point to this repo*' } | Should -Not -BeNullOrEmpty
+        $warnings | Where-Object { $_ -like '*Revert Dev Mode*Set Dev Mode*' } | Should -Not -BeNullOrEmpty
+    }
+
+    It "hard-stops on non-canonical ini path when overrides are not allowed" {
+        $scriptPath = (Resolve-Path (Join-Path $PSScriptRoot '..\scripts\read-library-paths.ps1')).Path
+        $repoRoot   = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+        $iniPath = Join-Path $TestDrive 'LabVIEW.ini'
+        Set-Content -LiteralPath $iniPath -Value @('LocalHost.LibraryPaths1=C:\other')
+
+        { & $scriptPath -RepositoryPath $repoRoot -SupportedBitness 64 -IniPath $iniPath } | Should -Throw
+    }
+}

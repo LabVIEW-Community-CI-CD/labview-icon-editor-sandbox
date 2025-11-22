@@ -6,22 +6,29 @@ function Resolve-LVIniPath {
         [string]$Arch
     )
 
-    if ($Arch -eq '64') {
-        $candidates = @(
-            "C:\Program Files\National Instruments\LabVIEW $LvVersion\LabVIEW.ini",
-            "$env:ProgramData\National Instruments\LabVIEW $LvVersion\LabVIEW.ini"
-        )
+    $allowCustom = [bool]$env:ALLOW_NONCANONICAL_LV_INI_PATH
+
+    $canonical = if ($Arch -eq '64') {
+        "C:\Program Files\National Instruments\LabVIEW $LvVersion\LabVIEW.ini"
     } else {
-        $candidates = @(
-            "C:\Program Files (x86)\National Instruments\LabVIEW $LvVersion\LabVIEW.ini",
-            "$env:ProgramData\National Instruments\LabVIEW $LvVersion (32-bit)\LabVIEW.ini"
-        )
+        "C:\Program Files (x86)\National Instruments\LabVIEW $LvVersion\LabVIEW.ini"
+    }
+
+    $candidates = @($canonical)
+    if ($allowCustom -and $env:TEST_LV_INI_PATH) {
+        $candidates = @($env:TEST_LV_INI_PATH) + $candidates
     }
 
     foreach ($path in $candidates) {
-        if (Test-Path $path) { return $path }
+        if (Test-Path $path) {
+            if (-not $allowCustom -and $path -ne $canonical) {
+                throw "Non-canonical LabVIEW.ini path detected: $path. Expected: $canonical"
+            }
+            return $path
+        }
     }
-    return $null
+
+    throw "LabVIEW.ini not found at canonical path: $canonical"
 }
 
 function Clear-StaleLibraryPaths {

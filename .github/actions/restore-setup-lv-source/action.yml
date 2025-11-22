@@ -12,7 +12,7 @@ runs:
       shell: pwsh
       run: |
         & "${{ github.action_path }}/RestoreSetupLVSource.ps1" \
-          -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} \
+          -Package_LabVIEW_Version ${{ inputs.minimum_supported_lv_version }} \
           -SupportedBitness ${{ inputs.supported_bitness }} \
           -RepositoryPath "${{ inputs.repository_path }}" \
           -LabVIEW_Project "${{ inputs.labview_project }}" \

@@ -429,6 +429,29 @@ jobs:
           minimum_supported_lv_version: 2021
           supported_bitness: 32
 
+  check-library-paths-2021:
+    name: Check LocalHost.LibraryPaths (2021)
+    needs: [verify-checklist-sync, apply-deps-2021-x86]
+    runs-on: self-hosted-windows-lv
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate LocalHost.LibraryPaths entries (64-bit)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/read-library-paths.ps1" `
+            -RepositoryPath "$env:GITHUB_WORKSPACE" `
+            -SupportedBitness 64 `
+            -FailOnMissing
+      - name: Validate LocalHost.LibraryPaths entries (32-bit)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/read-library-paths.ps1" `
+            -RepositoryPath "$env:GITHUB_WORKSPACE" `
+            -SupportedBitness 32 `
+            -FailOnMissing
+
   version:
     name: Compute Version
     needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality]
@@ -451,7 +474,7 @@ jobs:
 
   missing-in-project-2021-x64:
     name: Test Missing-In-Project (2021 x64)
-    needs: [verify-checklist-sync, apply-deps-2023-x64]
+    needs: [verify-checklist-sync, apply-deps-2023-x64, check-library-paths-2021]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/missing-in-project
@@ -462,7 +485,7 @@ jobs:
 
   missing-in-project-2021-x86:
     name: Test Missing-In-Project (2021 x86)
-    needs: [verify-checklist-sync, missing-in-project-2021-x64]
+    needs: [verify-checklist-sync, missing-in-project-2021-x64, check-library-paths-2021]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/missing-in-project

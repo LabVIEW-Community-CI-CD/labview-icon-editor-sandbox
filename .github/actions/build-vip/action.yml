@@ -112,7 +112,7 @@ runs:
           -SupportedBitness ${{ inputs.supported_bitness }} `
           -RepositoryPath "${{ inputs.repository_path }}" `
           -VIPBPath "${{ inputs.vipb_path }}" `
-          -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} `
+          -Package_LabVIEW_Version ${{ inputs.minimum_supported_lv_version }} `
           -LabVIEWMinorRevision ${{ inputs.labview_minor_revision }} `
           -Major ${{ inputs.major }} `
           -Minor ${{ inputs.minor }} `
