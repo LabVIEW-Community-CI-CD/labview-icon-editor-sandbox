@@ -347,6 +347,17 @@
       "dependsOrder": "sequence",
       "group": "build",
       "problemMatcher": []
+    },
+    {
+      "label": "Build, Analyze, Draft Release (compound)",
+      "dependsOn": [
+        "Build VI Package (Build.ps1)",
+        "Analyze VI Package (Pester)",
+        "Create draft GitHub release (local artifacts)"
+      ],
+      "dependsOrder": "sequence",
+      "group": "build",
+      "problemMatcher": []
     }
   ]
 }
