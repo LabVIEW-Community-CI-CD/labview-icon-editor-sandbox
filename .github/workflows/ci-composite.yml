@@ -507,11 +507,14 @@ jobs:
             Write-Host ($diff -join [Environment]::NewLine)
             Write-Host "----------------------------------------------"
             if ($Env:GITHUB_STEP_SUMMARY) {
-              "### Workspace changed during missing-in-project-x64" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-              "Diff (lv_icon_editor.lvproj):" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-              "```diff" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-              $diff | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-              "```" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              $summary = @"
+### Workspace changed during missing-in-project-x64
+Diff (lv_icon_editor.lvproj):
+\`\`\`diff
+$diff
+\`\`\`
+"@
+              $summary | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             }
             git checkout -- lv_icon_editor.lvproj
           }
@@ -545,11 +548,14 @@ jobs:
             Write-Host ($diff -join [Environment]::NewLine)
             Write-Host "----------------------------------------------"
             if ($Env:GITHUB_STEP_SUMMARY) {
-              "### Workspace changed during missing-in-project-x86" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-              "Diff (lv_icon_editor.lvproj):" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-              "```diff" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-              $diff | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-              "```" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              $summary = @"
+### Workspace changed during missing-in-project-x86
+Diff (lv_icon_editor.lvproj):
+\`\`\`diff
+$diff
+\`\`\`
+"@
+              $summary | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             }
             git checkout -- lv_icon_editor.lvproj
           }
