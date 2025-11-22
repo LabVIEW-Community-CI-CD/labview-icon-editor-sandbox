@@ -41,6 +41,8 @@ param(
     [string]$AuthorName
 )
 
+$ReleaseNotesFile = Join-Path $RepositoryPath 'Tooling\deployment\release_notes.md'
+
 # Helper function to verify a file/folder path exists
 function Test-PathExistence {
     param(
@@ -354,7 +356,7 @@ try {
         Patch                    = $Patch
         Build                    = $Build
         Commit                   = $Commit
-        ReleaseNotesFile         = "$RepositoryPath\Tooling\deployment\release_notes.md"
+        ReleaseNotesFile         = $ReleaseNotesFile
         DisplayInformationJSON   = $DisplayInformationJSON
         Verbose                  = $true
     }
@@ -373,7 +375,7 @@ try {
         Patch                    = $Patch
         Build                    = $Build
         Commit                   = $Commit
-        ReleaseNotesFile         = "$RepositoryPath\Tooling\deployment\release_notes.md"
+        ReleaseNotesFile         = $ReleaseNotesFile
         DisplayInformationJSON   = $DisplayInformationJSON
         Verbose                  = $true
     }
