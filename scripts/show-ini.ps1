@@ -3,7 +3,6 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('32','64')]
     [string]$SupportedBitness,
-    [switch]$FailOnMissing,
     [string]$IniPath
 )
 
@@ -80,37 +79,9 @@ if (-not $allowCustom -and $iniPath -ne $canonical) {
     throw "Non-canonical LabVIEW.ini resolved: $iniPath. Expected: $canonical"
 }
 
-$lines = Get-Content -LiteralPath $iniPath
-$entries = $lines | Where-Object { $_ -match '^LocalHost\.LibraryPaths\d*=' }
-$entries = @($entries)
-
-if (-not $entries -or $entries.Count -eq 0) {
-    $msg = "No LocalHost.LibraryPaths entries found in $iniPath"
-    Write-Warning $msg
-    if ($FailOnMissing) {
-        Write-Host "Hint: Run the VSCode task 'Set Dev Mode (LabVIEW)' for bitness $SupportedBitness, or call .github/actions/set-development-mode/run-dev-mode.ps1 -SupportedBitness $SupportedBitness to populate the INI." -ForegroundColor Yellow
-        Write-Error $msg
-        exit 2
-    }
-    exit 0
-}
-
-$index = 1
-$repoPathNormalized = [System.IO.Path]::GetFullPath($RepositoryPath).TrimEnd('\','/')
-$mismatched = @()
-foreach ($entry in $entries) {
-    Write-Host ("[{0}] {1}" -f $index, $entry)
-    $value = ($entry -split '=',2)[1]
-    $valuePath = [System.IO.Path]::GetFullPath($value).TrimEnd('\','/')
-    if ($valuePath -ne $repoPathNormalized) {
-        $mismatched += $value
-    }
-    $index++
-}
-
-if ($mismatched.Count -gt 0) {
-    $example = $mismatched | Select-Object -First 1
-    Write-Warning ("Found LocalHost.LibraryPaths entries that do not point to this repo (example: {0}). Consider running 'Revert Dev Mode (LabVIEW)' then 'Set Dev Mode (LabVIEW)' for bitness {1} to refresh the path." -f $example, $SupportedBitness)
-}
+$raw = Get-Content -LiteralPath $iniPath -Raw -Encoding UTF8
+Write-Host "----- BEGIN LabVIEW.ini -----"
+Write-Host $raw
+Write-Host "----- END LabVIEW.ini -----"
 
 exit 0

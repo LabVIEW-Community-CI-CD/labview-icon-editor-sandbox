@@ -48,6 +48,15 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+$projectPath = if ([System.IO.Path]::IsPathRooted($LabVIEW_Project)) {
+    $LabVIEW_Project
+} else {
+    Join-Path -Path $RepositoryPath -ChildPath "$LabVIEW_Project.lvproj"
+}
+if (-not (Test-Path -LiteralPath $projectPath)) {
+    throw "LabVIEW project not found at $projectPath"
+}
+
 $gcliArgs = @(
 '--lv-ver', $Package_LabVIEW_Version,
     '--arch', $SupportedBitness,
@@ -55,7 +64,7 @@ $gcliArgs = @(
     '--',
     'LabVIEW',
     'Localhost.LibraryPaths',
-    "$RepositoryPath",
+    $projectPath,
     $Build_Spec
 )
 
