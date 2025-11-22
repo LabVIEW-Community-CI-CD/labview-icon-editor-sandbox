@@ -29,8 +29,14 @@ outputs:
     description: "True if VI reported success."
     value: ${{ steps.run_vi.outputs.passed }}
   missing-files:
-    description: "Comma‑separated list of missing files."
+    description: "Comma-separated list of missing files."
     value: ${{ steps.run_vi.outputs.missing-files }}
+  gcli-log:
+    description: "Path to the saved g-cli log (if generated)."
+    value: ${{ steps.run_vi.outputs.gcli-log }}
+  meta-path:
+    description: "Path to the saved metadata JSON (if generated)."
+    value: ${{ steps.run_vi.outputs.meta-path }}
 
 runs:
   using: composite

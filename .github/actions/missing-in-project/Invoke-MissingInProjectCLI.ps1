@@ -170,6 +170,10 @@ $missingCsv  = ($Script:MissingFileLines -join ',')
 if ($env:GITHUB_OUTPUT) {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "passed=$passedStr"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "missing-files=$missingCsv"
+    $logOut  = if (Test-Path $GcliLogPath) { $GcliLogPath } else { "" }
+    $metaOut = if (Test-Path $MetaPath)  { $MetaPath }  else { "" }
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "gcli-log=$logOut"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "meta-path=$metaOut"
 }
 
 # =====================  FINAL EXIT CODE  ===================

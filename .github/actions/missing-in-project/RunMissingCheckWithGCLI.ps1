@@ -133,7 +133,7 @@ if ($invokeError) {
     $meta.invokeError = Get-ExceptionDetails -ErrorRecord $invokeError
 }
 
-$meta | ConvertTo-Json -Depth 6 | Set-Content -Path $metaPath -Encoding UTF8
+$meta | ConvertTo-Json -Depth 16 | Set-Content -Path $metaPath -Encoding UTF8
 
 # relay all output so the wrapper can capture & parse
 $gcliOutput | ForEach-Object { Write-Output $_ }
