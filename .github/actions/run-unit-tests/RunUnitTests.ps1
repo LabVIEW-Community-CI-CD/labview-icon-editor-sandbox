@@ -57,9 +57,9 @@ function Get-SingleLvproj {
         }
         elseif ($lvprojFiles.Count -gt 1) {
             # Found multiple .lvproj files
-            Write-Error "Error: Multiple .lvproj files found in '$currentDir'. Please ensure only one .lvproj is present."
-            $lvprojFiles | ForEach-Object { Write-Information (" - {0}" -f $_.FullName) -InformationAction Continue }
-            return $null
+            $list = $lvprojFiles | ForEach-Object { " - {0}" -f $_.FullName }
+            throw ("Multiple .lvproj files found in '{0}' (count={1}). Ensure only one is present. Found:{2}{3}" -f `
+                    $currentDir, $lvprojFiles.Count, [Environment]::NewLine, ($list -join [Environment]::NewLine))
         }
 
         # If none found, move one level up

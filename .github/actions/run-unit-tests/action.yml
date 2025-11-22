@@ -15,20 +15,7 @@ runs:
         Set-StrictMode -Version Latest
 
         $repo = Resolve-Path "${{ inputs.repository_path }}"
-        $candidates = @(
-          Join-Path $repo 'scripts/get-package-lv-version.ps1'),
-          Join-Path $repo '.github/scripts/get-package-lv-version.ps1'
-        ) -as [string[]]
-
-        $lvScript = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-        if (-not $lvScript) {
-          throw "Unable to locate get-package-lv-version.ps1 under '$repo/scripts' or '$repo/.github/scripts'."
-        }
-
-        $lvVer = pwsh -NoProfile -File $lvScript -RepositoryPath $repo
-        if (-not $lvVer) {
-          throw "Failed to resolve LabVIEW version from VIPB."
-        }
+        $lvVer = pwsh -NoProfile -File "$repo/scripts/resolve-lv-version.ps1" -RepositoryPath $repo
 
         & "${{ github.action_path }}/RunUnitTests.ps1" `
           -Package_LabVIEW_Version $lvVer `
