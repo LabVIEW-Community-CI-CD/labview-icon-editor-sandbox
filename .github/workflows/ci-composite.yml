@@ -367,14 +367,53 @@ jobs:
             vipc:
               - '**/*.vipc'
 
+  resolve-labview-version:
+    name: Resolve LabVIEW version from VIPB
+    needs: [verify-checklist-sync]
+    runs-on: ubuntu-latest
+    outputs:
+      minimum_supported_lv_version: ${{ steps.read.outputs.lv_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: read
+        name: Gate minimum LabVIEW policy vs VIPB
+        shell: pwsh
+        env:
+          EXPECTED_MIN_LV: ${{ env.MIN_LABVIEW_POLICY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          function Normalize-LVVersion([string]$raw) {
+            if ([string]::IsNullOrWhiteSpace($raw)) { throw "Version string is empty." }
+            $match = [regex]::Match($raw, '(?<maj>\d{2,4})')
+            if (-not $match.Success) { throw "Unable to parse LabVIEW major version from '$raw'." }
+            $maj = [int]$match.Groups['maj'].Value
+            if ($maj -lt 100) { $maj = 2000 + $maj }
+            return $maj.ToString()
+          }
+
+          $derivedRaw = & "$env:GITHUB_WORKSPACE/scripts/get-package-lv-version.ps1" -RepositoryPath "$env:GITHUB_WORKSPACE"
+          $derived = Normalize-LVVersion $derivedRaw
+          $expected = Normalize-LVVersion $env:EXPECTED_MIN_LV
+
+          if ($derived -ne $expected) {
+            throw ("MIN_LABVIEW_POLICY '{0}' (normalized {1}) does not match VIPB-derived {2} (normalized {3})." -f $env:EXPECTED_MIN_LV, $expected, $derivedRaw, $derived)
+          }
+
+          "lv_version=$derived" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
+          Write-Host ("LabVIEW version check passed: env policy {0} == VIPB {1} (normalized {2})." -f $env:EXPECTED_MIN_LV, $derivedRaw, $derived)
+
   apply-deps-2021-x64:
     name: Apply VIPC (2021 x64)
-    needs: [verify-checklist-sync, changes]
+    needs: [verify-checklist-sync, changes, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
         if: needs.changes.outputs.vipc == 'true'
         with:
+          minimum_supported_lv_version:    ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           vip_lv_version:               2021
           supported_bitness:            64
           repository_path:              ${{ github.workspace }}
@@ -384,12 +423,13 @@ jobs:
 
   apply-deps-2021-x86:
     name: Apply VIPC (2021 x86)
-    needs: [verify-checklist-sync, apply-deps-2021-x64, changes]
+    needs: [verify-checklist-sync, apply-deps-2021-x64, changes, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
         if: needs.changes.outputs.vipc == 'true'
         with:
+          minimum_supported_lv_version:    ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           vip_lv_version:               2021
           supported_bitness:            32
           repository_path:              ${{ github.workspace }}
@@ -399,12 +439,13 @@ jobs:
 
   apply-deps-2023-x64:
     name: Apply VIPC (2023 x64)
-    needs: [verify-checklist-sync, close-lv-2021-before-2023, changes]
+    needs: [verify-checklist-sync, close-lv-2021-before-2023, changes, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
         if: needs.changes.outputs.vipc == 'true'
         with:
+          minimum_supported_lv_version:    ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           vip_lv_version:               2023
           supported_bitness:            64
           repository_path:              ${{ github.workspace }}

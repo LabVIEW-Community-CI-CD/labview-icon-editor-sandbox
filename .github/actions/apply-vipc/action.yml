@@ -12,11 +12,15 @@ runs:
       shell: pwsh
       run: |
         & "${{ github.action_path }}/ApplyVIPC.ps1" `
+          -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} `
           -VIP_LVVersion ${{ inputs.vip_lv_version }} `
           -SupportedBitness ${{ inputs.supported_bitness }} `
           -RepositoryPath "${{ inputs.repository_path }}" `
           -VIPCPath "${{ inputs.vipc_path }}"
 inputs:
+  minimum_supported_lv_version:
+    description: 'Minimum supported LabVIEW version'
+    required: true
   vip_lv_version:
     description: 'VIPC LV version (usually same as minimum supported)'
     required: true
