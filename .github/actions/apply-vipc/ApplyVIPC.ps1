@@ -132,41 +132,38 @@ if (-not $gcli) {
 # -------------------------
 Write-Verbose "Constructing the g-cli command arguments..."
 
-$applyArgs = @(
-    "--lv-ver", $MinimumSupportedLVVersion,
-    "--arch", $SupportedBitness,
-    "-v", "$($ResolvedRepositoryPath)\Tooling\Deployment\Applyvipc.vi",
-    "--",
-    "$ResolvedVIPCPath",
-    "$VIP_LVVersion_B"
-)
-
-$secondaryArgs = $null
-if ($VIP_LVVersion -ne $MinimumSupportedLVVersion) {
-    Write-Verbose "VIP_LVVersion and MinimumSupportedLVVersion differ; preparing secondary vipc application for $VIP_LVVersion..."
-    $secondaryArgs = @(
-        "vipc",
+function New-ApplyArgs {
+    param(
+        [Parameter(Mandatory)][string]$LvMajor,
+        [Parameter(Mandatory)][string]$VersionLabel
+    )
+    @(
+        "--lv-ver", $LvMajor,
+        "--arch", $SupportedBitness,
+        "-v", "$($ResolvedRepositoryPath)\Tooling\Deployment\Applyvipc.vi",
         "--",
-        "-t", "3000",
-        "-v", "$VIP_LVVersion",
-        "$ResolvedVIPCPath"
+        "$ResolvedVIPCPath",
+        "$VersionLabel"
     )
 }
 
-Write-Information ("Executing: g-cli {0}" -f ($applyArgs -join ' ')) -InformationAction Continue
-$applyOut = & g-cli @applyArgs 2>&1
+$primaryArgs = New-ApplyArgs -LvMajor $MinimumSupportedLVVersion -VersionLabel $VIP_LVVersion_B
+Write-Information ("Executing: g-cli {0}" -f ($primaryArgs -join ' ')) -InformationAction Continue
+$applyOut = & g-cli @primaryArgs 2>&1
 if ($LASTEXITCODE -ne 0) {
     $joined = ($applyOut -join '; ')
     Write-Error "Failed applying VIPC to $VIP_LVVersion_B (exit $LASTEXITCODE). Output: $joined"
     exit $LASTEXITCODE
 }
 
-if ($secondaryArgs) {
+if ($VIP_LVVersion -ne $MinimumSupportedLVVersion) {
+    Write-Verbose "VIP_LVVersion and MinimumSupportedLVVersion differ; applying VIPC via Applyvipc.vi for $VIP_LVVersion..."
+    $secondaryArgs = New-ApplyArgs -LvMajor $VIP_LVVersion -VersionLabel $VIP_LVVersion_A
     Write-Information ("Executing secondary: g-cli {0}" -f ($secondaryArgs -join ' ')) -InformationAction Continue
     $secondaryOut = & g-cli @secondaryArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
         $joined = ($secondaryOut -join '; ')
-        Write-Error "Failed secondary VIPC apply for $VIP_LVVersion (exit $LASTEXITCODE). Output: $joined"
+        Write-Error "Failed secondary VIPC apply for $VIP_LVVersion_A (exit $LASTEXITCODE). Output: $joined"
         exit $LASTEXITCODE
     }
 }
