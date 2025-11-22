@@ -74,9 +74,27 @@ param (
 )
 
 $ErrorLogPath = if ($ErrorLog) {
-    if ([System.IO.Path]::IsPathRooted($ErrorLog)) { $ErrorLog } else { Join-Path $PSScriptRoot $ErrorLog }
+    if ([System.IO.Path]::IsPathRooted($ErrorLog)) {
+        $ErrorLog
+    }
+    else {
+        Join-Path -Path (Get-Location).Path -ChildPath $ErrorLog
+    }
 } else {
     Join-Path $PSScriptRoot 'error.json'
+}
+
+# Ensure log directory exists and clear prior log
+try {
+    $logDir = Split-Path -Path $ErrorLogPath -Parent
+    if ($logDir -and -not (Test-Path -LiteralPath $logDir)) {
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+    }
+}
+catch {
+    if (-not $QuietErrors) {
+        Write-Warning ("Failed to ensure error log directory for {0}: {1}" -f $ErrorLogPath, $_.Exception.Message)
+    }
 }
 Remove-Item -LiteralPath $ErrorLogPath -ErrorAction SilentlyContinue
 
@@ -111,7 +129,7 @@ function Write-ErrorPayload {
     catch {
         # Best effort; still emit to stdout if file write fails
         if (-not $QuietErrors) {
-            Write-Warning "Failed to write error log to $ErrorLogPath: $($_.Exception.Message)"
+            Write-Warning ("Failed to write error log to {0}: {1}" -f $ErrorLogPath, $_.Exception.Message)
         }
     }
 
@@ -298,8 +316,59 @@ catch {
 }
 
 if ([string]::IsNullOrWhiteSpace($releaseNotesFromFile)) {
-    Write-ErrorPayload -Error "Release notes file is empty. Populate it or provide valid content before running this action." `
-        -Path $ResolvedReleaseNotesFile
+    # Attempt to pull content from git if available
+    $fallbackContent = $null
+    $repoRoot = $ResolvedRepositoryPath.ProviderPath
+    $relPath  = $ResolvedReleaseNotesFile.ProviderPath
+    if ($relPath.StartsWith($repoRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        $relPath = $relPath.Substring($repoRoot.Length).TrimStart('\','/')
+    }
+
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        try {
+            $fallbackContent = git -C $repoRoot show ("HEAD:{0}" -f $relPath) 2>$null
+        }
+        catch {
+            # ignore; handled below
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($fallbackContent)) {
+        try {
+            $fallbackContent | Set-Content -Path $ResolvedReleaseNotesFile -Encoding utf8
+            $releaseNotesFromFile = $fallbackContent
+            Write-Information "Release notes were empty; populated from git HEAD:$relPath" -InformationAction Continue
+        }
+        catch {
+            Write-ErrorPayload -Error "Release notes file is empty and could not be populated." `
+                -Details $_.Exception.Message `
+                -Path $ResolvedReleaseNotesFile
+        }
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($jsonObj.'Release Notes - Change Log')) {
+        try {
+            $jsonObj.'Release Notes - Change Log' | Set-Content -Path $ResolvedReleaseNotesFile -Encoding utf8
+            $releaseNotesFromFile = $jsonObj.'Release Notes - Change Log'
+            Write-Information "Release notes were empty; populated from DisplayInformationJSON." -InformationAction Continue
+        }
+        catch {
+            Write-ErrorPayload -Error "Release notes file is empty and could not be populated from DisplayInformationJSON." `
+                -Details $_.Exception.Message `
+                -Path $ResolvedReleaseNotesFile
+        }
+    }
+    else {
+        $defaultNotes = "Release notes were not provided; generated placeholder."
+        try {
+            $defaultNotes | Set-Content -Path $ResolvedReleaseNotesFile -Encoding utf8
+            $releaseNotesFromFile = $defaultNotes
+            Write-Information "Release notes were empty; populated with placeholder content." -InformationAction Continue
+        }
+        catch {
+            Write-ErrorPayload -Error "Release notes file is empty. Populate it or provide valid content before running this action." `
+                -Path $ResolvedReleaseNotesFile
+        }
+    }
 }
 
 $releaseNotesJsonValue = $jsonObj.'Release Notes - Change Log'

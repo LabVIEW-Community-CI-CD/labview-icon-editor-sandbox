@@ -91,6 +91,49 @@ function Invoke-ScriptSafe {
     }
 }
 
+function Write-ReleaseNotesFromGit {
+    param(
+        [string]$RepoPath,
+        [string]$DestinationPath
+    )
+
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Write-Verbose "git not found; skipping release notes generation from git."
+        return
+    }
+
+    try {
+        $lastTag = git -C $RepoPath describe --tags --abbrev=0 2>$null
+    }
+    catch {
+        $lastTag = $null
+    }
+
+    if (-not $lastTag) {
+        Write-Verbose "No tags found; using HEAD for release notes."
+        $range  = 'HEAD'
+        $header = 'Release Notes'
+    }
+    else {
+        Write-Verbose ("Last tag detected: {0}" -f $lastTag)
+        $range  = "$lastTag..HEAD"
+        $header = "Release Notes (since $lastTag)"
+    }
+
+    $log = git -C $RepoPath log $range --pretty='- %h %s' --no-merges
+    if (-not $log) {
+        $log = if ($lastTag) { 'No commits since last tag.' } else { 'No commits found.' }
+    }
+
+    $body = "$header`n`n$log`n"
+    $destDir = Split-Path -Path $DestinationPath -Parent
+    if ($destDir -and -not (Test-Path -LiteralPath $destDir)) {
+        New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+    }
+    Set-Content -Path $DestinationPath -Value $body -Encoding utf8
+    Write-Information "Generated release notes from git into $DestinationPath" -InformationAction Continue
+}
+
 function Get-LabVIEWVersionFromVipb {
     param([Parameter(Mandatory)][string]$RootPath)
     $vipb = Get-ChildItem -Path $RootPath -Filter *.vipb -File -Recurse | Select-Object -First 1
@@ -274,6 +317,9 @@ try {
     # -------------------------------------------------------------------------
     # We include "Package Version" with your script parameters.
     # The rest of the fields remain empty or default as needed.
+    Write-Verbose "Generating release notes from git..."
+    Write-ReleaseNotesFromGit -RepoPath $RepositoryPath -DestinationPath $ReleaseNotesFile
+
     $jsonObject = @{
         "Package Version" = @{
             "major" = $Major
