@@ -137,6 +137,11 @@ The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct
 
 *(The **Run Unit Tests** workflow has been consolidated into the main CI process.)*
 
+**How LabVIEW versioning is wired through CI**
+
+- The `resolve-labview-version` job calls `scripts/get-package-lv-version.ps1` to read the VIPB and enforce the `MIN_LABVIEW_POLICY`. It publishes the normalized value as `needs.resolve-labview-version.outputs.minimum_supported_lv_version`.
+- Downstream jobs export that output as `LABVIEW_VERSION` and pass the same value into any `labview_version` action inputs (including the `run-unit-tests` composite). The composite and its `RunUnitTests.ps1` helper require the provided version and fail early if it is missing, preventing silent recomputation.
+
 ---
 
 ### 3.3 Setting Up a Self-Hosted Runner

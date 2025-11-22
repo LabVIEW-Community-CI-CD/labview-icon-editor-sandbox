@@ -15,7 +15,22 @@ runs:
         Set-StrictMode -Version Latest
 
         $repo = Resolve-Path "${{ inputs.repository_path }}"
-        $lvVer = pwsh -NoProfile -File "$repo/scripts/resolve-lv-version.ps1" -RepositoryPath $repo
+        $actionRoot = Resolve-Path "${{ github.action_path }}"
+        $scriptPath = Join-Path $actionRoot "RunUnitTests.ps1"
+
+        $lvVer = "${{ inputs.labview_version }}"
+        $versionSource = 'inputs.labview_version'
+        if ([string]::IsNullOrWhiteSpace($lvVer)) {
+          $lvVer = $Env:LABVIEW_VERSION
+          $versionSource = 'LABVIEW_VERSION'
+        }
+
+        if ([string]::IsNullOrWhiteSpace($lvVer)) {
+          throw "LabVIEW version not provided. Set inputs.labview_version or the LABVIEW_VERSION environment variable."
+        }
+
+        Write-Host "Using LabVIEW version ($versionSource): $lvVer"
+        Write-Host "RunUnitTests.ps1 resolved path: $scriptPath"
 
         # Resolve project file: use input when provided, otherwise auto-detect (prefer root-level)
         $pf = "${{ inputs.project-file }}"
@@ -44,7 +59,7 @@ runs:
           $pf = $candidates[0].FullName
         }
 
-        & "${{ github.action_path }}/RunUnitTests.ps1" `
+        & $scriptPath `
           -Package_LabVIEW_Version $lvVer `
           -SupportedBitness ${{ inputs.supported_bitness }} `
           -AbsoluteProjectPath $pf
@@ -55,6 +70,10 @@ inputs:
   supported_bitness:
     description: '32 or 64'
     required: true
+  labview_version:
+    description: 'LabVIEW version to use (must be supplied via this input or the LABVIEW_VERSION env; action fails when missing).'
+    required: false
+    default: ""
   project-file:
     description: 'Optional path to .lvproj; if omitted, auto-detect (preferring repo root, error on multiple/none).'
     required: false

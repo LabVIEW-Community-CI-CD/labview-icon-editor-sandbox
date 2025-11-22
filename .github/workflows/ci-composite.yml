@@ -352,7 +352,7 @@ jobs:
 
   changes:
     name: Detect VIPC changes
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality]
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality, ps-coverage]
     runs-on: ubuntu-latest
     outputs:
       vipc: ${{ steps.filter.outputs.vipc }}
@@ -407,7 +407,7 @@ jobs:
 
   apply-deps-x64:
     name: Apply VIPC (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
-    needs: [verify-checklist-sync, changes, resolve-labview-version]
+    needs: [verify-checklist-sync, changes, resolve-labview-version, ps-coverage]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
@@ -460,7 +460,7 @@ jobs:
 
   version:
     name: Compute Version
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality]
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality, ps-coverage]
     runs-on: self-hosted-windows-lv
     outputs:
       VERSION:       ${{ steps.compute.outputs.VERSION }}
@@ -540,13 +540,16 @@ jobs:
 
   test-x64:
     name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
-    needs: [verify-checklist-sync, missing-in-project-x86]
+    needs: [verify-checklist-sync, missing-in-project-x86, resolve-labview-version]
     runs-on: self-hosted-windows-lv
+    env:
+      LABVIEW_VERSION: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
     steps:
       - uses: ./.github/actions/run-unit-tests
         with:
           repository_path: ${{ github.workspace }}
           supported_bitness:            "64"
+          labview_version:  ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
       - if: always()
         name: Close LabVIEW ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} 64-bit after unit tests
         uses: ./.github/actions/close-labview
@@ -573,13 +576,16 @@ jobs:
 
   test-x86:
     name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
-    needs: [verify-checklist-sync, test-x64]
+    needs: [verify-checklist-sync, test-x64, resolve-labview-version]
     runs-on: self-hosted-windows-lv
+    env:
+      LABVIEW_VERSION: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
     steps:
       - uses: ./.github/actions/run-unit-tests
         with:
           repository_path: ${{ github.workspace }}
           supported_bitness:            "32"
+          labview_version:  ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
       - if: always()
         name: Close LabVIEW ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} 32-bit after unit tests
         uses: ./.github/actions/close-labview
@@ -696,6 +702,7 @@ jobs:
         run: |
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module Pester -Scope CurrentUser -Force -RequiredVersion 5.7.1
+          Install-Module powershell-yaml -Scope CurrentUser -Force
       - name: Run Pester with coverage
         shell: pwsh
         run: |
