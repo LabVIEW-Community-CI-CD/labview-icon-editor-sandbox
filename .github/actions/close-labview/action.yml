@@ -14,6 +14,9 @@ runs:
       run: |
         $ErrorActionPreference = 'Stop'
         $repo = "${{ inputs.repository_path }}"
+        if ([string]::IsNullOrWhiteSpace($repo)) {
+          $repo = $env:GITHUB_WORKSPACE
+        }
         $candidates = @(
           (Join-Path $repo 'scripts/get-package-lv-version.ps1'),
           (Join-Path $repo '.github/scripts/get-package-lv-version.ps1')
@@ -27,6 +30,9 @@ runs:
           -Package_LabVIEW_Version $lvVer `
           -SupportedBitness ${{ inputs.supported_bitness }}
 inputs:
+  minimum_supported_lv_version:
+    description: 'Minimum LabVIEW version allowed to run'
+    required: false
   repository_path:
     description: 'Workspace root path'
     required: true

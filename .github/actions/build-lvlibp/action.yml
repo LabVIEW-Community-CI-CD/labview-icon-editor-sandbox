@@ -32,6 +32,9 @@ runs:
           -Build ${{ inputs.build }} `
           -Commit "${{ inputs.commit }}"
 inputs:
+  minimum_supported_lv_version:
+    description: 'Minimum LabVIEW version allowed to run'
+    required: false
   supported_bitness:
     description: '32 or 64'
     required: true
