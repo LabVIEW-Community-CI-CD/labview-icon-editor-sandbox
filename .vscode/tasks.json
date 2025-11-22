@@ -58,6 +58,12 @@
       "default": "1"
     },
     {
+      "id": "commitHash",
+      "type": "promptString",
+      "description": "Git commit hash for stamping artifacts",
+      "default": "manual"
+    },
+    {
       "id": "companyName",
       "type": "promptString",
       "description": "Company name for metadata",
@@ -96,7 +102,7 @@
       "args": [
         "-NoProfile",
         "-File",
-        "${workspaceFolder}/.github/actions/build/run-local-build.ps1",
+        "${workspaceFolder}/.github/actions/build/Build.ps1",
         "-RepositoryPath",
         "${input:repoPath}",
         "-Major",
@@ -109,6 +115,8 @@
         "${input:buildNumber}",
         "-LabVIEWMinorRevision",
         "3",
+        "-Commit",
+        "${input:commitHash}",
         "-CompanyName",
         "${input:companyName}",
         "-AuthorName",

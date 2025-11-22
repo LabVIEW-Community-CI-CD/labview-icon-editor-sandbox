@@ -119,7 +119,17 @@ try {
     Write-Verbose " - CompanyName: $CompanyName"
     Write-Verbose " - AuthorName: $AuthorName"
 
-    # Validate needed folders
+    # Ensure the repo root exists before reading the VIPB version
+    if (-not (Test-Path -LiteralPath $RepositoryPath)) {
+        Write-Error "RepositoryPath does not exist: $RepositoryPath"
+        exit 1
+    }
+
+    # Derive LabVIEW version from VIPB as the first consumer step
+    $lvVersion = Get-LabVIEWVersionFromVipb -RootPath $RepositoryPath
+    Write-Information ("Using LabVIEW version from VIPB: {0}" -f $lvVersion) -InformationAction Continue
+
+    # Validate needed folders after version is known
     Test-PathExistence $RepositoryPath "RepositoryPath"
     Test-PathExistence "$RepositoryPath\resource\plugins" "Plugins folder"
     Test-PathExistence "$RepositoryPath\lv_icon_editor.lvproj" "LabVIEW project"
@@ -133,10 +143,6 @@ try {
         Write-Error "Missing runner_dependencies.vipc at $vipcPath. Cannot apply dependencies; run packaging prep or fetch the VIPC."
         exit 1
     }
-
-    # Derive LabVIEW version from VIPB
-    $lvVersion = Get-LabVIEWVersionFromVipb -RootPath $RepositoryPath
-    Write-Information ("Using LabVIEW version from VIPB: {0}" -f $lvVersion) -InformationAction Continue
 
     # 1) Clean up old .lvlibp in the plugins folder
     Write-Information "Cleaning up old .lvlibp files in plugins folder..." -InformationAction Continue
