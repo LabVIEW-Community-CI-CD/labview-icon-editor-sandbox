@@ -42,6 +42,16 @@ runs:
   using: composite
   steps:
 
+    - name: Validate inputs
+      shell: pwsh
+      run: |
+        if ([string]::IsNullOrWhiteSpace('${{ inputs.lv-ver }}')) {
+          throw "Missing input 'lv-ver'; must be a non-empty LabVIEW version (e.g. 2021)."
+        }
+        if ([string]::IsNullOrWhiteSpace('${{ inputs.arch }}')) {
+          throw "Missing input 'arch'; must be '32' or '64'."
+        }
+
     - name: Resolve project file path
       id: resolve
       shell: pwsh
