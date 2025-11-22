@@ -75,9 +75,20 @@ runs:
         if (-not $candidates) {
           throw "No .lvproj files found under $Env:GITHUB_WORKSPACE. Provide inputs.project-file."
         }
+
+        # Prefer a root-level project if multiple are present
+        $workspaceRoot = (Resolve-Path $Env:GITHUB_WORKSPACE).Path
+        $rootProjects = $candidates | Where-Object { $_.Directory.FullName -eq $workspaceRoot }
+        if ($rootProjects.Count -eq 1) {
+          $candidates = @($rootProjects[0])
+        }
+        elseif ($rootProjects.Count -gt 1) {
+          $candidates = $rootProjects
+        }
+
         if ($candidates.Count -gt 1) {
           $list = $candidates | ForEach-Object { " - $($_.FullName)" } | Out-String
-          throw "Multiple .lvproj files found; set inputs.project-file to disambiguate.`n$list"
+          throw "Multiple .lvproj files found; set inputs.project-file to disambiguate. Candidates:`n$list"
         }
 
         $pf = $candidates[0].FullName
