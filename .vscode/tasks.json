@@ -144,7 +144,7 @@
         "-File",
         "${workspaceFolder}/.github/actions/analyze-vi-package/run-local.ps1",
         "-VipArtifactPath",
-        "builds/VI Package/${workspaceFolderBasename}_64bit_*",
+        "${input:vipArtifactPath}",
         "-MinLabVIEW",
         "${input:minLv}"
       ],
