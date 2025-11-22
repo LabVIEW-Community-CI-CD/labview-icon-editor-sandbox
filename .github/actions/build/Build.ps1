@@ -218,10 +218,16 @@ try {
     Write-Information "Applying VIPC (dependencies) for 64-bit..." -InformationAction Continue
     Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
         Package_LabVIEW_Version   = $lvVersion
-        VIP_LVVersion             = $lvVersion
         SupportedBitness          = '64'
         RepositoryPath            = $RepositoryPath
         VIPCPath                  = 'Tooling\deployment\runner_dependencies.vipc'
+    }
+
+    # 6.1) Ensure LabVIEW 64-bit is closed before building to avoid loaded NIIconEditor collisions
+    Write-Verbose "Pre-build: closing LabVIEW (64-bit) to ensure a clean session..."
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentMap @{
+        Package_LabVIEW_Version = $lvVersion
+        SupportedBitness        = '64'
     }
 
     # 7) Build LV Library (64-bit)
