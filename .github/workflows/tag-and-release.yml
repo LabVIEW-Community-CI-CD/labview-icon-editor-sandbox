@@ -432,7 +432,7 @@ jobs:
             const prerelease = '${{ steps.version.outputs.IS_PRERELEASE }}' === 'true';
             const vipName = '${{ steps.locate-artifacts.outputs.vip_name }}';
             const notesName = '${{ steps.locate-artifacts.outputs.notes_name }}';
-            const repo = '${{ github.event.repository.name || "labview-icon-editor" }}';
+            const repo = '${{ github.event.repository.name || \'labview-icon-editor\' }}';
             const stemmedReadiness = `Readiness: ${repo}-test-data-readiness-*.md, ${repo}-test-env-readiness-*.md (fallback to legacy names if stemmed missing)`;
             const evidence = [
               `Test completion: test-completion-${tag}.md`,
