@@ -748,7 +748,6 @@ jobs:
     steps:
       - uses: ./.github/actions/build-lvlibp
         with:
-          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 32
           repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
@@ -777,7 +776,6 @@ jobs:
     steps:
       - uses: ./.github/actions/build-lvlibp
         with:
-          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 64
           repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}

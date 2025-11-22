@@ -173,7 +173,7 @@ Although GitHub Actions primarily run on GitHub-hosted or self-hosted agents, yo
    - If you have custom or dev references, ensure Dev Mode is toggled appropriately.
 
 3. **Build VI Package**:
-   - Manually invoke `Build.ps1` from `.github/actions/build` to generate a `.vip`.
+   - Manually invoke `Build.ps1` from `.github/actions/build` to generate a `.vip`. The build number comes from the total commit count (requires full history).
    - Pass optional metadata fields (e.g., `-CompanyName`, `-AuthorName`) if you want your build to be **branded**.
    - On GitHub Actions, the workflow will produce and upload the artifact automatically.
 
