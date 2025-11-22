@@ -281,15 +281,15 @@ try {
             "patch" = $Patch
             "build" = $Build
         }
-        "Product Name"                  = ""
-        "Company Name"                  = $CompanyName
+        "Product Name"                    = "LabVIEW Icon Editor"
+        "Company Name"                    = $CompanyName
         "Author Name (Person or Company)" = $AuthorName
-        "Product Homepage (URL)"        = ""
-        "Legal Copyright"               = ""
-        "License Agreement Name"        = ""
-        "Product Description Summary"   = ""
-        "Product Description"           = ""
-        "Release Notes - Change Log"    = ""
+        "Product Homepage (URL)"          = "https://github.com/LabVIEW-Community-CI-CD/labview-icon-editor"
+        "Legal Copyright"                 = "LabVIEW-Community-CI-CD"
+        "License Agreement Name"          = ""
+        "Product Description Summary"     = "Community icon editor for LabVIEW"
+        "Product Description"             = "Community-driven icon editor for LabVIEW including custom icon APIs."
+        "Release Notes - Change Log"      = ""
     }
 
     $DisplayInformationJSON = $jsonObject | ConvertTo-Json -Depth 3
