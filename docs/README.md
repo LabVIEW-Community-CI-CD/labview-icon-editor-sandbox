@@ -22,7 +22,7 @@ This directory collects guides and references for working with the LabVIEW Icon 
 - [Experiments Guide](ci/experiments.md)
 - [Troubleshooting & FAQ](ci/troubleshooting-faq.md)
 - [Composite Actions](ci/actions/README.md)
-  - [Build VI Package](ci/actions/build-vi-package.md)
+  - [Build VI Package](ci/actions/build-vi-package.md) *(build-vip action)*
   - [Development Mode Toggle](ci/actions/development-mode-toggle.md)
   - [Injecting Repo/Org to VI Package](ci/actions/injecting-repo-org-to-vi-package.md)
   - [Maintainer's Guide](ci/actions/maintainers-guide.md)

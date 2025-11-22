@@ -1,8 +1,13 @@
 name: CI Pipeline (Composite)
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
+  # Enforce one run at a time per branch/PR to avoid overlapping fixes on the same feature branch.
+  # Deduplicate by commit (PR head SHA when available); cancel older runs for the same commit.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
+
+env:
+  MIN_LABVIEW_POLICY: "21.0"
 
 on:
   push:
@@ -10,8 +15,6 @@ on:
       - main
       - develop
       - release/*
-      - feature/*
-      - hotfix/*
   pull_request:
     branches:
       - main
@@ -364,67 +367,96 @@ jobs:
             vipc:
               - '**/*.vipc'
 
-  apply-deps-2021-x64:
-    name: Apply VIPC (2021 x64)
-    needs: [verify-checklist-sync, changes]
+  resolve-labview-version:
+    name: Resolve LabVIEW version from VIPB
+    needs: [verify-checklist-sync]
+    runs-on: ubuntu-latest
+    outputs:
+      minimum_supported_lv_version: ${{ steps.read.outputs.lv_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: read
+        name: Gate minimum LabVIEW policy vs VIPB
+        shell: pwsh
+        env:
+          EXPECTED_MIN_LV: ${{ env.MIN_LABVIEW_POLICY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          function Normalize-LVVersion([string]$raw) {
+            if ([string]::IsNullOrWhiteSpace($raw)) { throw "Version string is empty." }
+            $match = [regex]::Match($raw, '(?<maj>\d{2,4})')
+            if (-not $match.Success) { throw "Unable to parse LabVIEW major version from '$raw'." }
+            $maj = [int]$match.Groups['maj'].Value
+            if ($maj -lt 100) { $maj = 2000 + $maj }
+            return $maj.ToString()
+          }
+
+          $derivedRaw = & "$env:GITHUB_WORKSPACE/scripts/get-package-lv-version.ps1" -RepositoryPath "$env:GITHUB_WORKSPACE"
+          $derived = Normalize-LVVersion $derivedRaw
+          $expected = Normalize-LVVersion $env:EXPECTED_MIN_LV
+
+          if ($derived -ne $expected) {
+            throw ("MIN_LABVIEW_POLICY '{0}' (normalized {1}) does not match VIPB-derived {2} (normalized {3})." -f $env:EXPECTED_MIN_LV, $expected, $derivedRaw, $derived)
+          }
+
+          "lv_version=$derived" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
+          Write-Host ("LabVIEW version check passed: env policy {0} == VIPB {1} (normalized {2})." -f $env:EXPECTED_MIN_LV, $derivedRaw, $derived)
+
+  apply-deps-x64:
+    name: Apply VIPC (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
+    needs: [verify-checklist-sync, changes, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
         if: needs.changes.outputs.vipc == 'true'
         with:
-          minimum_supported_lv_version: 2021
-          vip_lv_version:               2021
+          package_labview_version:      ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness:            64
-          relative_path:                ${{ github.workspace }}
+          repository_path:              ${{ github.workspace }}
           vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
       - run: echo "No .vipc changes detected; skipping dependency application."
         if: needs.changes.outputs.vipc != 'true'
 
-  apply-deps-2021-x86:
-    name: Apply VIPC (2021 x86)
-    needs: [verify-checklist-sync, apply-deps-2021-x64, changes]
+  apply-deps-x86:
+    name: Apply VIPC (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
+    needs: [verify-checklist-sync, apply-deps-x64, changes, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
         if: needs.changes.outputs.vipc == 'true'
         with:
-          minimum_supported_lv_version: 2021
-          vip_lv_version:               2021
+          package_labview_version:      ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness:            32
-          relative_path:                ${{ github.workspace }}
+          repository_path:              ${{ github.workspace }}
           vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
       - run: echo "No .vipc changes detected; skipping dependency application."
         if: needs.changes.outputs.vipc != 'true'
 
-  apply-deps-2023-x64:
-    name: Apply VIPC (2023 x64)
-    needs: [verify-checklist-sync, close-lv-2021-before-2023, changes]
+  check-library-paths:
+    name: Check LocalHost.LibraryPaths (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }})
+    needs: [verify-checklist-sync, apply-deps-x86]
     runs-on: self-hosted-windows-lv
     steps:
-      - uses: ./.github/actions/apply-vipc
-        if: needs.changes.outputs.vipc == 'true'
+      - uses: actions/checkout@v4
         with:
-          minimum_supported_lv_version: 2023
-          vip_lv_version:               2023
-          supported_bitness:            64
-          relative_path:                ${{ github.workspace }}
-          vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
-      - run: echo "No .vipc changes detected; skipping dependency application."
-        if: needs.changes.outputs.vipc != 'true'
-
-  close-lv-2021-before-2023:
-    name: Close LabVIEW 2021 before 2023 tasks
-    needs: [verify-checklist-sync, apply-deps-2021-x86]
-    runs-on: self-hosted-windows-lv
-    steps:
-      - uses: ./.github/actions/close-labview
-        with:
-          minimum_supported_lv_version: 2021
-          supported_bitness: 64
-      - uses: ./.github/actions/close-labview
-        with:
-          minimum_supported_lv_version: 2021
-          supported_bitness: 32
+          fetch-depth: 0
+      - name: Validate LocalHost.LibraryPaths entries (64-bit)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/read-library-paths.ps1" `
+            -RepositoryPath "$env:GITHUB_WORKSPACE" `
+            -SupportedBitness 64 `
+            -FailOnMissing
+      - name: Validate LocalHost.LibraryPaths entries (32-bit)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/read-library-paths.ps1" `
+            -RepositoryPath "$env:GITHUB_WORKSPACE" `
+            -SupportedBitness 32 `
+            -FailOnMissing
 
   version:
     name: Compute Version
@@ -446,77 +478,77 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  missing-in-project-2021-x64:
-    name: Test Missing-In-Project (2021 x64)
-    needs: [verify-checklist-sync, apply-deps-2023-x64]
+  missing-in-project-x64:
+    name: Test Missing-In-Project (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
+    needs: [verify-checklist-sync, apply-deps-x64, check-library-paths]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/missing-in-project
         with:
-          lv-ver:       "2021"
+          lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           arch:         "64"
           project-file: "lv_icon_editor.lvproj"
 
-  missing-in-project-2021-x86:
-    name: Test Missing-In-Project (2021 x86)
-    needs: [verify-checklist-sync, missing-in-project-2021-x64]
+  missing-in-project-x86:
+    name: Test Missing-In-Project (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
+    needs: [verify-checklist-sync, missing-in-project-x64, check-library-paths]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/missing-in-project
         with:
-          lv-ver:       "2021"
+          lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           arch:         "32"
           project-file: "lv_icon_editor.lvproj"
 
-  test-2021-x64:
-    name: Run Unit Tests (2021 x64)
-    needs: [verify-checklist-sync, missing-in-project-2021-x86]
+  test-x64:
+    name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
+    needs: [verify-checklist-sync, missing-in-project-x86]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/run-unit-tests
         with:
-          minimum_supported_lv_version: "2021"
+          repository_path: ${{ github.workspace }}
           supported_bitness:            "64"
       - if: always()
-        name: Close LabVIEW 2021 64-bit after unit tests
+        name: Close LabVIEW ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} 64-bit after unit tests
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2021
+          repository_path: ${{ github.workspace }}
           supported_bitness: 64
       - if: always()
         name: Upload unit test report (x64)
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-report-x64
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-unit-test-report-64bit
           path: .github/actions/run-unit-tests/UnitTestReport.xml
           if-no-files-found: ignore
 
-  test-2021-x86:
-    name: Run Unit Tests (2021 x86)
-    needs: [verify-checklist-sync, test-2021-x64]
+  test-x86:
+    name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
+    needs: [verify-checklist-sync, test-x64]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/run-unit-tests
         with:
-          minimum_supported_lv_version: "2021"
+          repository_path: ${{ github.workspace }}
           supported_bitness:            "32"
       - if: always()
-        name: Close LabVIEW 2021 32-bit after unit tests
+        name: Close LabVIEW ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} 32-bit after unit tests
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2021
+          repository_path: ${{ github.workspace }}
           supported_bitness: 32
       - if: always()
         name: Upload unit test report (x86)
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-report-x86
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-unit-test-report-32bit
           path: .github/actions/run-unit-tests/UnitTestReport.xml
           if-no-files-found: ignore
 
   publish-performance-and-portability:
     name: Publish Performance/Portability JSON
-    needs: [verify-checklist-sync, test-2021-x86]
+    needs: [verify-checklist-sync, test-x86]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -532,9 +564,11 @@ jobs:
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
+          repo = "${{ github.event.repository.name || 'labview-icon-editor' }}"
+
           reports = {
-              "test-2021-x64": Path("artifacts/unit-test-report-x64/UnitTestReport.xml"),
-              "test-2021-x86": Path("artifacts/unit-test-report-x86/UnitTestReport.xml"),
+              "test-x64": Path(f"artifacts/{repo}-unit-test-report-64bit/UnitTestReport.xml"),
+              "test-x86": Path(f"artifacts/{repo}-unit-test-report-32bit/UnitTestReport.xml"),
           }
 
           perf_entries = []
@@ -586,21 +620,72 @@ jobs:
       - name: Upload performance/portability reports
         uses: actions/upload-artifact@v4
         with:
-          name: reports-json
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-reports-json
           path: |
             reports/performance-measurements.json
             reports/portability-status.json
 
+  ps-coverage:
+    name: PowerShell Tests & Coverage
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Pester 5.7.1
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -Scope CurrentUser -Force -RequiredVersion 5.7.1
+      - name: Run Pester with coverage
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $coverageTargets = @(
+            '.github/actions/add-token-to-labview/LocalhostLibraryPaths.ps1',
+            '.github/actions/set-development-mode/run-dev-mode.ps1',
+            '.github/actions/set-development-mode/Set_Development_Mode.ps1',
+            '.github/actions/prepare-labview-source/Prepare_LabVIEW_source.ps1',
+            '.github/actions/build/Build.ps1',
+            'scripts/read-library-paths.ps1',
+            'scripts/show-ini.ps1',
+            'scripts/verify-dev-mode-state.ps1'
+          )
+          $pesterConfig = New-PesterConfiguration
+          $pesterConfig.Run.Container = New-PesterContainer -Path 'Test'
+          $pesterConfig.TestResult.Enabled = $true
+          $pesterConfig.TestResult.OutputPath = 'pester-results.xml'
+          $pesterConfig.CodeCoverage.Enabled = $true
+          $pesterConfig.CodeCoverage.Path = $coverageTargets
+          $pesterConfig.CodeCoverage.OutputPath = 'coverage.xml'
+          $pesterConfig.CodeCoverage.OutputFormat = 'JaCoCo'
+          $pesterConfig.Run.PassThru = $true
+          $pesterConfig.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $pesterConfig
+      - name: Upload Pester results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-pester-results
+          path: pester-results.xml
+      - name: Upload Pester coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-pester-coverage
+          path: coverage.xml
+
   build-ppl-x86:
-    name: Build 32-bit Packed Library
-    needs: [verify-checklist-sync, build-ppl-x64, version]
+    name: Build 32-bit Packed Library (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }})
+    needs: [verify-checklist-sync, build-ppl-x64, version, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/build-lvlibp
         with:
-          minimum_supported_lv_version: 2021
+          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 32
-          relative_path: ${{ github.workspace }}
+          repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}
           patch: ${{ needs.version.outputs.PATCH }}
@@ -609,7 +694,7 @@ jobs:
       - if: always()
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2021
+          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 32
       - uses: ./.github/actions/rename-file
         with:
@@ -617,19 +702,19 @@ jobs:
           new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x86.lvlibp
       - uses: actions/upload-artifact@v4
         with:
-          name: lv_icon_x86.lvlibp
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-32bit
           path: resource/plugins/lv_icon_x86.lvlibp
 
   build-ppl-x64:
-    name: Build 64-bit Packed Library
-    needs: [verify-checklist-sync, test-2021-x86, version]
+    name: Build 64-bit Packed Library (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }})
+    needs: [verify-checklist-sync, test-x86, version, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/build-lvlibp
         with:
-          minimum_supported_lv_version: 2021
+          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 64
-          relative_path: ${{ github.workspace }}
+          repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}
           patch: ${{ needs.version.outputs.PATCH }}
@@ -638,7 +723,7 @@ jobs:
       - if: always()
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2021
+          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 64
       - uses: ./.github/actions/rename-file
         with:
@@ -646,28 +731,33 @@ jobs:
           new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x64.lvlibp
       - uses: actions/upload-artifact@v4
         with:
-          name: lv_icon_x64.lvlibp
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-64bit
           path: resource/plugins/lv_icon_x64.lvlibp
 
   build-vip:
     name: Build VI Package
     # Chain after 32-bit build, which already depends on 64-bit, to enforce x64 -> x86 -> build-vip ordering
     needs: [verify-checklist-sync, build-ppl-x86, version]
+    outputs:
+      vip_artifact: ${{ steps.build-vip.outputs.vip_artifact }}
+      vip_path: ${{ steps.build-vip.outputs.vip_path }}
+      release_notes_artifact: ${{ steps.release-notes.outputs.artifact_name }}
     runs-on: self-hosted-windows-lv
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Generate release notes
+        id: release-notes
         uses: ./.github/actions/generate-release-notes
         # output_path defaults to Tooling/deployment/release_notes.md
       - uses: actions/download-artifact@v4
         with:
-          name: lv_icon_x86.lvlibp
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-32bit
           path: resource/plugins
       - uses: actions/download-artifact@v4
         with:
-          name: lv_icon_x64.lvlibp
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-64bit
           path: resource/plugins
       - name: Generate display information JSON
         id: display-info
@@ -725,7 +815,7 @@ jobs:
       - uses: ./.github/actions/modify-vipb-display-info
         with:
           supported_bitness: 64
-          relative_path: ${{ github.workspace }}
+          repository_path: ${{ github.workspace }}
           vipb_path: Tooling/deployment/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
@@ -736,10 +826,11 @@ jobs:
           commit: ${{ github.sha }}
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
-      - uses: ./.github/actions/build-vip
+      - id: build-vip
+        uses: ./.github/actions/build-vip
         with:
           supported_bitness: 64
-          relative_path: ${{ github.workspace }}
+          repository_path: ${{ github.workspace }}
           vipb_path: Tooling/deployment/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
@@ -774,3 +865,65 @@ jobs:
           } else {
             Write-Host ("Tag validation ok: {0}" -f $provided)
           }
+
+  analyze-vip:
+    name: Analyze VI Package
+    needs: [verify-checklist-sync, build-vip]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record analyze job start
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = "timings"
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          $path = Join-Path $dir "analyze-vip.txt"
+          "job=analyze-vip" | Out-File -FilePath $path -Encoding utf8
+          "server_time_start=$(Get-Date -Format o)" | Out-File -FilePath $path -Encoding utf8 -Append
+          "run_id=${{ github.run_id }}" | Out-File -FilePath $path -Encoding utf8 -Append
+          "ref=${{ github.ref }}" | Out-File -FilePath $path -Encoding utf8 -Append
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-vip.outputs.vip_artifact }}
+          path: builds/VI Package
+      - name: Locate downloaded VI package
+        id: locate-downloaded-vip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = "builds/VI Package"
+          $vip = Get-ChildItem -Path $dir -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $vip) {
+            Write-Error "No .vip found under '$dir' after artifact download."
+          }
+          "vip_path=$($vip.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+      - name: Analyze built VI package
+        id: analyze-vip
+        uses: ./.github/actions/analyze-vi-package
+        with:
+          vip_artifact_path: ${{ steps.locate-downloaded-vip.outputs.vip_path }}
+          min_labview: ${{ env.MIN_LABVIEW_POLICY }}
+      - name: Upload VI package analysis results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-vip-analysis-junit
+          path: ${{ steps.analyze-vip.outputs.junit }}
+      - name: Record analyze job end and upload timing
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = "timings/analyze-vip.txt"
+          if (-not (Test-Path $path)) {
+            Write-Error "Timing file missing at $path"
+          }
+          "server_time_end=$(Get-Date -Format o)" | Out-File -FilePath $path -Encoding utf8 -Append
+        # Upload timing as its own artifact for duration analysis
+      - name: Upload analyze timing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-analyze-vip-timing
+          path: timings/analyze-vip.txt

@@ -159,6 +159,27 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           path: artifacts
 
+      - name: Validate upstream analysis artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $repo = "${{ github.event.repository.name }}"
+          if ([string]::IsNullOrWhiteSpace($repo)) { $repo = "labview-icon-editor" }
+
+          $analysisDir = Join-Path $PWD ("artifacts/{0}-vip-analysis-junit" -f $repo)
+          if (-not (Test-Path $analysisDir -PathType Container)) {
+            Write-Warning "Expected analysis artifact folder at $analysisDir for $repo. Falling back to legacy folder name 'artifacts/vip-analysis-junit'."
+            $analysisDir = Join-Path $PWD 'artifacts/vip-analysis-junit'
+          }
+          if (-not (Test-Path $analysisDir -PathType Container)) {
+            Write-Error "Expected analysis artifact folder at $analysisDir. Remediation: ensure analyze-vip job uploads <repo>-vip-analysis-junit."
+          }
+          $junit = Get-ChildItem -Path $analysisDir -Filter *.xml -File | Select-Object -First 1
+          if (-not $junit) {
+            Write-Error "No JUnit XML found in $analysisDir. Remediation: ensure analyzer writes pester-results.xml and uploads it."
+          }
+          Write-Host ("Found analyzer result: {0}" -f $junit.FullName)
+
       - name: List downloaded artifacts
         shell: pwsh
         run: |
@@ -173,20 +194,35 @@ jobs:
           $dest = Join-Path $PWD 'reports'
           if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
 
-          $perf = Get-ChildItem -Path $root -Recurse -Filter "performance-measurements.json" -File | Select-Object -First 1
+          $repo = "${{ github.event.repository.name }}"
+          if ([string]::IsNullOrWhiteSpace($repo)) { $repo = "labview-icon-editor" }
+
+          $perf = Get-ChildItem -Path $root -Recurse -Filter "performance-measurements.json" -File | Where-Object { $_.FullName -like "*$repo-reports-json*" } | Select-Object -First 1
+          if (-not $perf) {
+            $perf = Get-ChildItem -Path $root -Recurse -Filter "performance-measurements.json" -File | Select-Object -First 1
+            if ($perf) {
+              Write-Warning "Using fallback performance-measurements.json (not stemmed with $repo)."
+            }
+          }
           if ($perf) {
             Copy-Item -Path $perf.FullName -Destination (Join-Path $dest 'performance-measurements.json') -Force
             Write-Host "Found performance measurements: $($perf.FullName)"
           } else {
-            Write-Host "No performance-measurements.json found in artifacts."
+            Write-Host "No performance-measurements.json found in artifacts for $repo."
           }
 
-          $port = Get-ChildItem -Path $root -Recurse -Filter "portability-status.json" -File | Select-Object -First 1
+          $port = Get-ChildItem -Path $root -Recurse -Filter "portability-status.json" -File | Where-Object { $_.FullName -like "*$repo-reports-json*" } | Select-Object -First 1
+          if (-not $port) {
+            $port = Get-ChildItem -Path $root -Recurse -Filter "portability-status.json" -File | Select-Object -First 1
+            if ($port) {
+              Write-Warning "Using fallback portability-status.json (not stemmed with $repo)."
+            }
+          }
           if ($port) {
             Copy-Item -Path $port.FullName -Destination (Join-Path $dest 'portability-status.json') -Force
             Write-Host "Found portability-status.json: $($port.FullName)"
           } else {
-            Write-Host "No portability-status.json found in artifacts."
+            Write-Host "No portability-status.json found in artifacts for $repo."
           }
 
           Write-Host "Reports directory contents:"
@@ -199,15 +235,35 @@ jobs:
           $root = Join-Path $PWD 'artifacts'
           $dest = Join-Path $PWD 'reports'
           if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
+          $repo = "${{ github.event.repository.name }}"
+          if ([string]::IsNullOrWhiteSpace($repo)) { $repo = "labview-icon-editor" }
+
           $copied = 0
-          foreach ($pattern in @("test-data-readiness-*.md","test-env-readiness-*.md")) {
+          $patterns = @(
+            "$repo-test-data-readiness-*.md",
+            "$repo-test-env-readiness-*.md"
+          )
+          $fallbackPatterns = @(
+            "test-data-readiness-*.md",
+            "test-env-readiness-*.md"
+          )
+
+          foreach ($pattern in $patterns) {
             $item = Get-ChildItem -Path $root -Recurse -Filter $pattern -File | Select-Object -First 1
+            if (-not $item) {
+              $fallback = $fallbackPatterns[$patterns.IndexOf($pattern)]
+              $item = Get-ChildItem -Path $root -Recurse -Filter $fallback -File | Select-Object -First 1
+              if ($item) {
+                Write-Warning ("Using fallback readiness artifact {0} (pattern {1}) instead of stemmed {2}" -f $item.Name, $fallback, $pattern)
+              }
+            }
+
             if ($item) {
               Copy-Item -Path $item.FullName -Destination (Join-Path $dest $item.Name) -Force
               Write-Host ("Copied {0} to reports/" -f $item.Name)
               $copied++
             } else {
-              Write-Warning ("No artifact found matching {0}" -f $pattern)
+              Write-Warning ("No artifact found matching {0} or fallback {1}" -f $pattern, $fallbackPatterns[$patterns.IndexOf($pattern)])
             }
           }
           Write-Host ("Total readiness artifacts copied: {0}" -f $copied)
@@ -241,9 +297,17 @@ jobs:
           $root = Join-Path $PWD 'artifacts'
           $dest = Join-Path $PWD 'reports'
           if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
-          $report = Get-ChildItem -Path $root -Recurse -Filter "test-report.md" -File | Select-Object -First 1
+          $repo = "${{ github.event.repository.name }}"
+          if ([string]::IsNullOrWhiteSpace($repo)) { $repo = "labview-icon-editor" }
+          $report = Get-ChildItem -Path $root -Recurse -Filter "test-report.md" -File | Where-Object { $_.FullName -like "*$repo-test-report*" } | Select-Object -First 1
           if (-not $report) {
-            Write-Error "No test-report.md found in artifacts from upstream CI run."
+            $report = Get-ChildItem -Path $root -Recurse -Filter "test-report.md" -File | Select-Object -First 1
+            if ($report) {
+              Write-Warning "Using fallback test-report.md (not stemmed with $repo)."
+            }
+          }
+          if (-not $report) {
+            Write-Error "No test-report.md found in artifacts from upstream CI run for $repo."
           }
           Copy-Item -Path $report.FullName -Destination (Join-Path $dest 'test-report.md') -Force
           Write-Host ("Copied test report from {0}" -f $report.FullName)
@@ -319,11 +383,18 @@ jobs:
           $notes = $notesCandidates[0]
 
           $expectedVersion = "$(${{ steps.version.outputs.MAJOR }}).$(${{ steps.version.outputs.MINOR }}).$(${{ steps.version.outputs.PATCH }}).$(${{ steps.version.outputs.BUILD }})"
-          if ($vip.Name -notmatch $expectedVersion) {
-            Write-Error ("Located .vip '{0}' does not contain expected version '{1}'. Remediation: ensure artifact filename includes the computed version." -f $vip.Name, $expectedVersion)
+          $repoName = "${{ github.event.repository.name }}"
+          if ([string]::IsNullOrWhiteSpace($repoName)) { $repoName = "labview-icon-editor" }
+
+          $vipPattern = "^{0}_(?<bitness>32|64)bit_{1}\.vip$" -f [regex]::Escape($repoName), [regex]::Escape($expectedVersion)
+          $notesPattern = "^release_notes_{0}_(?<bitness>32|64)bit_{1}\.md$" -f [regex]::Escape($repoName), [regex]::Escape($expectedVersion)
+
+          if ($vip.Name -notmatch $vipPattern) {
+            Write-Error ("Located .vip '{0}' does not match expected pattern '{1}'. Remediation: ensure artifact filename follows <repo>_<bitness>bit_<version>.vip." -f $vip.Name, $vipPattern)
           }
-          if ($notes.Name -notmatch $expectedVersion) {
-            Write-Error ("Located release notes '{0}' do not contain expected version '{1}'. Remediation: ensure notes filename includes the computed version." -f $notes.Name, $expectedVersion)
+
+          if ($notes.Name -notmatch $notesPattern) {
+            Write-Error ("Located release notes '{0}' do not match expected pattern '{1}'. Remediation: ensure release notes filename follows release_notes_<repo>_<bitness>bit_<version>.md." -f $notes.Name, $notesPattern)
           }
 
           "vip_path=$($vip.FullName)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
@@ -361,6 +432,8 @@ jobs:
             const prerelease = '${{ steps.version.outputs.IS_PRERELEASE }}' === 'true';
             const vipName = '${{ steps.locate-artifacts.outputs.vip_name }}';
             const notesName = '${{ steps.locate-artifacts.outputs.notes_name }}';
+            const repo = '${{ github.event.repository.name || 'labview-icon-editor' }}';
+            const stemmedReadiness = `Readiness: ${repo}-test-data-readiness-*.md, ${repo}-test-env-readiness-*.md (fallback to legacy names if stemmed missing)`;
             const evidence = [
               `Test completion: test-completion-${tag}.md`,
               `Test report: test-report.md`,
@@ -368,7 +441,7 @@ jobs:
               `Execution log: test-execution-log-${tag}.md`,
               'Lychee report: lychee-report.json',
               'ADR lint: adr-lint.log',
-              'Readiness: test-data-readiness-*.md, test-env-readiness-*.md',
+              stemmedReadiness,
             ];
             const body = [
               'Automated release generated by tag-and-release workflow.',

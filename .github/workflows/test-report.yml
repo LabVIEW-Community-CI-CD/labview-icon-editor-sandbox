@@ -94,7 +94,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-report
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-test-report
           path: |
             test-report.md
             reports/test-status-${{ github.run_id }}.md

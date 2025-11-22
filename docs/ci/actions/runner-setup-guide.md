@@ -88,7 +88,7 @@ Additionally, **you can pass metadata fields** (like **organization** or **repos
    - Great for reconfiguring LabVIEW for local dev vs. distribution builds.
 
 2. **CI Pipeline (Composite)**
-   - Includes a **test** job for unit tests, a **version** job that computes semantic versioning, and a **build-vi-package** job that packages the `.vip` using the version job's outputs.
+   - Includes a **test** job for unit tests, a **version** job that computes semantic versioning, and a **build-vip** job that packages the `.vip` using the version job's outputs.
    - **Label-based** semantic versioning (`major`, `minor`, `patch`). Defaults to `patch` if no label.
    - **Derives build number from total commit count** (`git rev-list --count HEAD`).
    - **Fork-friendly**: runs on forks without requiring signing keys.
