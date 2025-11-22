@@ -44,8 +44,10 @@ param(
     [string]$Commit
 )
 
-Write-Output "PPL Version: $Major.$Minor.$Patch.$Build"
-Write-Output "Commit: $Commit"
+    # Resolve version from VIPB for determinism
+    $Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
+    Write-Output "PPL Version: $Major.$Minor.$Patch.$Build"
+    Write-Output "Commit: $Commit"
 
 $buildArgs = @(
 "--lv-ver", $Package_LabVIEW_Version,

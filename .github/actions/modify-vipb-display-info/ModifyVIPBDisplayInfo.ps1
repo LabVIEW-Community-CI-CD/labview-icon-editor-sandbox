@@ -106,7 +106,8 @@ catch {
     exit 1
 }
 
-# 3) Calculate the LabVIEW version string
+# 3) Resolve LabVIEW version from VIPB to ensure determinism and calculate the LabVIEW version string
+$Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
 $lvNumericMajor    = $Package_LabVIEW_Version - 2000
 $lvNumericVersion  = "$($lvNumericMajor).$LabVIEWMinorRevision"
 if ($SupportedBitness -eq "64") {

@@ -45,16 +45,39 @@ function Clear-StaleLibraryPaths {
     $lines   = $ini -split "`r?`n"
     $cleaned = @()
     $removed = @()
+    $seen    = @{}
+    $repoNorm = [System.IO.Path]::GetFullPath($RepositoryRoot).TrimEnd('\','/').ToLowerInvariant()
+
     foreach ($line in $lines) {
-        if ($line -match $pattern -and $line -like "*actions-runner*actions-runner*") {
+        if (-not ($line -match $pattern)) {
+            $cleaned += $line
+            continue
+        }
+
+        $parts = $line -split '=',2
+        $value = if ($parts.Count -gt 1) { $parts[1] } else { '' }
+        if ([string]::IsNullOrWhiteSpace($value)) {
             $removed += $line
             continue
         }
+        $valNorm = ([System.IO.Path]::GetFullPath($value)).TrimEnd('\','/').ToLowerInvariant()
+
+        $shouldRemove =
+            ($line -like "*actions-runner*actions-runner*") -or
+            ($valNorm -eq $repoNorm) -or
+            ($seen.ContainsKey($valNorm))
+
+        if ($shouldRemove) {
+            $removed += $line
+            continue
+        }
+
+        $seen[$valNorm] = $true
         $cleaned += $line
     }
     if ($removed.Count -gt 0) {
         Set-Content -LiteralPath $lvIniPath -Value ($cleaned -join "`r`n")
         $sample = $removed | Select-Object -First 1
-        Write-Warning ("Removed {0} stale LocalHost.LibraryPaths entries from {1}. Example removed entry: {2}" -f $removed.Count, $lvIniPath, $sample)
+        Write-Warning ("Removed {0} LocalHost.LibraryPaths entries from {1}. Example removed entry: {2}" -f $removed.Count, $lvIniPath, $sample)
     }
 }

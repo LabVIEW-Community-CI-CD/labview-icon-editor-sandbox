@@ -44,6 +44,20 @@ function Setup {
 function MainSequence {
 
     Write-Information "`n=== MainSequence ===" -InformationAction Continue
+    Write-Information "Preflight: showing LocalHost.LibraryPaths for current bitness..." -InformationAction Continue
+    try {
+        $repoRoot = Split-Path -Parent $ProjectFile
+        $repoRoot = Split-Path -Parent $repoRoot
+        $pathsScript = Join-Path $PSScriptRoot '..\..\scripts\read-library-paths.ps1'
+        if (Test-Path $pathsScript) {
+            & $pathsScript -RepositoryPath $repoRoot -SupportedBitness $Arch -FailOnMissing
+        } else {
+            Write-Warning "read-library-paths.ps1 not found; skipping preflight display."
+        }
+    }
+    catch {
+        Write-Warning ("Preflight LocalHost.LibraryPaths check failed: {0}" -f $_.Exception.Message)
+    }
     Write-Information "Invoking missing-file check via helper script ...`n" -InformationAction Continue
 
     # call helper & capture any stdout (not strictly needed now)

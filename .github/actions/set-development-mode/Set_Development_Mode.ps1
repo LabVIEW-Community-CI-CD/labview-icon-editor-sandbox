@@ -117,12 +117,9 @@ function Get-LabVIEWVersionFromVipb {
 }
 
 try {
-    if (-not $Package_LabVIEW_Version) {
-        $Package_LabVIEW_Version = Get-LabVIEWVersionFromVipb -RootPath $RepositoryPath
-        Write-Information ("Detected LabVIEW version from VIPB: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
-    } else {
-        Write-Information ("Using explicit LabVIEW version: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
-    }
+    # Always resolve from VIPB to ensure determinism; ignore inbound overrides
+    $Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
+    Write-Information ("Detected LabVIEW version from VIPB: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
 
     $targetBitness = $SupportedBitness
     Write-Information ("Targeting bitness: {0}-bit" -f $targetBitness) -InformationAction Continue

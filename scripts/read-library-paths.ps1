@@ -82,6 +82,7 @@ if (-not $allowCustom -and $iniPath -ne $canonical) {
 
 $lines = Get-Content -LiteralPath $iniPath
 $entries = $lines | Where-Object { $_ -match '^LocalHost\.LibraryPaths\d+=' }
+$entries = @($entries)
 
 if (-not $entries -or $entries.Count -eq 0) {
     $msg = "No LocalHost.LibraryPaths entries found in $iniPath"

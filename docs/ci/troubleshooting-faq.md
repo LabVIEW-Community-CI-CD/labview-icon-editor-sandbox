@@ -157,7 +157,7 @@ Below are 13 possible issues you might encounter, along with suggested steps to 
    - [`apply-deps`](../../.github/workflows/ci-composite.yml#apply-deps) – applies VIPC dependencies when needed.
    - [`missing-in-project-check`](../../.github/workflows/ci-composite.yml#missing-in-project-check) – validates project file membership.
    - [`Run Unit Tests`](../../.github/workflows/ci-composite.yml#test) – executes unit tests.
-   - [`Build VI Package`](../../.github/workflows/ci-composite.yml#build-vi-package) – produces the `.vip` artifact.
+   - [`Build VI Package`](../../.github/workflows/ci-composite.yml#build-vip) – produces the `.vip` artifact.
 3. Update your `CONTRIBUTING.md` to specify the merging rules so contributors know what’s needed.
 
 ---

@@ -24,7 +24,7 @@ In a multi-fork or multi-organization environment, **injecting the repository na
 We achieve this by:
 1. **Generating** a JSON object with fields like `"Company Name"` and `"Author Name (Person or Company)"` directly in the workflow using GitHub-provided variables (e.g., `${{ github.repository_owner }}` and `${{ github.event.repository.name }}`).
 2. **Using** the `modify-vipb-display-info` action to merge this JSON into the `.vipb` (VI Package Builder) file.
-3. **Building** the package with the `build-lvlibp` and `build-vi-package` actions from the composite CI workflow.
+3. **Building** the package with the `build-lvlibp` and `build-vip` actions from the composite CI workflow.
 
 ---
 
@@ -44,7 +44,7 @@ We achieve this by:
 
 ## GitHub Actions and PowerShell
 
-An abbreviated **GitHub Actions** example below mirrors the [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) workflow. A **`version`** job first computes the semantic version and outputs `MAJOR`, `MINOR`, `PATCH`, and `BUILD` for downstream steps. The **`build-ppl`** job uses a matrix to compile both 32- and 64-bit packed libraries, and the **`build-vi-package`** job injects the display metadata and creates the final `.vip` file. Referring to the jobs by name—rather than line numbers—helps avoid future drift. The snippet highlights key steps such as `compute-version`, `build-lvlibp`, `modify-vipb-display-info`, and `build-vi-package`:
+An abbreviated **GitHub Actions** example below mirrors the [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) workflow. A **`version`** job first computes the semantic version and outputs `MAJOR`, `MINOR`, `PATCH`, and `BUILD` for downstream steps. The **`build-ppl`** job uses a matrix to compile both 32- and 64-bit packed libraries, and the **`build-vip`** job injects the display metadata and creates the final `.vip` file. Referring to the jobs by name—rather than line numbers—helps avoid future drift. The snippet highlights key steps such as `compute-version`, `build-lvlibp`, `modify-vipb-display-info`, and `build-vip`:
 
 ```yaml
 jobs:
@@ -71,7 +71,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/build-lvlibp
         with:
-          minimum_supported_lv_version: 2021
           supported_bitness: ${{ matrix.bitness }}
           repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
@@ -80,7 +79,7 @@ jobs:
           build: ${{ needs.version.outputs.BUILD }}
           commit: ${{ github.sha }}
 
-  build-vi-package:
+  build-vip:
     runs-on: self-hosted-windows-lv
     needs: [build-ppl, version]
     steps:
@@ -96,8 +95,7 @@ jobs:
           "json=$($info | ConvertTo-Json -Depth 5 -Compress)" >> $Env:GITHUB_OUTPUT
       - uses: ./.github/actions/modify-vipb-display-info
         with:
-          vipb_path: .github/actions/build-vi-package/NI Icon editor.vipb
-          minimum_supported_lv_version: 2023
+          vipb_path: .github/actions/build-vip/NI Icon editor.vipb
           labview_minor_revision: 3
           repository_path: ${{ github.workspace }}
           supported_bitness: 64
@@ -108,10 +106,11 @@ jobs:
           commit: ${{ github.sha }}
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
-      - uses: ./.github/actions/build-vi-package
+      - uses: ./.github/actions/build-vip
         with:
-          minimum_supported_lv_version: 2023
           labview_minor_revision: 3
+          repository_path: ${{ github.workspace }}
+          vipb_path: .github/actions/build-vip/NI Icon editor.vipb
           supported_bitness: 64
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}
@@ -122,7 +121,7 @@ jobs:
           display_information_json: ${{ steps.display-info.outputs.json }}
 ```
 
-> **Note:** `build-vi-package` runs outside the bitness matrix because the Icon Editor ships only a 64-bit VI Package; packaging the 32-bit output would duplicate artifacts.
+> **Note:** `build-vip` runs outside the bitness matrix because the Icon Editor ships only a 64-bit VI Package; packaging the 32-bit output would duplicate artifacts. The LabVIEW major version is resolved automatically from the repo’s VIPB via `scripts/get-package-lv-version.ps1`, so no version override is needed.
 
 **Key points**:
 - **`${{ github.repository_owner }}`** is the **organization** (or user) that owns the repo.
@@ -132,7 +131,7 @@ jobs:
   - the repository URL (with a fallback to `https://github.com/<owner>/<repo>`);
   - descriptive text derived from the repository description when it exists, or a generated default when it does not;
   - the contents of the workflow-generated `Tooling/deployment/release_notes.md` file as the **Release Notes - Change Log** field.
-- `modify-vipb-display-info` and `build-vi-package` consume this JSON to embed the metadata directly in the `.vip`.
+- `modify-vipb-display-info` and `build-vip` consume this JSON to embed the metadata directly in the `.vip`.
 
 ---
 
@@ -145,7 +144,7 @@ jobs:
    2. `build-lvlibp` compiles the **32- and 64-bit** packed libraries.
    3. A PowerShell step generates JSON with `CompanyName` and `AuthorName` fields derived from GitHub variables.
    4. `modify-vipb-display-info` merges that JSON into the `.vipb` file.
-   5. `build-vi-package` produces the final **64-bit LabVIEW 2023** Icon Editor `.vip` package.
+   5. `build-vip` produces the final **64-bit LabVIEW 2023** Icon Editor `.vip` package.
 4. **Actions** can then upload the resulting `.vip` as an artifact.
 
 ---

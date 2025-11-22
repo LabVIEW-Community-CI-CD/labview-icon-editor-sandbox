@@ -375,7 +375,6 @@ jobs:
       - uses: ./.github/actions/apply-vipc
         if: needs.changes.outputs.vipc == 'true'
         with:
-          minimum_supported_lv_version: 2021
           vip_lv_version:               2021
           supported_bitness:            64
           repository_path:              ${{ github.workspace }}
@@ -391,7 +390,6 @@ jobs:
       - uses: ./.github/actions/apply-vipc
         if: needs.changes.outputs.vipc == 'true'
         with:
-          minimum_supported_lv_version: 2021
           vip_lv_version:               2021
           supported_bitness:            32
           repository_path:              ${{ github.workspace }}
@@ -407,7 +405,6 @@ jobs:
       - uses: ./.github/actions/apply-vipc
         if: needs.changes.outputs.vipc == 'true'
         with:
-          minimum_supported_lv_version: 2023
           vip_lv_version:               2023
           supported_bitness:            64
           repository_path:              ${{ github.workspace }}
@@ -422,11 +419,11 @@ jobs:
     steps:
       - uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2021
+          repository_path: ${{ github.workspace }}
           supported_bitness: 64
       - uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2021
+          repository_path: ${{ github.workspace }}
           supported_bitness: 32
 
   check-library-paths-2021:
@@ -501,19 +498,19 @@ jobs:
     steps:
       - uses: ./.github/actions/run-unit-tests
         with:
-          minimum_supported_lv_version: "2021"
+          repository_path: ${{ github.workspace }}
           supported_bitness:            "64"
       - if: always()
         name: Close LabVIEW 2021 64-bit after unit tests
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2021
+          repository_path: ${{ github.workspace }}
           supported_bitness: 64
       - if: always()
         name: Upload unit test report (x64)
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-report-x64
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-unit-test-report-64bit
           path: .github/actions/run-unit-tests/UnitTestReport.xml
           if-no-files-found: ignore
 
@@ -524,19 +521,19 @@ jobs:
     steps:
       - uses: ./.github/actions/run-unit-tests
         with:
-          minimum_supported_lv_version: "2021"
+          repository_path: ${{ github.workspace }}
           supported_bitness:            "32"
       - if: always()
         name: Close LabVIEW 2021 32-bit after unit tests
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2021
+          repository_path: ${{ github.workspace }}
           supported_bitness: 32
       - if: always()
         name: Upload unit test report (x86)
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-report-x86
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-unit-test-report-32bit
           path: .github/actions/run-unit-tests/UnitTestReport.xml
           if-no-files-found: ignore
 
@@ -558,9 +555,11 @@ jobs:
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
+          repo = "${{ github.event.repository.name or 'labview-icon-editor' }}"
+
           reports = {
-              "test-2021-x64": Path("artifacts/unit-test-report-x64/UnitTestReport.xml"),
-              "test-2021-x86": Path("artifacts/unit-test-report-x86/UnitTestReport.xml"),
+              "test-2021-x64": Path(f"artifacts/{repo}-unit-test-report-64bit/UnitTestReport.xml"),
+              "test-2021-x86": Path(f"artifacts/{repo}-unit-test-report-32bit/UnitTestReport.xml"),
           }
 
           perf_entries = []
@@ -612,7 +611,7 @@ jobs:
       - name: Upload performance/portability reports
         uses: actions/upload-artifact@v4
         with:
-          name: reports-json
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-reports-json
           path: |
             reports/performance-measurements.json
             reports/portability-status.json
@@ -653,13 +652,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pester-results
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-pester-results
           path: pester-results.xml
       - name: Upload Pester coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pester-coverage
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-pester-coverage
           path: coverage.xml
 
   build-ppl-x86:
@@ -688,7 +687,7 @@ jobs:
           new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x86.lvlibp
       - uses: actions/upload-artifact@v4
         with:
-          name: lv_icon_x86.lvlibp
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-32bit
           path: resource/plugins/lv_icon_x86.lvlibp
 
   build-ppl-x64:
@@ -717,7 +716,7 @@ jobs:
           new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x64.lvlibp
       - uses: actions/upload-artifact@v4
         with:
-          name: lv_icon_x64.lvlibp
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-64bit
           path: resource/plugins/lv_icon_x64.lvlibp
 
   build-vip:
@@ -739,11 +738,11 @@ jobs:
         # output_path defaults to Tooling/deployment/release_notes.md
       - uses: actions/download-artifact@v4
         with:
-          name: lv_icon_x86.lvlibp
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-32bit
           path: resource/plugins
       - uses: actions/download-artifact@v4
         with:
-          name: lv_icon_x64.lvlibp
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-64bit
           path: resource/plugins
       - name: Generate display information JSON
         id: display-info
@@ -894,7 +893,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vip-analysis-junit
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-vip-analysis-junit
           path: ${{ steps.analyze-vip.outputs.junit }}
       - name: Record analyze job end and upload timing
         if: always()
@@ -911,5 +910,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: analyze-vip-timing
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-analyze-vip-timing
           path: timings/analyze-vip.txt

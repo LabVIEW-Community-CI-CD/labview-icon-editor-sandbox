@@ -111,7 +111,10 @@ catch {
 $LogDirectory = Join-Path -Path $ResolvedRepositoryPath -ChildPath "builds/logs"
 New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
 
-# 3) Calculate the LabVIEW version string
+# 3) Resolve LabVIEW version from VIPB to ensure determinism, overriding any inbound value
+$Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
+
+# Calculate the LabVIEW version string
 $lvNumericMajor    = $Package_LabVIEW_Version - 2000
 $lvNumericVersion  = "$($lvNumericMajor).$LabVIEWMinorRevision"
 if ($SupportedBitness -eq "64") {

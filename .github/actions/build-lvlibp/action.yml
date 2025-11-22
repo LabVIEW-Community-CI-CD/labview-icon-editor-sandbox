@@ -11,8 +11,9 @@ runs:
     - name: Run Build_lvlibp.ps1
       shell: pwsh
       run: |
+        $lvVer = pwsh -NoProfile -File "${{ github.action_path }}/../../scripts/get-package-lv-version.ps1" -RepositoryPath "${{ inputs.repository_path }}"
         & "${{ github.action_path }}/Build_lvlibp.ps1" `
-          -Package_LabVIEW_Version ${{ inputs.minimum_supported_lv_version }} `
+          -Package_LabVIEW_Version $lvVer `
           -SupportedBitness ${{ inputs.supported_bitness }} `
           -RepositoryPath "${{ inputs.repository_path }}" `
           -Major ${{ inputs.major }} `
@@ -21,9 +22,6 @@ runs:
           -Build ${{ inputs.build }} `
           -Commit "${{ inputs.commit }}"
 inputs:
-  minimum_supported_lv_version:
-    description: 'LabVIEW major version'
-    required: true
   supported_bitness:
     description: '32 or 64'
     required: true

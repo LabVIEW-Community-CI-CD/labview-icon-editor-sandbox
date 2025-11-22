@@ -83,6 +83,9 @@ if (-not $AbsoluteProjectPath) {
     exit 3
 }
 Write-Information "Using LabVIEW project file: $AbsoluteProjectPath" -InformationAction Continue
+$repoRoot = Split-Path -Parent $AbsoluteProjectPath
+$Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $repoRoot
+Write-Information ("Resolved LabVIEW version from VIPB: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
 
 # Script-level variables to track exit states
 $Script:OriginalExitCode = 0

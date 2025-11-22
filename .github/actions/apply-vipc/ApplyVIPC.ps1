@@ -24,6 +24,19 @@ Write-Verbose " - SupportedBitness:          $SupportedBitness"
 Write-Verbose " - RepositoryPath:            $RepositoryPath"
 Write-Verbose " - VIPCPath:                  $VIPCPath"
 
+# Resolve LabVIEW version from VIPB to ensure determinism (ignore inbound override)
+try {
+    $resolvedVersion = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
+    if ($resolvedVersion -ne $MinimumSupportedLVVersion) {
+        Write-Warning ("Overriding inbound MinimumSupportedLVVersion '{0}' with VIPB-derived '{1}'" -f $MinimumSupportedLVVersion, $resolvedVersion)
+    }
+    $MinimumSupportedLVVersion = $resolvedVersion
+}
+catch {
+    Write-Error "Failed to resolve LabVIEW version from VIPB: $($_.Exception.Message)"
+    exit 1
+}
+
 # -------------------------
 # 1) Resolve Paths & Validate
 # -------------------------

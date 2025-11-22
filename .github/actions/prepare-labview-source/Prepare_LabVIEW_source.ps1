@@ -55,7 +55,7 @@ $gcliArgs = @(
     '--',
     'LabVIEW',
     'Localhost.LibraryPaths',
-    "$RepositoryPath\$LabVIEW_Project.lvproj",
+    "$RepositoryPath",
     $Build_Spec
 )
 

@@ -27,8 +27,9 @@ runs:
         New-Item -ItemType Directory -Path $logDir -Force | Out-Null
         $logFile = Join-Path -Path $logDir -ChildPath "gcli-preflight.log"
 
+        $lvVer = pwsh -NoProfile -File "${{ github.action_path }}/../../scripts/get-package-lv-version.ps1" -RepositoryPath "${{ inputs.repository_path }}"
         $gcliArgs = @(
-          "--lv-ver", "${{ inputs.minimum_supported_lv_version }}",
+          "--lv-ver", $lvVer,
           "--arch", "${{ inputs.supported_bitness }}",
           "--connect-timeout", "60000",
           "--kill",
@@ -108,11 +109,13 @@ runs:
       run: |
         $displayInformationJson = $Env:DISPLAY_INFORMATION_JSON
 
+        $lvVer = pwsh -NoProfile -File "${{ github.action_path }}/../../scripts/get-package-lv-version.ps1" -RepositoryPath "${{ inputs.repository_path }}"
+
         & "${{ github.action_path }}/build_vip.ps1" `
           -SupportedBitness ${{ inputs.supported_bitness }} `
           -RepositoryPath "${{ inputs.repository_path }}" `
           -VIPBPath "${{ inputs.vipb_path }}" `
-          -Package_LabVIEW_Version ${{ inputs.minimum_supported_lv_version }} `
+          -Package_LabVIEW_Version $lvVer `
           -LabVIEWMinorRevision ${{ inputs.labview_minor_revision }} `
           -Major ${{ inputs.major }} `
           -Minor ${{ inputs.minor }} `
@@ -157,9 +160,13 @@ runs:
         }
 
         $dir = Split-Path -Parent $source
-        $version = "{0}.{1}.{2}.{3}" -f "${{ inputs.major }}", "${{ inputs.minor }}", "${{ inputs.patch }}", "${{ inputs.build }}"
-        $destName = "release_notes_{0}.md" -f $version
-        $artifactName = "release_notes_{0}" -f $version
+        $repoName = Split-Path -Path "${{ inputs.repository_path }}" -Leaf
+        if ([string]::IsNullOrWhiteSpace($repoName)) {
+          $repoName = "labview-icon-editor"
+        }
+        $stem = "{0}_{1}bit_{2}.{3}.{4}.{5}" -f $repoName,"${{ inputs.supported_bitness }}","${{ inputs.major }}","${{ inputs.minor }}","${{ inputs.patch }}","${{ inputs.build }}"
+        $destName = "release_notes_{0}.md" -f $stem
+        $artifactName = "release_notes_{0}" -f $stem
         $destPath = Join-Path -Path $dir -ChildPath $destName
 
         Copy-Item -LiteralPath $source -Destination $destPath -Force
@@ -192,9 +199,23 @@ runs:
         $vip = $vipFiles[0]
         Write-Host ("Selected .vip: {0}" -f $vip.FullName)
 
-        "vip_path=$($vip.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-        "vip_name=$($vip.Name)"     | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-        "vip_artifact=$([System.IO.Path]::GetFileNameWithoutExtension($vip.Name))" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+        $repoName = Split-Path -Path "${{ inputs.repository_path }}" -Leaf
+        if ([string]::IsNullOrWhiteSpace($repoName)) {
+          $repoName = "labview-icon-editor"
+        }
+        $stem = "{0}_{1}bit_{2}.{3}.{4}.{5}" -f $repoName,"${{ inputs.supported_bitness }}","${{ inputs.major }}","${{ inputs.minor }}","${{ inputs.patch }}","${{ inputs.build }}"
+        $targetName = "$stem.vip"
+        $targetPath = Join-Path -Path $vip.DirectoryName -ChildPath $targetName
+
+        if ($vip.FullName -ne $targetPath) {
+          Write-Host ("Renaming {0} -> {1}" -f $vip.Name, $targetName)
+          if (Test-Path $targetPath) { Remove-Item -LiteralPath $targetPath -Force }
+          Move-Item -LiteralPath $vip.FullName -Destination $targetPath -Force
+        }
+
+        "vip_path=$targetPath" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+        "vip_name=$targetName" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+        "vip_artifact=$stem"   | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
     - name: Upload release notes
       id: upload-release-notes
@@ -250,7 +271,7 @@ runs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: gcli-logs
+        name: ${{ steps.locate-vip.outputs.vip_artifact }}-gcli-logs
         path: ${{ inputs.repository_path }}/builds/logs
         if-no-files-found: ignore
 
@@ -276,9 +297,6 @@ inputs:
     required: true
   vipb_path:
     description: 'Path to the VIPB file (relative to workspace)'
-    required: true
-  minimum_supported_lv_version:
-    description: 'LabVIEW major version'
     required: true
   labview_minor_revision:
     description: 'LabVIEW minor revision (0 or 3)'
