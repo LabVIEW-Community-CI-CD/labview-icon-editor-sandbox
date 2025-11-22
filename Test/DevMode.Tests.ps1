@@ -44,3 +44,31 @@ Describe "run-dev-mode.ps1" {
         Remove-Item function:g-cli -ErrorAction SilentlyContinue
     }
 }
+
+Describe "AddTokenToLabVIEW guard" {
+    It "removes stale double-rooted LocalHost.LibraryPaths entries and warns" {
+        $helperPath = (Resolve-Path (Join-Path $PSScriptRoot '..\.github\actions\add-token-to-labview\LocalhostLibraryPaths.ps1')).Path
+        . $helperPath
+
+        $iniPath = Join-Path $TestDrive 'LabVIEW.ini'
+        $iniContent = @(
+            'LocalHost.LibraryPaths1=C:\actions-runner\_work\actions-runner\_work\labview-icon-editor\labview-icon-editor',
+            'LocalHost.LibraryPaths2=C:\valid\repo',
+            'Other=keep'
+        )
+        Set-Content -LiteralPath $iniPath -Value $iniContent
+        $env:LV_INI_OVERRIDE_PATH = $iniPath
+        try {
+            $warnings = & { Clear-StaleLibraryPaths -LvVersion '2021' -Arch '64' -RepositoryRoot 'C:\repo' } 3>&1
+        }
+        finally {
+            Remove-Item Env:LV_INI_OVERRIDE_PATH -ErrorAction SilentlyContinue
+        }
+
+        $updated = Get-Content -LiteralPath $iniPath
+        ($updated -join "`n") | Should -Not -Match 'actions-runner\\_work\\actions-runner\\_work'
+        $updated | Should -Contain 'LocalHost.LibraryPaths2=C:\valid\repo'
+        $updated | Should -Contain 'Other=keep'
+        $warnings | Where-Object { $_ -like '*Removed*stale LocalHost.LibraryPaths*' } | Should -Not -BeNullOrEmpty
+    }
+}

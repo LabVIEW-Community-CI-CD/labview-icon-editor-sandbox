@@ -41,6 +41,14 @@ $tokenTarget = if ($project) {
     $RepositoryPath
 }
 
+# Remove stale runner paths (e.g., double-rooted workspaces) before adding the current one.
+$helperPath = Join-Path -Path $PSScriptRoot -ChildPath 'LocalhostLibraryPaths.ps1'
+if (-not (Test-Path -LiteralPath $helperPath)) {
+    throw "Missing helper script for cleaning LocalHost.LibraryPaths: $helperPath"
+}
+. $helperPath
+Clear-StaleLibraryPaths -LvVersion $MinimumSupportedLVVersion -Arch $SupportedBitness -RepositoryRoot $RepositoryPath
+
 $_gcliArgs = @(
     '--lv-ver', $MinimumSupportedLVVersion,
     '--arch', $SupportedBitness,
