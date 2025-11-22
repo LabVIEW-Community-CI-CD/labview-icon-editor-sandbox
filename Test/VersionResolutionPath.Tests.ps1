@@ -1,6 +1,9 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+# Import powershell-yaml module for YAML parsing
+Import-Module powershell-yaml -ErrorAction Stop
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $workflowPath = Join-Path $repoRoot '.github/workflows/ci-composite.yml'
 $actionPath = Join-Path $repoRoot '.github/actions/run-unit-tests/action.yml'

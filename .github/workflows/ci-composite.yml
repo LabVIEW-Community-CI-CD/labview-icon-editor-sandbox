@@ -702,6 +702,7 @@ jobs:
         run: |
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module Pester -Scope CurrentUser -Force -RequiredVersion 5.7.1
+          Install-Module powershell-yaml -Scope CurrentUser -Force
       - name: Run Pester with coverage
         shell: pwsh
         run: |
