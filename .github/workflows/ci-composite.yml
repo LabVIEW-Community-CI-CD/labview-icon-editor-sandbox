@@ -553,8 +553,18 @@ jobs:
         with:
           repository_path: ${{ github.workspace }}
           supported_bitness: 64
-      - if: always()
-        name: Upload unit test report (x64)
+      - name: Upload unit test report (x64)
+        id: check_report_x64
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path '.github/actions/run-unit-tests/UnitTestReport.xml') {
+            "found_report=true" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append -Encoding utf8
+          } else {
+            "found_report=false" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append -Encoding utf8
+          }
+      - name: Upload unit test report (x64)
+        if: always() && steps.check_report_x64.outputs.found_report == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-unit-test-report-64bit
@@ -576,8 +586,18 @@ jobs:
         with:
           repository_path: ${{ github.workspace }}
           supported_bitness: 32
-      - if: always()
-        name: Upload unit test report (x86)
+      - name: Upload unit test report (x86)
+        id: check_report_x86
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path '.github/actions/run-unit-tests/UnitTestReport.xml') {
+            "found_report=true" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append -Encoding utf8
+          } else {
+            "found_report=false" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append -Encoding utf8
+          }
+      - name: Upload unit test report (x86)
+        if: always() && steps.check_report_x86.outputs.found_report == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-unit-test-report-32bit
