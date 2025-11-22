@@ -44,6 +44,16 @@
       "default": "64"
     },
     {
+      "id": "libraryPathsBitness",
+      "type": "pickString",
+      "description": "Bitness for reading LocalHost.LibraryPaths entries",
+      "options": [
+        "32",
+        "64"
+      ],
+      "default": "64"
+    },
+    {
       "id": "semverMajor",
       "type": "promptString",
       "description": "Major version",
@@ -172,6 +182,24 @@
         "${workspaceFolder}/.github/actions/revert-development-mode/run-dev-mode.ps1",
         "-SupportedBitness",
         "${input:devModeBitness}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Show LocalHost.LibraryPaths (LabVIEW)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/read-library-paths.ps1",
+        "-RepositoryPath",
+        "${workspaceFolder}",
+        "-SupportedBitness",
+        "${input:libraryPathsBitness}"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

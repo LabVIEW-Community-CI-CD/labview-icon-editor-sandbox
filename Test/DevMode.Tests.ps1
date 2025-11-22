@@ -47,7 +47,7 @@ Describe "run-dev-mode.ps1" {
 
 Describe "AddTokenToLabVIEW guard" {
     It "removes stale double-rooted LocalHost.LibraryPaths entries and warns" {
-        $helperPath = (Resolve-Path (Join-Path $PSScriptRoot '..\.github\actions\add-token-to-labview\LocalhostLibraryPaths.ps1')).Path
+        $helperPath = Join-Path $PSScriptRoot '..\.github\actions\add-token-to-labview\LocalhostLibraryPaths.ps1'
         . $helperPath
 
         $iniPath = Join-Path $TestDrive 'LabVIEW.ini'
@@ -57,13 +57,11 @@ Describe "AddTokenToLabVIEW guard" {
             'Other=keep'
         )
         Set-Content -LiteralPath $iniPath -Value $iniContent
-        $env:LV_INI_OVERRIDE_PATH = $iniPath
-        try {
-            $warnings = & { Clear-StaleLibraryPaths -LvVersion '2021' -Arch '64' -RepositoryRoot 'C:\repo' } 3>&1
-        }
-        finally {
-            Remove-Item Env:LV_INI_OVERRIDE_PATH -ErrorAction SilentlyContinue
-        }
+
+        # Override resolver to point at our test ini
+        Set-Item -Path Function:Resolve-LVIniPath -Value ([scriptblock]::Create("param([string]`$LvVersion,[string]`$Arch) return '$iniPath'"))
+
+        $warnings = & { Clear-StaleLibraryPaths -LvVersion '2021' -Arch '64' -RepositoryRoot 'C:\repo' } 3>&1
 
         $updated = Get-Content -LiteralPath $iniPath
         ($updated -join "`n") | Should -Not -Match 'actions-runner\\_work\\actions-runner\\_work'

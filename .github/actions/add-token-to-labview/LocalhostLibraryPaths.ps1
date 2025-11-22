@@ -1,19 +1,37 @@
-# Helper to scrub stale LocalHost.LibraryPaths entries from LabVIEW INI
+# Helper functions to resolve LabVIEW ini locations and remove stale LocalHost.LibraryPaths entries.
+
+function Resolve-LVIniPath {
+    param(
+        [string]$LvVersion,
+        [string]$Arch
+    )
+
+    if ($Arch -eq '64') {
+        $candidates = @(
+            "C:\Program Files\National Instruments\LabVIEW $LvVersion\LabVIEW.ini",
+            "$env:ProgramData\National Instruments\LabVIEW $LvVersion\LabVIEW.ini"
+        )
+    } else {
+        $candidates = @(
+            "C:\Program Files (x86)\National Instruments\LabVIEW $LvVersion\LabVIEW.ini",
+            "$env:ProgramData\National Instruments\LabVIEW $LvVersion (32-bit)\LabVIEW.ini"
+        )
+    }
+
+    foreach ($path in $candidates) {
+        if (Test-Path $path) { return $path }
+    }
+    return $null
+}
+
 function Clear-StaleLibraryPaths {
     param(
         [string]$LvVersion,
         [string]$Arch,
         [string]$RepositoryRoot
     )
-    $overrideIni = $env:LV_INI_OVERRIDE_PATH
-    $lvIniPath = if ($overrideIni) {
-        $overrideIni
-    } elseif ($Arch -eq '64') {
-        "$env:ProgramData\National Instruments\LabVIEW $LvVersion\LabVIEW.ini"
-    } else {
-        "$env:ProgramData\National Instruments\LabVIEW $LvVersion (32-bit)\LabVIEW.ini"
-    }
-    if (-not (Test-Path $lvIniPath)) { return }
+    $lvIniPath = Resolve-LVIniPath -LvVersion $LvVersion -Arch $Arch
+    if (-not $lvIniPath) { return }
 
     $ini     = Get-Content -LiteralPath $lvIniPath -Raw
     $pattern = 'LocalHost\.LibraryPaths\d+='
