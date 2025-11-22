@@ -483,22 +483,52 @@ jobs:
     needs: [verify-checklist-sync, apply-deps-x64, check-library-paths, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
       - uses: ./.github/actions/missing-in-project
         with:
           lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           arch:         "64"
           project-file: "lv_icon_editor.lvproj"
+      - name: Detect unexpected workspace changes (x64)
+        if: always()
+        shell: pwsh
+        run: |
+          cd $Env:GITHUB_WORKSPACE
+          $dirty = git status --porcelain
+          if ($dirty) {
+            git status --short
+            git diff > post_mip_dirty_x64.diff
+            Write-Error "Workspace became dirty during missing-in-project-x64. Investigate diff at post_mip_dirty_x64.diff"
+          }
 
   missing-in-project-x86:
     name: Test Missing-In-Project (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
     needs: [verify-checklist-sync, missing-in-project-x64, check-library-paths, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
       - uses: ./.github/actions/missing-in-project
         with:
           lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           arch:         "32"
           project-file: "lv_icon_editor.lvproj"
+      - name: Detect unexpected workspace changes (x86)
+        if: always()
+        shell: pwsh
+        run: |
+          cd $Env:GITHUB_WORKSPACE
+          $dirty = git status --porcelain
+          if ($dirty) {
+            git status --short
+            git diff > post_mip_dirty_x86.diff
+            Write-Error "Workspace became dirty during missing-in-project-x86. Investigate diff at post_mip_dirty_x86.diff"
+          }
 
   test-x64:
     name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
