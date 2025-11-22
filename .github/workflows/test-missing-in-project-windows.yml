@@ -61,11 +61,27 @@ jobs:
             echo "✅ Nothing missing for ${{ matrix.lv-version }}‑${{ matrix.bitness }}" >> $GITHUB_STEP_SUMMARY
           }
 
-      # 4️⃣  Keep the binary‑generated list as a downloadable artifact
+      # 4️⃣  Keep the binary-generated list as a downloadable artifact
       - name: Upload missing-files artifact
         if: always() && steps.mip.outputs.passed != 'True'
         uses: actions/upload-artifact@v4
         with:
           name: missing-files-${{ matrix.lv-version }}-${{ matrix.bitness }}
           path: missing-files.txt
+          if-no-files-found: ignore
+
+      # 5️⃣  Upload g-cli diagnostics when available
+      - name: Upload g-cli log
+        if: always() && steps.mip.outputs.gcli-log != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: gcli-log-${{ matrix.lv-version }}-${{ matrix.bitness }}
+          path: ${{ steps.mip.outputs.gcli-log }}
+          if-no-files-found: ignore
+      - name: Upload g-cli metadata
+        if: always() && steps.mip.outputs.meta-path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: gcli-meta-${{ matrix.lv-version }}-${{ matrix.bitness }}
+          path: ${{ steps.mip.outputs.meta-path }}
           if-no-files-found: ignore

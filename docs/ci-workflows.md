@@ -104,7 +104,7 @@ Below are the **key GitHub Actions** provided in this repository:
    - Invokes `Set_Development_Mode.ps1` or `RevertDevelopmentMode.ps1`.
    - Usually triggered via `workflow_dispatch` for manual toggling.
 
-2. **[Build VI Package](ci/actions/build-vi-package.md)**
+2. **[Build VI Package](ci/actions/build-vi-package.md)** (build-vip action)
    - **Automatically** versions your code based on PR labels (`major`, `minor`, `patch`).
      Direct pushes retain the previous version and increment only the build number.
    - Uses a **build counter** to ensure each artifact is uniquely numbered (e.g., `v1.2.3-build4`).
@@ -129,9 +129,9 @@ The [`ci-composite.yml`](../.github/workflows/ci-composite.yml) pipeline breaks 
 - **missing-in-project-check** – verifies every source file is referenced in the `.lvproj`.
 - **test** – runs LabVIEW unit tests on Windows in LabVIEW 2021 (32- and 64-bit).
 - **build-ppl** – uses a matrix to build 32-bit and 64-bit packed libraries, then uses the `rename-file` action to append the bitness to each library’s filename.
-- **build-vi-package** – packages the final VI Package using the built libraries and version information. In `ci-composite.yml` this job passes `supported_bitness: 64`, so it produces only a 64-bit `.vip`.
+- **build-vip** – packages the final VI Package using the built libraries and version information, outputting `<repo>_<bitness>bit_<major>.<minor>.<patch>.<build>.vip`. In `ci-composite.yml` this job passes `supported_bitness: 64`, so it produces only a 64-bit `.vip`.
 
-Both `build-ppl` and `build-vi-package` run a `close-labview` step after their build actions finish but before any steps that rename files or upload artifacts, so it isn't the job's final step.
+Both `build-ppl` and `build-vip` run a `close-labview` step after their build actions finish but before any steps that rename files or upload artifacts, so it isn't the job's final step.
 
 The `build-ppl` job uses a matrix to produce both bitnesses rather than distinct jobs.
 

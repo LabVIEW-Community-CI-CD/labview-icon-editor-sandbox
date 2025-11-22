@@ -41,6 +41,8 @@ param(
     [string]$AuthorName
 )
 
+$ReleaseNotesFile = Join-Path $RepositoryPath 'Tooling\deployment\release_notes.md'
+
 # Helper function to verify a file/folder path exists
 function Test-PathExistence {
     param(
@@ -89,6 +91,49 @@ function Invoke-ScriptSafe {
         Write-Error "Error occurred while executing `"$ScriptPath`" with arguments: $render. Exiting. Details: $($_.Exception.Message)"
         exit 1
     }
+}
+
+function Write-ReleaseNotesFromGit {
+    param(
+        [string]$RepoPath,
+        [string]$DestinationPath
+    )
+
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Write-Verbose "git not found; skipping release notes generation from git."
+        return
+    }
+
+    try {
+        $lastTag = git -C $RepoPath describe --tags --abbrev=0 2>$null
+    }
+    catch {
+        $lastTag = $null
+    }
+
+    if (-not $lastTag) {
+        Write-Verbose "No tags found; using HEAD for release notes."
+        $range  = 'HEAD'
+        $header = 'Release Notes'
+    }
+    else {
+        Write-Verbose ("Last tag detected: {0}" -f $lastTag)
+        $range  = "$lastTag..HEAD"
+        $header = "Release Notes (since $lastTag)"
+    }
+
+    $log = git -C $RepoPath log $range --pretty='- %h %s' --no-merges
+    if (-not $log) {
+        $log = if ($lastTag) { 'No commits since last tag.' } else { 'No commits found.' }
+    }
+
+    $body = "$header`n`n$log`n"
+    $destDir = Split-Path -Path $DestinationPath -Parent
+    if ($destDir -and -not (Test-Path -LiteralPath $destDir)) {
+        New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+    }
+    Set-Content -Path $DestinationPath -Value $body -Encoding utf8
+    Write-Information "Generated release notes from git into $DestinationPath" -InformationAction Continue
 }
 
 function Get-LabVIEWVersionFromVipb {
@@ -168,8 +213,7 @@ try {
     Write-Information "Applying VIPC (dependencies) for 32-bit..." -InformationAction Continue
     $ApplyVIPC = Join-Path $ActionsPath "apply-vipc/ApplyVIPC.ps1"
     Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
-        MinimumSupportedLVVersion = $lvVersion
-        VIP_LVVersion             = $lvVersion
+        Package_LabVIEW_Version   = $lvVersion
         SupportedBitness          = '32'
         RepositoryPath            = $RepositoryPath
         VIPCPath                  = 'Tooling\deployment\runner_dependencies.vipc'
@@ -181,14 +225,14 @@ try {
     Invoke-ScriptSafe -ScriptPath $MissingHelper -ArgumentMap @{
         LVVersion   = $lvVersion
         Arch        = '32'
-        ProjectFile = "$RepositoryPath\lv_icon_editor.lvproj"
+        ProjectFile = (Join-Path $RepositoryPath 'lv_icon_editor.lvproj')
     }
 
     # 3) Build LV Library (32-bit)
     Write-Verbose "Building LV library (32-bit)..."
     $BuildLvlibp = Join-Path $ActionsPath "build-lvlibp/Build_lvlibp.ps1"
     $argsLvlibp32 = @{
-        MinimumSupportedLVVersion = $lvVersion
+        Package_LabVIEW_Version   = $lvVersion
         SupportedBitness          = '32'
         RepositoryPath            = $RepositoryPath
         Major                     = $Major
@@ -202,27 +246,50 @@ try {
     # 4) Close LabVIEW (32-bit)
     Write-Verbose "Closing LabVIEW (32-bit)..."
     $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion', $lvVersion,'-SupportedBitness','32')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentMap @{
+        Package_LabVIEW_Version = $lvVersion
+        SupportedBitness        = '32'
+    }
 
     # 5) Rename .lvlibp -> lv_icon_x86.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x86.lvlibp..."
     $RenameFile = Join-Path $ActionsPath "rename-file/Rename-file.ps1"
-    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RepositoryPath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x86.lvlibp')
+    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentMap @{
+        CurrentFilename = "$RepositoryPath\resource\plugins\lv_icon.lvlibp"
+        NewFilename     = 'lv_icon_x86.lvlibp'
+    }
+
+    # 5.1) Restore project to avoid cross-bitness saves before 64-bit build
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        Write-Verbose "Restoring lv_icon_editor.lvproj from source control before 64-bit build..."
+        $restore = & git -C $RepositoryPath checkout -- "lv_icon_editor.lvproj" 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Failed to restore lv_icon_editor.lvproj: $($restore -join '; ')"
+        }
+    } else {
+        Write-Warning "git not found; skipping lvproj restore before 64-bit build."
+    }
 
     # 6) Apply VIPC (64-bit)
     Write-Information "Applying VIPC (dependencies) for 64-bit..." -InformationAction Continue
     Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
-        MinimumSupportedLVVersion = $lvVersion
-        VIP_LVVersion             = $lvVersion
+        Package_LabVIEW_Version   = $lvVersion
         SupportedBitness          = '64'
         RepositoryPath            = $RepositoryPath
         VIPCPath                  = 'Tooling\deployment\runner_dependencies.vipc'
     }
 
+    # 6.1) Ensure LabVIEW 64-bit is closed before building to avoid loaded NIIconEditor collisions
+    Write-Verbose "Pre-build: closing LabVIEW (64-bit) to ensure a clean session..."
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentMap @{
+        Package_LabVIEW_Version = $lvVersion
+        SupportedBitness        = '64'
+    }
+
     # 7) Build LV Library (64-bit)
     Write-Verbose "Building LV library (64-bit)..."
     $argsLvlibp64 = @{
-        MinimumSupportedLVVersion = $lvVersion
+        Package_LabVIEW_Version   = $lvVersion
         SupportedBitness          = '64'
         RepositoryPath            = $RepositoryPath
         Major                     = $Major
@@ -235,17 +302,26 @@ try {
 
     # 7.1) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion', $lvVersion,'-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentMap @{
+        Package_LabVIEW_Version = $lvVersion
+        SupportedBitness        = '64'
+    }
 
     # Rename .lvlibp -> lv_icon_x64.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x64.lvlibp..."
-    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RepositoryPath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x64.lvlibp')
+    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentMap @{
+        CurrentFilename = "$RepositoryPath\resource\plugins\lv_icon.lvlibp"
+        NewFilename     = 'lv_icon_x64.lvlibp'
+    }
 
     # -------------------------------------------------------------------------
     # 8) Construct the JSON for "Company Name" & "Author Name", plus version
     # -------------------------------------------------------------------------
     # We include "Package Version" with your script parameters.
     # The rest of the fields remain empty or default as needed.
+    Write-Verbose "Generating release notes from git..."
+    Write-ReleaseNotesFromGit -RepoPath $RepositoryPath -DestinationPath $ReleaseNotesFile
+
     $jsonObject = @{
         "Package Version" = @{
             "major" = $Major
@@ -253,15 +329,15 @@ try {
             "patch" = $Patch
             "build" = $Build
         }
-        "Product Name"                  = ""
-        "Company Name"                  = $CompanyName
+        "Product Name"                    = "LabVIEW Icon Editor"
+        "Company Name"                    = $CompanyName
         "Author Name (Person or Company)" = $AuthorName
-        "Product Homepage (URL)"        = ""
-        "Legal Copyright"               = ""
-        "License Agreement Name"        = ""
-        "Product Description Summary"   = ""
-        "Product Description"           = ""
-        "Release Notes - Change Log"    = ""
+        "Product Homepage (URL)"          = "https://github.com/LabVIEW-Community-CI-CD/labview-icon-editor"
+        "Legal Copyright"                 = "LabVIEW-Community-CI-CD"
+        "License Agreement Name"          = ""
+        "Product Description Summary"     = "Community icon editor for LabVIEW"
+        "Product Description"             = "Community-driven icon editor for LabVIEW including custom icon APIs."
+        "Release Notes - Change Log"      = ""
     }
 
     $DisplayInformationJSON = $jsonObject | ConvertTo-Json -Depth 3
@@ -269,44 +345,47 @@ try {
     # 9) Modify VIPB Display Information
     Write-Verbose "Modify VIPB Display Information (64-bit)..."
     $ModifyVIPB = Join-Path $ActionsPath "modify-vipb-display-info/ModifyVIPBDisplayInfo.ps1"
-    Invoke-ScriptSafe $ModifyVIPB `
-        (
-            # Use single-dash for all recognized parameters
-            "-SupportedBitness 64 " +
-            "-RepositoryPath `"$RepositoryPath`" " +
-            "-VIPBPath `"Tooling\deployment\NI Icon editor.vipb`" " +
-            "-MinimumSupportedLVVersion 2023 " +
-            "-LabVIEWMinorRevision $LabVIEWMinorRevision " +
-            "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
-            "-Commit `"$Commit`" " +
-            "-ReleaseNotesFile `"$RepositoryPath\Tooling\deployment\release_notes.md`" " +
-            # Pass our JSON
-            "-DisplayInformationJSON '$DisplayInformationJSON' " +
-            "-Verbose"
-        )
+    Invoke-ScriptSafe -ScriptPath $ModifyVIPB -ArgumentMap @{
+        SupportedBitness         = '64'
+        RepositoryPath           = $RepositoryPath
+        VIPBPath                 = 'Tooling\deployment\NI Icon editor.vipb'
+        Package_LabVIEW_Version  = $lvVersion
+        LabVIEWMinorRevision     = $LabVIEWMinorRevision
+        Major                    = $Major
+        Minor                    = $Minor
+        Patch                    = $Patch
+        Build                    = $Build
+        Commit                   = $Commit
+        ReleaseNotesFile         = $ReleaseNotesFile
+        DisplayInformationJSON   = $DisplayInformationJSON
+        Verbose                  = $true
+    }
 
     # 11) Build VI Package (64-bit) 2023
     Write-Verbose "Building VI Package (64-bit)..."
     $BuildVip = Join-Path $ActionsPath "build-vip/build_vip.ps1"
-    Invoke-ScriptSafe $BuildVip `
-        (
-            # Use single-dash for all recognized parameters
-            "-SupportedBitness 64 " +
-            "-RepositoryPath `"$RepositoryPath`" " +
-            "-VIPBPath `"Tooling\deployment\NI Icon editor.vipb`" " +
-            "-MinimumSupportedLVVersion 2023 " +
-            "-LabVIEWMinorRevision $LabVIEWMinorRevision " +
-            "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
-            "-Commit `"$Commit`" " +
-            "-ReleaseNotesFile `"$RepositoryPath\Tooling\deployment\release_notes.md`" " +
-            # Pass our JSON
-            "-DisplayInformationJSON '$DisplayInformationJSON' " +
-            "-Verbose"
-        )
+    Invoke-ScriptSafe -ScriptPath $BuildVip -ArgumentMap @{
+        SupportedBitness         = '64'
+        RepositoryPath           = $RepositoryPath
+        VIPBPath                 = 'Tooling\deployment\NI Icon editor.vipb'
+        Package_LabVIEW_Version  = $lvVersion
+        LabVIEWMinorRevision     = $LabVIEWMinorRevision
+        Major                    = $Major
+        Minor                    = $Minor
+        Patch                    = $Patch
+        Build                    = $Build
+        Commit                   = $Commit
+        ReleaseNotesFile         = $ReleaseNotesFile
+        DisplayInformationJSON   = $DisplayInformationJSON
+        Verbose                  = $true
+    }
 
     # 12) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2023','-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentMap @{
+        Package_LabVIEW_Version = $lvVersion
+        SupportedBitness        = '64'
+    }
 
     Write-Information "All scripts executed successfully!" -InformationAction Continue
     Write-Verbose "Script: Build.ps1 completed without errors."

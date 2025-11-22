@@ -6,18 +6,19 @@
     Utilizes g-cli's QuitLabVIEW command to shut down the specified LabVIEW
     version and bitness, ensuring the application exits cleanly.
 
-.PARAMETER MinimumSupportedLVVersion
+.PARAMETER Package_LabVIEW_Version
     LabVIEW version to close (e.g., "2021").
 
 .PARAMETER SupportedBitness
     Bitness of the LabVIEW instance ("32" or "64").
 
 .EXAMPLE
-    .\Close_LabVIEW.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64"
+    .\Close_LabVIEW.ps1 -Package_LabVIEW_Version "2021" -SupportedBitness "64"
 #>
 param(
     [Parameter(Mandatory)]
-    [string]$MinimumSupportedLVVersion,
+    [Alias('MinimumSupportedLVVersion')]
+    [string]$Package_LabVIEW_Version,
     [Parameter(Mandatory)]
     [ValidateSet("32","64")]
     [string]$SupportedBitness
@@ -60,8 +61,8 @@ function Invoke-SafeQuitLabVIEW {
 }
 
 try {
-    Invoke-SafeQuitLabVIEW -Version $MinimumSupportedLVVersion -Bitness $SupportedBitness
-    Write-Information "LabVIEW $MinimumSupportedLVVersion ($SupportedBitness-bit) closed or not running." -InformationAction Continue
+    Invoke-SafeQuitLabVIEW -Version $Package_LabVIEW_Version -Bitness $SupportedBitness
+    Write-Information "LabVIEW $Package_LabVIEW_Version ($SupportedBitness-bit) closed or not running." -InformationAction Continue
 }
 catch {
     Write-Error $_.Exception.Message

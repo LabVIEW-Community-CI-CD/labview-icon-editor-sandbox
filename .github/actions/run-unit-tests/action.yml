@@ -11,12 +11,13 @@ runs:
     - name: Run RunUnitTests.ps1
       shell: pwsh
       run: |
+        $lvVer = pwsh -NoProfile -File "${{ github.action_path }}/../../scripts/get-package-lv-version.ps1" -RepositoryPath "${{ inputs.repository_path }}"
         & "${{ github.action_path }}/RunUnitTests.ps1" `
-          -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} `
+          -Package_LabVIEW_Version $lvVer `
           -SupportedBitness ${{ inputs.supported_bitness }}
 inputs:
-  minimum_supported_lv_version:
-    description: 'LabVIEW major version'
+  repository_path:
+    description: 'Workspace root path'
     required: true
   supported_bitness:
     description: '32 or 64'

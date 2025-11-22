@@ -5,14 +5,14 @@ Invoke **`RunUnitTests.ps1`** to execute LabVIEW unit tests and output a result 
 ## Inputs
 | Name | Required | Example | Description |
 |------|----------|---------|-------------|
-| `minimum_supported_lv_version` | **Yes** | `2021` | LabVIEW major version. |
+| `repository_path` | **Yes** | `${{ github.workspace }}` | Workspace root; version is resolved from the repo VIPB. |
 | `supported_bitness` | **Yes** | `32` or `64` | Target LabVIEW bitness. |
 
 ## Quick-start
 ```yaml
 - uses: ./.github/actions/run-unit-tests
   with:
-    minimum_supported_lv_version: 2024
+    repository_path: ${{ github.workspace }}
     supported_bitness: 64
 ```
 

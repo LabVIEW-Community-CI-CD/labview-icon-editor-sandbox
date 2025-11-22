@@ -7,7 +7,7 @@
     the LabVIEW INI file under the Localhost.LibraryPaths token. This enables
     LabVIEW to locate local project libraries during development or builds.
 
-.PARAMETER MinimumSupportedLVVersion
+.PARAMETER Package_LabVIEW_Version
     LabVIEW version used by g-cli (e.g., "2021").
 
 .PARAMETER SupportedBitness
@@ -17,11 +17,11 @@
     Path to the repository root that should be added to the INI token.
 
 .EXAMPLE
-    .\AddTokenToLabVIEW.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RepositoryPath "C:\labview-icon-editor"
+    .\AddTokenToLabVIEW.ps1 -Package_LabVIEW_Version "2021" -SupportedBitness "64" -RepositoryPath "C:\labview-icon-editor"
 #>
 
 param(
-    [Parameter(Mandatory)][Alias('Package_LabVIEW_Version')][string]$MinimumSupportedLVVersion,
+    [Parameter(Mandatory)][Alias('MinimumSupportedLVVersion')][string]$Package_LabVIEW_Version,
     [Parameter(Mandatory)][ValidateSet('32','64')][string]$SupportedBitness,
     [Parameter(Mandatory)][string]$RepositoryPath
 )
@@ -41,8 +41,16 @@ $tokenTarget = if ($project) {
     $RepositoryPath
 }
 
+# Remove stale runner paths (e.g., double-rooted workspaces) before adding the current one.
+$helperPath = Join-Path $PSScriptRoot 'LocalhostLibraryPaths.ps1'
+if (-not (Test-Path $helperPath)) {
+    throw "Missing helper script for cleaning LocalHost.LibraryPaths: $helperPath"
+}
+. $helperPath
+Clear-StaleLibraryPaths -LvVersion $Package_LabVIEW_Version -Arch $SupportedBitness -RepositoryRoot $RepositoryPath
+
 $_gcliArgs = @(
-    '--lv-ver', $MinimumSupportedLVVersion,
+    '--lv-ver', $Package_LabVIEW_Version,
     '--arch', $SupportedBitness,
     '--',
     $iniTokenVi,
@@ -68,3 +76,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Information "Created localhost.library path in ini file." -InformationAction Continue
+
+# Ensure canonical INI also carries the token (g-cli may write to ProgramData/user INI)
+try {
+    Add-LibraryPathToken -LvVersion $Package_LabVIEW_Version -Arch $SupportedBitness -TokenPath $tokenTarget -RepositoryRoot $RepositoryPath
+}
+catch {
+    Write-Warning ("Failed to mirror LocalHost.LibraryPaths into canonical INI: {0}" -f $_.Exception.Message)
+}

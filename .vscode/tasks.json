@@ -44,6 +44,26 @@
       "default": "64"
     },
     {
+      "id": "libraryPathsBitness",
+      "type": "pickString",
+      "description": "Bitness for reading LocalHost.LibraryPaths entries",
+      "options": [
+        "32",
+        "64"
+      ],
+      "default": "64"
+    },
+    {
+      "id": "lvlibpBitness",
+      "type": "pickString",
+      "description": "Bitness for building the lvlibp",
+      "options": [
+        "32",
+        "64"
+      ],
+      "default": "64"
+    },
+    {
       "id": "semverMajor",
       "type": "promptString",
       "description": "Major version",
@@ -53,7 +73,7 @@
       "id": "semverMinor",
       "type": "promptString",
       "description": "Minor version",
-      "default": "0"
+      "default": "1"
     },
     {
       "id": "semverPatch",
@@ -96,7 +116,7 @@
         "-File",
         "${workspaceFolder}/.github/actions/analyze-vi-package/run-local.ps1",
         "-VipArtifactPath",
-        "${input:vipArtifactPath}",
+        "builds/VI Package/${workspaceFolderBasename}_64bit_*",
         "-MinLabVIEW",
         "${input:minLv}"
       ],
@@ -135,14 +155,45 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
+      "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Build VIP (full pipeline)",
-      "dependsOn": [
-        "Build VI Package (Build.ps1)"
+      "label": "Build VIP (stemmed artifact naming)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/.github/actions/build-vip/build_vip.ps1",
+        "-SupportedBitness",
+        "${input:lvlibpBitness}",
+        "-RepositoryPath",
+        "${input:repoPath}",
+        "-VIPBPath",
+        ".github/actions/build-vip/NI Icon editor.vipb",
+        "-Package_LabVIEW_Version",
+        "$(pwsh -NoProfile -File ${workspaceFolder}/scripts/get-package-lv-version.ps1 -RepositoryPath ${workspaceFolder})",
+        "-LabVIEWMinorRevision",
+        "3",
+        "-Major",
+        "${input:semverMajor}",
+        "-Minor",
+        "${input:semverMinor}",
+        "-Patch",
+        "${input:semverPatch}",
+        "-Build",
+        "${input:buildNumber}",
+        "-Commit",
+        "${input:commitHash}",
+        "-ReleaseNotesFile",
+        "${workspaceFolder}/Tooling/deployment/release_notes.md",
+        "-DisplayInformationJSON",
+        "{}"
       ],
-      "dependsOrder": "sequence",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "build",
       "problemMatcher": []
     },
@@ -172,6 +223,53 @@
         "${workspaceFolder}/.github/actions/revert-development-mode/run-dev-mode.ps1",
         "-SupportedBitness",
         "${input:devModeBitness}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build lvlibp (LabVIEW)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "& { $ver = & \"${workspaceFolder}/scripts/get-package-lv-version.ps1\" -RepositoryPath \"${workspaceFolder}\"; & \"${workspaceFolder}/.github/actions/build-lvlibp/Build_lvlibp.ps1\" -Package_LabVIEW_Version $ver -SupportedBitness \"${input:lvlibpBitness}\" -RepositoryPath \"${workspaceFolder}\" -Major 0 -Minor 0 -Patch 0 -Build 0 -Commit \"manual\" }"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Show LocalHost.LibraryPaths (LabVIEW)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/read-library-paths.ps1",
+        "-RepositoryPath",
+        "${workspaceFolder}",
+        "-SupportedBitness",
+        "${input:libraryPathsBitness}",
+        "-FailOnMissing"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Apply VIPC (VIPM CLI troubleshoot)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "& { $ver = & \"${workspaceFolder}/scripts/get-package-lv-version.ps1\" -RepositoryPath \"${workspaceFolder}\"; & \"${workspaceFolder}/.github/actions/apply-vipc/ApplyVIPC.ps1\" -Package_LabVIEW_Version $ver -SupportedBitness \"64\" -RepositoryPath \"${workspaceFolder}\" -VIPCPath \".github/actions/apply-vipc/runner_dependencies.vipc\" -Verbose }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

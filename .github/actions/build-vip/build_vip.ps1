@@ -15,7 +15,7 @@
 .PARAMETER VIPBPath
     Relative path to the VIPB file to update.
 
-.PARAMETER MinimumSupportedLVVersion
+.PARAMETER Package_LabVIEW_Version
     Minimum LabVIEW version supported by the package.
 
 .PARAMETER LabVIEWMinorRevision
@@ -43,7 +43,7 @@
     JSON string representing the VIPB display information to update.
 
 .EXAMPLE
-    .\build_vip.ps1 -SupportedBitness "64" -RepositoryPath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -MinimumSupportedLVVersion 2021 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
+    .\build_vip.ps1 -SupportedBitness "64" -RepositoryPath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -Package_LabVIEW_Version 2021 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
 #>
 
 param (
@@ -51,7 +51,8 @@ param (
     [string]$RepositoryPath,
     [string]$VIPBPath,
 
-    [int]$MinimumSupportedLVVersion,
+    [Alias('MinimumSupportedLVVersion')]
+    [int]$Package_LabVIEW_Version,
 
     [ValidateSet("0","3")]
     [string]$LabVIEWMinorRevision = "0",
@@ -110,8 +111,28 @@ catch {
 $LogDirectory = Join-Path -Path $ResolvedRepositoryPath -ChildPath "builds/logs"
 New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
 
-# 3) Calculate the LabVIEW version string
-$lvNumericMajor    = $MinimumSupportedLVVersion - 2000
+# 3) Resolve LabVIEW version from VIPB to ensure determinism, overriding any inbound value
+$versionScriptCandidates = @(
+    (Join-Path $ResolvedRepositoryPath 'scripts/get-package-lv-version.ps1'),
+    (Join-Path $ResolvedRepositoryPath '.github/scripts/get-package-lv-version.ps1'),
+    (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1')
+) | Where-Object { Test-Path $_ }
+
+if (-not $versionScriptCandidates) {
+    $errorObject = [PSCustomObject]@{
+        error = "Unable to locate get-package-lv-version.ps1 relative to repository or action path."
+        repo  = $ResolvedRepositoryPath
+        action= $PSScriptRoot
+    }
+    $errorObject | ConvertTo-Json -Depth 6
+    exit 1
+}
+
+$versionScript = $versionScriptCandidates | Select-Object -First 1
+$Package_LabVIEW_Version = & $versionScript -RepositoryPath $RepositoryPath
+
+# Calculate the LabVIEW version string
+$lvNumericMajor    = $Package_LabVIEW_Version - 2000
 $lvNumericVersion  = "$($lvNumericMajor).$LabVIEWMinorRevision"
 if ($SupportedBitness -eq "64") {
     $VIP_LVVersion_A = "$lvNumericVersion (64-bit)"
@@ -154,7 +175,7 @@ else {
 
 # 5) Construct reusable g-cli arguments
 $gcliArgs = @(
-    "--lv-ver", $MinimumSupportedLVVersion.ToString(),
+    "--lv-ver", $Package_LabVIEW_Version.ToString(),
     "--arch", $SupportedBitness,
     "--connect-timeout", "120000",
     "--kill",

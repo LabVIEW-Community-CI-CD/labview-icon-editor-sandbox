@@ -6,7 +6,7 @@
     Calls RestoreSetupLVSource.vi via g-cli to unzip the LabVIEW Icon API and
     remove the Localhost.LibraryPaths token from the LabVIEW INI file.
 
-.PARAMETER MinimumSupportedLVVersion
+.PARAMETER Package_LabVIEW_Version
     LabVIEW version used to run g-cli.
 
 .PARAMETER SupportedBitness
@@ -22,11 +22,11 @@
     Build specification name within the project.
 
 .EXAMPLE
-    .\RestoreSetupLVSource.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RepositoryPath "C:\labview-icon-editor" -LabVIEW_Project "lv_icon_editor" -Build_Spec "Editor Packed Library"
+    .\RestoreSetupLVSource.ps1 -Package_LabVIEW_Version "2021" -SupportedBitness "64" -RepositoryPath "C:\labview-icon-editor" -LabVIEW_Project "lv_icon_editor" -Build_Spec "Editor Packed Library"
 #>
 param(
-    [Alias('Package_LabVIEW_Version')]
-    [string]$MinimumSupportedLVVersion,
+    [Alias('MinimumSupportedLVVersion')]
+    [string]$Package_LabVIEW_Version,
     [ValidateSet('32','64')]
     [string]$SupportedBitness,
     [string]$RepositoryPath,
@@ -37,7 +37,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $gcliArgs = @(
-    '--lv-ver', $MinimumSupportedLVVersion,
+    '--lv-ver', $Package_LabVIEW_Version,
     '--arch', $SupportedBitness,
     '-v', "$RepositoryPath\Tooling\RestoreSetupLVSource.vi",
     '--',

@@ -7,7 +7,7 @@
     update the LabVIEW configuration, ensuring the project is ready for
     subsequent build steps.
 
-.PARAMETER MinimumSupportedLVVersion
+.PARAMETER Package_LabVIEW_Version
     LabVIEW version used by g-cli.
 
 .PARAMETER SupportedBitness
@@ -23,13 +23,13 @@
     Name of the build specification to prepare.
 
 .EXAMPLE
-    .\Prepare_LabVIEW_source.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RepositoryPath "C:\labview icon editor" -LabVIEW_Project "lv_icon_editor" -Build_Spec "Editor Packed Library"
+    .\Prepare_LabVIEW_source.ps1 -Package_LabVIEW_Version "2021" -SupportedBitness "64" -RepositoryPath "C:\labview icon editor" -LabVIEW_Project "lv_icon_editor" -Build_Spec "Editor Packed Library"
 #>
 
 param(
-    [Parameter(Mandatory = $true)]
-    [Alias('Package_LabVIEW_Version')]
-    [string]$MinimumSupportedLVVersion,
+[Parameter(Mandatory = $true)]
+[Alias('MinimumSupportedLVVersion')]
+[string]$Package_LabVIEW_Version,
 
     [Parameter(Mandatory = $true)]
     [ValidateSet("32", "64", IgnoreCase = $true)]
@@ -48,14 +48,23 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+$projectPath = if ([System.IO.Path]::IsPathRooted($LabVIEW_Project)) {
+    $LabVIEW_Project
+} else {
+    Join-Path -Path $RepositoryPath -ChildPath "$LabVIEW_Project.lvproj"
+}
+if (-not (Test-Path -LiteralPath $projectPath)) {
+    throw "LabVIEW project not found at $projectPath"
+}
+
 $gcliArgs = @(
-    '--lv-ver', $MinimumSupportedLVVersion,
+'--lv-ver', $Package_LabVIEW_Version,
     '--arch', $SupportedBitness,
     '-v', "$RepositoryPath\Tooling\PrepareIESource.vi",
     '--',
     'LabVIEW',
     'Localhost.LibraryPaths',
-    "$RepositoryPath\$LabVIEW_Project.lvproj",
+    $projectPath,
     $Build_Spec
 )
 

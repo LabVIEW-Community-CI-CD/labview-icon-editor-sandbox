@@ -78,24 +78,24 @@ try {
     # Run Unit Tests
     $RunUnitTests = Join-Path $ActionsPath "run-unit-tests/RunUnitTests.ps1"
     Invoke-ScriptSafe -ScriptPath $RunUnitTests -ArgumentList @(
-        '-MinimumSupportedLVVersion','2021',
+        '-Package_LabVIEW_Version','2021',
         '-SupportedBitness','32',
         '-RepositoryPath', $RepositoryPath
     )
 
     # Close LabVIEW
     $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','32')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-Package_LabVIEW_Version','2021','-SupportedBitness','32')
 
     # Run Unit Tests
     Invoke-ScriptSafe -ScriptPath $RunUnitTests -ArgumentList @(
-        '-MinimumSupportedLVVersion','2021',
+        '-Package_LabVIEW_Version','2021',
         '-SupportedBitness','64',
         '-RepositoryPath', $RepositoryPath
     )
 
         # Close LabVIEW
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2021','-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-Package_LabVIEW_Version','2021','-SupportedBitness','64')
 
     Write-Information "All scripts executed successfully!" -InformationAction Continue
 } catch {

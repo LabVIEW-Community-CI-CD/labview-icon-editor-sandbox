@@ -6,7 +6,7 @@
     Invokes the LabVIEW build specification "Editor Packed Library" through
     g-cli, embedding the provided version information and commit identifier.
 
-.PARAMETER MinimumSupportedLVVersion
+.PARAMETER Package_LabVIEW_Version
     LabVIEW version used for the build.
 
 .PARAMETER SupportedBitness
@@ -31,10 +31,10 @@
     Commit hash or identifier recorded in the build.
 
 .EXAMPLE
-    .\Build_lvlibp.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RepositoryPath "C:\labview-icon-editor" -Major 1 -Minor 0 -Patch 0 -Build 0 -Commit "Placeholder"
+    .\Build_lvlibp.ps1 -Package_LabVIEW_Version "2021" -SupportedBitness "64" -RepositoryPath "C:\labview-icon-editor" -Major 1 -Minor 0 -Patch 0 -Build 0 -Commit "Placeholder"
 #>
 param(
-    [string]$MinimumSupportedLVVersion,
+    [Alias('MinimumSupportedLVVersion')][string]$Package_LabVIEW_Version,
     [string]$SupportedBitness,
     [string]$RepositoryPath,
     [Int32]$Major,
@@ -44,12 +44,23 @@ param(
     [string]$Commit
 )
 
-Write-Output "PPL Version: $Major.$Minor.$Patch.$Build"
-Write-Output "Commit: $Commit"
+    # Resolve version from VIPB for determinism
+$versionScript = @(
+    (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1'),
+    (Join-Path $PSScriptRoot '..\..\..\scripts\get-package-lv-version.ps1') # fallback if invoked from a different working dir
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if (-not $versionScript) {
+    throw "Unable to locate get-package-lv-version.ps1 relative to $PSScriptRoot"
+}
+
+$Package_LabVIEW_Version = & $versionScript -RepositoryPath $RepositoryPath
+    Write-Output "PPL Version: $Major.$Minor.$Patch.$Build"
+    Write-Output "Commit: $Commit"
 
 $buildArgs = @(
-    "--lv-ver", $MinimumSupportedLVVersion,
-    "--arch", $SupportedBitness,
+"--lv-ver", $Package_LabVIEW_Version,
+"--arch", $SupportedBitness,
     "lvbuildspec",
     "--",
     "-v", "$Major.$Minor.$Patch.$Build",
@@ -63,7 +74,7 @@ $output = & g-cli @buildArgs 2>&1
 if ($LASTEXITCODE -ne 0) {
     $joined = ($output -join '; ')
     Write-Error "Build failed with exit code $LASTEXITCODE. Output: $joined"
-    g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness QuitLabVIEW
+g-cli --lv-ver $Package_LabVIEW_Version --arch $SupportedBitness QuitLabVIEW
     exit 1
 }
 

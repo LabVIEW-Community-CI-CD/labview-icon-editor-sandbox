@@ -20,6 +20,8 @@ $Script:ParsingFailed    = $false
 
 $HelperPath      = Join-Path $PSScriptRoot 'RunMissingCheckWithGCLI.ps1'
 $MissingFilePath = Join-Path $PSScriptRoot 'missing_files.txt'
+$GcliLogPath     = Join-Path $PSScriptRoot 'missing_in_project_gcli.log'
+$MetaPath        = Join-Path $PSScriptRoot 'missing_in_project_meta.json'
 
 if (-not (Test-Path $HelperPath)) {
     Write-Error "Helper script not found: $HelperPath"
@@ -44,6 +46,19 @@ function Setup {
 function MainSequence {
 
     Write-Information "`n=== MainSequence ===" -InformationAction Continue
+    Write-Information "Preflight: showing LocalHost.LibraryPaths for current bitness..." -InformationAction Continue
+    try {
+        $repoRoot = Split-Path -Parent $ProjectFile
+        $pathsScript = Join-Path $repoRoot 'scripts/read-library-paths.ps1'
+        if (Test-Path $pathsScript) {
+            & $pathsScript -RepositoryPath $repoRoot -SupportedBitness $Arch -FailOnMissing
+        } else {
+            Write-Warning "read-library-paths.ps1 not found; skipping preflight display."
+        }
+    }
+    catch {
+        Write-Warning ("Preflight LocalHost.LibraryPaths check failed: {0}" -f $_.Exception.Message)
+    }
     Write-Information "Invoking missing-file check via helper script ...`n" -InformationAction Continue
 
     # call helper & capture any stdout (not strictly needed now)
@@ -51,7 +66,17 @@ function MainSequence {
     $Script:HelperExitCode = $LASTEXITCODE
 
     if ($Script:HelperExitCode -ne 0) {
-        Write-Error "Helper returned non-zero exit code: $Script:HelperExitCode"
+        $logNote = ""
+        if (Test-Path $GcliLogPath) {
+            $logNote += " g-cli log: $GcliLogPath;"
+        }
+        if (Test-Path $MetaPath) {
+            $logNote += " meta: $MetaPath;"
+        }
+        if ($logNote) {
+            $logNote = " (" + $logNote.Trim() + ")"
+        }
+        Write-Error "Helper returned non-zero exit code: $Script:HelperExitCode$logNote"
     }
 
     # -------- read missing_files.txt --------
@@ -99,6 +124,12 @@ function Cleanup {
             Remove-Item $MissingFilePath -Force -ErrorAction SilentlyContinue
             Write-Information "All good - removed $MissingFilePath" -InformationAction Continue
         }
+        if (Test-Path $GcliLogPath) {
+            Remove-Item $GcliLogPath -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path $MetaPath) {
+            Remove-Item $MetaPath -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 
@@ -139,6 +170,10 @@ $missingCsv  = ($Script:MissingFileLines -join ',')
 if ($env:GITHUB_OUTPUT) {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "passed=$passedStr"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "missing-files=$missingCsv"
+    $logOut  = if (Test-Path $GcliLogPath) { $GcliLogPath } else { "" }
+    $metaOut = if (Test-Path $MetaPath)  { $MetaPath }  else { "" }
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "gcli-log=$logOut"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "meta-path=$metaOut"
 }
 
 # =====================  FINAL EXIT CODE  ===================

@@ -17,7 +17,7 @@
 .PARAMETER VIPBPath
     Relative path to the VIPB file to modify.
 
-.PARAMETER MinimumSupportedLVVersion
+.PARAMETER Package_LabVIEW_Version
     Minimum LabVIEW version supported by the package.
 
 .PARAMETER LabVIEWMinorRevision
@@ -45,7 +45,7 @@
     JSON string representing the VIPB display information to update.
 
 .EXAMPLE
-    .\ModifyVIPBDisplayInfo.ps1 -SupportedBitness "64" -RepositoryPath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -MinimumSupportedLVVersion 2023 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
+    .\ModifyVIPBDisplayInfo.ps1 -SupportedBitness "64" -RepositoryPath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -Package_LabVIEW_Version 2023 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param (
@@ -53,7 +53,8 @@ param (
     [string]$RepositoryPath,
     [string]$VIPBPath,
 
-    [int]$MinimumSupportedLVVersion,
+[Alias('MinimumSupportedLVVersion')]
+[int]$Package_LabVIEW_Version,
 
     [ValidateSet("0","3")]
     [string]$LabVIEWMinorRevision = "0",
@@ -66,8 +67,78 @@ param (
     [string]$ReleaseNotesFile,
 
     [Parameter(Mandatory=$true)]
-    [string]$DisplayInformationJSON
+    [string]$DisplayInformationJSON,
+
+    [string]$ErrorLog,
+    [switch]$QuietErrors
 )
+
+$ErrorLogPath = if ($ErrorLog) {
+    if ([System.IO.Path]::IsPathRooted($ErrorLog)) {
+        $ErrorLog
+    }
+    else {
+        Join-Path -Path (Get-Location).Path -ChildPath $ErrorLog
+    }
+} else {
+    Join-Path $PSScriptRoot 'error.json'
+}
+
+# Ensure log directory exists and clear prior log
+try {
+    $logDir = Split-Path -Path $ErrorLogPath -Parent
+    if ($logDir -and -not (Test-Path -LiteralPath $logDir)) {
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+    }
+}
+catch {
+    if (-not $QuietErrors) {
+        Write-Warning ("Failed to ensure error log directory for {0}: {1}" -f $ErrorLogPath, $_.Exception.Message)
+    }
+}
+Remove-Item -LiteralPath $ErrorLogPath -ErrorAction SilentlyContinue
+
+$ErrorPrefix = "VIPB_UPDATE_"
+
+function Out-JsonSafe {
+    param(
+        [Parameter(Mandatory)]$Object,
+        [int]$Depth = 4
+    )
+    $Object | ConvertTo-Json -Depth $Depth -WarningAction SilentlyContinue
+}
+
+function Write-ErrorPayload {
+    param(
+        [string]$Error,
+        [string]$Details = "",
+        [string]$Context = "",
+        [string]$Path = ""
+    )
+    $payload = [ordered]@{
+        error   = $Error
+        details = $Details
+        context = $Context
+        path    = $Path
+    }
+    $json = $payload | ConvertTo-Json -Depth 4 -WarningAction SilentlyContinue
+
+    try {
+        $json | Set-Content -Path $ErrorLogPath -Encoding utf8
+    }
+    catch {
+        # Best effort; still emit to stdout if file write fails
+        if (-not $QuietErrors) {
+            Write-Warning ("Failed to write error log to {0}: {1}" -f $ErrorLogPath, $_.Exception.Message)
+        }
+    }
+
+    if (-not $QuietErrors) {
+        Write-Error ("{0}{1}: See error log: {2}" -f $ErrorPrefix, $Error, $ErrorLogPath)
+        $json
+    }
+    exit 1
+}
 
 # 1) Resolve paths
 try {
@@ -75,13 +146,23 @@ try {
     $ResolvedVIPBPath = Join-Path -Path $ResolvedRepositoryPath -ChildPath $VIPBPath -ErrorAction Stop
 }
 catch {
-    $errorObject = [PSCustomObject]@{
-        error      = "Error resolving paths. Ensure RepositoryPath and VIPBPath are valid."
-        exception  = $_.Exception.Message
-        stackTrace = $_.Exception.StackTrace
-    }
-    $errorObject | ConvertTo-Json -Depth 10
-    exit 1
+    Write-ErrorPayload -Error "Error resolving paths. Ensure RepositoryPath and VIPBPath are valid." `
+        -Details $_.Exception.Message `
+        -Context "RepositoryPath=$RepositoryPath; VIPBPath=$VIPBPath"
+}
+
+# Early validation: verify inputs exist and required JSON keys are present before heavy work
+if (-not $RepositoryPath -or -not (Test-Path -LiteralPath $RepositoryPath)) {
+    Write-ErrorPayload -Error "RepositoryPath is missing or invalid." -Path $RepositoryPath
+}
+if (-not $VIPBPath) {
+    Write-ErrorPayload -Error "VIPBPath is required." -Context "VIPBPath not provided"
+}
+if (-not (Test-Path -LiteralPath $ResolvedVIPBPath)) {
+    Write-ErrorPayload -Error "VIPBPath does not exist." -Path $ResolvedVIPBPath
+}
+if (-not $ReleaseNotesFile) {
+    Write-ErrorPayload -Error "ReleaseNotesFile path is required." -Context "ReleaseNotesFile not provided"
 }
 
 # 2) Create release notes if needed
@@ -96,17 +177,14 @@ try {
     $ResolvedReleaseNotesFile = Resolve-Path -Path $ReleaseNotesFile -ErrorAction Stop
 }
 catch {
-    $errorObject = [PSCustomObject]@{
-        error      = "Error resolving ReleaseNotesFile. Ensure the path exists and is accessible."
-        exception  = $_.Exception.Message
-        stackTrace = $_.Exception.StackTrace
-    }
-    $errorObject | ConvertTo-Json -Depth 10
-    exit 1
+    Write-ErrorPayload -Error "Error resolving ReleaseNotesFile. Ensure the path exists and is accessible." `
+        -Details $_.Exception.Message `
+        -Path $ReleaseNotesFile
 }
 
-# 3) Calculate the LabVIEW version string
-$lvNumericMajor    = $MinimumSupportedLVVersion - 2000
+# 3) Resolve LabVIEW version from VIPB to ensure determinism and calculate the LabVIEW version string
+$Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
+$lvNumericMajor    = $Package_LabVIEW_Version - 2000
 $lvNumericVersion  = "$($lvNumericMajor).$LabVIEWMinorRevision"
 if ($SupportedBitness -eq "64") {
     $VIP_LVVersion_A = "$lvNumericVersion (64-bit)"
@@ -121,13 +199,9 @@ try {
     $jsonObj = $DisplayInformationJSON | ConvertFrom-Json
 }
 catch {
-    $errorObject = [PSCustomObject]@{
-        error      = "Failed to parse DisplayInformationJSON into valid JSON."
-        exception  = $_.Exception.Message
-        stackTrace = $_.Exception.StackTrace
-    }
-    $errorObject | ConvertTo-Json -Depth 10
-    exit 1
+    Write-ErrorPayload -Error "Failed to parse DisplayInformationJSON into valid JSON." `
+        -Details $_.Exception.Message `
+        -Context ("DisplayInformationJSON length: {0}" -f ($DisplayInformationJSON.Length))
 }
 
 # If "Package Version" doesn't exist, create it as a subobject
@@ -157,13 +231,11 @@ $requiredFields = @(
 
 $missingFields = $requiredFields | Where-Object { [string]::IsNullOrWhiteSpace($jsonObj.PSObject.Properties[$_].Value) }
 if ($missingFields.Count -gt 0) {
-    $errorObject = [PSCustomObject]@{
-        error            = "DisplayInformationJSON is missing required field(s)."
-        missing_fields   = $missingFields
-        provided_payload = $jsonObj
-    }
-    $errorObject | ConvertTo-Json -Depth 10
-    exit 1
+    $providedKeys = ($jsonObj.PSObject.Properties.Name -join ', ')
+    $inputHash    = [System.BitConverter]::ToString((New-Object System.Security.Cryptography.SHA256Managed).ComputeHash([System.Text.Encoding]::UTF8.GetBytes($DisplayInformationJSON))).Replace("-", "")
+    Write-ErrorPayload -Error "DisplayInformationJSON is missing required field(s)." `
+        -Details ("Missing: {0}" -f ($missingFields -join ', ')) `
+        -Context ("Provided keys: {0}; payload hash: {1}" -f $providedKeys, $inputHash)
 }
 
 # Helper to set or create XML child nodes safely
@@ -195,13 +267,9 @@ try {
     [xml]$vipbXml = Get-Content -Raw -Path $ResolvedVIPBPath
 }
 catch {
-    $errorObject = [PSCustomObject]@{
-        error      = "Failed to load VIPB file."
-        exception  = $_.Exception.Message
-        stackTrace = $_.Exception.StackTrace
-    }
-    $errorObject | ConvertTo-Json -Depth 10
-    exit 1
+    Write-ErrorPayload -Error "Failed to load VIPB file." `
+        -Details $_.Exception.Message `
+        -Path $ResolvedVIPBPath
 }
 
 $generalSettings     = $vipbXml.VI_Package_Builder_Settings.Library_General_Settings
@@ -209,12 +277,8 @@ $advancedSettings    = $vipbXml.VI_Package_Builder_Settings.Advanced_Settings
 $descriptionSettings = $advancedSettings.Description
 
 if (-not $generalSettings -or -not $descriptionSettings) {
-    $errorObject = [PSCustomObject]@{
-        error     = "VIPB file is missing expected sections (Library_General_Settings or Description)."
-        vipb_path = $ResolvedVIPBPath
-    }
-    $errorObject | ConvertTo-Json -Depth 10
-    exit 1
+    Write-ErrorPayload -Error "VIPB file is missing expected sections (Library_General_Settings or Description)." `
+        -Path $ResolvedVIPBPath
 }
 
 # Update high-level metadata
@@ -246,22 +310,65 @@ try {
     }
 }
 catch {
-    $errorObject = [PSCustomObject]@{
-        error      = "Failed to read release notes file."
-        path       = $ResolvedReleaseNotesFile
-        exception  = $_.Exception.Message
-    }
-    $errorObject | ConvertTo-Json -Depth 10
-    exit 1
+    Write-ErrorPayload -Error "Failed to read release notes file." `
+        -Details $_.Exception.Message `
+        -Path $ResolvedReleaseNotesFile
 }
 
 if ([string]::IsNullOrWhiteSpace($releaseNotesFromFile)) {
-    $errorObject = [PSCustomObject]@{
-        error = "Release notes file is empty. Populate it or provide valid content before running this action."
-        path  = $ResolvedReleaseNotesFile
+    # Attempt to pull content from git if available
+    $fallbackContent = $null
+    $repoRoot = $ResolvedRepositoryPath.ProviderPath
+    $relPath  = $ResolvedReleaseNotesFile.ProviderPath
+    if ($relPath.StartsWith($repoRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        $relPath = $relPath.Substring($repoRoot.Length).TrimStart('\','/')
     }
-    $errorObject | ConvertTo-Json -Depth 10
-    exit 1
+
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        try {
+            $fallbackContent = git -C $repoRoot show ("HEAD:{0}" -f $relPath) 2>$null
+        }
+        catch {
+            # ignore; handled below
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($fallbackContent)) {
+        try {
+            $fallbackContent | Set-Content -Path $ResolvedReleaseNotesFile -Encoding utf8
+            $releaseNotesFromFile = $fallbackContent
+            Write-Information "Release notes were empty; populated from git HEAD:$relPath" -InformationAction Continue
+        }
+        catch {
+            Write-ErrorPayload -Error "Release notes file is empty and could not be populated." `
+                -Details $_.Exception.Message `
+                -Path $ResolvedReleaseNotesFile
+        }
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($jsonObj.'Release Notes - Change Log')) {
+        try {
+            $jsonObj.'Release Notes - Change Log' | Set-Content -Path $ResolvedReleaseNotesFile -Encoding utf8
+            $releaseNotesFromFile = $jsonObj.'Release Notes - Change Log'
+            Write-Information "Release notes were empty; populated from DisplayInformationJSON." -InformationAction Continue
+        }
+        catch {
+            Write-ErrorPayload -Error "Release notes file is empty and could not be populated from DisplayInformationJSON." `
+                -Details $_.Exception.Message `
+                -Path $ResolvedReleaseNotesFile
+        }
+    }
+    else {
+        $defaultNotes = "Release notes were not provided; generated placeholder."
+        try {
+            $defaultNotes | Set-Content -Path $ResolvedReleaseNotesFile -Encoding utf8
+            $releaseNotesFromFile = $defaultNotes
+            Write-Information "Release notes were empty; populated with placeholder content." -InformationAction Continue
+        }
+        catch {
+            Write-ErrorPayload -Error "Release notes file is empty. Populate it or provide valid content before running this action." `
+                -Path $ResolvedReleaseNotesFile
+        }
+    }
 }
 
 $releaseNotesJsonValue = $jsonObj.'Release Notes - Change Log'
@@ -323,20 +430,10 @@ $recognizedKeys = @(
 
 $unhandledKeys = $jsonObj.PSObject.Properties | Where-Object { $_.Name -notin $recognizedKeys }
 if ($unhandledKeys.Count -gt 0) {
-    $details = $unhandledKeys | ForEach-Object {
-        [PSCustomObject]@{
-            key   = $_.Name
-            value = $_.Value
-        }
-    }
-
-    $errorObject = [PSCustomObject]@{
-        error              = "DisplayInformationJSON contains unhandled field(s). Update the mapping to keep metadata in sync."
-        unhandled_fields   = $details
-        recognized_fields  = $recognizedKeys
-    }
-    $errorObject | ConvertTo-Json -Depth 10
-    exit 1
+    $detailKeys = $unhandledKeys | ForEach-Object { $_.Name }
+    Write-ErrorPayload -Error "DisplayInformationJSON contains unhandled field(s). Update the mapping to keep metadata in sync." `
+        -Details ("Unhandled: {0}" -f ($detailKeys -join ', ')) `
+        -Context ("Recognized: {0}" -f ($recognizedKeys -join ', '))
 }
 
 try {
@@ -352,14 +449,10 @@ try {
         $xmlWriter.Close()
     }
 
-Write-Information "Successfully updated VIPB metadata: $ResolvedVIPBPath" -InformationAction Continue
+    Write-Information "Successfully updated VIPB metadata: $ResolvedVIPBPath" -InformationAction Continue
 }
 catch {
-    $errorObject = [PSCustomObject]@{
-        error      = "Failed to save updated VIPB metadata."
-        exception  = $_.Exception.Message
-        stackTrace = $_.Exception.StackTrace
-    }
-    $errorObject | ConvertTo-Json -Depth 10
-    exit 1
+    Write-ErrorPayload -Error "Failed to save updated VIPB metadata." `
+        -Details $_.Exception.Message `
+        -Path $ResolvedVIPBPath
 }

@@ -16,11 +16,12 @@ runs:
           ${{ inputs.display_information_json }}
       run: |
         $displayInformationJson = $Env:DISPLAY_INFORMATION_JSON
+        $lvVer = pwsh -NoProfile -File "${{ github.action_path }}/../../scripts/get-package-lv-version.ps1" -RepositoryPath "${{ inputs.repository_path }}"
         & "${{ github.action_path }}/ModifyVIPBDisplayInfo.ps1" `
           -SupportedBitness ${{ inputs.supported_bitness }} `
           -RepositoryPath "${{ inputs.repository_path }}" `
           -VIPBPath "${{ inputs.vipb_path }}" `
-          -MinimumSupportedLVVersion ${{ inputs.minimum_supported_lv_version }} `
+          -Package_LabVIEW_Version $lvVer `
           -LabVIEWMinorRevision ${{ inputs.labview_minor_revision }} `
           -Major ${{ inputs.major }} `
           -Minor ${{ inputs.minor }} `
@@ -38,9 +39,6 @@ inputs:
     required: true
   vipb_path:
     description: 'Path to the VIPB file (relative to workspace)'
-    required: true
-  minimum_supported_lv_version:
-    description: 'LabVIEW major version'
     required: true
   labview_minor_revision:
     description: 'LabVIEW minor revision (0 or 3)'

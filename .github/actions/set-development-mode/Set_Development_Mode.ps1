@@ -46,12 +46,10 @@ if (-not (Test-Path -LiteralPath $RepositoryPath)) {
 $AddTokenScript = Join-Path -Path $ScriptDirectory -ChildPath '..\add-token-to-labview\AddTokenToLabVIEW.ps1'
 $PrepareScript  = Join-Path -Path $ScriptDirectory -ChildPath '..\prepare-labview-source\Prepare_LabVIEW_source.ps1'
 $CloseScript    = Join-Path -Path $ScriptDirectory -ChildPath '..\close-labview\Close_LabVIEW.ps1'
-$MissingHelper  = Join-Path -Path $ScriptDirectory -ChildPath '..\missing-in-project\Invoke-MissingInProjectCLI.ps1'
 
 Write-Information "AddTokenToLabVIEW script: $AddTokenScript" -InformationAction Continue
 Write-Information "Prepare_LabVIEW_source script: $PrepareScript" -InformationAction Continue
 Write-Information "Close_LabVIEW script: $CloseScript" -InformationAction Continue
-Write-Information "Missing-in-project script: $MissingHelper" -InformationAction Continue
 
 # Helper function to execute scripts and stop on error
 function Invoke-ScriptSafe {
@@ -117,12 +115,9 @@ function Get-LabVIEWVersionFromVipb {
 }
 
 try {
-    if (-not $Package_LabVIEW_Version) {
-        $Package_LabVIEW_Version = Get-LabVIEWVersionFromVipb -RootPath $RepositoryPath
-        Write-Information ("Detected LabVIEW version from VIPB: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
-    } else {
-        Write-Information ("Using explicit LabVIEW version: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
-    }
+    # Always resolve from VIPB to ensure determinism; ignore inbound overrides
+    $Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
+    Write-Information ("Detected LabVIEW version from VIPB: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
 
     $targetBitness = $SupportedBitness
     Write-Information ("Targeting bitness: {0}-bit" -f $targetBitness) -InformationAction Continue
@@ -157,13 +152,13 @@ try {
     $arch = $targetBitness
 
     Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        Package_LabVIEW_Version   = $Package_LabVIEW_Version
         SupportedBitness          = $arch
         RepositoryPath            = $RepositoryPath
     }
 
     Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        Package_LabVIEW_Version   = $Package_LabVIEW_Version
         SupportedBitness          = $arch
         RepositoryPath            = $RepositoryPath
         LabVIEW_Project           = $LabVIEW_Project
@@ -171,14 +166,8 @@ try {
     }
 
     Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        Package_LabVIEW_Version   = $Package_LabVIEW_Version
         SupportedBitness          = $arch
-    }
-
-    Invoke-ScriptSafe -ScriptPath $MissingHelper -ArgumentMap @{
-        LVVersion   = $Package_LabVIEW_Version
-        Arch        = $arch
-        ProjectFile = "$RepositoryPath\lv_icon_editor.lvproj"
     }
 }
 catch {
