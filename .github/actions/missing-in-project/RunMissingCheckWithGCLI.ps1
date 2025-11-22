@@ -126,8 +126,8 @@ catch {
 
 $meta.exitCode = $exitCode
 $meta.outputPreview = @{
-    first = $gcliOutput | Select-Object -First 5
-    last  = $gcliOutput | Select-Object -Last 5
+    first = ($gcliOutput | ForEach-Object { $_.ToString() } | Select-Object -First 5)
+    last  = ($gcliOutput | ForEach-Object { $_.ToString() } | Select-Object -Last 5)
 }
 if ($invokeError) {
     $meta.invokeError = Get-ExceptionDetails -ErrorRecord $invokeError
