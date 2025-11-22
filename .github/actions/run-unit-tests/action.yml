@@ -10,16 +10,14 @@ runs:
 
     - name: Run RunUnitTests.ps1
       shell: pwsh
-      env:
-        INPUT_LV_VERSION: ${{ inputs.labview_version }}
       run: |
         $ErrorActionPreference = 'Stop'
         Set-StrictMode -Version Latest
 
         $repo = Resolve-Path "${{ inputs.repository_path }}"
-        $lvVer = $Env:INPUT_LV_VERSION
+        $lvVer = "${{ inputs.labview_version }}"
         if ([string]::IsNullOrWhiteSpace($lvVer)) {
-          $lvVer = pwsh -NoProfile -File "$repo/scripts/resolve-lv-version.ps1" -RepositoryPath $repo
+          $lvVer = $Env:LABVIEW_VERSION
         }
 
         # Resolve project file: use input when provided, otherwise auto-detect (prefer root-level)
@@ -61,7 +59,7 @@ inputs:
     description: '32 or 64'
     required: true
   labview_version:
-    description: 'LabVIEW version to use (fallbacks to resolve-lv-version when empty).'
+    description: 'LabVIEW version to use (falls back to $LABVIEW_VERSION env when empty).'
     required: false
     default: ""
   project-file:
