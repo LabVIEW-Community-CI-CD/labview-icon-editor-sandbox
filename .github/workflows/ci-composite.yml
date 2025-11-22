@@ -491,7 +491,6 @@ jobs:
         with:
           lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           arch:         "64"
-          project-file: "lv_icon_editor.lvproj"
       - name: Detect unexpected workspace changes (x64)
         if: always()
         shell: pwsh
@@ -500,23 +499,28 @@ jobs:
           $dirty = git status --porcelain
           if ($dirty) {
             git status --short
-            $diff = git diff -- lv_icon_editor.lvproj
-            $diff | Out-File post_mip_dirty_x64.diff -Encoding utf8
-            Write-Host "Workspace became dirty during missing-in-project-x64. Diff follows:"
-            Write-Host "------ lv_icon_editor.lvproj diff (x64) ------"
-            Write-Host ($diff -join [Environment]::NewLine)
-            Write-Host "----------------------------------------------"
-            if ($Env:GITHUB_STEP_SUMMARY) {
-              $summary = @"
+            $projFiles = git ls-files "*.lvproj"
+            foreach ($pf in $projFiles) {
+              $diff = git diff -- $pf
+              if (-not $diff) { continue }
+              $outFile = "post_mip_dirty_x64_{0}.diff" -f (Split-Path $pf -Leaf)
+              $diff | Out-File $outFile -Encoding utf8
+              Write-Host "Workspace became dirty during missing-in-project-x64 for $pf. Diff follows:"
+              Write-Host "------ $pf diff (x64) ------"
+              Write-Host ($diff -join [Environment]::NewLine)
+              Write-Host "----------------------------------------------"
+              if ($Env:GITHUB_STEP_SUMMARY) {
+                $summary = @"
 ### Workspace changed during missing-in-project-x64
-Diff (lv_icon_editor.lvproj):
-\`\`\`diff
-$diff
-\`\`\`
+File: $pf
+```diff
+$($diff -join "`n")
+```
 "@
-              $summary | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+                $summary | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              }
+              git checkout -- $pf
             }
-            git checkout -- lv_icon_editor.lvproj
           }
 
   missing-in-project-x86:
@@ -532,7 +536,6 @@ $diff
         with:
           lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           arch:         "32"
-          project-file: "lv_icon_editor.lvproj"
       - name: Detect unexpected workspace changes (x86)
         if: always()
         shell: pwsh
@@ -541,23 +544,28 @@ $diff
           $dirty = git status --porcelain
           if ($dirty) {
             git status --short
-            $diff = git diff -- lv_icon_editor.lvproj
-            $diff | Out-File post_mip_dirty_x86.diff -Encoding utf8
-            Write-Host "Workspace became dirty during missing-in-project-x86. Diff follows:"
-            Write-Host "------ lv_icon_editor.lvproj diff (x86) ------"
-            Write-Host ($diff -join [Environment]::NewLine)
-            Write-Host "----------------------------------------------"
-            if ($Env:GITHUB_STEP_SUMMARY) {
-              $summary = @"
+            $projFiles = git ls-files "*.lvproj"
+            foreach ($pf in $projFiles) {
+              $diff = git diff -- $pf
+              if (-not $diff) { continue }
+              $outFile = "post_mip_dirty_x86_{0}.diff" -f (Split-Path $pf -Leaf)
+              $diff | Out-File $outFile -Encoding utf8
+              Write-Host "Workspace became dirty during missing-in-project-x86 for $pf. Diff follows:"
+              Write-Host "------ $pf diff (x86) ------"
+              Write-Host ($diff -join [Environment]::NewLine)
+              Write-Host "----------------------------------------------"
+              if ($Env:GITHUB_STEP_SUMMARY) {
+                $summary = @"
 ### Workspace changed during missing-in-project-x86
-Diff (lv_icon_editor.lvproj):
-\`\`\`diff
-$diff
-\`\`\`
+File: $pf
+```diff
+$($diff -join "`n")
+```
 "@
-              $summary | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+                $summary | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              }
+              git checkout -- $pf
             }
-            git checkout -- lv_icon_editor.lvproj
           }
 
   test-x64:
