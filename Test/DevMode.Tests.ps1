@@ -200,7 +200,8 @@ Describe "LocalhostLibraryPaths helpers" {
 
         $updated = Get-Content -LiteralPath $iniPath
         ($updated -join "`n") | Should -Not -Match 'actions-runner\\_work\\actions-runner\\_work'
-        ($updated -join "`n") | Should -Not -Match 'LocalHost.LibraryPaths2=C:\\repo'
+        # Keep a single repo entry, drop duplicates
+        $updated | Should -Contain 'LocalHost.LibraryPaths2=C:\repo'
         ($updated -join "`n") | Should -Not -Match 'LocalHost.LibraryPaths3=C:\\repo'
         $updated | Should -Contain 'LocalHost.LibraryPaths4=C:\keepme'
         $warnings | Where-Object { $_ -like '*Removed*LocalHost.LibraryPaths entries*' } | Should -Not -BeNullOrEmpty
@@ -304,8 +305,10 @@ Describe "LocalhostLibraryPaths helpers" {
         Set-Item -Path Function:Resolve-LVIniPath -Value ([scriptblock]::Create("param([string]`$LvVersion,[string]`$Arch) return '$iniPath'"))
         $warnings = & { Clear-StaleLibraryPaths -LvVersion '2021' -Arch '32' -RepositoryRoot 'C:\repo\path' } 3>&1
         $updated = Get-Content -LiteralPath $iniPath
-        ($updated -join "`n") | Should -Not -Match 'LocalHost.LibraryPaths1='
+        # Repo entry is retained (cleanup is deferred to revert)
+        $updated | Should -Contain 'LocalHost.LibraryPaths1=c:\Repo\Path'
         $updated | Should -Contain 'LocalHost.LibraryPaths2=C:\KEEP'
-        $warnings | Where-Object { $_ -like '*Removed*LocalHost.LibraryPaths entries*' } | Should -Not -BeNullOrEmpty
+        # No warning expected for retained repo entry
+        $warnings | Where-Object { $_ -like '*Removed*LocalHost.LibraryPaths entries*' } | Should -BeNullOrEmpty
     }
 }
