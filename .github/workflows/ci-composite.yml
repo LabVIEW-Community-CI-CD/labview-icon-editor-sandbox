@@ -500,8 +500,12 @@ jobs:
           $dirty = git status --porcelain
           if ($dirty) {
             git status --short
-            git diff > post_mip_dirty_x64.diff
-            Write-Error "Workspace became dirty during missing-in-project-x64. Investigate diff at post_mip_dirty_x64.diff"
+            git diff -- lv_icon_editor.lvproj > post_mip_dirty_x64.diff
+            Write-Host "Workspace became dirty during missing-in-project-x64. Diff saved to post_mip_dirty_x64.diff"
+            if ($Env:GITHUB_STEP_SUMMARY) {
+              "### Workspace changed during missing-in-project-x64" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              "Saved diff: post_mip_dirty_x64.diff" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+            }
           }
 
   missing-in-project-x86:
@@ -526,8 +530,12 @@ jobs:
           $dirty = git status --porcelain
           if ($dirty) {
             git status --short
-            git diff > post_mip_dirty_x86.diff
-            Write-Error "Workspace became dirty during missing-in-project-x86. Investigate diff at post_mip_dirty_x86.diff"
+            git diff -- lv_icon_editor.lvproj > post_mip_dirty_x86.diff
+            Write-Host "Workspace became dirty during missing-in-project-x86. Diff saved to post_mip_dirty_x86.diff"
+            if ($Env:GITHUB_STEP_SUMMARY) {
+              "### Workspace changed during missing-in-project-x86" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              "Saved diff: post_mip_dirty_x86.diff" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+            }
           }
 
   test-x64:
