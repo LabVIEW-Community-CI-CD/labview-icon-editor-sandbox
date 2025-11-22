@@ -514,9 +514,9 @@ jobs:
                   "### Workspace changed during missing-in-project-x64",
                   "File: $pf",
                   "```diff",
-                  ($diff -join \"`n\"),
+                  ($diff -join "`n"),
                   "```"
-                ) -join \"`n\"
+                ) -join "`n"
                 $summary | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
               }
               git checkout -- $pf
@@ -559,9 +559,9 @@ jobs:
                   "### Workspace changed during missing-in-project-x86",
                   "File: $pf",
                   "```diff",
-                  ($diff -join \"`n\"),
+                  ($diff -join "`n"),
                   "```"
-                ) -join \"`n\"
+                ) -join "`n"
                 $summary | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
               }
               git checkout -- $pf
