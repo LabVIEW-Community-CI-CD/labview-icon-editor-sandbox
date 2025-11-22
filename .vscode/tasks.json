@@ -88,6 +88,34 @@
       "default": "1"
     },
     {
+      "id": "releaseTag",
+      "type": "promptString",
+      "description": "Git tag to use for the draft release (leave blank to derive from version inputs)",
+      "default": ""
+    },
+    {
+      "id": "releaseTitle",
+      "type": "promptString",
+      "description": "Release title (leave blank to reuse the tag)",
+      "default": ""
+    },
+    {
+      "id": "releaseNotesPath",
+      "type": "promptString",
+      "description": "Path to the release notes markdown file to attach and use as the release body",
+      "default": "Tooling/deployment/release_notes.md"
+    },
+    {
+      "id": "releasePrerelease",
+      "type": "pickString",
+      "description": "Mark the draft release as a prerelease",
+      "options": [
+        "false",
+        "true"
+      ],
+      "default": "false"
+    },
+    {
       "id": "commitHash",
       "type": "promptString",
       "description": "Git commit hash for stamping artifacts",
@@ -274,6 +302,50 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
+      "problemMatcher": []
+    },
+    {
+      "label": "Create draft GitHub release (local artifacts)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/.github/scripts/create-draft-release.ps1",
+        "-RepositoryPath",
+        "${input:repoPath}",
+        "-VipPath",
+        "${input:vipArtifactPath}",
+        "-ReleaseNotesPath",
+        "${input:releaseNotesPath}",
+        "-Tag",
+        "${input:releaseTag}",
+        "-Title",
+        "${input:releaseTitle}",
+        "-Major",
+        "${input:semverMajor}",
+        "-Minor",
+        "${input:semverMinor}",
+        "-Patch",
+        "${input:semverPatch}",
+        "-Build",
+        "${input:buildNumber}",
+        "-Prerelease",
+        "${input:releasePrerelease}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build and Draft Release (compound)",
+      "dependsOn": [
+        "Build VI Package (Build.ps1)",
+        "Create draft GitHub release (local artifacts)"
+      ],
+      "dependsOrder": "sequence",
+      "group": "build",
       "problemMatcher": []
     }
   ]
