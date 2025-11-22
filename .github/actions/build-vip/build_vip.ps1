@@ -112,7 +112,24 @@ $LogDirectory = Join-Path -Path $ResolvedRepositoryPath -ChildPath "builds/logs"
 New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
 
 # 3) Resolve LabVIEW version from VIPB to ensure determinism, overriding any inbound value
-$Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
+$versionScriptCandidates = @(
+    (Join-Path $ResolvedRepositoryPath 'scripts/get-package-lv-version.ps1'),
+    (Join-Path $ResolvedRepositoryPath '.github/scripts/get-package-lv-version.ps1'),
+    (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1')
+) | Where-Object { Test-Path $_ }
+
+if (-not $versionScriptCandidates) {
+    $errorObject = [PSCustomObject]@{
+        error = "Unable to locate get-package-lv-version.ps1 relative to repository or action path."
+        repo  = $ResolvedRepositoryPath
+        action= $PSScriptRoot
+    }
+    $errorObject | ConvertTo-Json -Depth 6
+    exit 1
+}
+
+$versionScript = $versionScriptCandidates | Select-Object -First 1
+$Package_LabVIEW_Version = & $versionScript -RepositoryPath $RepositoryPath
 
 # Calculate the LabVIEW version string
 $lvNumericMajor    = $Package_LabVIEW_Version - 2000
