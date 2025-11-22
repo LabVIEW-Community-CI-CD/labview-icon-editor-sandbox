@@ -225,7 +225,7 @@ try {
     Invoke-ScriptSafe -ScriptPath $MissingHelper -ArgumentMap @{
         LVVersion   = $lvVersion
         Arch        = '32'
-        ProjectFile = "$RepositoryPath\lv_icon_editor.lvproj"
+        ProjectFile = (Join-Path $RepositoryPath 'lv_icon_editor.lvproj')
     }
 
     # 3) Build LV Library (32-bit)
