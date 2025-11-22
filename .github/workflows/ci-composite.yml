@@ -510,13 +510,7 @@ jobs:
               Write-Host ($diff -join [Environment]::NewLine)
               Write-Host "----------------------------------------------"
               if ($Env:GITHUB_STEP_SUMMARY) {
-                $summary = @"
-### Workspace changed during missing-in-project-x64
-File: $pf
-```diff
-$($diff -join "`n")
-```
-"@
+                $summary = "### Workspace changed during missing-in-project-x64`nFile: $pf`n```diff`n$($diff -join \"`n\")`n```"
                 $summary | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
               }
               git checkout -- $pf
@@ -555,13 +549,7 @@ $($diff -join "`n")
               Write-Host ($diff -join [Environment]::NewLine)
               Write-Host "----------------------------------------------"
               if ($Env:GITHUB_STEP_SUMMARY) {
-                $summary = @"
-### Workspace changed during missing-in-project-x86
-File: $pf
-```diff
-$($diff -join "`n")
-```
-"@
+                $summary = "### Workspace changed during missing-in-project-x86`nFile: $pf`n```diff`n$($diff -join \"`n\")`n```"
                 $summary | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
               }
               git checkout -- $pf
