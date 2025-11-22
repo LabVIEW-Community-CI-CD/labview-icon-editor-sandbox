@@ -496,35 +496,10 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          cd $Env:GITHUB_WORKSPACE
-          $dirty = git status --porcelain
-          if ($dirty) {
-            git status --short
-            $projFiles = git ls-files "*.lvproj"
-            $hasDiff = $false
-            foreach ($pf in $projFiles) {
-              $diff = git diff -- $pf
-              if (-not $diff) { continue }
-              $outFile = "post_mip_dirty_x64_{0}.diff" -f (Split-Path $pf -Leaf)
-              $diff | Out-File $outFile -Encoding utf8
-              Write-Host "Workspace became dirty during missing-in-project-x64 for $pf. Diff follows:"
-              Write-Host "------ $pf diff (x64) ------"
-              Write-Host ($diff -join [Environment]::NewLine)
-              Write-Host "----------------------------------------------"
-              $hasDiff = $true
-              if ($Env:GITHUB_STEP_SUMMARY) {
-                Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Value "### Workspace changed during missing-in-project-x64" -Encoding utf8
-                Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Value "File: $pf" -Encoding utf8
-                Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Value "```diff" -Encoding utf8
-                Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Value ($diff -join "`n") -Encoding utf8
-                Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Value "```" -Encoding utf8
-              }
-              git checkout -- $pf
-            }
-            if ($hasDiff) {
-              "found_diff=true" >> $Env:GITHUB_OUTPUT
-            }
-          }
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/report-lvproj-diffs.ps1" `
+            -Label "missing-in-project-x64" `
+            -DiffPrefix "x64" `
+            -Workspace "$env:GITHUB_WORKSPACE"
       - name: Upload lvproj diffs (x64, if any)
         if: always() && steps.guard_x64.outputs.found_diff == 'true'
         uses: actions/upload-artifact@v4
@@ -551,35 +526,10 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          cd $Env:GITHUB_WORKSPACE
-          $dirty = git status --porcelain
-          if ($dirty) {
-            git status --short
-            $projFiles = git ls-files "*.lvproj"
-            $hasDiff = $false
-            foreach ($pf in $projFiles) {
-              $diff = git diff -- $pf
-              if (-not $diff) { continue }
-              $outFile = "post_mip_dirty_x86_{0}.diff" -f (Split-Path $pf -Leaf)
-              $diff | Out-File $outFile -Encoding utf8
-              Write-Host "Workspace became dirty during missing-in-project-x86 for $pf. Diff follows:"
-              Write-Host "------ $pf diff (x86) ------"
-              Write-Host ($diff -join [Environment]::NewLine)
-              Write-Host "----------------------------------------------"
-              $hasDiff = $true
-              if ($Env:GITHUB_STEP_SUMMARY) {
-                Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Value "### Workspace changed during missing-in-project-x86" -Encoding utf8
-                Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Value "File: $pf" -Encoding utf8
-                Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Value "```diff" -Encoding utf8
-                Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Value ($diff -join "`n") -Encoding utf8
-                Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Value "```" -Encoding utf8
-              }
-              git checkout -- $pf
-            }
-            if ($hasDiff) {
-              "found_diff=true" >> $Env:GITHUB_OUTPUT
-            }
-          }
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/report-lvproj-diffs.ps1" `
+            -Label "missing-in-project-x86" `
+            -DiffPrefix "x86" `
+            -Workspace "$env:GITHUB_WORKSPACE"
       - name: Upload lvproj diffs (x86, if any)
         if: always() && steps.guard_x86.outputs.found_diff == 'true'
         uses: actions/upload-artifact@v4
