@@ -34,8 +34,13 @@ This plan distills the findings from **Resolving the __Run Unit Tests (x64)__ Wo
 
 ## Phase 6 — Hardening and Documentation
 - [ ] Add regression tests or lint checks (if available) to ensure the version-resolution path remains valid (e.g., unit tests for path construction in action scripts).
-- [ ] Update contributor-facing docs to explain how the LabVIEW version is resolved and passed through CI, including any new inputs or environment variables.
+- [x] Update contributor-facing docs to explain how the LabVIEW version is resolved and passed through CI, including any new inputs or environment variables.
 - [ ] Consider adding telemetry/logging within the action to report the resolved version and script path for easier future debugging.
+
+### Current LabVIEW version flow (contributor reference)
+1. **Resolve once**: The `resolve-labview-version` job runs `scripts/get-package-lv-version.ps1` to read the VIPB and normalize the minimum supported version. It gates against `MIN_LABVIEW_POLICY` and publishes the value as `needs.resolve-labview-version.outputs.minimum_supported_lv_version`.
+2. **Propagate everywhere**: Jobs that depend on the version (VIPC application, missing-in-project checks, x64/x86 unit tests, packed library builds) set `LABVIEW_VERSION` to that output and pass the same value into any action input named `labview_version`.
+3. **Fail fast if missing**: The `run-unit-tests` composite action and `RunUnitTests.ps1` consume the provided version and throw if the workflow omits it, preventing silent fallbacks to in-action resolution.
 
 ## Exit Criteria
 - The `Run Unit Tests (x64)` job completes successfully in CI with a correctly resolved `Package_LabVIEW_Version`.
