@@ -32,11 +32,14 @@ param(
     [Parameter(Mandatory=$true)]
     [ValidateSet("32","64")]
     [string]
-    $SupportedBitness
+    $SupportedBitness,
+
+    [string]
+    $AbsoluteProjectPath
 )
 
 # --------------------------------------------------------------------
-# 1) Locate exactly one .lvproj file by searching upward from $PSScriptRoot
+# 1) Locate exactly one .lvproj file (use provided path when available, else search upward)
 # --------------------------------------------------------------------
 Write-Information "Starting directory for .lvproj search: $PSScriptRoot" -InformationAction Continue
 
@@ -76,7 +79,15 @@ function Get-SingleLvproj {
     }
 }
 
-$AbsoluteProjectPath = Get-SingleLvproj -StartFolder $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($AbsoluteProjectPath)) {
+    $AbsoluteProjectPath = Get-SingleLvproj -StartFolder $PSScriptRoot
+}
+else {
+    if (-not (Test-Path $AbsoluteProjectPath)) {
+        throw "Provided project path does not exist: $AbsoluteProjectPath"
+    }
+    $AbsoluteProjectPath = (Resolve-Path $AbsoluteProjectPath).Path
+}
 
 if (-not $AbsoluteProjectPath) {
     # We failed to find exactly one .lvproj in any ancestor up to the level before root
