@@ -24,8 +24,8 @@ This plan distills the findings from **Resolving the __Run Unit Tests (x64)__ Wo
 - [ ] Ensure the action fails clearly if the version input is absent, to prevent silent regressions.
 
 ## Phase 4 — Complete/Remove Partial Feature Code
-- [ ] Audit for references to the unfinished `resolve-lv-version.ps1` and either finish integration (add the script and wire it up) or remove dead references to avoid confusion.
-- [ ] Confirm there is exactly one active code path for LabVIEW version detection across jobs and scripts.
+- [x] Removed the unused `scripts/resolve-lv-version.ps1` helper to eliminate dead references and duplication.
+- [x] Confirmed there is a single LabVIEW version-resolution path: `scripts/get-package-lv-version.ps1` called by the `resolve-labview-version` job and passed through to downstream actions.
 
 ## Phase 5 — Validation
 - [ ] Run the updated workflow on Windows and Linux runners to confirm the `Run Unit Tests (x64)` job succeeds and `Package_LabVIEW_Version` is populated.
