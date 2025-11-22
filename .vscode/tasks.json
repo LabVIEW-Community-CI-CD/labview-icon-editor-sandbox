@@ -73,7 +73,7 @@
       "id": "semverMinor",
       "type": "promptString",
       "description": "Minor version",
-      "default": "0"
+      "default": "1"
     },
     {
       "id": "semverPatch",
