@@ -93,14 +93,10 @@ if (-not $AbsoluteProjectPath) {
     exit 3
 }
 Write-Information "Using LabVIEW project file: $AbsoluteProjectPath" -InformationAction Continue
-$repoRoot = Split-Path -Parent $AbsoluteProjectPath
 if ([string]::IsNullOrWhiteSpace($Package_LabVIEW_Version)) {
-    $Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $repoRoot
-    Write-Information ("Resolved LabVIEW version from VIPB: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
+    throw "LabVIEW version is required but was not provided. Ensure the composite action supplies inputs.labview_version or LABVIEW_VERSION."
 }
-else {
-    Write-Information ("Using LabVIEW version provided by workflow: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
-}
+Write-Information ("Using LabVIEW version provided by workflow: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
 
 # Script-level variables to track exit states
 $Script:OriginalExitCode = 0

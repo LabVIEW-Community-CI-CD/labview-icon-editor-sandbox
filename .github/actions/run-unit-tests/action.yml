@@ -20,6 +20,10 @@ runs:
           $lvVer = $Env:LABVIEW_VERSION
         }
 
+        if ([string]::IsNullOrWhiteSpace($lvVer)) {
+          throw "LabVIEW version not provided. Set inputs.labview_version or the LABVIEW_VERSION environment variable."
+        }
+
         # Resolve project file: use input when provided, otherwise auto-detect (prefer root-level)
         $pf = "${{ inputs.project-file }}"
         if (-not [string]::IsNullOrWhiteSpace($pf)) {
@@ -59,7 +63,7 @@ inputs:
     description: '32 or 64'
     required: true
   labview_version:
-    description: 'LabVIEW version to use (falls back to $LABVIEW_VERSION env when empty).'
+    description: 'LabVIEW version to use (must be supplied via this input or the LABVIEW_VERSION env; action fails when missing).'
     required: false
     default: ""
   project-file:
