@@ -114,7 +114,8 @@ $exitCode   = -1
 $invokeError = $null
 
 try {
-    $gcliOutput = & g-cli @gcliArgs 2>&1 | Tee-Object -Variable _outLines -FilePath $gcliLogPath
+    # Capture output while writing to a log file; Tee-Object cannot use -Variable and -FilePath together
+    $gcliOutput = & g-cli @gcliArgs 2>&1 | Tee-Object -FilePath $gcliLogPath
     $exitCode   = $LASTEXITCODE
 }
 catch {
