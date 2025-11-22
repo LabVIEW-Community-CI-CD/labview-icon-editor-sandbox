@@ -26,7 +26,16 @@ Write-Verbose " - VIPCPath:                  $VIPCPath"
 
 # Resolve LabVIEW version from VIPB to ensure determinism (ignore inbound override)
 try {
-    $resolvedVersion = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
+    $lvVersionScript = Join-Path $RepositoryPath 'scripts\get-package-lv-version.ps1'
+    if (-not (Test-Path $lvVersionScript)) {
+        # Fallback to .github/scripts in case the repository layout differs
+        $lvVersionScript = Join-Path $RepositoryPath '.github\scripts\get-package-lv-version.ps1'
+    }
+    if (-not (Test-Path $lvVersionScript)) {
+        throw "Unable to locate get-package-lv-version.ps1 under '$RepositoryPath/scripts' or '$RepositoryPath/.github/scripts'."
+    }
+
+    $resolvedVersion = & $lvVersionScript -RepositoryPath $RepositoryPath
     if ($resolvedVersion -ne $MinimumSupportedLVVersion) {
         Write-Warning ("Overriding inbound MinimumSupportedLVVersion '{0}' with VIPB-derived '{1}'" -f $MinimumSupportedLVVersion, $resolvedVersion)
     }
