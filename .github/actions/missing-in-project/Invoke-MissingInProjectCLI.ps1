@@ -21,6 +21,7 @@ $Script:ParsingFailed    = $false
 $HelperPath      = Join-Path $PSScriptRoot 'RunMissingCheckWithGCLI.ps1'
 $MissingFilePath = Join-Path $PSScriptRoot 'missing_files.txt'
 $GcliLogPath     = Join-Path $PSScriptRoot 'missing_in_project_gcli.log'
+$MetaPath        = Join-Path $PSScriptRoot 'missing_in_project_meta.json'
 
 if (-not (Test-Path $HelperPath)) {
     Write-Error "Helper script not found: $HelperPath"
@@ -67,7 +68,13 @@ function MainSequence {
     if ($Script:HelperExitCode -ne 0) {
         $logNote = ""
         if (Test-Path $GcliLogPath) {
-            $logNote = " (g-cli log: $GcliLogPath)"
+            $logNote += " g-cli log: $GcliLogPath;"
+        }
+        if (Test-Path $MetaPath) {
+            $logNote += " meta: $MetaPath;"
+        }
+        if ($logNote) {
+            $logNote = " (" + $logNote.Trim() + ")"
         }
         Write-Error "Helper returned non-zero exit code: $Script:HelperExitCode$logNote"
     }
@@ -119,6 +126,9 @@ function Cleanup {
         }
         if (Test-Path $GcliLogPath) {
             Remove-Item $GcliLogPath -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path $MetaPath) {
+            Remove-Item $MetaPath -Force -ErrorAction SilentlyContinue
         }
     }
 }
