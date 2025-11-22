@@ -13,36 +13,59 @@
 .PARAMETER SupportedBitness
     Target bitness of the LabVIEW environment ("32" or "64").
 
-.PARAMETER RelativePath
+.PARAMETER RepositoryPath
     Path to the repository root that should be added to the INI token.
 
 .EXAMPLE
-    .\AddTokenToLabVIEW.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RelativePath "C:\labview-icon-editor"
+    .\AddTokenToLabVIEW.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RepositoryPath "C:\labview-icon-editor"
 #>
 
 param(
-    [string]$MinimumSupportedLVVersion,
-    [string]$SupportedBitness,
-    [string]$RelativePath
+    [Parameter(Mandatory)][Alias('Package_LabVIEW_Version')][string]$MinimumSupportedLVVersion,
+    [Parameter(Mandatory)][ValidateSet('32','64')][string]$SupportedBitness,
+    [Parameter(Mandatory)][string]$RepositoryPath
 )
 
-# Construct the command
-$script = @"
-g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness -v "$RelativePath\Tooling\deployment\Create_LV_INI_Token.vi" -- "LabVIEW" "Localhost.LibraryPaths" "$RelativePath"
-"@
-
-Write-Output "Executing the following command:"
-Write-Output $script
-
-# Execute the command and check for errors
-try {
-    Invoke-Expression $script
-
-    # Check the exit code of the executed command
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Create localhost.library path from ini file"
-    }
-} catch {
-    Write-Host ""
-    exit 0
+$ErrorActionPreference = 'Stop'
+$RepositoryPath = (Resolve-Path -LiteralPath $RepositoryPath).Path
+$iniTokenVi = Join-Path -Path $RepositoryPath -ChildPath 'Tooling\deployment\Create_LV_INI_Token.vi'
+if (-not (Test-Path -LiteralPath $iniTokenVi)) {
+    throw "Missing VI required to add INI token: $iniTokenVi"
 }
+
+# Determine target folder for Localhost.LibraryPaths (folder that contains the project)
+$project = Get-ChildItem -Path $RepositoryPath -Filter *.lvproj -File -Recurse | Select-Object -First 1
+$tokenTarget = if ($project) {
+    Split-Path -Parent $project.FullName
+} else {
+    $RepositoryPath
+}
+
+$_gcliArgs = @(
+    '--lv-ver', $MinimumSupportedLVVersion,
+    '--arch', $SupportedBitness,
+    'vi',
+    '--',
+    $iniTokenVi,
+    '--',
+    'LabVIEW',
+    'Localhost.LibraryPaths',
+    $SupportedBitness,
+    $tokenTarget
+)
+
+Write-Information ("Invoking g-cli: {0}" -f ($_gcliArgs -join ' ')) -InformationAction Continue
+Write-Information ("Localhost.LibraryPaths target: {0}" -f $tokenTarget) -InformationAction Continue
+
+$gcli = Get-Command g-cli -ErrorAction SilentlyContinue
+if (-not $gcli) {
+    throw "g-cli is not available on PATH; cannot add INI token."
+}
+
+$output = & g-cli @_gcliArgs 2>&1
+if ($LASTEXITCODE -ne 0) {
+    $joined = ($output -join '; ')
+    throw ("g-cli failed with exit code {0}: {1} | cmd: {2}" -f $LASTEXITCODE, $joined, ($_gcliArgs -join ' '))
+}
+
+Write-Information "Created localhost.library path in ini file." -InformationAction Continue

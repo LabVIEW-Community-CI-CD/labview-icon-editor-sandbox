@@ -12,7 +12,7 @@
 
   Example usage:
     .\Build.ps1 `
-      -RelativePath "C:\release\labview-icon-editor-fork" `
+      -RepositoryPath "C:\release\labview-icon-editor-fork" `
       -Major 1 -Minor 0 -Patch 0 -Build 3 -Commit "Placeholder" `
       -CompanyName "Acme Corporation" `
       -AuthorName "John Doe (Acme Corp)" `
@@ -22,23 +22,13 @@
 [CmdletBinding()]  # Enables -Verbose, -Debug, etc.
 param(
     [Parameter(Mandatory = $true)]
-    [string]$RelativePath,
+    [string]$RepositoryPath,
 
-    [Parameter(Mandatory = $true)]
     [int]$Major = 1,
-
-    [Parameter(Mandatory = $true)]
-    [int]$Minor,
-
-    [Parameter(Mandatory = $true)]
-    [int]$Patch,
-
-    [Parameter(Mandatory = $true)]
-    [int]$Build,
-
-    [Parameter(Mandatory = $true)]
+    [int]$Minor = 0,
+    [int]$Patch = 0,
+    [int]$Build = 1,
     [string]$Commit,
-
     # LabVIEW "minor" revision (0 or 3)
     [Parameter(Mandatory = $false)]
     [int]$LabVIEWMinorRevision = 3,
@@ -52,52 +42,74 @@ param(
 )
 
 # Helper function to verify a file/folder path exists
-function Assert-PathExists {
+function Test-PathExistence {
     param(
         [string]$Path,
         [string]$Description
     )
     Write-Verbose "Checking if '$Description' exists at path: $Path"
     if (-not (Test-Path -Path $Path)) {
-        Write-Host "The '$Description' does not exist: $Path" -ForegroundColor Red
+        Write-Error "The '$Description' does not exist: $Path"
         exit 1
     }
     Write-Verbose "Confirmed '$Description' exists at path: $Path"
 }
 
-# Helper function to run another script with arguments
-function Execute-Script {
+# Helper function to run another script with arguments safely
+function Invoke-ScriptSafe {
     param(
         [string]$ScriptPath,
-        [string]$Arguments
+        [hashtable]$ArgumentMap,
+        [string[]]$ArgumentList
     )
-    Write-Host "Executing: $ScriptPath $Arguments" -ForegroundColor Cyan
-    Write-Verbose "Constructing command line..."
-    
-    # The & symbol explicitly invokes the script file
-    $command = "& `"$ScriptPath`" $Arguments"
-    Write-Verbose "Command: $command"
+    if (-not $ScriptPath) { throw "ScriptPath is required" }
+    if (-not (Test-Path -LiteralPath $ScriptPath)) { throw "ScriptPath '$ScriptPath' not found" }
 
+    $render = if ($ArgumentMap) {
+        ($ArgumentMap.GetEnumerator() | ForEach-Object { "-$($_.Key) $($_.Value)" }) -join ' '
+    } else {
+        ($ArgumentList -join ' ')
+    }
+    Write-Information ("Executing: {0} {1}" -f $ScriptPath, $render) -InformationAction Continue
     try {
-        Invoke-Expression $command
+        if ($ArgumentMap) {
+            & $ScriptPath @ArgumentMap
+        } elseif ($ArgumentList) {
+            & $ScriptPath @ArgumentList
+        } else {
+            & $ScriptPath
+        }
         Write-Verbose "Command completed. Checking exit code..."
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "Error occurred while executing: `"$ScriptPath`" with arguments: `"$Arguments`". Exit code: $LASTEXITCODE" -ForegroundColor Red
+            Write-Error "Error occurred while executing `"$ScriptPath`" with arguments: $render. Exit code: $LASTEXITCODE"
             exit $LASTEXITCODE
         }
-        Write-Verbose "Exit code is 0; no errors detected."
     }
     catch {
-        Write-Host "Error occurred while executing: `"$ScriptPath`" with arguments: `"$Arguments`". Exiting." -ForegroundColor Red
-        Write-Verbose "Exception details: $($_.Exception.Message)"
+        Write-Error "Error occurred while executing `"$ScriptPath`" with arguments: $render. Exiting. Details: $($_.Exception.Message)"
         exit 1
     }
+}
+
+function Get-LabVIEWVersionFromVipb {
+    param([Parameter(Mandatory)][string]$RootPath)
+    $vipb = Get-ChildItem -Path $RootPath -Filter *.vipb -File -Recurse | Select-Object -First 1
+    if (-not $vipb) { throw "No .vipb file found under $RootPath" }
+    $text = Get-Content -LiteralPath $vipb.FullName -Raw
+    $match = [regex]::Match($text, '<Package_LabVIEW_Version>(?<ver>[^<]+)</Package_LabVIEW_Version>', 'IgnoreCase')
+    if (-not $match.Success) { throw "Unable to locate Package_LabVIEW_Version in $($vipb.FullName)" }
+    $raw = $match.Groups['ver'].Value
+    $verMatch = [regex]::Match($raw, '^(?<majmin>\d{2}\.\d)')
+    if (-not $verMatch.Success) { throw "Unable to parse LabVIEW version from '$raw' in $($vipb.FullName)" }
+    $maj = [int]($verMatch.Groups['majmin'].Value.Split('.')[0])
+    $computed = if ($maj -ge 20) { "20$maj" } else { $maj.ToString() }
+    return $computed
 }
 
 try {
     Write-Verbose "Script: Build.ps1 starting."
     Write-Verbose "Parameters received:"
-    Write-Verbose " - RelativePath: $RelativePath"
+    Write-Verbose " - RepositoryPath: $RepositoryPath"
     Write-Verbose " - Major: $Major"
     Write-Verbose " - Minor: $Minor"
     Write-Verbose " - Patch: $Patch"
@@ -107,92 +119,127 @@ try {
     Write-Verbose " - CompanyName: $CompanyName"
     Write-Verbose " - AuthorName: $AuthorName"
 
-    # Validate needed folders
-    Assert-PathExists $RelativePath "RelativePath"
-    Assert-PathExists "$RelativePath\resource\plugins" "Plugins folder"
+    # Ensure the repo root exists before reading the VIPB version
+    if (-not (Test-Path -LiteralPath $RepositoryPath)) {
+        Write-Error "RepositoryPath does not exist: $RepositoryPath"
+        exit 1
+    }
+
+    # Derive LabVIEW version from VIPB as the first consumer step
+    $lvVersion = Get-LabVIEWVersionFromVipb -RootPath $RepositoryPath
+    Write-Information ("Using LabVIEW version from VIPB: {0}" -f $lvVersion) -InformationAction Continue
+
+    # Validate needed folders after version is known
+    Test-PathExistence $RepositoryPath "RepositoryPath"
+    Test-PathExistence "$RepositoryPath\resource\plugins" "Plugins folder"
+    Test-PathExistence "$RepositoryPath\lv_icon_editor.lvproj" "LabVIEW project"
 
     $ActionsPath = Split-Path -Parent $PSScriptRoot
-    Assert-PathExists $ActionsPath "Actions folder"
+    Test-PathExistence $ActionsPath "Actions folder"
+
+    # Ensure VIPC dependencies exist (mirrors CI prep)
+    $vipcPath = Join-Path $RepositoryPath "Tooling\deployment\runner_dependencies.vipc"
+    if (-not (Test-Path -LiteralPath $vipcPath)) {
+        Write-Error "Missing runner_dependencies.vipc at $vipcPath. Cannot apply dependencies; run packaging prep or fetch the VIPC."
+        exit 1
+    }
 
     # 1) Clean up old .lvlibp in the plugins folder
-    Write-Host "Cleaning up old .lvlibp files in plugins folder..." -ForegroundColor Yellow
-    Write-Verbose "Looking for .lvlibp files in $($RelativePath)\resource\plugins..."
+    Write-Information "Cleaning up old .lvlibp files in plugins folder..." -InformationAction Continue
+    Write-Verbose "Looking for .lvlibp files in $($RepositoryPath)\resource\plugins..."
     try {
-        $PluginFiles = Get-ChildItem -Path "$RelativePath\resource\plugins" -Filter '*.lvlibp' -ErrorAction Stop
+        $PluginFiles = Get-ChildItem -Path "$RepositoryPath\resource\plugins" -Filter '*.lvlibp' -ErrorAction Stop
         if ($PluginFiles) {
-            Write-Verbose "Found $($PluginFiles.Count) file(s): $($PluginFiles | ForEach-Object { $_.Name } -join ', ')"
+            $pluginNames = $PluginFiles | ForEach-Object { $_.Name }
+            Write-Verbose "Found $($PluginFiles.Count) file(s): $($pluginNames -join ', ')"
             $PluginFiles | Remove-Item -Force
-            Write-Host "Deleted .lvlibp files from plugins folder." -ForegroundColor Green
+            Write-Information "Deleted .lvlibp files from plugins folder." -InformationAction Continue
         }
         else {
-            Write-Host "No .lvlibp files found to delete." -ForegroundColor Cyan
+            Write-Information "No .lvlibp files found to delete." -InformationAction Continue
         }
     }
     catch {
-        Write-Host "Error occurred while retrieving .lvlibp files: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Error "Error occurred while retrieving .lvlibp files: $($_.Exception.Message)"
         Write-Verbose "Stack Trace: $($_.Exception.StackTrace)"
     }
 
-#    # 2) Apply VIPC (32-bit)
-#    Write-Verbose "Now applying VIPC for 32-bit..."
-#    Execute-Script $ApplyVIPC `
-#        ("-MinimumSupportedLVVersion 2021 " +
-#         "-VIP_LVVersion 2021 " +
-#         "-SupportedBitness 32 " +
-#         "-RelativePath `"$RelativePath`" " +
-#         "-VIPCPath `"Tooling\deployment\runner_dependencies.vipc`"")
+    # 2) Apply VIPC (32-bit)
+    Write-Information "Applying VIPC (dependencies) for 32-bit..." -InformationAction Continue
+    $ApplyVIPC = Join-Path $ActionsPath "apply-vipc/ApplyVIPC.ps1"
+    Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
+        MinimumSupportedLVVersion = $lvVersion
+        VIP_LVVersion             = $lvVersion
+        SupportedBitness          = '32'
+        RepositoryPath            = $RepositoryPath
+        VIPCPath                  = 'Tooling\deployment\runner_dependencies.vipc'
+    }
+
+    # 2.1) Preflight missing items using existing missing-in-project helper (32-bit)
+    Write-Information "Preflight: checking for missing project items via missing-in-project..." -InformationAction Continue
+    $MissingHelper = Join-Path $ActionsPath "missing-in-project/Invoke-MissingInProjectCLI.ps1"
+    Invoke-ScriptSafe -ScriptPath $MissingHelper -ArgumentMap @{
+        LVVersion   = $lvVersion
+        Arch        = '32'
+        ProjectFile = "$RepositoryPath\lv_icon_editor.lvproj"
+    }
 
     # 3) Build LV Library (32-bit)
     Write-Verbose "Building LV library (32-bit)..."
     $BuildLvlibp = Join-Path $ActionsPath "build-lvlibp/Build_lvlibp.ps1"
-    Execute-Script $BuildLvlibp `
-        ("-MinimumSupportedLVVersion 2021 " +
-         "-SupportedBitness 32 " +
-         "-RelativePath `"$RelativePath`" " +
-         "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
-         "-Commit `"$Commit`"")
+    $argsLvlibp32 = @{
+        MinimumSupportedLVVersion = $lvVersion
+        SupportedBitness          = '32'
+        RepositoryPath            = $RepositoryPath
+        Major                     = $Major
+        Minor                     = $Minor
+        Patch                     = $Patch
+        Build                     = $Build
+        Commit                    = $Commit
+    }
+    & $BuildLvlibp @argsLvlibp32
 
     # 4) Close LabVIEW (32-bit)
     Write-Verbose "Closing LabVIEW (32-bit)..."
     $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
-    Execute-Script $CloseLabVIEW `
-        "-MinimumSupportedLVVersion 2021 -SupportedBitness 32"
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion', $lvVersion,'-SupportedBitness','32')
 
     # 5) Rename .lvlibp -> lv_icon_x86.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x86.lvlibp..."
     $RenameFile = Join-Path $ActionsPath "rename-file/Rename-file.ps1"
-    Execute-Script $RenameFile `
-        "-CurrentFilename `"$RelativePath\resource\plugins\lv_icon.lvlibp`" -NewFilename 'lv_icon_x86.lvlibp'"
+    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RepositoryPath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x86.lvlibp')
 
- #   # 6) Apply VIPC (64-bit)
- #   Write-Verbose "Now applying VIPC for 64-bit..."
-#   $ApplyVIPC = Join-Path $ActionsPath "apply-vipc/ApplyVIPC.ps1"
-#   Execute-Script $ApplyVIPC `
- #       ("-MinimumSupportedLVVersion 2021 " +
- #        "-VIP_LVVersion 2021 " +
- #        "-SupportedBitness 64 " +
- #        "-RelativePath `"$RelativePath`" " +
- #        "-VIPCPath `"Tooling\deployment\runner_dependencies.vipc`"")
+    # 6) Apply VIPC (64-bit)
+    Write-Information "Applying VIPC (dependencies) for 64-bit..." -InformationAction Continue
+    Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
+        MinimumSupportedLVVersion = $lvVersion
+        VIP_LVVersion             = $lvVersion
+        SupportedBitness          = '64'
+        RepositoryPath            = $RepositoryPath
+        VIPCPath                  = 'Tooling\deployment\runner_dependencies.vipc'
+    }
 
     # 7) Build LV Library (64-bit)
     Write-Verbose "Building LV library (64-bit)..."
-    Execute-Script $BuildLvlibp `
-        ("-MinimumSupportedLVVersion 2021 " +
-         "-SupportedBitness 64 " +
-         "-RelativePath `"$RelativePath`" " +
-         "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
-         "-Commit `"$Commit`"")
-    
+    $argsLvlibp64 = @{
+        MinimumSupportedLVVersion = $lvVersion
+        SupportedBitness          = '64'
+        RepositoryPath            = $RepositoryPath
+        Major                     = $Major
+        Minor                     = $Minor
+        Patch                     = $Patch
+        Build                     = $Build
+        Commit                    = $Commit
+    }
+    & $BuildLvlibp @argsLvlibp64
+
     # 7.1) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Execute-Script $CloseLabVIEW `
-        "-MinimumSupportedLVVersion 2021 -SupportedBitness 64"
-    
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion', $lvVersion,'-SupportedBitness','64')
 
     # Rename .lvlibp -> lv_icon_x64.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x64.lvlibp..."
-    Execute-Script $RenameFile `
-        "-CurrentFilename `"$RelativePath\resource\plugins\lv_icon.lvlibp`" -NewFilename 'lv_icon_x64.lvlibp'"
+    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RepositoryPath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x64.lvlibp')
 
     # -------------------------------------------------------------------------
     # 8) Construct the JSON for "Company Name" & "Author Name", plus version
@@ -222,36 +269,36 @@ try {
     # 9) Modify VIPB Display Information
     Write-Verbose "Modify VIPB Display Information (64-bit)..."
     $ModifyVIPB = Join-Path $ActionsPath "modify-vipb-display-info/ModifyVIPBDisplayInfo.ps1"
-    Execute-Script $ModifyVIPB `
+    Invoke-ScriptSafe $ModifyVIPB `
         (
             # Use single-dash for all recognized parameters
             "-SupportedBitness 64 " +
-            "-RelativePath `"$RelativePath`" " +
+            "-RepositoryPath `"$RepositoryPath`" " +
             "-VIPBPath `"Tooling\deployment\NI Icon editor.vipb`" " +
             "-MinimumSupportedLVVersion 2023 " +
             "-LabVIEWMinorRevision $LabVIEWMinorRevision " +
             "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
             "-Commit `"$Commit`" " +
-            "-ReleaseNotesFile `"$RelativePath\Tooling\deployment\release_notes.md`" " +
+            "-ReleaseNotesFile `"$RepositoryPath\Tooling\deployment\release_notes.md`" " +
             # Pass our JSON
             "-DisplayInformationJSON '$DisplayInformationJSON' " +
             "-Verbose"
-        )   
+        )
 
     # 11) Build VI Package (64-bit) 2023
     Write-Verbose "Building VI Package (64-bit)..."
     $BuildVip = Join-Path $ActionsPath "build-vip/build_vip.ps1"
-    Execute-Script $BuildVip `
+    Invoke-ScriptSafe $BuildVip `
         (
             # Use single-dash for all recognized parameters
             "-SupportedBitness 64 " +
-            "-RelativePath `"$RelativePath`" " +
+            "-RepositoryPath `"$RepositoryPath`" " +
             "-VIPBPath `"Tooling\deployment\NI Icon editor.vipb`" " +
             "-MinimumSupportedLVVersion 2023 " +
             "-LabVIEWMinorRevision $LabVIEWMinorRevision " +
             "-Major $Major -Minor $Minor -Patch $Patch -Build $Build " +
             "-Commit `"$Commit`" " +
-            "-ReleaseNotesFile `"$RelativePath\Tooling\deployment\release_notes.md`" " +
+            "-ReleaseNotesFile `"$RepositoryPath\Tooling\deployment\release_notes.md`" " +
             # Pass our JSON
             "-DisplayInformationJSON '$DisplayInformationJSON' " +
             "-Verbose"
@@ -259,14 +306,13 @@ try {
 
     # 12) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Execute-Script $CloseLabVIEW `
-        "-MinimumSupportedLVVersion 2023 -SupportedBitness 64"
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-MinimumSupportedLVVersion','2023','-SupportedBitness','64')
 
-    Write-Host "All scripts executed successfully!" -ForegroundColor Green
+    Write-Information "All scripts executed successfully!" -InformationAction Continue
     Write-Verbose "Script: Build.ps1 completed without errors."
 }
 catch {
-    Write-Host "An unexpected error occurred during script execution: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Error "An unexpected error occurred during script execution: $($_.Exception.Message)"
     Write-Verbose "Stack Trace: $($_.Exception.StackTrace)"
     exit 1
 }

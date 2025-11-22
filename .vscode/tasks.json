@@ -1,0 +1,168 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "vipArtifactPath",
+      "type": "promptString",
+      "description": "Path to the built .vip (file/folder/pattern)",
+      "default": "builds/VI Package/"
+    },
+    {
+      "label": "g-cli --help (dump)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/.github/scripts/dump-gcli-help.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "id": "minLv",
+      "type": "promptString",
+      "description": "Minimum LabVIEW version (major.minor)",
+      "default": "21.0"
+    },
+    {
+      "id": "repoPath",
+      "type": "promptString",
+      "description": "Path to the repository root",
+      "default": "${workspaceFolder}"
+    },
+    {
+      "id": "semverMajor",
+      "type": "promptString",
+      "description": "Major version",
+      "default": "0"
+    },
+    {
+      "id": "semverMinor",
+      "type": "promptString",
+      "description": "Minor version",
+      "default": "0"
+    },
+    {
+      "id": "semverPatch",
+      "type": "promptString",
+      "description": "Patch version",
+      "default": "0"
+    },
+    {
+      "id": "buildNumber",
+      "type": "promptString",
+      "description": "Build number",
+      "default": "1"
+    },
+    {
+      "id": "commitHash",
+      "type": "promptString",
+      "description": "Git commit hash for stamping artifacts",
+      "default": "manual"
+    },
+    {
+      "id": "companyName",
+      "type": "promptString",
+      "description": "Company name for metadata",
+      "default": "LabVIEW-Community-CI-CD"
+    },
+    {
+      "id": "authorName",
+      "type": "promptString",
+      "description": "Author/Packager name for metadata",
+      "default": "LabVIEW Icon Editor CI"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "Analyze VI Package (Pester)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/.github/actions/analyze-vi-package/run-local.ps1",
+        "-VipArtifactPath",
+        "${input:vipArtifactPath}",
+        "-MinLabVIEW",
+        "${input:minLv}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build VI Package (Build.ps1)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/.github/actions/build/Build.ps1",
+        "-RepositoryPath",
+        "${input:repoPath}",
+        "-Major",
+        "${input:semverMajor}",
+        "-Minor",
+        "${input:semverMinor}",
+        "-Patch",
+        "${input:semverPatch}",
+        "-Build",
+        "${input:buildNumber}",
+        "-LabVIEWMinorRevision",
+        "3",
+        "-Commit",
+        "${input:commitHash}",
+        "-CompanyName",
+        "${input:companyName}",
+        "-AuthorName",
+        "${input:authorName}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build VIP (full pipeline)",
+      "dependsOn": [
+        "Build VI Package (Build.ps1)"
+      ],
+      "dependsOrder": "sequence",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Set Dev Mode (LabVIEW)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/.github/actions/set-development-mode/run-dev-mode.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Revert Dev Mode (LabVIEW)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/.github/actions/revert-development-mode/run-dev-mode.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

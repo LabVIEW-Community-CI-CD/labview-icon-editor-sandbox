@@ -4,16 +4,16 @@
     This version includes additional debug/verbose output.
 
 .EXAMPLE
-    .\applyvipc.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RelativePath "C:\release\labview-icon-editor-fork" -VIPCPath "Tooling\deployment\runner_dependencies.vipc" -VIP_LVVersion "2021" -Verbose
+    .\applyvipc.ps1 -MinimumSupportedLVVersion "2021" -SupportedBitness "64" -RepositoryPath "C:\release\labview-icon-editor-fork" -VIPCPath "Tooling\deployment\runner_dependencies.vipc" -VIP_LVVersion "2021" -Verbose
 #>
 
 [CmdletBinding()]  # Enables -Verbose and other common parameters
 Param (
-    [string]$MinimumSupportedLVVersion,
-    [string]$VIP_LVVersion,
-    [string]$SupportedBitness,
-    [string]$RelativePath,
-    [string]$VIPCPath
+    [Parameter(Mandatory)][string]$MinimumSupportedLVVersion,
+    [Parameter(Mandatory)][string]$VIP_LVVersion,
+    [Parameter(Mandatory)][ValidateSet('32','64')][string]$SupportedBitness,
+    [Parameter(Mandatory)][string]$RepositoryPath,
+    [Parameter(Mandatory)][string]$VIPCPath
 )
 
 Write-Verbose "Script Name: $($MyInvocation.MyCommand.Definition)"
@@ -21,19 +21,19 @@ Write-Verbose "Parameters provided:"
 Write-Verbose " - MinimumSupportedLVVersion: $MinimumSupportedLVVersion"
 Write-Verbose " - VIP_LVVersion:             $VIP_LVVersion"
 Write-Verbose " - SupportedBitness:          $SupportedBitness"
-Write-Verbose " - RelativePath:              $RelativePath"
+Write-Verbose " - RepositoryPath:            $RepositoryPath"
 Write-Verbose " - VIPCPath:                  $VIPCPath"
 
 # -------------------------
 # 1) Resolve Paths & Validate
 # -------------------------
 try {
-    Write-Verbose "Attempting to resolve the 'RelativePath'..."
-    $ResolvedRelativePath = Resolve-Path -Path $RelativePath -ErrorAction Stop
-    Write-Verbose "ResolvedRelativePath: $ResolvedRelativePath"
+    Write-Verbose "Attempting to resolve the repository path..."
+    $ResolvedRepositoryPath = Resolve-Path -Path $RepositoryPath -ErrorAction Stop
+    Write-Verbose "ResolvedRepositoryPath: $ResolvedRepositoryPath"
 
     Write-Verbose "Building full path for the .vipc file..."
-    $ResolvedVIPCPath = Join-Path -Path $ResolvedRelativePath -ChildPath $VIPCPath -ErrorAction Stop
+    $ResolvedVIPCPath = Join-Path -Path $ResolvedRepositoryPath -ChildPath $VIPCPath -ErrorAction Stop
     Write-Verbose "ResolvedVIPCPath:     $ResolvedVIPCPath"
 
     # Verify that the .vipc file actually exists
@@ -52,7 +52,7 @@ try {
     }
 }
 catch {
-    Write-Error "Error resolving paths. Ensure RelativePath and VIPCPath are valid. Details: $($_.Exception.Message)"
+    Write-Error "Error resolving paths. Ensure RepositoryPath and VIPCPath are valid. Details: $($_.Exception.Message)"
     exit 1
 }
 
@@ -94,42 +94,59 @@ switch ("$MinimumSupportedLVVersion-$SupportedBitness") {
     }
 }
 
-Write-Output "Applying dependencies for LabVIEW $VIP_LVVersion_B..."
+Write-Information "Applying dependencies for LabVIEW $VIP_LVVersion_B..." -InformationAction Continue
 Write-Verbose "VIP_LVVersion_A (for primary LVVersion): $VIP_LVVersion_A"
 Write-Verbose "VIP_LVVersion_B (for minimum LVVersion): $VIP_LVVersion_B"
+
+# Sanity check g-cli exists
+$gcli = Get-Command g-cli -ErrorAction SilentlyContinue
+if (-not $gcli) {
+    Write-Error "g-cli is not available on PATH; cannot apply VIPC."
+    exit 1
+}
 
 # -------------------------
 # 3) Construct the Script to Execute
 # -------------------------
-Write-Verbose "Constructing the g-cli command script..."
-$script = @"
-g-cli --lv-ver $MinimumSupportedLVVersion --arch $SupportedBitness -v "$($ResolvedRelativePath)\Tooling\Deployment\Applyvipc.vi" -- "$ResolvedVIPCPath" "$VIP_LVVersion_B"
-"@
+Write-Verbose "Constructing the g-cli command arguments..."
 
+$applyArgs = @(
+    "--lv-ver", $MinimumSupportedLVVersion,
+    "--arch", $SupportedBitness,
+    "-v", "$($ResolvedRepositoryPath)\Tooling\Deployment\Applyvipc.vi",
+    "--",
+    "$ResolvedVIPCPath",
+    "$VIP_LVVersion_B"
+)
+
+$secondaryArgs = $null
 if ($VIP_LVVersion -ne $MinimumSupportedLVVersion) {
-    Write-Verbose "VIP_LVVersion and MinimumSupportedLVVersion differ; adding commands for $VIP_LVVersion..."
-    $script += @"
-g-cli vipc -- -t 3000 -v "$VIP_LVVersion" "$ResolvedVIPCPath"
-"@
+    Write-Verbose "VIP_LVVersion and MinimumSupportedLVVersion differ; preparing secondary vipc application for $VIP_LVVersion..."
+    $secondaryArgs = @(
+        "vipc",
+        "--",
+        "-t", "3000",
+        "-v", "$VIP_LVVersion",
+        "$ResolvedVIPCPath"
+    )
 }
 
-# -------------------------
-# 4) Output the script for debugging
-# -------------------------
-Write-Output "Executing the following commands:"
-Write-Output $script
-Write-Verbose "Full script content (for debugging): `n$script"
+Write-Information ("Executing: g-cli {0}" -f ($applyArgs -join ' ')) -InformationAction Continue
+$applyOut = & g-cli @applyArgs 2>&1
+if ($LASTEXITCODE -ne 0) {
+    $joined = ($applyOut -join '; ')
+    Write-Error "Failed applying VIPC to $VIP_LVVersion_B (exit $LASTEXITCODE). Output: $joined"
+    exit $LASTEXITCODE
+}
 
-# -------------------------
-# 5) Execute the Script & Handle Errors (Try/Catch with Invoke-Expression)
-# -------------------------
-try {
-    Write-Verbose "Starting Invoke-Expression to run g-cli commands..."
-    Invoke-Expression $script
-    Write-Host "Successfully applied dependencies to LabVIEW: $VIP_LVVersion_B" `
-        " (and potentially $VIP_LVVersion_A if switched)."
+if ($secondaryArgs) {
+    Write-Information ("Executing secondary: g-cli {0}" -f ($secondaryArgs -join ' ')) -InformationAction Continue
+    $secondaryOut = & g-cli @secondaryArgs 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        $joined = ($secondaryOut -join '; ')
+        Write-Error "Failed secondary VIPC apply for $VIP_LVVersion (exit $LASTEXITCODE). Output: $joined"
+        exit $LASTEXITCODE
+    }
 }
-catch {
-    Write-Error "An error occurred while applying the .vipc dependencies. Details: $($_.Exception.Message)"
-    exit 1
-}
+
+Write-Information "Successfully applied dependencies to LabVIEW." -InformationAction Continue

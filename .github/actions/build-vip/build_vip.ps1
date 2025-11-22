@@ -9,7 +9,7 @@
 .PARAMETER SupportedBitness
     LabVIEW bitness for the build ("32" or "64").
 
-.PARAMETER RelativePath
+.PARAMETER RepositoryPath
     Path to the repository root.
 
 .PARAMETER VIPBPath
@@ -43,12 +43,12 @@
     JSON string representing the VIPB display information to update.
 
 .EXAMPLE
-    .\build_vip.ps1 -SupportedBitness "64" -RelativePath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -MinimumSupportedLVVersion 2021 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
+    .\build_vip.ps1 -SupportedBitness "64" -RepositoryPath "C:\repo" -VIPBPath "Tooling\deployment\NI Icon editor.vipb" -MinimumSupportedLVVersion 2021 -LabVIEWMinorRevision 3 -Major 1 -Minor 0 -Patch 0 -Build 2 -Commit "abcd123" -ReleaseNotesFile "Tooling\deployment\release_notes.md" -DisplayInformationJSON '{"Package Version":{"major":1,"minor":0,"patch":0,"build":2}}'
 #>
 
 param (
     [string]$SupportedBitness,
-    [string]$RelativePath,
+    [string]$RepositoryPath,
     [string]$VIPBPath,
 
     [int]$MinimumSupportedLVVersion,
@@ -69,12 +69,17 @@ param (
 
 # 1) Resolve paths
 try {
-    $ResolvedRelativePath = Resolve-Path -Path $RelativePath -ErrorAction Stop
-    $ResolvedVIPBPath = Join-Path -Path $ResolvedRelativePath -ChildPath $VIPBPath -ErrorAction Stop
+    $ResolvedRepositoryPath = Resolve-Path -Path $RepositoryPath -ErrorAction Stop
+    $ResolvedVIPBPath = Join-Path -Path $ResolvedRepositoryPath -ChildPath $VIPBPath -ErrorAction Stop
+    Write-Verbose "RepositoryPath resolved to $ResolvedRepositoryPath"
+    Write-Verbose "VIPBPath resolved to $ResolvedVIPBPath"
+    if ($Commit) {
+        Write-Verbose "Embedding commit metadata: $Commit" -Verbose:$VerbosePreference
+    }
 }
 catch {
     $errorObject = [PSCustomObject]@{
-        error      = "Error resolving paths. Ensure RelativePath and VIPBPath are valid."
+        error      = "Error resolving paths. Ensure RepositoryPath and VIPBPath are valid."
         exception  = $_.Exception.Message
         stackTrace = $_.Exception.StackTrace
     }
@@ -84,7 +89,7 @@ catch {
 
 # 2) Create release notes if needed and resolve the paths
 if (-not (Test-Path $ReleaseNotesFile)) {
-    Write-Host "Release notes file '$ReleaseNotesFile' does not exist. Creating it..."
+    Write-Information "Release notes file '$ReleaseNotesFile' does not exist. Creating it..." -InformationAction Continue
     New-Item -ItemType File -Path $ReleaseNotesFile -Force | Out-Null
 }
 
@@ -102,7 +107,7 @@ catch {
 }
 
 # 3a) Ensure build log directory exists for troubleshooting
-$LogDirectory = Join-Path -Path $ResolvedRelativePath -ChildPath "builds/logs"
+$LogDirectory = Join-Path -Path $ResolvedRepositoryPath -ChildPath "builds/logs"
 New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
 
 # 3) Calculate the LabVIEW version string
@@ -147,9 +152,6 @@ else {
     $jsonObj.'Package Version'.build = $Build
 }
 
-# Re-convert to a JSON string with a comfortable nesting depth
-$UpdatedDisplayInformationJSON = $jsonObj | ConvertTo-Json -Depth 5
-
 # 5) Construct reusable g-cli arguments
 $gcliArgs = @(
     "--lv-ver", $MinimumSupportedLVVersion.ToString(),
@@ -178,7 +180,7 @@ $attemptLogs = @()
 for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
     $logFile = Join-Path -Path $LogDirectory -ChildPath ("gcli-build-attempt-{0}.log" -f $attempt)
     $attemptLogs += $logFile
-    Write-Host "Starting g-cli build attempt $attempt of $maxAttempts. Logs: $logFile"
+    Write-Information "Starting g-cli build attempt $attempt of $maxAttempts. Logs: $logFile" -InformationAction Continue
 
     try {
         & g-cli @gcliArgs 2>&1 | Tee-Object -FilePath $logFile
@@ -203,12 +205,12 @@ if (-not $success) {
     for ($i = 0; $i -lt $attemptLogs.Count; $i++) {
         $log = $attemptLogs[$i]
         if (Test-Path $log) {
-            Write-Host ("---- g-cli build log attempt {0} ({1}) ----" -f ($i + 1), $log)
-            Get-Content -Path $log | ForEach-Object { Write-Host $_ }
-            Write-Host ("---- end g-cli build log attempt {0} ----" -f ($i + 1))
+            Write-Information ("---- g-cli build log attempt {0} ({1}) ----" -f ($i + 1), $log) -InformationAction Continue
+            Get-Content -Path $log | ForEach-Object { Write-Information $_ -InformationAction Continue }
+            Write-Information ("---- end g-cli build log attempt {0} ----" -f ($i + 1)) -InformationAction Continue
         }
         else {
-            Write-Host ("g-cli build log for attempt {0} not found at {1}" -f ($i + 1), $log)
+            Write-Warning ("g-cli build log for attempt {0} not found at {1}" -f ($i + 1), $log)
         }
     }
 
@@ -221,4 +223,4 @@ if (-not $success) {
     exit 1
 }
 
-Write-Host "Successfully built VI package: $ResolvedVIPBPath"
+Write-Information "Successfully built VI package: $ResolvedVIPBPath" -InformationAction Continue

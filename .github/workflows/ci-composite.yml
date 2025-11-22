@@ -1,8 +1,13 @@
 name: CI Pipeline (Composite)
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
+  # Enforce one run at a time per branch/PR to avoid overlapping fixes on the same feature branch.
+  # Deduplicate by commit (PR head SHA when available); cancel older runs for the same commit.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
+
+env:
+  MIN_LABVIEW_POLICY: "21.0"
 
 on:
   push:
@@ -10,8 +15,6 @@ on:
       - main
       - develop
       - release/*
-      - feature/*
-      - hotfix/*
   pull_request:
     branches:
       - main
@@ -375,7 +378,7 @@ jobs:
           minimum_supported_lv_version: 2021
           vip_lv_version:               2021
           supported_bitness:            64
-          relative_path:                ${{ github.workspace }}
+          repository_path:              ${{ github.workspace }}
           vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
       - run: echo "No .vipc changes detected; skipping dependency application."
         if: needs.changes.outputs.vipc != 'true'
@@ -391,7 +394,7 @@ jobs:
           minimum_supported_lv_version: 2021
           vip_lv_version:               2021
           supported_bitness:            32
-          relative_path:                ${{ github.workspace }}
+          repository_path:              ${{ github.workspace }}
           vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
       - run: echo "No .vipc changes detected; skipping dependency application."
         if: needs.changes.outputs.vipc != 'true'
@@ -407,7 +410,7 @@ jobs:
           minimum_supported_lv_version: 2023
           vip_lv_version:               2023
           supported_bitness:            64
-          relative_path:                ${{ github.workspace }}
+          repository_path:              ${{ github.workspace }}
           vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
       - run: echo "No .vipc changes detected; skipping dependency application."
         if: needs.changes.outputs.vipc != 'true'
@@ -591,6 +594,51 @@ jobs:
             reports/performance-measurements.json
             reports/portability-status.json
 
+  ps-coverage:
+    name: PowerShell Tests & Coverage
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Pester 5.7.1
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -Scope CurrentUser -Force -RequiredVersion 5.7.1
+      - name: Run Pester with coverage
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $coverageTargets = @(
+            '.github/actions/**/*.ps1',
+            '.github/actions/**/*.psm1'
+          )
+          $pesterConfig = New-PesterConfiguration
+          $pesterConfig.Run.Container = New-PesterContainer -Path 'Test'
+          $pesterConfig.TestResult.Enabled = $true
+          $pesterConfig.TestResult.OutputPath = 'pester-results.xml'
+          $pesterConfig.CodeCoverage.Enabled = $true
+          $pesterConfig.CodeCoverage.Path = $coverageTargets
+          $pesterConfig.CodeCoverage.OutputPath = 'coverage.xml'
+          $pesterConfig.CodeCoverage.OutputFormat = 'JaCoCo'
+          $pesterConfig.Run.PassThru = $true
+          $pesterConfig.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $pesterConfig
+      - name: Upload Pester results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-results
+          path: pester-results.xml
+      - name: Upload Pester coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-coverage
+          path: coverage.xml
+
   build-ppl-x86:
     name: Build 32-bit Packed Library
     needs: [verify-checklist-sync, build-ppl-x64, version]
@@ -600,7 +648,7 @@ jobs:
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: 32
-          relative_path: ${{ github.workspace }}
+          repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}
           patch: ${{ needs.version.outputs.PATCH }}
@@ -629,7 +677,7 @@ jobs:
         with:
           minimum_supported_lv_version: 2021
           supported_bitness: 64
-          relative_path: ${{ github.workspace }}
+          repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}
           patch: ${{ needs.version.outputs.PATCH }}
@@ -653,12 +701,17 @@ jobs:
     name: Build VI Package
     # Chain after 32-bit build, which already depends on 64-bit, to enforce x64 -> x86 -> build-vip ordering
     needs: [verify-checklist-sync, build-ppl-x86, version]
+    outputs:
+      vip_artifact: ${{ steps.build-vip.outputs.vip_artifact }}
+      vip_path: ${{ steps.build-vip.outputs.vip_path }}
+      release_notes_artifact: ${{ steps.release-notes.outputs.artifact_name }}
     runs-on: self-hosted-windows-lv
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Generate release notes
+        id: release-notes
         uses: ./.github/actions/generate-release-notes
         # output_path defaults to Tooling/deployment/release_notes.md
       - uses: actions/download-artifact@v4
@@ -725,7 +778,7 @@ jobs:
       - uses: ./.github/actions/modify-vipb-display-info
         with:
           supported_bitness: 64
-          relative_path: ${{ github.workspace }}
+          repository_path: ${{ github.workspace }}
           vipb_path: Tooling/deployment/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
@@ -736,10 +789,11 @@ jobs:
           commit: ${{ github.sha }}
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
-      - uses: ./.github/actions/build-vip
+      - id: build-vip
+        uses: ./.github/actions/build-vip
         with:
           supported_bitness: 64
-          relative_path: ${{ github.workspace }}
+          repository_path: ${{ github.workspace }}
           vipb_path: Tooling/deployment/NI Icon editor.vipb
           minimum_supported_lv_version: 2023
           labview_minor_revision: 3
@@ -774,3 +828,65 @@ jobs:
           } else {
             Write-Host ("Tag validation ok: {0}" -f $provided)
           }
+
+  analyze-vip:
+    name: Analyze VI Package
+    needs: [verify-checklist-sync, build-vip]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record analyze job start
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = "timings"
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          $path = Join-Path $dir "analyze-vip.txt"
+          "job=analyze-vip" | Out-File -FilePath $path -Encoding utf8
+          "server_time_start=$(Get-Date -Format o)" | Out-File -FilePath $path -Encoding utf8 -Append
+          "run_id=${{ github.run_id }}" | Out-File -FilePath $path -Encoding utf8 -Append
+          "ref=${{ github.ref }}" | Out-File -FilePath $path -Encoding utf8 -Append
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-vip.outputs.vip_artifact }}
+          path: builds/VI Package
+      - name: Locate downloaded VI package
+        id: locate-downloaded-vip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = "builds/VI Package"
+          $vip = Get-ChildItem -Path $dir -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $vip) {
+            Write-Error "No .vip found under '$dir' after artifact download."
+          }
+          "vip_path=$($vip.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+      - name: Analyze built VI package
+        id: analyze-vip
+        uses: ./.github/actions/analyze-vi-package
+        with:
+          vip_artifact_path: ${{ steps.locate-downloaded-vip.outputs.vip_path }}
+          min_labview: ${{ env.MIN_LABVIEW_POLICY }}
+      - name: Upload VI package analysis results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vip-analysis-junit
+          path: ${{ steps.analyze-vip.outputs.junit }}
+      - name: Record analyze job end and upload timing
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = "timings/analyze-vip.txt"
+          if (-not (Test-Path $path)) {
+            Write-Error "Timing file missing at $path"
+          }
+          "server_time_end=$(Get-Date -Format o)" | Out-File -FilePath $path -Encoding utf8 -Append
+        # Upload timing as its own artifact for duration analysis
+      - name: Upload analyze timing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyze-vip-timing
+          path: timings/analyze-vip.txt

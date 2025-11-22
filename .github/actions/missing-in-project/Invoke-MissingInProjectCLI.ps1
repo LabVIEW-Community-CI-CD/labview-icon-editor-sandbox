@@ -1,4 +1,9 @@
 #Requires -Version 7.0
+
+# ---------- PARAMETERS ----------
+[Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","LVVersion",Justification="Used throughout helper invocations")]
+[Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","Arch",Justification="Used throughout helper invocations")]
+[Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","ProjectFile",Justification="Used throughout helper invocations")]
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$LVVersion,
@@ -23,23 +28,23 @@ if (-not (Test-Path $HelperPath)) {
 
 # =========================  SETUP  =========================
 function Setup {
-    Write-Host "=== Setup ==="
-    Write-Host "LVVersion  : $LVVersion"
-    Write-Host "Arch       : $Arch-bit"
-    Write-Host "ProjectFile: $ProjectFile"
+    Write-Information "=== Setup ===" -InformationAction Continue
+    Write-Information "LVVersion  : $LVVersion" -InformationAction Continue
+    Write-Information "Arch       : $Arch-bit" -InformationAction Continue
+    Write-Information "ProjectFile: $ProjectFile" -InformationAction Continue
 
     # remove an old results file to avoid stale data
     if (Test-Path $MissingFilePath) {
         Remove-Item $MissingFilePath -Force -ErrorAction SilentlyContinue
-        Write-Host "Deleted previous $MissingFilePath"
+        Write-Information "Deleted previous $MissingFilePath" -InformationAction Continue
     }
 }
 
 # =====================  MAIN SEQUENCE  =====================
 function MainSequence {
 
-    Write-Host "`n=== MainSequence ==="
-    Write-Host "Invoking missing‑file check via helper script …`n"
+    Write-Information "`n=== MainSequence ===" -InformationAction Continue
+    Write-Information "Invoking missing-file check via helper script ...`n" -InformationAction Continue
 
     # call helper & capture any stdout (not strictly needed now)
     & $HelperPath -LVVersion $LVVersion -Arch $Arch -ProjectFile $ProjectFile
@@ -57,14 +62,14 @@ function MainSequence {
     }
     else {
         if ($Script:HelperExitCode -ne 0) {
-            # helper failed and didn't produce a file – we cannot parse anything
+            # helper failed and didn't produce a file - we cannot parse anything
             $Script:ParsingFailed = $true
             return
         }
     }
 
     # ----------  TABULAR REPORT  ----------
-    Write-Host ""
+    Write-Information "" -InformationAction Continue
     $col1   = "FilePath"
     $maxLen = if ($Script:MissingFileLines.Count) {
                   ($Script:MissingFileLines | Measure-Object -Maximum Length).Maximum
@@ -72,27 +77,27 @@ function MainSequence {
                   $col1.Length
               }
 
-    Write-Host ($col1.PadRight($maxLen)) -ForegroundColor Cyan
+    Write-Information ($col1.PadRight($maxLen)) -InformationAction Continue
 
     if ($Script:MissingFileLines.Count -eq 0) {
         $msg = "No missing files detected"
-        Write-Host ($msg.PadRight($maxLen)) -ForegroundColor Green
+        Write-Information ($msg.PadRight($maxLen)) -InformationAction Continue
     }
     else {
         foreach ($line in $Script:MissingFileLines) {
-            Write-Host ($line.PadRight($maxLen)) -ForegroundColor Red
+            Write-Warning ($line.PadRight($maxLen))
         }
     }
 }
 
 # ========================  CLEANUP  ========================
 function Cleanup {
-    Write-Host "`n=== Cleanup ==="
+    Write-Information "`n=== Cleanup ===" -InformationAction Continue
     # Delete the text file if everything passed
     if ($Script:HelperExitCode -eq 0 -and $Script:MissingFileLines.Count -eq 0) {
         if (Test-Path $MissingFilePath) {
             Remove-Item $MissingFilePath -Force -ErrorAction SilentlyContinue
-            Write-Host "All good – removed $MissingFilePath"
+            Write-Information "All good - removed $MissingFilePath" -InformationAction Continue
         }
     }
 }
