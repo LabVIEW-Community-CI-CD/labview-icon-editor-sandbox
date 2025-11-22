@@ -500,12 +500,20 @@ jobs:
           $dirty = git status --porcelain
           if ($dirty) {
             git status --short
-            git diff -- lv_icon_editor.lvproj > post_mip_dirty_x64.diff
-            Write-Host "Workspace became dirty during missing-in-project-x64. Diff saved to post_mip_dirty_x64.diff"
+            $diff = git diff -- lv_icon_editor.lvproj
+            $diff | Out-File post_mip_dirty_x64.diff -Encoding utf8
+            Write-Host "Workspace became dirty during missing-in-project-x64. Diff follows:"
+            Write-Host "------ lv_icon_editor.lvproj diff (x64) ------"
+            Write-Host ($diff -join [Environment]::NewLine)
+            Write-Host "----------------------------------------------"
             if ($Env:GITHUB_STEP_SUMMARY) {
               "### Workspace changed during missing-in-project-x64" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-              "Saved diff: post_mip_dirty_x64.diff" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              "Diff (lv_icon_editor.lvproj):" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              "```diff" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              $diff | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              "```" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             }
+            git checkout -- lv_icon_editor.lvproj
           }
 
   missing-in-project-x86:
@@ -530,12 +538,20 @@ jobs:
           $dirty = git status --porcelain
           if ($dirty) {
             git status --short
-            git diff -- lv_icon_editor.lvproj > post_mip_dirty_x86.diff
-            Write-Host "Workspace became dirty during missing-in-project-x86. Diff saved to post_mip_dirty_x86.diff"
+            $diff = git diff -- lv_icon_editor.lvproj
+            $diff | Out-File post_mip_dirty_x86.diff -Encoding utf8
+            Write-Host "Workspace became dirty during missing-in-project-x86. Diff follows:"
+            Write-Host "------ lv_icon_editor.lvproj diff (x86) ------"
+            Write-Host ($diff -join [Environment]::NewLine)
+            Write-Host "----------------------------------------------"
             if ($Env:GITHUB_STEP_SUMMARY) {
               "### Workspace changed during missing-in-project-x86" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-              "Saved diff: post_mip_dirty_x86.diff" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              "Diff (lv_icon_editor.lvproj):" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              "```diff" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              $diff | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              "```" | Out-File -FilePath $Env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             }
+            git checkout -- lv_icon_editor.lvproj
           }
 
   test-x64:
