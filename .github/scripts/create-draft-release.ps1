@@ -118,7 +118,31 @@ try {
     }
 
     $vipFile = Resolve-Asset -Path $VipPath -Description "VI Package (.vip)" -DefaultFilter "*.vip"
-    $notesFile = Resolve-Asset -Path $ReleaseNotesPath -Description "Release notes" -DefaultFilter "*.md"
+
+    $notesFile = $null
+    try {
+        $notesFile = Resolve-Asset -Path $ReleaseNotesPath -Description "Release notes" -DefaultFilter "*.md"
+    }
+    catch {
+        # Fall back to release_notes_*.md; if still missing, create the desired path
+        $targetPath = if ([System.IO.Path]::IsPathRooted($ReleaseNotesPath)) {
+            $ReleaseNotesPath
+        } else {
+            Join-Path -Path $repoRoot -ChildPath $ReleaseNotesPath
+        }
+        $notesDir = Split-Path -Path $targetPath -Parent
+        if (-not (Test-Path -LiteralPath $notesDir)) {
+            New-Item -ItemType Directory -Path $notesDir -Force | Out-Null
+        }
+        $fallback = Get-ChildItem -Path $notesDir -Filter "release_notes_*.md" -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($fallback) {
+            $notesFile = $fallback
+        } else {
+            New-Item -ItemType File -Path $targetPath -Force | Out-Null
+            $notesFile = Get-Item -LiteralPath $targetPath
+            Write-Host ("Created placeholder release notes at {0}" -f $notesFile.FullName)
+        }
+    }
 
     if (-not $Tag) {
         if ($PSBoundParameters.ContainsKey('Major') -and $PSBoundParameters.ContainsKey('Minor') -and $PSBoundParameters.ContainsKey('Patch')) {
