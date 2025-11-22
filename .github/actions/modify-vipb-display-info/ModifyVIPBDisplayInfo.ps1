@@ -81,7 +81,7 @@ catch {
         exception  = $_.Exception.Message
         stackTrace = $_.Exception.StackTrace
     }
-    $errorObject | ConvertTo-Json -Depth 10
+    $errorObject | ConvertTo-Json -Depth 32
     exit 1
 }
 
@@ -102,7 +102,7 @@ catch {
         exception  = $_.Exception.Message
         stackTrace = $_.Exception.StackTrace
     }
-    $errorObject | ConvertTo-Json -Depth 10
+    $errorObject | ConvertTo-Json -Depth 32
     exit 1
 }
 
@@ -128,7 +128,7 @@ catch {
         exception  = $_.Exception.Message
         stackTrace = $_.Exception.StackTrace
     }
-    $errorObject | ConvertTo-Json -Depth 10
+    $errorObject | ConvertTo-Json -Depth 32
     exit 1
 }
 
@@ -164,7 +164,7 @@ if ($missingFields.Count -gt 0) {
         missing_fields   = $missingFields
         provided_payload = $jsonObj
     }
-    $errorObject | ConvertTo-Json -Depth 10
+    $errorObject | ConvertTo-Json -Depth 32
     exit 1
 }
 
@@ -202,7 +202,7 @@ catch {
         exception  = $_.Exception.Message
         stackTrace = $_.Exception.StackTrace
     }
-    $errorObject | ConvertTo-Json -Depth 10
+    $errorObject | ConvertTo-Json -Depth 32
     exit 1
 }
 
@@ -215,7 +215,7 @@ if (-not $generalSettings -or -not $descriptionSettings) {
         error     = "VIPB file is missing expected sections (Library_General_Settings or Description)."
         vipb_path = $ResolvedVIPBPath
     }
-    $errorObject | ConvertTo-Json -Depth 10
+    $errorObject | ConvertTo-Json -Depth 32
     exit 1
 }
 
@@ -253,7 +253,7 @@ catch {
         path       = $ResolvedReleaseNotesFile
         exception  = $_.Exception.Message
     }
-    $errorObject | ConvertTo-Json -Depth 10
+    $errorObject | ConvertTo-Json -Depth 32
     exit 1
 }
 
@@ -262,7 +262,7 @@ if ([string]::IsNullOrWhiteSpace($releaseNotesFromFile)) {
         error = "Release notes file is empty. Populate it or provide valid content before running this action."
         path  = $ResolvedReleaseNotesFile
     }
-    $errorObject | ConvertTo-Json -Depth 10
+    $errorObject | ConvertTo-Json -Depth 32
     exit 1
 }
 
@@ -337,7 +337,7 @@ if ($unhandledKeys.Count -gt 0) {
         unhandled_fields   = $details
         recognized_fields  = $recognizedKeys
     }
-    $errorObject | ConvertTo-Json -Depth 10
+    $errorObject | ConvertTo-Json -Depth 32
     exit 1
 }
 
@@ -362,6 +362,6 @@ catch {
         exception  = $_.Exception.Message
         stackTrace = $_.Exception.StackTrace
     }
-    $errorObject | ConvertTo-Json -Depth 10
+    $errorObject | ConvertTo-Json -Depth 32
     exit 1
 }
