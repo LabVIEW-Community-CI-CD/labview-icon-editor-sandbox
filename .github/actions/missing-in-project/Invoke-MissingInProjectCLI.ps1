@@ -20,6 +20,7 @@ $Script:ParsingFailed    = $false
 
 $HelperPath      = Join-Path $PSScriptRoot 'RunMissingCheckWithGCLI.ps1'
 $MissingFilePath = Join-Path $PSScriptRoot 'missing_files.txt'
+$GcliLogPath     = Join-Path $PSScriptRoot 'missing_in_project_gcli.log'
 
 if (-not (Test-Path $HelperPath)) {
     Write-Error "Helper script not found: $HelperPath"
@@ -64,7 +65,11 @@ function MainSequence {
     $Script:HelperExitCode = $LASTEXITCODE
 
     if ($Script:HelperExitCode -ne 0) {
-        Write-Error "Helper returned non-zero exit code: $Script:HelperExitCode"
+        $logNote = ""
+        if (Test-Path $GcliLogPath) {
+            $logNote = " (g-cli log: $GcliLogPath)"
+        }
+        Write-Error "Helper returned non-zero exit code: $Script:HelperExitCode$logNote"
     }
 
     # -------- read missing_files.txt --------
@@ -111,6 +116,9 @@ function Cleanup {
         if (Test-Path $MissingFilePath) {
             Remove-Item $MissingFilePath -Force -ErrorAction SilentlyContinue
             Write-Information "All good - removed $MissingFilePath" -InformationAction Continue
+        }
+        if (Test-Path $GcliLogPath) {
+            Remove-Item $GcliLogPath -Force -ErrorAction SilentlyContinue
         }
     }
 }
