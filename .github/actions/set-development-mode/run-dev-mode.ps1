@@ -1,5 +1,7 @@
 param(
-    [string]$RepositoryPath
+    [string]$RepositoryPath,
+    [ValidateSet('32','64')]
+    [string]$SupportedBitness
 )
 
 $ErrorActionPreference = 'Stop'
@@ -28,4 +30,11 @@ if ($LASTEXITCODE -ne 0) {
     throw "g-cli --help failed with exit code $LASTEXITCODE; ensure g-cli is installed correctly."
 }
 
-& (Join-Path $PSScriptRoot 'Set_Development_Mode.ps1') -RepositoryPath $RepositoryPath
+$invokeArgs = @{
+    RepositoryPath = $RepositoryPath
+}
+if ($PSBoundParameters.ContainsKey('SupportedBitness')) {
+    $invokeArgs.SupportedBitness = $SupportedBitness
+}
+
+& (Join-Path $PSScriptRoot 'Set_Development_Mode.ps1') @invokeArgs

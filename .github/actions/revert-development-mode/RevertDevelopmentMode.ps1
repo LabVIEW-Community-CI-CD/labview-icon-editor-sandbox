@@ -20,7 +20,12 @@ param(
 
     # Optional override; if not provided we read Package_LabVIEW_Version from the repo .vipb
     [Parameter(Mandatory = $false)]
-    [string]$Package_LabVIEW_Version
+    [string]$Package_LabVIEW_Version,
+
+    # Limit work to a single bitness (default 64-bit)
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('32','64')]
+    [string]$SupportedBitness = '64'
 )
 
 # Define LabVIEW project name
@@ -104,38 +109,26 @@ try {
     } else {
         Write-Information ("Using explicit LabVIEW version: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
     }
+
+    $targetBitness = $SupportedBitness
+    Write-Information ("Targeting bitness: {0}-bit" -f $targetBitness) -InformationAction Continue
     # Build the script paths
     $RestoreScript = Join-Path -Path $ScriptDirectory -ChildPath '..\restore-setup-lv-source\RestoreSetupLVSource.ps1'
     $CloseScript   = Join-Path -Path $ScriptDirectory -ChildPath '..\close-labview\Close_LabVIEW.ps1'
 
-    # Restore setup for LabVIEW (32-bit)
+    $arch = $targetBitness
+
     Invoke-ScriptSafe -ScriptPath $RestoreScript -ArgumentMap @{
         MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = '32'
+        SupportedBitness          = $arch
         RepositoryPath            = $RepositoryPath
         LabVIEW_Project           = $LabVIEW_Project
         Build_Spec                = 'Editor Packed Library'
     }
 
-    # Close LabVIEW (32-bit)
     Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
         MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = '32'
-    }
-
-    # Restore setup for LabVIEW (64-bit)
-    Invoke-ScriptSafe -ScriptPath $RestoreScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = '64'
-        RepositoryPath            = $RepositoryPath
-        LabVIEW_Project           = $LabVIEW_Project
-        Build_Spec                = 'Editor Packed Library'
-    }
-
-    # Close LabVIEW (64-bit)
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = '64'
+        SupportedBitness          = $arch
     }
 
 } catch {

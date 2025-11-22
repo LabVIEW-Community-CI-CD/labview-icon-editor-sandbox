@@ -44,7 +44,6 @@ $tokenTarget = if ($project) {
 $_gcliArgs = @(
     '--lv-ver', $MinimumSupportedLVVersion,
     '--arch', $SupportedBitness,
-    'vi',
     '--',
     $iniTokenVi,
     '--',

@@ -34,6 +34,16 @@
       "default": "${workspaceFolder}"
     },
     {
+      "id": "devModeBitness",
+      "type": "pickString",
+      "description": "Target LabVIEW bitness for dev-mode tasks",
+      "options": [
+        "32",
+        "64"
+      ],
+      "default": "64"
+    },
+    {
       "id": "semverMajor",
       "type": "promptString",
       "description": "Major version",
@@ -143,7 +153,9 @@
       "args": [
         "-NoProfile",
         "-File",
-        "${workspaceFolder}/.github/actions/set-development-mode/run-dev-mode.ps1"
+        "${workspaceFolder}/.github/actions/set-development-mode/run-dev-mode.ps1",
+        "-SupportedBitness",
+        "${input:devModeBitness}"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -157,7 +169,9 @@
       "args": [
         "-NoProfile",
         "-File",
-        "${workspaceFolder}/.github/actions/revert-development-mode/run-dev-mode.ps1"
+        "${workspaceFolder}/.github/actions/revert-development-mode/run-dev-mode.ps1",
+        "-SupportedBitness",
+        "${input:devModeBitness}"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

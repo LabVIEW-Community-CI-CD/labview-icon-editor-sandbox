@@ -21,7 +21,12 @@ param(
 
     # Optional override; if not provided we read Package_LabVIEW_Version from the repo .vipb
     [Parameter(Mandatory = $false)]
-    [string]$Package_LabVIEW_Version
+    [string]$Package_LabVIEW_Version,
+
+    # Limit work to a single bitness (default 64-bit)
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('32','64')]
+    [string]$SupportedBitness = '64'
 )
 
 # Define LabVIEW project name
@@ -119,6 +124,9 @@ try {
         Write-Information ("Using explicit LabVIEW version: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
     }
 
+    $targetBitness = $SupportedBitness
+    Write-Information ("Targeting bitness: {0}-bit" -f $targetBitness) -InformationAction Continue
+
     # Ensure the INI token VI exists before attempting g-cli
     $iniTokenVi = Join-Path -Path $RepositoryPath -ChildPath 'Tooling\deployment\Create_LV_INI_Token.vi'
     if (-not (Test-Path -LiteralPath $iniTokenVi)) {
@@ -146,16 +154,17 @@ try {
         Write-Information "No 'resource\plugins' directory found at $PluginsPath; skipping removal of packed libraries." -InformationAction Continue
     }
 
-    # 32-bit actions
+    $arch = $targetBitness
+
     Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentMap @{
         MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = '32'
+        SupportedBitness          = $arch
         RepositoryPath            = $RepositoryPath
     }
 
     Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentMap @{
         MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = '32'
+        SupportedBitness          = $arch
         RepositoryPath            = $RepositoryPath
         LabVIEW_Project           = $LabVIEW_Project
         Build_Spec                = 'Editor Packed Library'
@@ -163,43 +172,14 @@ try {
 
     Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
         MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = '32'
+        SupportedBitness          = $arch
     }
 
-    # Verify project integrity after 32-bit prep
     Invoke-ScriptSafe -ScriptPath $MissingHelper -ArgumentMap @{
         LVVersion   = $Package_LabVIEW_Version
-        Arch        = '32'
+        Arch        = $arch
         ProjectFile = "$RepositoryPath\lv_icon_editor.lvproj"
     }
-
-    # 64-bit actions
-    Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = '64'
-        RepositoryPath            = $RepositoryPath
-    }
-
-    Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = '64'
-        RepositoryPath            = $RepositoryPath
-        LabVIEW_Project           = $LabVIEW_Project
-        Build_Spec                = 'Editor Packed Library'
-    }
-
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = '64'
-    }
-
-    # Verify project integrity after 64-bit prep
-    Invoke-ScriptSafe -ScriptPath $MissingHelper -ArgumentMap @{
-        LVVersion   = $Package_LabVIEW_Version
-        Arch        = '64'
-        ProjectFile = "$RepositoryPath\lv_icon_editor.lvproj"
-    }
-
 }
 catch {
     Write-Error "An unexpected error occurred during script execution: $($_.Exception.Message)"
