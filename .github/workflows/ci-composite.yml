@@ -540,13 +540,14 @@ jobs:
 
   test-x64:
     name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
-    needs: [verify-checklist-sync, missing-in-project-x86]
+    needs: [verify-checklist-sync, missing-in-project-x86, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/run-unit-tests
         with:
           repository_path: ${{ github.workspace }}
           supported_bitness:            "64"
+          labview_version:  ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
       - if: always()
         name: Close LabVIEW ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} 64-bit after unit tests
         uses: ./.github/actions/close-labview
@@ -573,13 +574,14 @@ jobs:
 
   test-x86:
     name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
-    needs: [verify-checklist-sync, test-x64]
+    needs: [verify-checklist-sync, test-x64, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/run-unit-tests
         with:
           repository_path: ${{ github.workspace }}
           supported_bitness:            "32"
+          labview_version:  ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
       - if: always()
         name: Close LabVIEW ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} 32-bit after unit tests
         uses: ./.github/actions/close-labview

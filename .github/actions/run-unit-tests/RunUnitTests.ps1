@@ -24,10 +24,9 @@
 [Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","Package_LabVIEW_Version",Justification="Used in nested functions and g-cli invocation")]
 [Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","SupportedBitness",Justification="Used in nested functions and g-cli invocation")]
 param(
-    [Parameter(Mandatory=$true)]
     [Alias('MinimumSupportedLVVersion')]
     [string]
-    $Package_LabVIEW_Version,
+    $Package_LabVIEW_Version = "",
 
     [Parameter(Mandatory=$true)]
     [ValidateSet("32","64")]
@@ -95,8 +94,13 @@ if (-not $AbsoluteProjectPath) {
 }
 Write-Information "Using LabVIEW project file: $AbsoluteProjectPath" -InformationAction Continue
 $repoRoot = Split-Path -Parent $AbsoluteProjectPath
-$Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $repoRoot
-Write-Information ("Resolved LabVIEW version from VIPB: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
+if ([string]::IsNullOrWhiteSpace($Package_LabVIEW_Version)) {
+    $Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $repoRoot
+    Write-Information ("Resolved LabVIEW version from VIPB: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
+}
+else {
+    Write-Information ("Using LabVIEW version provided by workflow: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
+}
 
 # Script-level variables to track exit states
 $Script:OriginalExitCode = 0
