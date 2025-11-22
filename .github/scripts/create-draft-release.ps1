@@ -9,11 +9,30 @@ param(
     [Parameter()][int]$Minor,
     [Parameter()][int]$Patch,
     [Parameter()][int]$Build = 0,
-    [Parameter()][bool]$Prerelease = $false
+    [Parameter()][object]$Prerelease = $true
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Resolve-Path -Path $RepositoryPath
+
+function Get-GitHubToken {
+    if ($Env:GH_TOKEN) { return $Env:GH_TOKEN }
+    if ($Env:GITHUB_TOKEN) { return $Env:GITHUB_TOKEN }
+
+    if (Get-Command gh -ErrorAction SilentlyContinue) {
+        try {
+            $token = & gh auth token 2>$null
+            if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($token)) {
+                return $token.Trim()
+            }
+        }
+        catch {
+            $global:LASTEXITCODE = 0
+        }
+    }
+
+    return $null
+}
 
 function Resolve-Asset {
     param(
@@ -55,12 +74,9 @@ try {
         throw "GitHub CLI (gh) not found. Install it and ensure it is on PATH."
     }
 
-    $token = $Env:GH_TOKEN
+    $token = Get-GitHubToken
     if (-not $token) {
-        $token = $Env:GITHUB_TOKEN
-    }
-    if (-not $token) {
-        throw "Set GH_TOKEN or GITHUB_TOKEN so the GitHub CLI can create the draft release."
+        throw "Set GH_TOKEN or GITHUB_TOKEN (or run 'gh auth login') so the GitHub CLI can create the draft release."
     }
     $Env:GH_TOKEN = $token
 
@@ -72,12 +88,41 @@ try {
         $Title = $null
     }
 
+    # Normalize prerelease to a boolean regardless of string input
+    $isPrerelease = $false
+    if ($Prerelease -is [bool]) {
+        $isPrerelease = $Prerelease
+    }
+    elseif ($Prerelease -is [string]) {
+        $normalized = $Prerelease.Trim().ToLowerInvariant()
+        $isPrerelease = $normalized -in @('true', '1', 'yes', 'y', 'on')
+    }
+
+    # Derive build number from total commit count; fall back to provided Build
+    $buildNumber = $Build
+    try {
+        git -C $repoRoot fetch --unshallow 2>$null | Out-Null
+    }
+    catch {
+        $global:LASTEXITCODE = 0
+    }
+    try {
+        $count = git -C $repoRoot rev-list --count HEAD 2>$null
+        if ($LASTEXITCODE -eq 0 -and $count) {
+            $buildNumber = [int]$count
+            Write-Host ("Using build number from commit count: {0}" -f $buildNumber)
+        }
+    }
+    catch {
+        $global:LASTEXITCODE = 0
+    }
+
     $vipFile = Resolve-Asset -Path $VipPath -Description "VI Package (.vip)" -DefaultFilter "*.vip"
     $notesFile = Resolve-Asset -Path $ReleaseNotesPath -Description "Release notes" -DefaultFilter "*.md"
 
     if (-not $Tag) {
         if ($PSBoundParameters.ContainsKey('Major') -and $PSBoundParameters.ContainsKey('Minor') -and $PSBoundParameters.ContainsKey('Patch')) {
-            $Tag = ("v{0}.{1}.{2}.{3}" -f $Major, $Minor, $Patch, $Build)
+            $Tag = ("v{0}.{1}.{2}.{3}" -f $Major, $Minor, $Patch, $buildNumber)
         }
         else {
             throw "Provide -Tag or all of -Major, -Minor, -Patch, -Build so a tag can be derived."
@@ -103,7 +148,7 @@ try {
     if ($releaseExists) {
         Write-Host ("Release {0} exists; updating draft metadata and refreshing assets." -f $Tag)
         $editArgs = @('release', 'edit', $Tag, '--draft', '--title', $Title, '--notes-file', $notesFile.FullName)
-        if ($Prerelease) { $editArgs += '--prerelease' }
+        if ($isPrerelease) { $editArgs += '--prerelease' }
         & gh @editArgs
 
         $uploadArgs = @('release', 'upload', $Tag) + $assetList + '--clobber'
@@ -112,7 +157,7 @@ try {
     else {
         Write-Host ("Creating draft release {0} and uploading assets." -f $Tag)
         $createArgs = @('release', 'create', $Tag) + $assetList + @('--draft', '--title', $Title, '--notes-file', $notesFile.FullName)
-        if ($Prerelease) { $createArgs += '--prerelease' }
+        if ($isPrerelease) { $createArgs += '--prerelease' }
         & gh @createArgs
     }
 

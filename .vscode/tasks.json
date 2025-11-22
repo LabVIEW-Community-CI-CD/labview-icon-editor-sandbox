@@ -113,7 +113,7 @@
         "false",
         "true"
       ],
-      "default": "false"
+      "default": "true"
     },
     {
       "id": "commitHash",
