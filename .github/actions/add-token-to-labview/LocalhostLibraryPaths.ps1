@@ -81,3 +81,39 @@ function Clear-StaleLibraryPaths {
         Write-Warning ("Removed {0} LocalHost.LibraryPaths entries from {1}. Example removed entry: {2}" -f $removed.Count, $lvIniPath, $sample)
     }
 }
+
+function Add-LibraryPathToken {
+    param(
+        [string]$LvVersion,
+        [string]$Arch,
+        [string]$TokenPath,
+        [string]$RepositoryRoot
+    )
+
+    $lvIniPath = Resolve-LVIniPath -LvVersion $LvVersion -Arch $Arch
+    if (-not $lvIniPath) { return }
+
+    $normToken = [System.IO.Path]::GetFullPath($TokenPath).TrimEnd('\','/').ToLowerInvariant()
+    $lines = Get-Content -LiteralPath $lvIniPath -Raw -ErrorAction Stop -Encoding UTF8 -Delimiter "`n"
+    if ($lines -is [string]) { $lines = $lines -split "`r?`n" }
+
+    $pattern = 'LocalHost\.LibraryPaths(?<idx>\d+)\s*=\s*(?<val>.*)'
+    $maxIdx = -1
+    foreach ($line in $lines) {
+        $m = [regex]::Match($line, $pattern, 'IgnoreCase')
+        if (-not $m.Success) { continue }
+        $valNorm = ([System.IO.Path]::GetFullPath($m.Groups['val'].Value)).TrimEnd('\','/').ToLowerInvariant()
+        if ($valNorm -eq $normToken) {
+            Write-Information ("Canonical INI already contains LocalHost.LibraryPaths entry for {0}" -f $TokenPath) -InformationAction Continue
+            return
+        }
+        $idx = [int]$m.Groups['idx'].Value
+        if ($idx -gt $maxIdx) { $maxIdx = $idx }
+    }
+
+    $nextIdx = $maxIdx + 1
+    $newLine = "LocalHost.LibraryPaths{0}={1}" -f $nextIdx, $TokenPath
+    $lines = $lines + $newLine
+    Set-Content -LiteralPath $lvIniPath -Value ($lines -join "`r`n")
+    Write-Information ("Added LocalHost.LibraryPaths entry to canonical INI {0}: {1}" -f $lvIniPath, $newLine) -InformationAction Continue
+}

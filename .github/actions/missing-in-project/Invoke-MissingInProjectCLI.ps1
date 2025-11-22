@@ -47,8 +47,7 @@ function MainSequence {
     Write-Information "Preflight: showing LocalHost.LibraryPaths for current bitness..." -InformationAction Continue
     try {
         $repoRoot = Split-Path -Parent $ProjectFile
-        $repoRoot = Split-Path -Parent $repoRoot
-        $pathsScript = Join-Path $PSScriptRoot '..\..\scripts\read-library-paths.ps1'
+        $pathsScript = Join-Path $repoRoot 'scripts/read-library-paths.ps1'
         if (Test-Path $pathsScript) {
             & $pathsScript -RepositoryPath $repoRoot -SupportedBitness $Arch -FailOnMissing
         } else {

@@ -76,3 +76,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Information "Created localhost.library path in ini file." -InformationAction Continue
+
+# Ensure canonical INI also carries the token (g-cli may write to ProgramData/user INI)
+try {
+    Add-LibraryPathToken -LvVersion $Package_LabVIEW_Version -Arch $SupportedBitness -TokenPath $tokenTarget -RepositoryRoot $RepositoryPath
+}
+catch {
+    Write-Warning ("Failed to mirror LocalHost.LibraryPaths into canonical INI: {0}" -f $_.Exception.Message)
+}

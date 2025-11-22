@@ -118,7 +118,7 @@ function Get-LabVIEWVersionFromVipb {
 
 try {
     # Always resolve from VIPB to ensure determinism; ignore inbound overrides
-    $Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
+    $Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
     Write-Information ("Detected LabVIEW version from VIPB: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
 
     $targetBitness = $SupportedBitness
@@ -154,13 +154,13 @@ try {
     $arch = $targetBitness
 
     Invoke-ScriptSafe -ScriptPath $AddTokenScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        Package_LabVIEW_Version   = $Package_LabVIEW_Version
         SupportedBitness          = $arch
         RepositoryPath            = $RepositoryPath
     }
 
     Invoke-ScriptSafe -ScriptPath $PrepareScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        Package_LabVIEW_Version   = $Package_LabVIEW_Version
         SupportedBitness          = $arch
         RepositoryPath            = $RepositoryPath
         LabVIEW_Project           = $LabVIEW_Project
@@ -168,7 +168,7 @@ try {
     }
 
     Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
+        Package_LabVIEW_Version   = $Package_LabVIEW_Version
         SupportedBitness          = $arch
     }
 
