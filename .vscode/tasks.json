@@ -126,6 +126,39 @@
       "problemMatcher": []
     },
     {
+      "label": "Build VI Package (Build.ps1)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/.github/actions/build/Build.ps1",
+        "-RepositoryPath",
+        "${input:repoPath}",
+        "-Major",
+        "${input:semverMajor}",
+        "-Minor",
+        "${input:semverMinor}",
+        "-Patch",
+        "${input:semverPatch}",
+        "-Build",
+        "${input:buildNumber}",
+        "-LabVIEWMinorRevision",
+        "3",
+        "-Commit",
+        "${input:commitHash}",
+        "-CompanyName",
+        "${input:companyName}",
+        "-AuthorName",
+        "${input:authorName}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "Build VIP (stemmed artifact naming)",
       "type": "shell",
       "command": "pwsh",

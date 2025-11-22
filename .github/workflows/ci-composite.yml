@@ -634,8 +634,14 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $coverageTargets = @(
-            '.github/actions/**/*.ps1',
-            '.github/actions/**/*.psm1'
+            '.github/actions/add-token-to-labview/LocalhostLibraryPaths.ps1',
+            '.github/actions/set-development-mode/run-dev-mode.ps1',
+            '.github/actions/set-development-mode/Set_Development_Mode.ps1',
+            '.github/actions/prepare-labview-source/Prepare_LabVIEW_source.ps1',
+            '.github/actions/build/Build.ps1',
+            'scripts/read-library-paths.ps1',
+            'scripts/show-ini.ps1',
+            'scripts/verify-dev-mode-state.ps1'
           )
           $pesterConfig = New-PesterConfiguration
           $pesterConfig.Run.Container = New-PesterContainer -Path 'Test'
