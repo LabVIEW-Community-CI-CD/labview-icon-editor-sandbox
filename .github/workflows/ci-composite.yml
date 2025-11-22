@@ -352,7 +352,7 @@ jobs:
 
   changes:
     name: Detect VIPC changes
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality]
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality, ps-coverage]
     runs-on: ubuntu-latest
     outputs:
       vipc: ${{ steps.filter.outputs.vipc }}
@@ -407,7 +407,7 @@ jobs:
 
   apply-deps-x64:
     name: Apply VIPC (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
-    needs: [verify-checklist-sync, changes, resolve-labview-version]
+    needs: [verify-checklist-sync, changes, resolve-labview-version, ps-coverage]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
@@ -460,7 +460,7 @@ jobs:
 
   version:
     name: Compute Version
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality]
+    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality, ps-coverage]
     runs-on: self-hosted-windows-lv
     outputs:
       VERSION:       ${{ steps.compute.outputs.VERSION }}
