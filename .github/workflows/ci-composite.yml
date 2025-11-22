@@ -542,6 +542,8 @@ jobs:
     name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
     needs: [verify-checklist-sync, missing-in-project-x86, resolve-labview-version]
     runs-on: self-hosted-windows-lv
+    env:
+      LABVIEW_VERSION: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
     steps:
       - uses: ./.github/actions/run-unit-tests
         with:
@@ -576,6 +578,8 @@ jobs:
     name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
     needs: [verify-checklist-sync, test-x64, resolve-labview-version]
     runs-on: self-hosted-windows-lv
+    env:
+      LABVIEW_VERSION: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
     steps:
       - uses: ./.github/actions/run-unit-tests
         with:
