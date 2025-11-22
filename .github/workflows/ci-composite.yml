@@ -555,7 +555,7 @@ jobs:
           import xml.etree.ElementTree as ET
           from pathlib import Path
 
-          repo = "${{ github.event.repository.name or 'labview-icon-editor' }}"
+          repo = "${{ github.event.repository.name || 'labview-icon-editor' }}"
 
           reports = {
               "test-2021-x64": Path(f"artifacts/{repo}-unit-test-report-64bit/UnitTestReport.xml"),
