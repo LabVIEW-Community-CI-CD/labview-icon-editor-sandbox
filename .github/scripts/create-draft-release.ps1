@@ -64,6 +64,14 @@ try {
     }
     $Env:GH_TOKEN = $token
 
+    # Treat "auto" and blank values as unset so the tag/title can be derived
+    if ([string]::IsNullOrWhiteSpace($Tag) -or $Tag -eq 'auto') {
+        $Tag = $null
+    }
+    if ([string]::IsNullOrWhiteSpace($Title) -or $Title -eq 'auto') {
+        $Title = $null
+    }
+
     $vipFile = Resolve-Asset -Path $VipPath -Description "VI Package (.vip)" -DefaultFilter "*.vip"
     $notesFile = Resolve-Asset -Path $ReleaseNotesPath -Description "Release notes" -DefaultFilter "*.md"
 

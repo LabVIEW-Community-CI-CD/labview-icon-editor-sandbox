@@ -90,14 +90,14 @@
     {
       "id": "releaseTag",
       "type": "promptString",
-      "description": "Git tag to use for the draft release (leave blank to derive from version inputs)",
-      "default": ""
+      "description": "Git tag to use for the draft release (use 'auto' to derive from version inputs)",
+      "default": "auto"
     },
     {
       "id": "releaseTitle",
       "type": "promptString",
-      "description": "Release title (leave blank to reuse the tag)",
-      "default": ""
+      "description": "Release title (use 'auto' to reuse the tag)",
+      "default": "auto"
     },
     {
       "id": "releaseNotesPath",
