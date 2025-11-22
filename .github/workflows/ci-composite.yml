@@ -405,71 +405,39 @@ jobs:
           "lv_version=$derived" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
           Write-Host ("LabVIEW version check passed: env policy {0} == VIPB {1} (normalized {2})." -f $env:EXPECTED_MIN_LV, $derivedRaw, $derived)
 
-  apply-deps-2021-x64:
-    name: Apply VIPC (2021 x64)
+  apply-deps-x64:
+    name: Apply VIPC (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
     needs: [verify-checklist-sync, changes, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
         if: needs.changes.outputs.vipc == 'true'
         with:
-          minimum_supported_lv_version:    ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
-          vip_lv_version:               2021
+          package_labview_version:      ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness:            64
           repository_path:              ${{ github.workspace }}
           vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
       - run: echo "No .vipc changes detected; skipping dependency application."
         if: needs.changes.outputs.vipc != 'true'
 
-  apply-deps-2021-x86:
-    name: Apply VIPC (2021 x86)
-    needs: [verify-checklist-sync, apply-deps-2021-x64, changes, resolve-labview-version]
+  apply-deps-x86:
+    name: Apply VIPC (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
+    needs: [verify-checklist-sync, apply-deps-x64, changes, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/apply-vipc
         if: needs.changes.outputs.vipc == 'true'
         with:
-          minimum_supported_lv_version:    ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
-          vip_lv_version:               2021
+          package_labview_version:      ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness:            32
           repository_path:              ${{ github.workspace }}
           vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
       - run: echo "No .vipc changes detected; skipping dependency application."
         if: needs.changes.outputs.vipc != 'true'
 
-  apply-deps-2023-x64:
-    name: Apply VIPC (2023 x64)
-    needs: [verify-checklist-sync, close-lv-2021-before-2023, changes, resolve-labview-version]
-    runs-on: self-hosted-windows-lv
-    steps:
-      - uses: ./.github/actions/apply-vipc
-        if: needs.changes.outputs.vipc == 'true'
-        with:
-          minimum_supported_lv_version:    ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
-          vip_lv_version:               2023
-          supported_bitness:            64
-          repository_path:              ${{ github.workspace }}
-          vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
-      - run: echo "No .vipc changes detected; skipping dependency application."
-        if: needs.changes.outputs.vipc != 'true'
-
-  close-lv-2021-before-2023:
-    name: Close LabVIEW 2021 before 2023 tasks
-    needs: [verify-checklist-sync, apply-deps-2021-x86]
-    runs-on: self-hosted-windows-lv
-    steps:
-      - uses: ./.github/actions/close-labview
-        with:
-          repository_path: ${{ github.workspace }}
-          supported_bitness: 64
-      - uses: ./.github/actions/close-labview
-        with:
-          repository_path: ${{ github.workspace }}
-          supported_bitness: 32
-
-  check-library-paths-2021:
-    name: Check LocalHost.LibraryPaths (2021)
-    needs: [verify-checklist-sync, apply-deps-2021-x86]
+  check-library-paths:
+    name: Check LocalHost.LibraryPaths (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }})
+    needs: [verify-checklist-sync, apply-deps-x86]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: actions/checkout@v4
@@ -510,31 +478,31 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  missing-in-project-2021-x64:
-    name: Test Missing-In-Project (2021 x64)
-    needs: [verify-checklist-sync, apply-deps-2023-x64, check-library-paths-2021]
+  missing-in-project-x64:
+    name: Test Missing-In-Project (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
+    needs: [verify-checklist-sync, apply-deps-x64, check-library-paths]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/missing-in-project
         with:
-          lv-ver:       "2021"
+          lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           arch:         "64"
           project-file: "lv_icon_editor.lvproj"
 
-  missing-in-project-2021-x86:
-    name: Test Missing-In-Project (2021 x86)
-    needs: [verify-checklist-sync, missing-in-project-2021-x64, check-library-paths-2021]
+  missing-in-project-x86:
+    name: Test Missing-In-Project (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
+    needs: [verify-checklist-sync, missing-in-project-x64, check-library-paths]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/missing-in-project
         with:
-          lv-ver:       "2021"
+          lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           arch:         "32"
           project-file: "lv_icon_editor.lvproj"
 
-  test-2021-x64:
-    name: Run Unit Tests (2021 x64)
-    needs: [verify-checklist-sync, missing-in-project-2021-x86]
+  test-x64:
+    name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
+    needs: [verify-checklist-sync, missing-in-project-x86]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/run-unit-tests
@@ -542,7 +510,7 @@ jobs:
           repository_path: ${{ github.workspace }}
           supported_bitness:            "64"
       - if: always()
-        name: Close LabVIEW 2021 64-bit after unit tests
+        name: Close LabVIEW ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} 64-bit after unit tests
         uses: ./.github/actions/close-labview
         with:
           repository_path: ${{ github.workspace }}
@@ -555,9 +523,9 @@ jobs:
           path: .github/actions/run-unit-tests/UnitTestReport.xml
           if-no-files-found: ignore
 
-  test-2021-x86:
-    name: Run Unit Tests (2021 x86)
-    needs: [verify-checklist-sync, test-2021-x64]
+  test-x86:
+    name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
+    needs: [verify-checklist-sync, test-x64]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/run-unit-tests
@@ -565,7 +533,7 @@ jobs:
           repository_path: ${{ github.workspace }}
           supported_bitness:            "32"
       - if: always()
-        name: Close LabVIEW 2021 32-bit after unit tests
+        name: Close LabVIEW ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} 32-bit after unit tests
         uses: ./.github/actions/close-labview
         with:
           repository_path: ${{ github.workspace }}
@@ -580,7 +548,7 @@ jobs:
 
   publish-performance-and-portability:
     name: Publish Performance/Portability JSON
-    needs: [verify-checklist-sync, test-2021-x86]
+    needs: [verify-checklist-sync, test-x86]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -599,8 +567,8 @@ jobs:
           repo = "${{ github.event.repository.name || 'labview-icon-editor' }}"
 
           reports = {
-              "test-2021-x64": Path(f"artifacts/{repo}-unit-test-report-64bit/UnitTestReport.xml"),
-              "test-2021-x86": Path(f"artifacts/{repo}-unit-test-report-32bit/UnitTestReport.xml"),
+              "test-x64": Path(f"artifacts/{repo}-unit-test-report-64bit/UnitTestReport.xml"),
+              "test-x86": Path(f"artifacts/{repo}-unit-test-report-32bit/UnitTestReport.xml"),
           }
 
           perf_entries = []
@@ -709,13 +677,13 @@ jobs:
           path: coverage.xml
 
   build-ppl-x86:
-    name: Build 32-bit Packed Library
-    needs: [verify-checklist-sync, build-ppl-x64, version]
+    name: Build 32-bit Packed Library (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }})
+    needs: [verify-checklist-sync, build-ppl-x64, version, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/build-lvlibp
         with:
-          minimum_supported_lv_version: 2021
+          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 32
           repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
@@ -726,7 +694,7 @@ jobs:
       - if: always()
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2021
+          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 32
       - uses: ./.github/actions/rename-file
         with:
@@ -738,13 +706,13 @@ jobs:
           path: resource/plugins/lv_icon_x86.lvlibp
 
   build-ppl-x64:
-    name: Build 64-bit Packed Library
-    needs: [verify-checklist-sync, test-2021-x86, version]
+    name: Build 64-bit Packed Library (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }})
+    needs: [verify-checklist-sync, test-x86, version, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: ./.github/actions/build-lvlibp
         with:
-          minimum_supported_lv_version: 2021
+          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 64
           repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
@@ -755,7 +723,7 @@ jobs:
       - if: always()
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2021
+          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 64
       - uses: ./.github/actions/rename-file
         with:

@@ -45,7 +45,16 @@ param(
 )
 
     # Resolve version from VIPB for determinism
-    $Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $RepositoryPath
+$versionScript = @(
+    (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1'),
+    (Join-Path $PSScriptRoot '..\..\..\scripts\get-package-lv-version.ps1') # fallback if invoked from a different working dir
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if (-not $versionScript) {
+    throw "Unable to locate get-package-lv-version.ps1 relative to $PSScriptRoot"
+}
+
+$Package_LabVIEW_Version = & $versionScript -RepositoryPath $RepositoryPath
     Write-Output "PPL Version: $Major.$Minor.$Patch.$Build"
     Write-Output "Commit: $Commit"
 

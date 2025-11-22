@@ -261,6 +261,20 @@
         "cwd": "${workspaceFolder}"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Apply VIPC (VIPM CLI troubleshoot)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "& { $ver = & \"${workspaceFolder}/scripts/get-package-lv-version.ps1\" -RepositoryPath \"${workspaceFolder}\"; & \"${workspaceFolder}/.github/actions/apply-vipc/ApplyVIPC.ps1\" -Package_LabVIEW_Version $ver -SupportedBitness \"64\" -RepositoryPath \"${workspaceFolder}\" -VIPCPath \".github/actions/apply-vipc/runner_dependencies.vipc\" -Verbose }"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
     }
   ]
 }

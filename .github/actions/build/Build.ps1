@@ -169,7 +169,6 @@ try {
     $ApplyVIPC = Join-Path $ActionsPath "apply-vipc/ApplyVIPC.ps1"
     Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
         Package_LabVIEW_Version   = $lvVersion
-        VIP_LVVersion             = $lvVersion
         SupportedBitness          = '32'
         RepositoryPath            = $RepositoryPath
         VIPCPath                  = 'Tooling\deployment\runner_dependencies.vipc'
@@ -202,12 +201,18 @@ try {
     # 4) Close LabVIEW (32-bit)
     Write-Verbose "Closing LabVIEW (32-bit)..."
     $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-Package_LabVIEW_Version', $lvVersion,'-SupportedBitness','32')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentMap @{
+        Package_LabVIEW_Version = $lvVersion
+        SupportedBitness        = '32'
+    }
 
     # 5) Rename .lvlibp -> lv_icon_x86.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x86.lvlibp..."
     $RenameFile = Join-Path $ActionsPath "rename-file/Rename-file.ps1"
-    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RepositoryPath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x86.lvlibp')
+    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentMap @{
+        CurrentFilename = "$RepositoryPath\resource\plugins\lv_icon.lvlibp"
+        NewFilename     = 'lv_icon_x86.lvlibp'
+    }
 
     # 6) Apply VIPC (64-bit)
     Write-Information "Applying VIPC (dependencies) for 64-bit..." -InformationAction Continue
@@ -235,11 +240,17 @@ try {
 
     # 7.1) Close LabVIEW (64-bit)
     Write-Verbose "Closing LabVIEW (64-bit)..."
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentList @('-Package_LabVIEW_Version', $lvVersion,'-SupportedBitness','64')
+    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentMap @{
+        Package_LabVIEW_Version = $lvVersion
+        SupportedBitness        = '64'
+    }
 
     # Rename .lvlibp -> lv_icon_x64.lvlibp
     Write-Verbose "Renaming .lvlibp file to lv_icon_x64.lvlibp..."
-    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentList @('-CurrentFilename', "$RepositoryPath\resource\plugins\lv_icon.lvlibp", '-NewFilename', 'lv_icon_x64.lvlibp')
+    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentMap @{
+        CurrentFilename = "$RepositoryPath\resource\plugins\lv_icon.lvlibp"
+        NewFilename     = 'lv_icon_x64.lvlibp'
+    }
 
     # -------------------------------------------------------------------------
     # 8) Construct the JSON for "Company Name" & "Author Name", plus version

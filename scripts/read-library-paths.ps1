@@ -111,6 +111,10 @@ foreach ($entry in $entries) {
 if ($mismatched.Count -gt 0) {
     $example = $mismatched | Select-Object -First 1
     Write-Warning ("Found LocalHost.LibraryPaths entries that do not point to this repo (example: {0}). Consider running 'Revert Dev Mode (LabVIEW)' then 'Set Dev Mode (LabVIEW)' for bitness {1} to refresh the path." -f $example, $SupportedBitness)
+    if ($FailOnMissing) {
+        Write-Error "LocalHost.LibraryPaths entries are not pointing to this repo."
+        exit 3
+    }
 }
 
 exit 0
