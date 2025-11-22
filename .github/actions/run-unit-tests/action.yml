@@ -27,11 +27,11 @@ runs:
             throw "Project file not found: $pf"
           }
         } else {
-          $candidates = Get-ChildItem -Path $repo -Filter *.lvproj -File -Recurse
+          $candidates = @(Get-ChildItem -Path $repo -Filter *.lvproj -File -Recurse)
           if (-not $candidates) {
             throw "No .lvproj files found under $repo. Provide inputs.project-file."
           }
-          $rootProjects = $candidates | Where-Object { $_.Directory.FullName -eq $repo }
+          $rootProjects = @($candidates | Where-Object { $_.Directory.FullName -eq $repo })
           if ($rootProjects.Count -eq 1) {
             $candidates = @($rootProjects[0])
           } elseif ($rootProjects.Count -gt 1) {
