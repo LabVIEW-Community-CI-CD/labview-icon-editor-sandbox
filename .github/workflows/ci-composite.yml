@@ -480,25 +480,63 @@ jobs:
 
   missing-in-project-x64:
     name: Test Missing-In-Project (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
-    needs: [verify-checklist-sync, apply-deps-x64, check-library-paths]
+    needs: [verify-checklist-sync, apply-deps-x64, check-library-paths, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
       - uses: ./.github/actions/missing-in-project
         with:
           lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           arch:         "64"
-          project-file: "lv_icon_editor.lvproj"
+      - name: Detect unexpected workspace changes (x64)
+        id: guard_x64
+        if: always()
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/report-lvproj-diffs.ps1" `
+            -Label "missing-in-project-x64" `
+            -DiffPrefix "x64" `
+            -Workspace "$env:GITHUB_WORKSPACE"
+      - name: Upload lvproj diffs (x64, if any)
+        if: always() && steps.guard_x64.outputs.found_diff == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lvproj-diffs-x64
+          path: post_mip_dirty_x64_*.diff
+          if-no-files-found: ignore
 
   missing-in-project-x86:
     name: Test Missing-In-Project (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
-    needs: [verify-checklist-sync, missing-in-project-x64, check-library-paths]
+    needs: [verify-checklist-sync, missing-in-project-x64, check-library-paths, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
       - uses: ./.github/actions/missing-in-project
         with:
           lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           arch:         "32"
-          project-file: "lv_icon_editor.lvproj"
+      - name: Detect unexpected workspace changes (x86)
+        id: guard_x86
+        if: always()
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/report-lvproj-diffs.ps1" `
+            -Label "missing-in-project-x86" `
+            -DiffPrefix "x86" `
+            -Workspace "$env:GITHUB_WORKSPACE"
+      - name: Upload lvproj diffs (x86, if any)
+        if: always() && steps.guard_x86.outputs.found_diff == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lvproj-diffs-x86
+          path: post_mip_dirty_x86_*.diff
+          if-no-files-found: ignore
 
   test-x64:
     name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
