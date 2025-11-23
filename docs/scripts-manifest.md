@@ -44,7 +44,7 @@
   - Major [Int32]
   - Minor [Int32]
   - Patch [Int32]
-  - Build [Int32]
+  - Build [Int32] (overridden by total commit count when git history is available)
   - Commit [String]
 - Outputs: *(not explicitly declared)*
 
@@ -70,7 +70,7 @@
   - Major [Int32] default=1
   - Minor [Int32] default=0
   - Patch [Int32] default=0
-  - Build [Int32] default=1
+  - Build [Int32] default=1 (overridden by total commit count when git history is available)
   - Commit [String]
   - LabVIEWMinorRevision [Int32] default=3
   - CompanyName [String]

@@ -27,10 +27,10 @@ Adds a custom `LocalHost.LibraryPaths` token to the LabVIEW INI file so LabVIEW 
 Applies a `.vipc` container to a specific LabVIEW version and bitness using g-cli. Ensures that all required LabVIEW dependencies are installed before building.
 
 ## Build.ps1
-Top-level script that orchestrates the full build. Cleans previous outputs, builds packed libraries for 32-bit and 64-bit, updates metadata, and produces the final `.vip` package. Depends on many of the other scripts listed here.
+Top-level script that orchestrates the full build. Cleans previous outputs, builds packed libraries for 32-bit and 64-bit, updates metadata, and produces the final `.vip` package. Depends on many of the other scripts listed here. The build number is derived from the total commit count (`git rev-list --count HEAD`), so ensure full history is available (fetch-depth 0) when running.
 
 ## Build_lvlibp.ps1
-Invokes the "Editor Packed Library" build specification and embeds version information and commit identifiers into the resulting `.lvlibp`.
+Invokes the "Editor Packed Library" build specification and embeds version information and commit identifiers into the resulting `.lvlibp`. The build number comes from the total commit count (`git rev-list --count HEAD`) when history is available; otherwise it falls back to the provided value.
 
 ## build_vip.ps1
 Modifies a `.vipb` file and builds the final VI Package with g-cli, using version data and display information provided by `Build.ps1`.

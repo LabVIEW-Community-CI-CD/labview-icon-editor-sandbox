@@ -456,3 +456,6 @@ catch {
         -Details $_.Exception.Message `
         -Path $ResolvedVIPBPath
 }
+
+# Avoid leaking a non-zero $LASTEXITCODE from any auxiliary git/lookups that ran successfully
+$global:LASTEXITCODE = 0

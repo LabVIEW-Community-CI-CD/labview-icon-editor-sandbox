@@ -437,7 +437,7 @@ jobs:
 
   check-library-paths:
     name: Check LocalHost.LibraryPaths (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }})
-    needs: [verify-checklist-sync, apply-deps-x86]
+    needs: [verify-checklist-sync, apply-deps-x86, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: actions/checkout@v4
@@ -748,7 +748,6 @@ jobs:
     steps:
       - uses: ./.github/actions/build-lvlibp
         with:
-          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 32
           repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
@@ -759,7 +758,7 @@ jobs:
       - if: always()
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
+          repository_path: ${{ github.workspace }}
           supported_bitness: 32
       - uses: ./.github/actions/rename-file
         with:
@@ -777,7 +776,6 @@ jobs:
     steps:
       - uses: ./.github/actions/build-lvlibp
         with:
-          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
           supported_bitness: 64
           repository_path: ${{ github.workspace }}
           major: ${{ needs.version.outputs.MAJOR }}
@@ -788,7 +786,7 @@ jobs:
       - if: always()
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
+          repository_path: ${{ github.workspace }}
           supported_bitness: 64
       - uses: ./.github/actions/rename-file
         with:
@@ -869,7 +867,7 @@ jobs:
               $Env:REPO_URL
             }
             "Legal Copyright" = "© $(Get-Date -Format yyyy) $($Env:COMPANY)"
-            "License Agreement Name" = "See LICENSE.md"
+            "License Agreement Name" = "LICENSE"
             "Product Description Summary" = $description
             "Product Description" = $description
             "Release Notes - Change Log" = $releaseNotes
@@ -882,7 +880,6 @@ jobs:
           supported_bitness: 64
           repository_path: ${{ github.workspace }}
           vipb_path: Tooling/deployment/NI Icon editor.vipb
-          minimum_supported_lv_version: 2023
           labview_minor_revision: 3
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}
@@ -897,7 +894,6 @@ jobs:
           supported_bitness: 64
           repository_path: ${{ github.workspace }}
           vipb_path: Tooling/deployment/NI Icon editor.vipb
-          minimum_supported_lv_version: 2023
           labview_minor_revision: 3
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}
@@ -909,7 +905,7 @@ jobs:
       - if: always()
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2023
+          repository_path: ${{ github.workspace }}
           supported_bitness: 64
       - name: Validate tag matches computed version (if provided)
         if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.dispatch_tag != ''

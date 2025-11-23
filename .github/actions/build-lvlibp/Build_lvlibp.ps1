@@ -55,8 +55,32 @@ if (-not $versionScript) {
 }
 
 $Package_LabVIEW_Version = & $versionScript -RepositoryPath $RepositoryPath
-    Write-Output "PPL Version: $Major.$Minor.$Patch.$Build"
-    Write-Output "Commit: $Commit"
+
+# Derive build number from total commit count for PPL versioning; fall back to provided value
+$DerivedBuild = $Build
+try {
+    git -C $RepositoryPath fetch --unshallow 2>$null | Out-Null
+}
+catch {
+    $global:LASTEXITCODE = 0
+}
+try {
+    $commitCount = git -C $RepositoryPath rev-list --count HEAD 2>$null
+    if ($LASTEXITCODE -eq 0 -and $commitCount) {
+        $DerivedBuild = [int]$commitCount
+        Write-Information ("Using commit count for PPL build number: {0}" -f $DerivedBuild) -InformationAction Continue
+    }
+    else {
+        Write-Information ("Falling back to provided build number: {0}" -f $Build) -InformationAction Continue
+    }
+}
+catch {
+    Write-Information ("Falling back to provided build number: {0} (commit count unavailable)" -f $Build) -InformationAction Continue
+    $global:LASTEXITCODE = 0
+}
+$Build = $DerivedBuild
+Write-Output "PPL Version: $Major.$Minor.$Patch.$Build"
+Write-Output "Commit: $Commit"
 
 $buildArgs = @(
 "--lv-ver", $Package_LabVIEW_Version,

@@ -1,16 +1,30 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-# Import powershell-yaml module for YAML parsing
-Import-Module powershell-yaml -ErrorAction Stop
-
-# Resolve paths at script scope (before Describe block) to ensure $PSScriptRoot is available
-$script:repoRoot = Split-Path -Parent $PSScriptRoot
-$script:workflowPath = Join-Path $script:repoRoot '.github/workflows/ci-composite.yml'
-$script:actionPath = Join-Path $script:repoRoot '.github/actions/run-unit-tests/action.yml'
-
 Describe "LabVIEW version resolution wiring" {
     BeforeAll {
+        # Import module and resolve repo paths within the run phase to avoid discovery/run split issues
+        Import-Module powershell-yaml -ErrorAction Stop
+
+        $repoRoot = $null
+        $scriptPath = $PSCommandPath
+        if (-not $scriptPath) { $scriptPath = $MyInvocation.MyCommand.Path }
+        if (-not $scriptPath) { $scriptPath = $PSScriptRoot }
+
+        if ($scriptPath) {
+            $testDir = Split-Path -Parent $scriptPath
+            $repoRoot = Split-Path -Parent $testDir
+        }
+
+        if (-not $repoRoot) {
+            # Fallback for environments that do not populate script metadata
+            $repoRoot = (Get-Location).ProviderPath
+        }
+
+        $script:repoRoot = $repoRoot
+        $script:workflowPath = Join-Path $script:repoRoot '.github/workflows/ci-composite.yml'
+        $script:actionPath = Join-Path $script:repoRoot '.github/actions/run-unit-tests/action.yml'
+
         Test-Path -LiteralPath $script:workflowPath | Should -BeTrue
         Test-Path -LiteralPath $script:actionPath   | Should -BeTrue
 

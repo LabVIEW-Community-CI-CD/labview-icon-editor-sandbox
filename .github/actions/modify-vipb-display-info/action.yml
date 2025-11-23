@@ -15,8 +15,20 @@ runs:
         DISPLAY_INFORMATION_JSON: |
           ${{ inputs.display_information_json }}
       run: |
+        $ErrorActionPreference = 'Stop'
         $displayInformationJson = $Env:DISPLAY_INFORMATION_JSON
-        $lvVer = pwsh -NoProfile -File "${{ github.action_path }}/../../scripts/get-package-lv-version.ps1" -RepositoryPath "${{ inputs.repository_path }}"
+
+        $repo = "${{ inputs.repository_path }}"
+        $candidates = @(
+          (Join-Path $repo 'scripts/get-package-lv-version.ps1'),
+          (Join-Path $repo '.github/scripts/get-package-lv-version.ps1')
+        )
+        $lvScript = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if (-not $lvScript) {
+          throw "Unable to locate get-package-lv-version.ps1 under '$repo/scripts' or '$repo/.github/scripts'."
+        }
+
+        $lvVer = pwsh -NoProfile -File $lvScript -RepositoryPath $repo
         & "${{ github.action_path }}/ModifyVIPBDisplayInfo.ps1" `
           -SupportedBitness ${{ inputs.supported_bitness }} `
           -RepositoryPath "${{ inputs.repository_path }}" `

@@ -170,6 +170,25 @@ try {
         exit 1
     }
 
+    # Derive build number from total commits when available
+    try {
+        git -C $RepositoryPath fetch --unshallow 2>$null | Out-Null
+    }
+    catch {
+        $global:LASTEXITCODE = 0
+    }
+    try {
+        $commitCount = git -C $RepositoryPath rev-list --count HEAD 2>$null
+        if ($LASTEXITCODE -eq 0 -and $commitCount) {
+            $Build = [int]$commitCount
+            Write-Information ("Using commit count for build number: {0}" -f $Build) -InformationAction Continue
+        }
+    }
+    catch {
+        Write-Verbose "Commit count unavailable; using provided build number." -Verbose
+        $global:LASTEXITCODE = 0
+    }
+
     # Derive LabVIEW version from VIPB as the first consumer step
     $lvVersion = Get-LabVIEWVersionFromVipb -RootPath $RepositoryPath
     Write-Information ("Using LabVIEW version from VIPB: {0}" -f $lvVersion) -InformationAction Continue
