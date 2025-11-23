@@ -68,10 +68,10 @@
       "default": "1"
     },
     {
-      "id": "ciRunId",
+      "id": "ciGateWorkflow",
       "type": "promptString",
-      "description": "Workflow run ID from the successful CI build (for drafting a release)",
-      "default": ""
+      "description": "Workflow file name for CI gate (default: .github/workflows/ci.yml)",
+      "default": ".github/workflows/ci.yml"
     }
   ],
   "tasks": [
@@ -101,15 +101,8 @@
       "args": [
         "-NoProfile",
         "-File",
-        "${workspaceFolder}/scripts/run-build-or-package.ps1",
-        "-BuildMode",
-        "${input:buildMode}",
-        "-WorkspacePath",
-        "${workspaceFolder}",
-        "-LabVIEWMinorRevision",
-        "3",
-        "-LvlibpBitness",
-        "${input:lvlibpBitness}"
+        "-Command",
+        "& { & \"${workspaceFolder}/scripts/check-ci-gate.ps1\" -WorkflowFile \"${input:ciGateWorkflow}\" -RepositoryPath \"${workspaceFolder}\"; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & \"${workspaceFolder}/scripts/run-build-or-package.ps1\" -BuildMode \"${input:buildMode}\" -WorkspacePath \"${workspaceFolder}\" -LabVIEWMinorRevision 3 -LvlibpBitness \"${input:lvlibpBitness}\" }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -121,13 +114,11 @@
       "label": "Draft GitHub Release (CI artifacts)",
       "detail": "Dispatches draft-release.yml to create a draft release from CI artifacts by run ID.",
       "type": "shell",
-      "command": "gh",
+      "command": "pwsh",
       "args": [
-        "workflow",
-        "run",
-        "draft-release.yml",
-        "-f",
-        "run_id=${input:ciRunId}"
+        "-NoProfile",
+        "-Command",
+        "& { $runId = & \"${workspaceFolder}/scripts/check-ci-gate.ps1\" -WorkflowFile \"${input:ciGateWorkflow}\" -RepositoryPath \"${workspaceFolder}\" -Quiet -ReturnRunId; if ($LASTEXITCODE -ne 0 -or -not $runId) { exit $LASTEXITCODE }; gh workflow run draft-release.yml -f run_id=$runId }"
       ],
       "options": {
         "cwd": "${workspaceFolder}",
