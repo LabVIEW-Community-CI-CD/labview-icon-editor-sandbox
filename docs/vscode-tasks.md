@@ -21,11 +21,11 @@ Run from `Terminal -> Run Task…` in VS Code (or `Ctrl/Cmd+Shift+B`), then pick
 - **Build/Package VIP**  
   - Input `buildMode=full`: executes `.github/actions/build/Build.ps1`, which:  
     - Applies the VIPC, builds lvlibp for 32- and 64-bit, updates display info, then calls `build_vip.ps1` to package the 64-bit VIP.  
-    - Derives LabVIEW version from the VIPB, stamps metadata (company, author, semver, build), and writes release notes. SemVer comes from the latest git tag, and build number = commits since that tag.  
+    - Derives LabVIEW version from the VIPB, stamps metadata (company, author, semver, build), and writes release notes. SemVer comes from the latest git tag, and build number = total commits from repo root (stable even if tags move).  
   - Input `buildMode=package-only`: executes `scripts/build-vip-single-arch.ps1`, which:  
     - Copies the VIPB, removes the non-target lvlibp entries, adds an exclusion for the removed arch, and calls `build_vip.ps1`.  
     - Assumes the target lvlibp already exists (use the lvlibp build task first).  
-    - Builds a single-arch VIP with semver from the latest tag, plus build number from commits since that tag, commit, and release notes.
+    - Builds a single-arch VIP with semver from the latest tag, plus build number from commits since repo root, commit, and release notes.
 
 - **Build lvlibp (LabVIEW)**  
   - Resolves the package LabVIEW version via `scripts/get-package-lv-version.ps1`.  

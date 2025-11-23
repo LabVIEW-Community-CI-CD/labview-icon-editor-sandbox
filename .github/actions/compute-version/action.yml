@@ -114,15 +114,8 @@ runs:
       run: |
         $ErrorActionPreference = 'Stop'
         git fetch --unshallow 2>$null || Write-Information "Already a full clone." -InformationAction Continue
-        $lastTag = "${{ steps.last_tag.outputs.last_tag }}"
-        if ([string]::IsNullOrWhiteSpace($lastTag)) {
-          $count = git rev-list --count HEAD
-          Write-Information "No tag found; build number = commits from root => $count" -InformationAction Continue
-        } else {
-          $count = git rev-list --count "$lastTag..HEAD"
-          Write-Information "Build number = commits since tag $lastTag => $count" -InformationAction Continue
-        }
-        Write-Information "Commit-based build number => $count" -InformationAction Continue
+        $count = git rev-list --count HEAD
+        Write-Information "Build number = commits from repository root => $count" -InformationAction Continue
         "new_build_number=$count" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
     - name: Compute version string

@@ -71,21 +71,20 @@ function Resolve-SemverFromLatestTag {
 
 function Resolve-BuildNumber {
     param(
-        [Parameter(Mandatory)][string]$RepoRoot,
-        [Parameter(Mandatory)][string]$LastTag
+        [Parameter(Mandatory)][string]$RepoRoot
     )
 
     try { git -C $RepoRoot fetch --unshallow 2>$null | Out-Null } catch { $global:LASTEXITCODE = 0 }
     $count = ''
     try {
-        $count = git -C $RepoRoot rev-list --count "$LastTag..HEAD" 2>$null
+        $count = git -C $RepoRoot rev-list --count HEAD 2>$null
     }
     catch {
         $global:LASTEXITCODE = 0
         $count = ''
     }
     if ([string]::IsNullOrWhiteSpace($count)) {
-        throw "Unable to compute build number from commits since $LastTag. Ensure git history is available (fetch-depth 0)."
+        throw "Unable to compute build number from commits in the repository. Ensure git history is available (fetch-depth 0)."
     }
 
     return [int]$count
@@ -102,8 +101,8 @@ if ($gitRoot) { $repo = $gitRoot }
 $semver = Resolve-SemverFromLatestTag -RepoRoot $repo
 Write-Information ("Using semantic version from latest tag: v{0}.{1}.{2} (raw: {3})" -f $semver.Major, $semver.Minor, $semver.Patch, $semver.Raw) -InformationAction Continue
 
-$buildNumber = Resolve-BuildNumber -RepoRoot $repo -LastTag $semver.Raw
-Write-Information ("Build number = commits since {0}: {1}" -f $semver.Raw, $buildNumber) -InformationAction Continue
+$buildNumber = Resolve-BuildNumber -RepoRoot $repo
+Write-Information ("Build number = commits from repository root: {0}" -f $buildNumber) -InformationAction Continue
 
 $buildScript = Join-Path -Path $ws -ChildPath ".github/actions/build/Build.ps1"
 $singleScript = Join-Path -Path $ws -ChildPath "scripts/build-vip-single-arch.ps1"

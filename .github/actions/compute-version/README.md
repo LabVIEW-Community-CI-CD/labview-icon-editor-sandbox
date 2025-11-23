@@ -10,7 +10,7 @@ The action requires at least one existing semantic version tag (`vMAJOR.MINOR.PA
 ## Outputs
 - `VERSION`: Full version string (e.g. `v1.2.3-build4`).
 - `MAJOR`, `MINOR`, `PATCH`: Numeric version components.
-- `BUILD`: Commit-based build number.
+- `BUILD`: Commit-based build number (total commits from repo root).
 - `IS_PRERELEASE`: `true` when branch naming implies prerelease.
 
 ## Example
