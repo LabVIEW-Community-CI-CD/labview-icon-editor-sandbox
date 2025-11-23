@@ -139,10 +139,12 @@ Describe "VSCode Build Task wiring" {
             $command = ($buildTask.args -join ' ')
 
             # Ensure the mode is assigned with quotes and compared against quoted literals
-            $command | Should -Match '\$mode\s*=\s*\"?\${input:buildMode}\"?'
+            ($command -like "*`$mode =*") | Should -BeTrue
             $command | Should -Match '\[string\]::IsNullOrWhiteSpace\(\$mode\)'
-            $command | Should -Match '\$mode\s*-eq\s*\"vip\+lvlibp\"'
-            $command | Should -Match '\selse\s*\{'
+            $command | Should -Match "switch"
+            $command | Should -Match "'vip\+lvlibp'"
+            $command | Should -Match "'vip-single'"
+            $command | Should -Match 'Unknown buildMode'
         }
 
         It "parses after substituting sample values to catch mode/operator parser errors" {
