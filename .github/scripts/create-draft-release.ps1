@@ -149,7 +149,7 @@ try {
             $Tag = ("v{0}.{1}.{2}.{3}" -f $Major, $Minor, $Patch, $buildNumber)
         }
         else {
-            throw "Provide -Tag or all of -Major, -Minor, -Patch, -Build so a tag can be derived."
+            throw "Provide -Tag or all of -Major, -Minor, -Patch so a tag can be derived."
         }
     }
 
