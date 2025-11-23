@@ -155,7 +155,21 @@ switch ($BuildMode) {
                 throw "Build_lvlibp.ps1 not found at $buildLvlibpScript"
             }
             & $buildLvlibpScript -Package_LabVIEW_Version 0 -SupportedBitness '32' -RepositoryPath $repo -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -Commit $commitHash
-            & $singleScript -SupportedBitness '32' -RepositoryPath $repo -VIPBPath "Tooling/deployment/NI Icon editor.vipb" -LabVIEWMinorRevision $LabVIEWMinorRevision -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -Commit $commitHash -ReleaseNotesFile (Join-Path $ws "Tooling/deployment/release_notes.md") -DisplayInformationJSON "{}"
+            $builtLvlibp = Join-Path $repo "resource/plugins/lv_icon.lvlibp"
+            $targetLvlibp = Join-Path $repo "resource/plugins/lv_icon_x86.lvlibp"
+            if (Test-Path -LiteralPath $builtLvlibp) {
+                Write-Information "Renaming lv_icon.lvlibp -> lv_icon_x86.lvlibp for 32-bit packaging." -InformationAction Continue
+                Move-Item -LiteralPath $builtLvlibp -Destination $targetLvlibp -Force
+            }
+            $displayInfo = @{
+                'Package Version' = @{
+                    major = $semver.Major
+                    minor = $semver.Minor
+                    patch = $semver.Patch
+                    build = $buildNumber
+                }
+            } | ConvertTo-Json -Depth 3
+            & $singleScript -SupportedBitness '32' -RepositoryPath $repo -VIPBPath "Tooling/deployment/NI Icon editor.vipb" -LabVIEWMinorRevision $LabVIEWMinorRevision -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -Commit $commitHash -ReleaseNotesFile (Join-Path $ws "Tooling/deployment/release_notes.md") -DisplayInformationJSON $displayInfo
         }
         else {
             # Enforce selected bitness preflight; warn on the other arch
