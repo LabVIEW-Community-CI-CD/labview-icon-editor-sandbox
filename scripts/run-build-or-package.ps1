@@ -147,15 +147,12 @@ function Assert-DevModePaths {
 
 switch ($BuildMode) {
     'vip+lvlibp' {
-        # Enforce selected bitness preflight; warn on the other arch
         if ($LvlibpBitness -eq '32') {
-            Assert-DevModePaths -Repo $repo -Arch '32'
-            Assert-DevModePaths -Repo $repo -Arch '64' -WarnOnly
-        } else {
-            Assert-DevModePaths -Repo $repo -Arch '64'
-            Assert-DevModePaths -Repo $repo -Arch '32' -WarnOnly
+            throw "buildMode 'vip+lvlibp' packages a 64-bit VIP and requires LabVIEW 64-bit. If you only have LabVIEW 32-bit installed, rerun with buildMode 'vip-single' and LvlibpBitness=32."
         }
-        & $buildScript -RepositoryPath $repo -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -LabVIEWMinorRevision $LabVIEWMinorRevision -Commit $commitHash -CompanyName $CompanyName -AuthorName $AuthorName
+        # Enforce selected bitness preflight; warn on the other arch
+        Assert-DevModePaths -Repo $repo -Arch '64'
+        & $buildScript -RepositoryPath $repo -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -LabVIEWMinorRevision $LabVIEWMinorRevision -Commit $commitHash -CompanyName $CompanyName -AuthorName $AuthorName -LvlibpBitness $LvlibpBitness
     }
     'vip-single' {
         Assert-DevModePaths -Repo $repo -Arch $LvlibpBitness
