@@ -437,7 +437,7 @@ jobs:
 
   check-library-paths:
     name: Check LocalHost.LibraryPaths (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }})
-    needs: [verify-checklist-sync, apply-deps-x86]
+    needs: [verify-checklist-sync, apply-deps-x86, resolve-labview-version]
     runs-on: self-hosted-windows-lv
     steps:
       - uses: actions/checkout@v4
