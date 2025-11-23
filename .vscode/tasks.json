@@ -8,20 +8,6 @@
       "default": "builds/VI Package/"
     },
     {
-      "label": "g-cli --help (dump)",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-File",
-        "${workspaceFolder}/.github/scripts/dump-gcli-help.ps1"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
       "id": "minLv",
       "type": "promptString",
       "description": "Minimum LabVIEW version (major.minor)",
@@ -37,16 +23,6 @@
       "id": "devModeBitness",
       "type": "pickString",
       "description": "Target LabVIEW bitness for dev-mode tasks",
-      "options": [
-        "32",
-        "64"
-      ],
-      "default": "64"
-    },
-    {
-      "id": "libraryPathsBitness",
-      "type": "pickString",
-      "description": "Bitness for reading LocalHost.LibraryPaths entries",
       "options": [
         "32",
         "64"
@@ -88,34 +64,6 @@
       "default": "1"
     },
     {
-      "id": "releaseTag",
-      "type": "promptString",
-      "description": "Git tag to use for the draft release (use 'auto' to derive from version inputs)",
-      "default": "auto"
-    },
-    {
-      "id": "releaseTitle",
-      "type": "promptString",
-      "description": "Release title (use 'auto' to reuse the tag)",
-      "default": "auto"
-    },
-    {
-      "id": "releaseNotesPath",
-      "type": "promptString",
-      "description": "Path to the release notes markdown file to attach and use as the release body",
-      "default": "Tooling/deployment/release_notes.md"
-    },
-    {
-      "id": "releasePrerelease",
-      "type": "pickString",
-      "description": "Mark the draft release as a prerelease",
-      "options": [
-        "false",
-        "true"
-      ],
-      "default": "true"
-    },
-    {
       "id": "commitHash",
       "type": "promptString",
       "description": "Git commit hash for stamping artifacts",
@@ -154,20 +102,6 @@
       "problemMatcher": []
     },
     {
-      "label": "Analyze VI Package (Pester) [headless defaults]",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-Command",
-        "& { $vip = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_VIP_ARTIFACT_PATH)) { $Env:ICONEDITOR_VIP_ARTIFACT_PATH } else { \"builds/VI Package/\" }; $minLv = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_MIN_LV_VERSION)) { $Env:ICONEDITOR_MIN_LV_VERSION } else { \"21.0\" }; & \"${workspaceFolder}/.github/actions/analyze-vi-package/run-local.ps1\" -VipArtifactPath $vip -MinLabVIEW $minLv }"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
       "label": "Build VI Package (Build.ps1)",
       "type": "shell",
       "command": "pwsh",
@@ -193,21 +127,6 @@
         "${input:companyName}",
         "-AuthorName",
         "${input:authorName}"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
-      "label": "Build VI Package (Build.ps1) [headless defaults]",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-Command",
-        "& { $repo = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_REPO_PATH)) { $Env:ICONEDITOR_REPO_PATH } else { \"${workspaceFolder}\" }; $major = if ($Env:ICONEDITOR_SEMVER_MAJOR) { [int]$Env:ICONEDITOR_SEMVER_MAJOR } else { 0 }; $minor = if ($Env:ICONEDITOR_SEMVER_MINOR) { [int]$Env:ICONEDITOR_SEMVER_MINOR } else { 1 }; $patch = if ($Env:ICONEDITOR_SEMVER_PATCH) { [int]$Env:ICONEDITOR_SEMVER_PATCH } else { 0 }; $build = if ($Env:ICONEDITOR_BUILD_NUMBER) { [int]$Env:ICONEDITOR_BUILD_NUMBER } else { 1 }; $commit = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_COMMIT_HASH)) { $Env:ICONEDITOR_COMMIT_HASH } else { \"manual\" }; $company = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_COMPANY_NAME)) { $Env:ICONEDITOR_COMPANY_NAME } else { \"LabVIEW-Community-CI-CD\" }; $author = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_AUTHOR_NAME)) { $Env:ICONEDITOR_AUTHOR_NAME } else { \"LabVIEW Icon Editor CI\" }; & \"${workspaceFolder}/.github/actions/build/Build.ps1\" -RepositoryPath $repo -Major $major -Minor $minor -Patch $patch -Build $build -LabVIEWMinorRevision 3 -Commit $commit -CompanyName $company -AuthorName $author }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -255,6 +174,20 @@
       "problemMatcher": []
     },
     {
+      "label": "Build lvlibp (LabVIEW)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "& { $ver = & \"${workspaceFolder}/scripts/get-package-lv-version.ps1\" -RepositoryPath \"${workspaceFolder}\"; & \"${workspaceFolder}/.github/actions/build-lvlibp/Build_lvlibp.ps1\" -Package_LabVIEW_Version $ver -SupportedBitness \"${input:lvlibpBitness}\" -RepositoryPath \"${workspaceFolder}\" -Major 0 -Minor 0 -Patch 0 -Build 0 -Commit \"manual\" }"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Set Dev Mode (LabVIEW)",
       "type": "shell",
       "command": "pwsh",
@@ -284,122 +217,6 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "problemMatcher": []
-    },
-    {
-      "label": "Build lvlibp (LabVIEW)",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-Command",
-        "& { $ver = & \"${workspaceFolder}/scripts/get-package-lv-version.ps1\" -RepositoryPath \"${workspaceFolder}\"; & \"${workspaceFolder}/.github/actions/build-lvlibp/Build_lvlibp.ps1\" -Package_LabVIEW_Version $ver -SupportedBitness \"${input:lvlibpBitness}\" -RepositoryPath \"${workspaceFolder}\" -Major 0 -Minor 0 -Patch 0 -Build 0 -Commit \"manual\" }"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Show LocalHost.LibraryPaths (LabVIEW)",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-File",
-        "${workspaceFolder}/scripts/read-library-paths.ps1",
-        "-RepositoryPath",
-        "${workspaceFolder}",
-        "-SupportedBitness",
-        "${input:libraryPathsBitness}",
-        "-FailOnMissing"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Apply VIPC (VIPM CLI troubleshoot)",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-Command",
-        "& { $ver = & \"${workspaceFolder}/scripts/get-package-lv-version.ps1\" -RepositoryPath \"${workspaceFolder}\"; & \"${workspaceFolder}/.github/actions/apply-vipc/ApplyVIPC.ps1\" -Package_LabVIEW_Version $ver -SupportedBitness \"64\" -RepositoryPath \"${workspaceFolder}\" -VIPCPath \".github/actions/apply-vipc/runner_dependencies.vipc\" -Verbose }"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Create draft GitHub release (local artifacts)",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-File",
-        "${workspaceFolder}/.github/scripts/create-draft-release.ps1",
-        "-RepositoryPath",
-        "${input:repoPath}",
-        "-VipPath",
-        "${input:vipArtifactPath}",
-        "-ReleaseNotesPath",
-        "${input:releaseNotesPath}",
-        "-Tag",
-        "${input:releaseTag}",
-        "-Title",
-        "${input:releaseTitle}",
-        "-Major",
-        "${input:semverMajor}",
-        "-Minor",
-        "${input:semverMinor}",
-        "-Patch",
-        "${input:semverPatch}",
-        "-Build",
-        "${input:buildNumber}",
-        "-Prerelease",
-        "${input:releasePrerelease}"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Create draft GitHub release (local artifacts) [headless defaults]",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-Command",
-        "& { $repo = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_REPO_PATH)) { $Env:ICONEDITOR_REPO_PATH } else { \"${workspaceFolder}\" }; $vipPath = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_VIP_ARTIFACT_PATH)) { $Env:ICONEDITOR_VIP_ARTIFACT_PATH } else { \"builds/VI Package/\" }; $notes = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_RELEASE_NOTES_PATH)) { $Env:ICONEDITOR_RELEASE_NOTES_PATH } else { \"Tooling/deployment/release_notes.md\" }; $tag = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_RELEASE_TAG)) { $Env:ICONEDITOR_RELEASE_TAG } else { \"auto\" }; $title = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_RELEASE_TITLE)) { $Env:ICONEDITOR_RELEASE_TITLE } else { \"auto\" }; $major = if ($Env:ICONEDITOR_SEMVER_MAJOR) { [int]$Env:ICONEDITOR_SEMVER_MAJOR } else { 0 }; $minor = if ($Env:ICONEDITOR_SEMVER_MINOR) { [int]$Env:ICONEDITOR_SEMVER_MINOR } else { 1 }; $patch = if ($Env:ICONEDITOR_SEMVER_PATCH) { [int]$Env:ICONEDITOR_SEMVER_PATCH } else { 0 }; $build = if ($Env:ICONEDITOR_BUILD_NUMBER) { [int]$Env:ICONEDITOR_BUILD_NUMBER } else { 1 }; $prerelease = $true; if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_RELEASE_PRERELEASE)) { $normalized = $Env:ICONEDITOR_RELEASE_PRERELEASE.Trim().ToLowerInvariant(); $prerelease = $normalized -in @(\"true\", \"1\", \"yes\", \"y\", \"on\") }; & \"${workspaceFolder}/.github/scripts/create-draft-release.ps1\" -RepositoryPath $repo -VipPath $vipPath -ReleaseNotesPath $notes -Tag $tag -Title $title -Major $major -Minor $minor -Patch $patch -Build $build -Prerelease $prerelease }"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Build and Draft Release (compound)",
-      "dependsOn": [
-        "Build VI Package (Build.ps1)",
-        "Create draft GitHub release (local artifacts)"
-      ],
-      "dependsOrder": "sequence",
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
-      "label": "Build, Analyze, Draft Release (compound)",
-      "dependsOn": [
-        "Build VI Package (Build.ps1) [headless defaults]",
-        "Analyze VI Package (Pester) [headless defaults]",
-        "Create draft GitHub release (local artifacts) [headless defaults]"
-      ],
-      "dependsOrder": "sequence",
-      "group": "build",
       "problemMatcher": []
     }
   ]
