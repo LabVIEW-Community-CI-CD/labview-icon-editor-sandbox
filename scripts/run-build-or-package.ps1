@@ -122,6 +122,7 @@ Write-Information ("Using commit hash: {0}" -f $commitHash) -InformationAction C
 
 $buildScript = Join-Path -Path $ws -ChildPath ".github/actions/build/Build.ps1"
 $singleScript = Join-Path -Path $ws -ChildPath "scripts/build-vip-single-arch.ps1"
+$buildLvlibpScript = Join-Path -Path $ws -ChildPath ".github/actions/build-lvlibp/Build_lvlibp.ps1"
 function Assert-DevModePaths {
     param(
         [string]$Repo,
@@ -148,11 +149,19 @@ function Assert-DevModePaths {
 switch ($BuildMode) {
     'vip+lvlibp' {
         if ($LvlibpBitness -eq '32') {
-            throw "buildMode 'vip+lvlibp' packages a 64-bit VIP and requires LabVIEW 64-bit. If you only have LabVIEW 32-bit installed, rerun with buildMode 'vip-single' and LvlibpBitness=32."
+            Write-Information "LvlibpBitness=32 with buildMode=vip+lvlibp: building 32-bit lvlibp and packaging a single-arch VIP (no 64-bit steps will run)." -InformationAction Continue
+            Assert-DevModePaths -Repo $repo -Arch '32'
+            if (-not (Test-Path -LiteralPath $buildLvlibpScript)) {
+                throw "Build_lvlibp.ps1 not found at $buildLvlibpScript"
+            }
+            & $buildLvlibpScript -Package_LabVIEW_Version 0 -SupportedBitness '32' -RepositoryPath $repo -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -Commit $commitHash
+            & $singleScript -SupportedBitness '32' -RepositoryPath $repo -VIPBPath "Tooling/deployment/NI Icon editor.vipb" -LabVIEWMinorRevision $LabVIEWMinorRevision -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -Commit $commitHash -ReleaseNotesFile (Join-Path $ws "Tooling/deployment/release_notes.md") -DisplayInformationJSON "{}"
         }
-        # Enforce selected bitness preflight; warn on the other arch
-        Assert-DevModePaths -Repo $repo -Arch '64'
-        & $buildScript -RepositoryPath $repo -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -LabVIEWMinorRevision $LabVIEWMinorRevision -Commit $commitHash -CompanyName $CompanyName -AuthorName $AuthorName -LvlibpBitness $LvlibpBitness
+        else {
+            # Enforce selected bitness preflight; warn on the other arch
+            Assert-DevModePaths -Repo $repo -Arch '64'
+            & $buildScript -RepositoryPath $repo -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -LabVIEWMinorRevision $LabVIEWMinorRevision -Commit $commitHash -CompanyName $CompanyName -AuthorName $AuthorName -LvlibpBitness $LvlibpBitness
+        }
     }
     'vip-single' {
         Assert-DevModePaths -Repo $repo -Arch $LvlibpBitness
