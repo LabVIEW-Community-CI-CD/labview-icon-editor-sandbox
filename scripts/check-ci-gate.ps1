@@ -56,6 +56,12 @@ try {
     } else {
         throw "Unable to parse owner/repo from origin URL: $remoteUrl"
     }
+    # Normalize to the canonical repo name (handles GitHub renames/redirects).
+    $canonical = gh api "/repos/$owner/$name" -q '.full_name' 2>$null
+    if ($LASTEXITCODE -eq 0 -and $canonical -and $canonical -match '^(?<cOwner>[^/]+)/(?<cName>[^/]+)$') {
+        $owner = $Matches['cOwner']
+        $name  = $Matches['cName']
+    }
 } catch {
     throw "Unable to determine repository owner/name: $($_.Exception.Message)"
 }
@@ -69,7 +75,9 @@ $workflowName = [System.IO.Path]::GetFileName($workflowPath)
 
 # Query workflow runs for this SHA
 Write-Info "Querying GitHub Actions for workflow '$workflowName' on $owner/$name..."
-$json = gh api "/repos/$owner/$name/actions/workflows/$workflowName/runs" -f head_sha=$sha -F per_page=1 -q '.' 2>$null
+# The workflow-runs endpoint does not support head_sha; pull a page of runs and filter locally.
+# Explicitly force GET when passing query params; gh switches to POST if a field is present.
+$json = gh api -X GET "/repos/$owner/$name/actions/workflows/$workflowName/runs" -f per_page=50 2>$null
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($json)) {
     throw "Unable to query workflow runs via gh api. Ensure GH_TOKEN/GITHUB_TOKEN is set and gh is authenticated. $authHint"
 }
@@ -80,7 +88,7 @@ try {
     throw "Failed to parse gh api response: $($_.Exception.Message)"
 }
 
-$runs = @($data.workflow_runs)
+$runs = @($data.workflow_runs | Where-Object { $_.head_sha -eq $sha })
 if (-not $runs -or $runs.Count -eq 0) {
     throw "No runs found for workflow '$workflowName' at commit $sha."
 }
