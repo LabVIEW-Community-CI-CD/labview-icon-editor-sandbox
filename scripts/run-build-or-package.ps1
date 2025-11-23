@@ -4,7 +4,6 @@ param(
     [string]$BuildMode = 'vip+lvlibp',
     [string]$WorkspacePath,
     [string]$LabVIEWMinorRevision = '3',
-    [string]$CommitHash = 'manual',
     [string]$CompanyName = 'LabVIEW-Community-CI-CD',
     [string]$AuthorName = 'LabVIEW Icon Editor CI',
     [string]$LvlibpBitness = '64'
@@ -69,6 +68,20 @@ function Resolve-SemverFromLatestTag {
     }
 }
 
+function Resolve-CommitHash {
+    param([Parameter(Mandatory)][string]$RepoRoot)
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return "manual" }
+    try {
+        $hash = git -C $RepoRoot rev-parse HEAD 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($hash)) {
+            return $hash.Trim()
+        }
+    } catch {
+        $global:LASTEXITCODE = 0
+    }
+    return "manual"
+}
+
 function Resolve-BuildNumber {
     param(
         [Parameter(Mandatory)][string]$RepoRoot
@@ -103,6 +116,9 @@ Write-Information ("Using semantic version from latest tag: v{0}.{1}.{2} (raw: {
 
 $buildNumber = Resolve-BuildNumber -RepoRoot $repo
 Write-Information ("Build number = commits from repository root: {0}" -f $buildNumber) -InformationAction Continue
+
+$commitHash = Resolve-CommitHash -RepoRoot $repo
+Write-Information ("Using commit hash: {0}" -f $commitHash) -InformationAction Continue
 
 $buildScript = Join-Path -Path $ws -ChildPath ".github/actions/build/Build.ps1"
 $singleScript = Join-Path -Path $ws -ChildPath "scripts/build-vip-single-arch.ps1"
@@ -139,11 +155,11 @@ switch ($BuildMode) {
             Assert-DevModePaths -Repo $repo -Arch '64'
             Assert-DevModePaths -Repo $repo -Arch '32' -WarnOnly
         }
-        & $buildScript -RepositoryPath $repo -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -LabVIEWMinorRevision $LabVIEWMinorRevision -Commit $CommitHash -CompanyName $CompanyName -AuthorName $AuthorName
+        & $buildScript -RepositoryPath $repo -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -LabVIEWMinorRevision $LabVIEWMinorRevision -Commit $commitHash -CompanyName $CompanyName -AuthorName $AuthorName
     }
     'vip-single' {
         Assert-DevModePaths -Repo $repo -Arch $LvlibpBitness
-        & $singleScript -SupportedBitness $LvlibpBitness -RepositoryPath $repo -VIPBPath "Tooling/deployment/NI Icon editor.vipb" -LabVIEWMinorRevision $LabVIEWMinorRevision -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -Commit $CommitHash -ReleaseNotesFile (Join-Path $ws "Tooling/deployment/release_notes.md") -DisplayInformationJSON "{}"
+        & $singleScript -SupportedBitness $LvlibpBitness -RepositoryPath $repo -VIPBPath "Tooling/deployment/NI Icon editor.vipb" -LabVIEWMinorRevision $LabVIEWMinorRevision -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -Commit $commitHash -ReleaseNotesFile (Join-Path $ws "Tooling/deployment/release_notes.md") -DisplayInformationJSON "{}"
     }
     default { throw "Unknown buildMode '$BuildMode'" }
 }

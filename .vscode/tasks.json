@@ -68,12 +68,6 @@
       "default": "1"
     },
     {
-      "id": "commitHash",
-      "type": "promptString",
-      "description": "Git commit hash for stamping artifacts",
-      "default": "manual"
-    },
-    {
       "id": "companyName",
       "type": "promptString",
       "description": "Company name for metadata",
@@ -120,8 +114,6 @@
         "${workspaceFolder}",
         "-LabVIEWMinorRevision",
         "3",
-        "-CommitHash",
-        "${input:commitHash}",
         "-CompanyName",
         "${input:companyName}",
         "-AuthorName",

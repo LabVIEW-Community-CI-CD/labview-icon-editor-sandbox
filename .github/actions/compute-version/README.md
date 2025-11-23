@@ -12,6 +12,7 @@ The action requires at least one existing semantic version tag (`vMAJOR.MINOR.PA
 - `MAJOR`, `MINOR`, `PATCH`: Numeric version components.
 - `BUILD`: Commit-based build number (total commits from repo root).
 - `IS_PRERELEASE`: `true` when branch naming implies prerelease.
+- `Commit`: Git commit hash is resolved by callers (e.g., build scripts) automatically; no user prompt required.
 
 ## Example
 ```yaml
