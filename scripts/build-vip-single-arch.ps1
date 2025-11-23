@@ -43,7 +43,9 @@ param(
     [int]$Build = 0,
     [string]$Commit = "manual",
     [string]$ReleaseNotesFile = "Tooling/deployment/release_notes.md",
-    [string]$DisplayInformationJSON = "{}"
+    [string]$DisplayInformationJSON = "{}",
+
+    [switch]$ModifyInPlace
 )
 
 $ErrorActionPreference = 'Stop'
@@ -83,9 +85,14 @@ if (-not (Test-Path -LiteralPath $sourceVIPB)) {
     throw "VIPBPath not found: $sourceVIPB"
 }
 
-# Default output path under builds/tmp with an arch suffix
+# Default: modify in place unless an explicit output path is provided
 if (-not $OutputVIPBPath) {
-    $OutputVIPBPath = Join-Path -Path $repoRoot -ChildPath ("builds/tmp/NI Icon editor.{0}.vipb" -f $SupportedBitness)
+    if ($ModifyInPlace -or -not $PSBoundParameters.ContainsKey('ModifyInPlace')) {
+        $OutputVIPBPath = $sourceVIPB
+    }
+    else {
+        $OutputVIPBPath = Join-Path -Path $repoRoot -ChildPath ("builds/tmp/NI Icon editor.{0}.vipb" -f $SupportedBitness)
+    }
 } elseif (-not [System.IO.Path]::IsPathRooted($OutputVIPBPath)) {
     $OutputVIPBPath = Join-Path -Path $repoRoot -ChildPath $OutputVIPBPath
 }
