@@ -230,8 +230,8 @@ if ($LASTEXITCODE -ne 0) {
 
 # Verify a VIP was produced and surface its path
 try {
-    $vipsAfter = Get-ChildItem -Path (Join-Path $repoRoot 'builds') -Filter *.vip -Recurse -ErrorAction SilentlyContinue
-    $newVips = if ($vipsAfter) { $vipsAfter | Where-Object { $_.LastWriteTime -ge $startTime } } else { @() }
+    $vipsAfter = @(Get-ChildItem -Path (Join-Path $repoRoot 'builds') -Filter *.vip -Recurse -ErrorAction SilentlyContinue)
+    $newVips = if ($vipsAfter) { @($vipsAfter | Where-Object { $_.LastWriteTime -ge $startTime }) } else { @() }
     if (-not $newVips -or $newVips.Count -eq 0) {
         throw "No .vip artifact found after packaging. Check g-cli logs under builds/logs."
     }
