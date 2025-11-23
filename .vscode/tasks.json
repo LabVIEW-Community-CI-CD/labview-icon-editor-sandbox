@@ -67,12 +67,6 @@
       "description": "Build number",
       "default": "1"
     },
-    {
-      "id": "ciGateWorkflow",
-      "type": "promptString",
-      "description": "Workflow file name for CI gate (default: .github/workflows/ci.yml)",
-      "default": ".github/workflows/ci.yml"
-    }
   ],
   "tasks": [
     {
@@ -100,12 +94,15 @@
       "command": "pwsh",
       "args": [
         "-NoProfile",
-        "-File",
         "-Command",
-        "& { & \"${workspaceFolder}/scripts/check-ci-gate.ps1\" -WorkflowFile \"${input:ciGateWorkflow}\" -RepositoryPath \"${workspaceFolder}\"; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & \"${workspaceFolder}/scripts/run-build-or-package.ps1\" -BuildMode \"${input:buildMode}\" -WorkspacePath \"${workspaceFolder}\" -LabVIEWMinorRevision 3 -LvlibpBitness \"${input:lvlibpBitness}\" }"
+        "& { & \"${workspaceFolder}/scripts/check-ci-gate.ps1\" -WorkflowFile \".github/workflows/ci.yml\" -RepositoryPath \"${workspaceFolder}\"; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & \"${workspaceFolder}/scripts/run-build-or-package.ps1\" -BuildMode \"${input:buildMode}\" -WorkspacePath \"${workspaceFolder}\" -LabVIEWMinorRevision 3 -LvlibpBitness \"${input:lvlibpBitness}\" }"
       ],
       "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "GH_TOKEN": "${env:GH_TOKEN}",
+          "GITHUB_TOKEN": "${env:GITHUB_TOKEN}"
+        }
       },
       "group": "build",
       "problemMatcher": []
@@ -118,12 +115,13 @@
       "args": [
         "-NoProfile",
         "-Command",
-        "& { $runId = & \"${workspaceFolder}/scripts/check-ci-gate.ps1\" -WorkflowFile \"${input:ciGateWorkflow}\" -RepositoryPath \"${workspaceFolder}\" -Quiet -ReturnRunId; if ($LASTEXITCODE -ne 0 -or -not $runId) { exit $LASTEXITCODE }; gh workflow run draft-release.yml -f run_id=$runId }"
+        "& { $runId = & \"${workspaceFolder}/scripts/check-ci-gate.ps1\" -WorkflowFile \".github/workflows/ci.yml\" -RepositoryPath \"${workspaceFolder}\" -Quiet -ReturnRunId; if ($LASTEXITCODE -ne 0 -or -not $runId) { exit $LASTEXITCODE }; gh workflow run draft-release.yml -f run_id=$runId }"
       ],
       "options": {
         "cwd": "${workspaceFolder}",
         "env": {
-          "GH_TOKEN": "${env:GITHUB_TOKEN}"
+          "GH_TOKEN": "${env:GH_TOKEN}",
+          "GITHUB_TOKEN": "${env:GITHUB_TOKEN}"
         }
       },
       "problemMatcher": []

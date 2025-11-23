@@ -31,6 +31,18 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
     throw "GitHub CLI (gh) not found. Install gh and ensure GH_TOKEN/GITHUB_TOKEN is available."
 }
 
+# Ensure gh has a token; prefer GH_TOKEN, fall back to GITHUB_TOKEN
+if (-not $env:GH_TOKEN -and $env:GITHUB_TOKEN) {
+    $env:GH_TOKEN = $env:GITHUB_TOKEN
+}
+
+try {
+    gh auth status -h github.com 2>$null | Out-Null
+}
+catch {
+    throw "gh auth status failed. Login with 'gh auth login' or set GH_TOKEN/GITHUB_TOKEN with repo access."
+}
+
 # Determine repo owner/name
 try {
     $remoteUrl = git -C $repo remote get-url origin 2>$null
