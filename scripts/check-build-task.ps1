@@ -21,16 +21,18 @@ catch {
 }
 
 $json = Get-Content -LiteralPath $TasksPath -Raw | ConvertFrom-Json
-$buildTask = $json.tasks | Where-Object { $_.label -eq "Build VI Package (Build.ps1)" } | Select-Object -First 1
+$buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
 
 if (-not $buildTask) {
-    Write-Error "Build task 'Build VI Package (Build.ps1)' not found in $TasksPath"
+    Write-Error "Build task 'Build/Package VIP' not found in $TasksPath"
     exit 2
 }
 
 # Required substrings in the command
 $command = ($buildTask.args -join ' ')
 $required = @(
+    ".github/actions/build/Build.ps1",
+    "scripts/build-vip-single-arch.ps1",
     "-RepositoryPath",
     "-Major",
     "-Minor",
@@ -39,8 +41,7 @@ $required = @(
     "-LabVIEWMinorRevision",
     "-Commit",
     "-CompanyName",
-    "-AuthorName",
-    ".github/actions/build/Build.ps1"
+    "-AuthorName"
 )
 
 $missing = $required | Where-Object { $command -notmatch [regex]::Escape($_) }
