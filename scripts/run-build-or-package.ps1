@@ -101,6 +101,21 @@ function Resolve-RepoOwner {
     return $fallback
 }
 
+function Resolve-GitUserName {
+    param([Parameter(Mandatory)][string]$RepoRoot, [string]$Fallback)
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return $Fallback }
+    try {
+        $name = git -C $RepoRoot config user.name 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($name)) {
+            return $name.Trim()
+        }
+    }
+    catch {
+        $global:LASTEXITCODE = 0
+    }
+    return $Fallback
+}
+
 function Resolve-BuildNumber {
     param(
         [Parameter(Mandatory)][string]$RepoRoot
@@ -151,8 +166,9 @@ $AuthorName = if ($PSBoundParameters.ContainsKey('AuthorName') -and -not [string
     $AuthorName
 } else {
     $owner = Resolve-RepoOwner -RepoRoot $repo
-    Write-Information ("Using repo owner as Author Name: {0}" -f $owner) -InformationAction Continue
-    $owner
+    $gitUser = Resolve-GitUserName -RepoRoot $repo -Fallback $owner
+    Write-Information ("Using git user.name as Author Name: {0}" -f $gitUser) -InformationAction Continue
+    $gitUser
 }
 
 $buildScript = Join-Path -Path $ws -ChildPath ".github/actions/build/Build.ps1"

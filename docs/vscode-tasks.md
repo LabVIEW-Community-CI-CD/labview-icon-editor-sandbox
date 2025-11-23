@@ -22,7 +22,7 @@ Run from `Terminal -> Run Task…` in VS Code (or `Ctrl/Cmd+Shift+B`), then pick
   - Input `buildMode=full`: executes `.github/actions/build/Build.ps1`, which:  
     - Applies the VIPC, builds lvlibp for the requested bitness (32+64 by default; 64-only when `lvlibpBitness=64`), updates display info, then calls `build_vip.ps1` to package the 64-bit VIP.  
     - Derives LabVIEW version from the VIPB, stamps metadata (company, author, semver, build), and writes release notes. SemVer comes from the latest git tag, build number = total commits from repo root (stable even if tags move), and commit hash comes from HEAD automatically.  
-    - Company Name and Author Name are auto-derived from the git remote owner; no prompts are needed. If you only have LabVIEW 64-bit installed, set `lvlibpBitness=64` to skip all 32-bit steps. If you only have LabVIEW 32-bit, set `lvlibpBitness=32`; the task will build a 32-bit lvlibp and package a single-arch VIP automatically (no 64-bit steps).  
+    - Company Name is auto-derived from the git remote owner; Author Name from `git config user.name` (fallback to owner). No prompts are needed. If you only have LabVIEW 64-bit installed, set `lvlibpBitness=64` to skip all 32-bit steps. If you only have LabVIEW 32-bit, set `lvlibpBitness=32`; the task will build a 32-bit lvlibp and package a single-arch VIP automatically (no 64-bit steps).  
   - Input `buildMode=package-only`: executes `scripts/build-vip-single-arch.ps1`, which:  
     - Copies the VIPB, removes the non-target lvlibp entries, adds an exclusion for the removed arch, and calls `build_vip.ps1`.  
     - Assumes the target lvlibp already exists (use the lvlibp build task first).  
