@@ -120,9 +120,9 @@ Describe "VSCode Build Task wiring" {
             $modeInput = $json.inputs | Where-Object { $_.id -eq 'buildMode' } | Select-Object -First 1
             $modeInput | Should -Not -BeNullOrEmpty
             $modeInput.type | Should -Be 'pickString'
-            $modeInput.default | Should -Be 'full'
-            $modeInput.options | Should -Contain 'full'
-            $modeInput.options | Should -Contain 'package-only'
+            $modeInput.default | Should -Be 'vip+lvlibp'
+            $modeInput.options | Should -Contain 'vip+lvlibp'
+            $modeInput.options | Should -Contain 'vip-single'
 
             $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
             $buildTask | Should -Not -BeNullOrEmpty
@@ -139,9 +139,9 @@ Describe "VSCode Build Task wiring" {
             $command = ($buildTask.args -join ' ')
 
             # Ensure the mode is assigned with quotes and compared against quoted literals
-            $command | Should -Match '\$mode\s*=\s*''\${input:buildMode}'''
+            $command | Should -Match '\$mode\s*=\s*\"?\${input:buildMode}\"?'
             $command | Should -Match '\[string\]::IsNullOrWhiteSpace\(\$mode\)'
-            $command | Should -Match '\$mode\s*-eq\s*''full'''
+            $command | Should -Match '\$mode\s*-eq\s*\"vip\+lvlibp\"'
             $command | Should -Match '\selse\s*\{'
         }
 
@@ -155,7 +155,7 @@ Describe "VSCode Build Task wiring" {
             # Replace placeholders with sample values to simulate VS Code expansion
             $sample = $command
             $replacements = @{
-                '\$\{input:buildMode\}'      = 'full'
+                '\$\{input:buildMode\}'      = 'vip+lvlibp'
                 '\$\{input:repoPath\}'       = 'C:\repo'
                 '\$\{workspaceFolder\}'      = 'C:\repo'
                 '\$\{input:semverMajor\}'    = '0'
@@ -177,6 +177,14 @@ Describe "VSCode Build Task wiring" {
 
             $parseErrors = $null
             [System.Management.Automation.Language.Parser]::ParseInput($scriptBlockText, [ref]$null, [ref]$parseErrors) | Out-Null
+            $parseErrors | Should -BeNullOrEmpty
+
+            # Additional guard: ensure vip-single path fails fast when lvlibp is missing
+            $sampleSingle = $sample -replace 'vip\+lvlibp', 'vip-single'
+            $scriptBlockTextSingle = $sampleSingle -replace '.*-Command\s*&\s*\{', ''
+            $scriptBlockTextSingle = $scriptBlockTextSingle -replace '\}\s*$', ''
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseInput($scriptBlockTextSingle, [ref]$null, [ref]$parseErrors) | Out-Null
             $parseErrors | Should -BeNullOrEmpty
         }
     }

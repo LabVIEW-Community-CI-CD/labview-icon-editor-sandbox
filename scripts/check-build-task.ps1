@@ -1,5 +1,5 @@
-# Validates the VSCode build task wiring for Build.ps1.
-# Exits non-zero if the task is missing or does not include required flags.
+# Validates the VSCode build task wiring for the unified Build/Package task.
+# Exits non-zero if the task is missing or does not include required flags or inputs.
 [CmdletBinding()]
 param(
     [string]$TasksPath = ".vscode/tasks.json"
@@ -31,6 +31,7 @@ if (-not $buildTask) {
 # Required substrings in the command
 $command = ($buildTask.args -join ' ')
 $required = @(
+    "-buildMode",
     ".github/actions/build/Build.ps1",
     "scripts/build-vip-single-arch.ps1",
     "-RepositoryPath",
@@ -41,7 +42,8 @@ $required = @(
     "-LabVIEWMinorRevision",
     "-Commit",
     "-CompanyName",
-    "-AuthorName"
+    "-AuthorName",
+    "-SupportedBitness"
 )
 
 $missing = $required | Where-Object { $command -notmatch [regex]::Escape($_) }

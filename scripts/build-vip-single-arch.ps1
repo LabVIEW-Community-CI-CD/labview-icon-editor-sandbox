@@ -60,6 +60,20 @@ function Resolve-RepoPath {
 }
 
 $repoRoot = Resolve-RepoPath -Path $RepositoryPath
+$semverInputs = @{
+    Major = $Major
+    Minor = $Minor
+    Patch = $Patch
+    Build = $Build
+}
+foreach ($key in $semverInputs.Keys) {
+    $val = $semverInputs[$key]
+    if ($val -lt 0) { throw "$key must be >= 0; got $val" }
+}
+$isUnc = $repoRoot -like "\\\\*"
+if ($isUnc) {
+    Write-Warning "RepositoryPath is a UNC path ($repoRoot). g-cli and VIPM can behave poorly on UNC paths; consider mapping a drive."
+}
 $sourceVIPB = if ([System.IO.Path]::IsPathRooted($VIPBPath)) {
     $VIPBPath
 } else {
@@ -90,6 +104,23 @@ foreach ($node in @($destNodes)) {
     [void]$node.ParentNode.RemoveChild($node)
 }
 
+# VIPB sanity: ensure target arch destination remains and other arch is gone
+$targetToken = "resource/plugins/lv_icon_{0}.lvlibp" -f ($SupportedBitness -eq '64' ? 'x64' : 'x86')
+$targetDestNodes = $vipb.SelectNodes("//Destination_Overrides[Path='$targetToken']")
+if (-not $targetDestNodes -or $targetDestNodes.Count -eq 0) {
+    throw "Pruned VIPB is missing destination for $targetToken; cannot package this arch."
+}
+
+# Preflight: ensure the target lvlibp exists before invoking g-cli
+$targetLvlibp = Join-Path -Path $repoRoot -ChildPath ("resource/plugins/lv_icon_{0}.lvlibp" -f ($SupportedBitness -eq '64' ? 'x64' : 'x86'))
+$otherLvlibp = Join-Path -Path $repoRoot -ChildPath ("resource/plugins/lv_icon_{0}.lvlibp" -f ($SupportedBitness -eq '64' ? 'x86' : 'x64'))
+if (-not (Test-Path -LiteralPath $targetLvlibp)) {
+    $hint = if (Test-Path -LiteralPath $otherLvlibp) {
+        " Found the other arch at $otherLvlibp; you may have chosen the wrong bitness."
+    } else { "" }
+    throw "Expected lvlibp not found for $SupportedBitness-bit build: $targetLvlibp. Build the lvlibp first or run the vip+lvlibp mode.$hint"
+}
+
 # Add an exclusion for the removed arch to avoid missing-file packaging errors
 $sourceFilesNode = $vipb.VI_Package_Builder_Settings.Advanced_Settings.Source_Files
 if ($sourceFilesNode -and -not $vipb.SelectSingleNode("//Exclusions[Path='$otherToken']")) {
@@ -105,6 +136,16 @@ if ($outDir -and -not (Test-Path -LiteralPath $outDir)) {
     New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 }
 $vipb.Save($OutputVIPBPath)
+$resolvedOutputVIPB = Resolve-Path -LiteralPath $OutputVIPBPath -ErrorAction Stop
+
+# Ensure the pruned VIPB actually dropped the other arch
+$reserialized = [xml](Get-Content -LiteralPath $resolvedOutputVIPB -Raw)
+if ($reserialized.SelectNodes("//Destination_Overrides[Path[contains(., '$otherToken')]]").Count -gt 0) {
+    throw "Pruned VIPB still contains destination for $otherToken; refusing to package. Inspect $resolvedOutputVIPB."
+}
+if ($reserialized.SelectNodes("//Destination_Overrides[Path='$targetToken']").Count -eq 0) {
+    throw "Pruned VIPB no longer contains destination for $targetToken; refusing to package. Inspect $resolvedOutputVIPB."
+}
 
 # Build using the pruned VIPB copy
 $versionScript = Join-Path -Path $repoRoot -ChildPath "scripts/get-package-lv-version.ps1"
@@ -112,6 +153,10 @@ if (-not (Test-Path -LiteralPath $versionScript)) {
     throw "get-package-lv-version.ps1 not found at $versionScript"
 }
 $packageVersion = & $versionScript -RepositoryPath $repoRoot
+
+if (-not (Get-Command g-cli -ErrorAction SilentlyContinue)) {
+    throw "g-cli not found on PATH. Install VIPM CLI and ensure g-cli is available before packaging."
+}
 
 $buildVipScript = Join-Path -Path $repoRoot -ChildPath ".github/actions/build-vip/build_vip.ps1"
 if (-not (Test-Path -LiteralPath $buildVipScript)) {
@@ -122,6 +167,18 @@ $releaseNotesPath = if ([System.IO.Path]::IsPathRooted($ReleaseNotesFile)) {
     $ReleaseNotesFile
 } else {
     Join-Path -Path $repoRoot -ChildPath $ReleaseNotesFile
+}
+try {
+    $releaseNotesDir = Split-Path -Parent $releaseNotesPath
+    if ($releaseNotesDir -and -not (Test-Path -LiteralPath $releaseNotesDir)) {
+        New-Item -ItemType Directory -Path $releaseNotesDir -Force | Out-Null
+    }
+    if (-not (Test-Path -LiteralPath $releaseNotesPath)) {
+        "" | Set-Content -LiteralPath $releaseNotesPath -Encoding utf8
+    }
+}
+catch {
+    throw "Unable to ensure ReleaseNotesFile exists or is writable at '$releaseNotesPath': $($_.Exception.Message)"
 }
 
 $buildParams = @{
@@ -139,7 +196,30 @@ $buildParams = @{
     DisplayInformationJSON  = $DisplayInformationJSON
 }
 
+try {
+    $startTime = Get-Date
+    $existingVips = Get-ChildItem -Path (Join-Path $repoRoot 'builds') -Filter *.vip -Recurse -ErrorAction SilentlyContinue
+}
+catch {
+    $existingVips = @()
+}
+
 & $buildVipScript @buildParams
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
+}
+
+# Verify a VIP was produced and surface its path
+try {
+    $vipsAfter = Get-ChildItem -Path (Join-Path $repoRoot 'builds') -Filter *.vip -Recurse -ErrorAction SilentlyContinue
+    $newVips = if ($vipsAfter) { $vipsAfter | Where-Object { $_.LastWriteTime -ge $startTime } } else { @() }
+    if (-not $newVips -or $newVips.Count -eq 0) {
+        throw "No .vip artifact found after packaging. Check g-cli logs under builds/logs."
+    }
+    $newVips | Sort-Object LastWriteTime -Descending | Select-Object -First 3 | ForEach-Object {
+        Write-Information ("Produced VIP: {0}" -f $_.FullName) -InformationAction Continue
+    }
+}
+catch {
+    throw $_
 }

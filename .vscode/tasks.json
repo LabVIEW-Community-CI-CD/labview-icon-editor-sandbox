@@ -22,12 +22,12 @@
     {
       "id": "buildMode",
       "type": "pickString",
-      "description": "Build mode: full pipeline or package-only",
+      "description": "Artifact type: VIP + lvlibp builds, or single-arch VIP only",
       "options": [
-        "full",
-        "package-only"
+        "vip+lvlibp",
+        "vip-single"
       ],
-      "default": "full"
+      "default": "vip+lvlibp"
     },
     {
       "id": "devModeBitness",
@@ -113,13 +113,13 @@
     },
     {
       "label": "Build/Package VIP",
-      "detail": "Choose full pipeline (Build.ps1) or package-only (single-arch) via buildMode input",
+      "detail": "Choose artifact type via buildMode: vip+lvlibp (full pipeline) or vip-single (single-arch package)",
       "type": "shell",
       "command": "pwsh",
       "args": [
         "-NoProfile",
         "-Command",
-        "& { $mode = '${input:buildMode}'; if ([string]::IsNullOrWhiteSpace($mode)) { $mode = 'full' }; if ($mode -eq 'full') { & \"${workspaceFolder}/.github/actions/build/Build.ps1\" -RepositoryPath \"${input:repoPath}\" -Major \"${input:semverMajor}\" -Minor \"${input:semverMinor}\" -Patch \"${input:semverPatch}\" -Build \"${input:buildNumber}\" -LabVIEWMinorRevision 3 -Commit \"${input:commitHash}\" -CompanyName \"${input:companyName}\" -AuthorName \"${input:authorName}\" } else { & \"${workspaceFolder}/scripts/build-vip-single-arch.ps1\" -SupportedBitness \"${input:lvlibpBitness}\" -RepositoryPath \"${input:repoPath}\" -VIPBPath \"Tooling/deployment/NI Icon editor.vipb\" -LabVIEWMinorRevision 3 -Major \"${input:semverMajor}\" -Minor \"${input:semverMinor}\" -Patch \"${input:semverPatch}\" -Build \"${input:buildNumber}\" -Commit \"${input:commitHash}\" -ReleaseNotesFile \"${workspaceFolder}/Tooling/deployment/release_notes.md\" -DisplayInformationJSON \"{}\" } }"
+        "& { $mode = \"${input:buildMode}\"; if ([string]::IsNullOrWhiteSpace($mode)) { $mode = \"vip+lvlibp\" }; if ($mode -eq \"vip+lvlibp\") { & \"${workspaceFolder}/.github/actions/build/Build.ps1\" -RepositoryPath \"${input:repoPath}\" -Major \"${input:semverMajor}\" -Minor \"${input:semverMinor}\" -Patch \"${input:semverPatch}\" -Build \"${input:buildNumber}\" -LabVIEWMinorRevision 3 -Commit \"${input:commitHash}\" -CompanyName \"${input:companyName}\" -AuthorName \"${input:authorName}\" } else { & \"${workspaceFolder}/scripts/build-vip-single-arch.ps1\" -SupportedBitness \"${input:lvlibpBitness}\" -RepositoryPath \"${input:repoPath}\" -VIPBPath \"Tooling/deployment/NI Icon editor.vipb\" -LabVIEWMinorRevision 3 -Major \"${input:semverMajor}\" -Minor \"${input:semverMinor}\" -Patch \"${input:semverPatch}\" -Build \"${input:buildNumber}\" -Commit \"${input:commitHash}\" -ReleaseNotesFile \"${workspaceFolder}/Tooling/deployment/release_notes.md\" -DisplayInformationJSON \"{}\" } }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
