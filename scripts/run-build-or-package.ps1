@@ -4,7 +4,7 @@ param(
     [string]$BuildMode = 'vip+lvlibp',
     [string]$WorkspacePath,
     [string]$LabVIEWMinorRevision = '3',
-    [string]$CompanyName = 'LabVIEW-Community-CI-CD',
+    [string]$CompanyName,
     [string]$AuthorName = 'LabVIEW Icon Editor CI',
     [string]$LvlibpBitness = '64'
 )
@@ -82,6 +82,25 @@ function Resolve-CommitHash {
     return "manual"
 }
 
+function Resolve-RepoOwner {
+    param([Parameter(Mandatory)][string]$RepoRoot)
+    $fallback = "LabVIEW-Community-CI-CD"
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return $fallback }
+    try {
+        $url = git -C $RepoRoot remote get-url origin 2>$null
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($url)) { return $fallback }
+        $pattern = [regex]::Escape("github.com") + "[:/](?<owner>[^/]+)/(?:[^/]+?)(?:\.git)?$"
+        $m = [regex]::Match($url.Trim(), $pattern, 'IgnoreCase')
+        if ($m.Success -and $m.Groups['owner'].Value) {
+            return $m.Groups['owner'].Value
+        }
+    }
+    catch {
+        $global:LASTEXITCODE = 0
+    }
+    return $fallback
+}
+
 function Resolve-BuildNumber {
     param(
         [Parameter(Mandatory)][string]$RepoRoot
@@ -119,6 +138,14 @@ Write-Information ("Build number = commits from repository root: {0}" -f $buildN
 
 $commitHash = Resolve-CommitHash -RepoRoot $repo
 Write-Information ("Using commit hash: {0}" -f $commitHash) -InformationAction Continue
+
+$CompanyName = if ($PSBoundParameters.ContainsKey('CompanyName') -and -not [string]::IsNullOrWhiteSpace($CompanyName)) {
+    $CompanyName
+} else {
+    $owner = Resolve-RepoOwner -RepoRoot $repo
+    Write-Information ("Using repo owner as Company Name: {0}" -f $owner) -InformationAction Continue
+    $owner
+}
 
 $buildScript = Join-Path -Path $ws -ChildPath ".github/actions/build/Build.ps1"
 $singleScript = Join-Path -Path $ws -ChildPath "scripts/build-vip-single-arch.ps1"
