@@ -44,6 +44,38 @@ param(
     [string]$Commit
 )
 
+function Resolve-SemverFromLatestTag {
+    param([Parameter(Mandatory)][string]$RepoRoot)
+
+    $tag = ''
+    try {
+        $tag = git -C $RepoRoot describe --tags --abbrev=0 2>$null
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tag)) {
+            $tag = ''
+        }
+    }
+    catch {
+        $tag = ''
+    }
+
+    if ([string]::IsNullOrWhiteSpace($tag)) {
+        throw "No git tags were found. Create a semantic version tag (for example, v0.1.0) so PPL versioning can derive MAJOR/MINOR/PATCH."
+    }
+
+    $tagTrimmed = $tag.Trim()
+    $match = [regex]::Match($tagTrimmed, '^(?:refs/tags/)?v?(?<maj>\d+)\.(?<min>\d+)\.(?<pat>\d+)')
+    if (-not $match.Success) {
+        throw "Latest tag '$tag' is not a semantic version (expected vMAJOR.MINOR.PATCH[...])."
+    }
+
+    return [PSCustomObject]@{
+        Major = [int]$match.Groups['maj'].Value
+        Minor = [int]$match.Groups['min'].Value
+        Patch = [int]$match.Groups['pat'].Value
+        Raw   = $tagTrimmed
+    }
+}
+
     # Resolve version from VIPB for determinism
 $versionScript = @(
     (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1'),
@@ -55,6 +87,13 @@ if (-not $versionScript) {
 }
 
 $Package_LabVIEW_Version = & $versionScript -RepositoryPath $RepositoryPath
+
+# Override Major/Minor/Patch from the latest tag to keep PPL version aligned with repo semver
+$semver = Resolve-SemverFromLatestTag -RepoRoot $RepositoryPath
+$Major = $semver.Major
+$Minor = $semver.Minor
+$Patch = $semver.Patch
+Write-Information ("Using semantic version from latest tag for PPL: v{0}.{1}.{2}" -f $Major, $Minor, $Patch) -InformationAction Continue
 
 # Derive build number from total commit count for PPL versioning; fall back to provided value
 $DerivedBuild = $Build
