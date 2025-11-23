@@ -103,6 +103,7 @@
     },
     {
       "label": "Build VI Package (Build.ps1)",
+      "detail": "Full pipeline: apply VIPC, build lvlibp (32/64), then package VIP (64-bit)",
       "type": "shell",
       "command": "pwsh",
       "args": [
@@ -135,7 +136,8 @@
       "problemMatcher": []
     },
     {
-      "label": "Build VIP (stemmed artifact naming)",
+      "label": "Package VIP (single-arch, package-only)",
+      "detail": "Packaging only: requires the target lvlibp to exist; prunes other arch before building the VIP",
       "type": "shell",
       "command": "pwsh",
       "args": [
