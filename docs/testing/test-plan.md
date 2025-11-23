@@ -52,7 +52,7 @@ Scope: project-level plan for the LabVIEW Icon Editor repository. It reuses the 
 | Glossary | [`docs/testing/glossary.md`](./glossary.md) |
 
 ## §7.2.2 Context (project scope and constraints)
-- Scope is the LabVIEW Icon Editor repository plus CI workflows (`ci-composite.yml`, `dod-aggregator.yml`, `test-report.yml`, `tag-and-release.yml`) that generate ISO §8 status/completion reports.
+- Scope is the LabVIEW Icon Editor repository plus CI workflows (`ci.yml`, `dod-aggregator.yml`, `test-report.yml`, `tag-and-release.yml`) that generate ISO §8 status/completion reports.
 - Drivers: RTM priorities and TRW checklist items determine coverage thresholds and reporting content; policy/strategy set the tailored artifact set (plan + CI-generated §8 reports).
 - Constraints: LabVIEW tests depend on self-hosted `test-2021-x64`/`test-2021-x86` runners; outages pause merges (tracked in risk register) and require status reports noting the gap.
 - Interfaces: release automation uploads completion reports and VIP assets; RTM coverage and ADR lint gates block merges when gaps/waivers are missing.

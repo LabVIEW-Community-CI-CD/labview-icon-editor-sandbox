@@ -22,7 +22,7 @@ Describe "LabVIEW version resolution wiring" {
         }
 
         $script:repoRoot = $repoRoot
-        $script:workflowPath = Join-Path $script:repoRoot '.github/workflows/ci-composite.yml'
+        $script:workflowPath = Join-Path $script:repoRoot '.github/workflows/ci.yml'
         $script:actionPath = Join-Path $script:repoRoot '.github/actions/run-unit-tests/action.yml'
 
         Test-Path -LiteralPath $script:workflowPath | Should -BeTrue

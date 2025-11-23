@@ -67,6 +67,12 @@
       "description": "Build number",
       "default": "1"
     },
+    {
+      "id": "ciRunId",
+      "type": "promptString",
+      "description": "Workflow run ID from the successful CI build (for drafting a release)",
+      "default": ""
+    }
   ],
   "tasks": [
     {
@@ -109,6 +115,26 @@
         "cwd": "${workspaceFolder}"
       },
       "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Draft GitHub Release (CI artifacts)",
+      "detail": "Dispatches draft-release.yml to create a draft release from CI artifacts by run ID.",
+      "type": "shell",
+      "command": "gh",
+      "args": [
+        "workflow",
+        "run",
+        "draft-release.yml",
+        "-f",
+        "run_id=${input:ciRunId}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "GH_TOKEN": "${env:GITHUB_TOKEN}"
+        }
+      },
       "problemMatcher": []
     },
     {
