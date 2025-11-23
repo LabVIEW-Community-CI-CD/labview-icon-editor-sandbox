@@ -4,10 +4,7 @@ This directory collects guides and references for working with the LabVIEW Icon 
 
 ## General Guides
 
-- [Manual Setup Instructions](manual-instructions.md)
-- [Automated Setup Instructions](automated-setup.md)
-- [PowerShell CLI GitHub Action Instructions](powershell-cli-github-action-instructions.md)
-- [PowerShell Dependency Scripts](powershell-dependency-scripts.md)
+- [Building & Packaging via VS Code Tasks](vscode-tasks.md)
 - [CI Workflows Overview](ci-workflows.md)
 - [VS Code task shortlist](vscode-tasks.md)
 
