@@ -867,7 +867,7 @@ jobs:
               $Env:REPO_URL
             }
             "Legal Copyright" = "© $(Get-Date -Format yyyy) $($Env:COMPANY)"
-            "License Agreement Name" = "See LICENSE.md"
+            "License Agreement Name" = "LICENSE"
             "Product Description Summary" = $description
             "Product Description" = $description
             "Release Notes - Change Log" = $releaseNotes
