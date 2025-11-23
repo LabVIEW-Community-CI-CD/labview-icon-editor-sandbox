@@ -3,9 +3,6 @@ param(
     [ValidateSet('vip+lvlibp','vip-single')]
     [string]$BuildMode = 'vip+lvlibp',
     [string]$WorkspacePath,
-    [string]$SemverMajor = '0',
-    [string]$SemverMinor = '1',
-    [string]$SemverPatch = '0',
     [string]$BuildNumber = '1',
     [string]$LabVIEWMinorRevision = '3',
     [string]$CommitHash = 'manual',
@@ -34,6 +31,45 @@ function Resolve-GitRoot {
     return $null
 }
 
+function Resolve-SemverFromLatestTag {
+    param([Parameter(Mandatory)][string]$RepoRoot)
+
+    $helper = Join-Path -Path $RepoRoot -ChildPath ".github/actions/compute-version/Get-LastTag.ps1"
+    $tag = ''
+    if (Test-Path -LiteralPath $helper) {
+        $info = & $helper -RequireTag
+        $tag = $info.LastTag
+    }
+    else {
+        try {
+            $tag = git -C $RepoRoot describe --tags --abbrev=0 2>$null
+            if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tag)) {
+                $tag = ''
+            }
+        }
+        catch {
+            $tag = ''
+        }
+
+        if ([string]::IsNullOrWhiteSpace($tag)) {
+            throw "No git tags were found. Create the first semantic version tag (for example, v0.1.0) so versioning can derive MAJOR/MINOR/PATCH."
+        }
+    }
+
+    $tagTrimmed = $tag.Trim()
+    $match = [regex]::Match($tagTrimmed, '^(?:refs/tags/)?v?(?<maj>\d+)\.(?<min>\d+)\.(?<pat>\d+)')
+    if (-not $match.Success) {
+        throw "Latest tag '$tag' is not a semantic version (expected vMAJOR.MINOR.PATCH[...]). Fix or recreate the tag to continue."
+    }
+
+    return [PSCustomObject]@{
+        Major = [int]$match.Groups['maj'].Value
+        Minor = [int]$match.Groups['min'].Value
+        Patch = [int]$match.Groups['pat'].Value
+        Raw   = $tagTrimmed
+    }
+}
+
 # Normalize workspace first
 $ws = if ([string]::IsNullOrWhiteSpace($WorkspacePath)) { (Get-Location).ProviderPath } else { Resolve-PathSafe $WorkspacePath }
 
@@ -41,6 +77,9 @@ $ws = if ([string]::IsNullOrWhiteSpace($WorkspacePath)) { (Get-Location).Provide
 $repo = Resolve-PathSafe $ws
 $gitRoot = Resolve-GitRoot -BasePath $ws
 if ($gitRoot) { $repo = $gitRoot }
+
+$semver = Resolve-SemverFromLatestTag -RepoRoot $repo
+Write-Information ("Using semantic version from latest tag: v{0}.{1}.{2} (raw: {3})" -f $semver.Major, $semver.Minor, $semver.Patch, $semver.Raw) -InformationAction Continue
 
 $buildScript = Join-Path -Path $ws -ChildPath ".github/actions/build/Build.ps1"
 $singleScript = Join-Path -Path $ws -ChildPath "scripts/build-vip-single-arch.ps1"
@@ -77,11 +116,11 @@ switch ($BuildMode) {
             Assert-DevModePaths -Repo $repo -Arch '64'
             Assert-DevModePaths -Repo $repo -Arch '32' -WarnOnly
         }
-        & $buildScript -RepositoryPath $repo -Major $SemverMajor -Minor $SemverMinor -Patch $SemverPatch -Build $BuildNumber -LabVIEWMinorRevision $LabVIEWMinorRevision -Commit $CommitHash -CompanyName $CompanyName -AuthorName $AuthorName
+        & $buildScript -RepositoryPath $repo -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $BuildNumber -LabVIEWMinorRevision $LabVIEWMinorRevision -Commit $CommitHash -CompanyName $CompanyName -AuthorName $AuthorName
     }
     'vip-single' {
         Assert-DevModePaths -Repo $repo -Arch $LvlibpBitness
-        & $singleScript -SupportedBitness $LvlibpBitness -RepositoryPath $repo -VIPBPath "Tooling/deployment/NI Icon editor.vipb" -LabVIEWMinorRevision $LabVIEWMinorRevision -Major $SemverMajor -Minor $SemverMinor -Patch $SemverPatch -Build $BuildNumber -Commit $CommitHash -ReleaseNotesFile (Join-Path $ws "Tooling/deployment/release_notes.md") -DisplayInformationJSON "{}"
+        & $singleScript -SupportedBitness $LvlibpBitness -RepositoryPath $repo -VIPBPath "Tooling/deployment/NI Icon editor.vipb" -LabVIEWMinorRevision $LabVIEWMinorRevision -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $BuildNumber -Commit $CommitHash -ReleaseNotesFile (Join-Path $ws "Tooling/deployment/release_notes.md") -DisplayInformationJSON "{}"
     }
     default { throw "Unknown buildMode '$BuildMode'" }
 }

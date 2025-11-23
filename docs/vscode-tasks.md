@@ -6,6 +6,7 @@ Curated workspace tasks for the local workflows we actually reach for. The headl
 - **Build/Package VIP** – choose artifact type via `buildMode` input:
   - `vip+lvlibp`: runs `.github/actions/build/Build.ps1` (apply VIPC, build both lvlibps, package 64-bit VIP).
   - `vip-single`: runs `scripts/build-vip-single-arch.ps1` to prune the other arch and package a single-arch VIP; expects the target lvlibp to exist.
+  - Semantic version is **auto-derived from the latest git tag (vMAJOR.MINOR.PATCH)**. If no tag exists, the task fails fast and tells you to create the first tag (for example, `v0.1.0`).
 - **Build lvlibp (LabVIEW)** – builds the packed library with the resolved package version and selected bitness.
 - **Set Dev Mode (LabVIEW)** / **Revert Dev Mode (LabVIEW)** – toggles development mode for the chosen LabVIEW bitness.
 
@@ -20,11 +21,11 @@ Run from `Terminal -> Run Task…` in VS Code (or `Ctrl/Cmd+Shift+B`), then pick
 - **Build/Package VIP**  
   - Input `buildMode=full`: executes `.github/actions/build/Build.ps1`, which:  
     - Applies the VIPC, builds lvlibp for 32- and 64-bit, updates display info, then calls `build_vip.ps1` to package the 64-bit VIP.  
-    - Derives LabVIEW version from the VIPB, stamps metadata (company, author, semver, build), and writes release notes.  
+    - Derives LabVIEW version from the VIPB, stamps metadata (company, author, semver, build), and writes release notes. SemVer comes from the latest git tag.  
   - Input `buildMode=package-only`: executes `scripts/build-vip-single-arch.ps1`, which:  
     - Copies the VIPB, removes the non-target lvlibp entries, adds an exclusion for the removed arch, and calls `build_vip.ps1`.  
     - Assumes the target lvlibp already exists (use the lvlibp build task first).  
-    - Builds a single-arch VIP with your semver, build number, commit, and release notes.
+    - Builds a single-arch VIP with semver from the latest tag, plus your build number, commit, and release notes.
 
 - **Build lvlibp (LabVIEW)**  
   - Resolves the package LabVIEW version via `scripts/get-package-lv-version.ps1`.  

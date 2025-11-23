@@ -82,11 +82,14 @@ runs:
       run: |
         $ErrorActionPreference = 'Stop'
         $script = Join-Path -Path $PWD -ChildPath ".github/actions/compute-version/Get-LastTag.ps1"
+        $tag = ''
+        $isFirst = $false
         if (Test-Path $script) {
-          $info = & $script -AsJson | ConvertFrom-Json
+          $info = & $script -AsJson -RequireTag | ConvertFrom-Json
           $tag = $info.LastTag
           $isFirst = [bool]$info.IsFirstRelease
-        } else {
+        }
+        else {
           # Backward compatible fallback when helper script is unavailable (older branch)
           try {
             $tag = git describe --tags --abbrev=0 2>$null
@@ -97,12 +100,11 @@ runs:
             $tag = ''
           }
           $isFirst = [string]::IsNullOrWhiteSpace($tag)
+          if ($isFirst) {
+            throw "No git tags were found. Create the first semantic version tag (for example, v0.1.0) so versioning can derive MAJOR/MINOR/PATCH."
+          }
         }
-        if ([string]::IsNullOrWhiteSpace($tag)) {
-          Write-Information "No reachable tag found (initial release)." -InformationAction Continue
-        } else {
-          Write-Information "Last reachable tag: $tag" -InformationAction Continue
-        }
+        Write-Information "Last reachable tag: $tag" -InformationAction Continue
         "last_tag=$tag" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
         "is_first_release=$isFirst" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
 
@@ -132,6 +134,8 @@ runs:
         LAST_TAG:     ${{ steps.last_tag.outputs.last_tag }}
         HEAD_BRANCH:  ${{ github.event.workflow_run.head_branch || github.ref_name }}
       run: |
+        $ErrorActionPreference = 'Stop'
+
         function TagExists([string]$tag) {
           $null = git rev-parse -q --verify "refs/tags/$tag" 2>$null
           $exists = $LASTEXITCODE -eq 0
@@ -139,23 +143,21 @@ runs:
           return $exists
         }
 
-        $latestRaw = git describe --tags --abbrev=0 2>$null
-        if ($LASTEXITCODE -ne 0) {
-          Write-Host "No existing tags were found; defaulting to base 0.1.0."
-          $latestRaw = ''
-          $global:LASTEXITCODE = 0
+        $lastTag = $Env:LAST_TAG
+        if ([string]::IsNullOrWhiteSpace($lastTag)) {
+          throw "No git tags were found. Create the first semantic version tag (for example, v0.1.0) so versioning can derive MAJOR/MINOR/PATCH."
         }
-        if ([string]::IsNullOrWhiteSpace($latestRaw)) {
-          $maj=0; $min=1; $pat=0
+
+        $tagMatch = [regex]::Match($lastTag.Trim(), '^(?:refs/tags/)?v?(?<maj>\d+)\.(?<min>\d+)\.(?<pat>\d+)')
+        if (-not $tagMatch.Success) {
+          throw ("Last tag '{0}' is not a semantic version (expected vMAJOR.MINOR.PATCH[...]). Create or fix the latest tag so versioning can proceed." -f $lastTag)
         }
-        else {
-          $latest = $env:LAST_TAG
-          $latest = $latest.Trim().TrimStart('v') -replace '-build.*'
-          $parts = $latest.Split('.')
-          $maj = if ($parts.Length -gt 0 -and $parts[0]) { [int]$parts[0] } else { 0 }
-          $min = if ($parts.Length -gt 1 -and $parts[1]) { [int]$parts[1] } else { 0 }
-          $pat = if ($parts.Length -gt 2 -and $parts[2]) { [int]$parts[2] } else { 0 }
-        }
+
+        $maj = [int]$tagMatch.Groups['maj'].Value
+        $min = [int]$tagMatch.Groups['min'].Value
+        $pat = [int]$tagMatch.Groups['pat'].Value
+        Write-Information ("Using semantic version from latest tag: v{0}.{1}.{2}" -f $maj, $min, $pat) -InformationAction Continue
+
         switch ($env:BUMP_TYPE) {
           'major' { $maj++; $min=0; $pat=0 }
           'minor' { $min++; $pat=0 }

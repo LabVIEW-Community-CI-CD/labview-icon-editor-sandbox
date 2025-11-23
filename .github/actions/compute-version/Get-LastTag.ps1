@@ -1,6 +1,7 @@
 # Returns the last reachable tag and whether this is the first release scenario.
 param(
-    [switch] $AsJson
+    [switch] $AsJson,
+    [switch] $RequireTag
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,6 +19,10 @@ try {
 $result = [PSCustomObject]@{
     LastTag        = $tag
     IsFirstRelease = [string]::IsNullOrWhiteSpace($tag)
+}
+
+if ($RequireTag -and $result.IsFirstRelease) {
+    throw "No git tags were found. Create the first semantic version tag (for example, v0.1.0) so versioning can derive MAJOR/MINOR/PATCH."
 }
 
 if ($AsJson) {

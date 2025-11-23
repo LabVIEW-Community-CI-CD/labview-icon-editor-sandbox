@@ -33,6 +33,15 @@ try {
     if ($info.LastTag) {
         throw "Expected LastTag to be empty when no tags exist."
     }
+    try {
+        & "$scriptPath" -AsJson -RequireTag | Out-Null
+        throw "Expected RequireTag to throw when no tags exist."
+    }
+    catch {
+        if ($_.Exception.Message -notlike "*Create the first semantic version tag*") {
+            throw "RequireTag error message did not mention creating the first tag. Actual: $($_.Exception.Message)"
+        }
+    }
 } finally {
     Pop-Location
     Remove-Item -Recurse -Force $repo

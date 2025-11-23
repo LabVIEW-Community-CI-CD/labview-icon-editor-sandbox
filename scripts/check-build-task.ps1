@@ -33,11 +33,7 @@ $command = ($buildTask.args -join ' ')
 $required = @(
     "scripts/run-build-or-package.ps1",
     "-BuildMode",
-    "-RepositoryPath",
     "-WorkspacePath",
-    "-SemverMajor",
-    "-SemverMinor",
-    "-SemverPatch",
     "-BuildNumber",
     "-LabVIEWMinorRevision",
     "-CommitHash",
