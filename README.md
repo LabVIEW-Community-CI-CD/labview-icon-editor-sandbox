@@ -24,3 +24,9 @@ Behavior & defaults
 - VIPB: auto-detected (first `*.vipb` in repo); override with `-VipbPath` if needed.
 
 More details: see `docs/vscode-tasks.md`.
+
+## Docs quicklinks
+- Build & tasks: `docs/vscode-tasks.md`
+- CI overview: `docs/ci-workflows.md`
+- Dev mode toggle: `.github/actions/set-development-mode/run-dev-mode.ps1` and `.github/actions/revert-development-mode/run-dev-mode.ps1`
+- Tests: `docs/testing/policy.md` (and `Test/` for Pester)
