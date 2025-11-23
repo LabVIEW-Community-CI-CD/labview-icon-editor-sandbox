@@ -35,7 +35,6 @@ $required = @(
     "-BuildMode",
     "-WorkspacePath",
     "-LabVIEWMinorRevision",
-    "-AuthorName",
     "-LvlibpBitness"
 )
 

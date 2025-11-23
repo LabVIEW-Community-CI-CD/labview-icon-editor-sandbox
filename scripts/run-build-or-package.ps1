@@ -5,7 +5,7 @@ param(
     [string]$WorkspacePath,
     [string]$LabVIEWMinorRevision = '3',
     [string]$CompanyName,
-    [string]$AuthorName = 'LabVIEW Icon Editor CI',
+    [string]$AuthorName,
     [string]$LvlibpBitness = '64'
 )
 
@@ -144,6 +144,14 @@ $CompanyName = if ($PSBoundParameters.ContainsKey('CompanyName') -and -not [stri
 } else {
     $owner = Resolve-RepoOwner -RepoRoot $repo
     Write-Information ("Using repo owner as Company Name: {0}" -f $owner) -InformationAction Continue
+    $owner
+}
+
+$AuthorName = if ($PSBoundParameters.ContainsKey('AuthorName') -and -not [string]::IsNullOrWhiteSpace($AuthorName)) {
+    $AuthorName
+} else {
+    $owner = Resolve-RepoOwner -RepoRoot $repo
+    Write-Information ("Using repo owner as Author Name: {0}" -f $owner) -InformationAction Continue
     $owner
 }
 

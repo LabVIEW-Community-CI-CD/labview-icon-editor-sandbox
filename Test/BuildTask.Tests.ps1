@@ -102,7 +102,6 @@ Describe "VSCode Build Task wiring" {
             $command | Should -Match "-BuildMode"
             $command | Should -Match "-WorkspacePath"
             $command | Should -Match "-LabVIEWMinorRevision"
-            $command | Should -Match "-AuthorName"
             $command | Should -Match "-LvlibpBitness"
         }
 
@@ -136,7 +135,6 @@ Describe "VSCode Build Task wiring" {
             $command | Should -Match "scripts/run-build-or-package.ps1"
             $command | Should -Match "-BuildMode"
             $command | Should -Match "-WorkspacePath"
-            $command | Should -Match "-AuthorName"
             $command | Should -Match "-LvlibpBitness"
         }
 

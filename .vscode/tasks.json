@@ -67,12 +67,6 @@
       "description": "Build number",
       "default": "1"
     },
-    {
-      "id": "authorName",
-      "type": "promptString",
-      "description": "Author/Packager name for metadata",
-      "default": "LabVIEW Icon Editor CI"
-    }
   ],
   "tasks": [
     {
@@ -109,7 +103,6 @@
         "-LabVIEWMinorRevision",
         "3",
         "-AuthorName",
-        "${input:authorName}",
         "-LvlibpBitness",
         "${input:lvlibpBitness}"
       ],
