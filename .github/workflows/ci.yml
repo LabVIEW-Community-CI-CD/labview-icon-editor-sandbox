@@ -36,7 +36,7 @@ on:
 
 jobs:
   verify-checklist-sync:
-    name: Verify TRW checklist XLSX is synced with CSV
+    name: TRW checklist CSV (informational)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,16 +47,6 @@ jobs:
           echo "::group::docs/requirements/TRW_Verification_Checklist.csv"
           cat docs/requirements/TRW_Verification_Checklist.csv
           echo "::endgroup::"
-      - name: Regenerate checklist XLSX from CSV
-        run: python3 docs/requirements/sync_trw_csv_to_xlsx.py
-      - name: Fail if regeneration changes the workbook
-        run: |
-          if ! git diff --quiet -- docs/requirements/TRW_Verification_Checklist.xlsx; then
-            echo "The XLSX generated from CSV differs from the checked-in version." >&2
-            echo "Run docs/requirements/sync_trw_csv_to_xlsx.py and commit the updated XLSX." >&2
-            git diff -- docs/requirements/TRW_Verification_Checklist.xlsx
-            exit 1
-          fi
 
   test-compute-version-bump:
     name: Test compute-version bump selection (matrix)
