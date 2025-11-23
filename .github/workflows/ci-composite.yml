@@ -758,7 +758,7 @@ jobs:
       - if: always()
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
+          repository_path: ${{ github.workspace }}
           supported_bitness: 32
       - uses: ./.github/actions/rename-file
         with:
@@ -786,7 +786,7 @@ jobs:
       - if: always()
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
+          repository_path: ${{ github.workspace }}
           supported_bitness: 64
       - uses: ./.github/actions/rename-file
         with:
@@ -907,7 +907,7 @@ jobs:
       - if: always()
         uses: ./.github/actions/close-labview
         with:
-          minimum_supported_lv_version: 2023
+          repository_path: ${{ github.workspace }}
           supported_bitness: 64
       - name: Validate tag matches computed version (if provided)
         if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.dispatch_tag != ''
