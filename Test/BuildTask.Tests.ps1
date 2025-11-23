@@ -94,24 +94,22 @@ Describe "VSCode Build Task wiring" {
             $tasksPath | Should -Not -BeNullOrEmpty
             Test-Path -LiteralPath $tasksPath | Should -BeTrue
             $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
-            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build VI Package (Build.ps1)" } | Select-Object -First 1
+            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
             $buildTask | Should -Not -BeNullOrEmpty
             $command = ($buildTask.args -join ' ')
-            $required = @(
-                "-RepositoryPath",
-                "-Major",
-                "-Minor",
-                "-Patch",
-                "-Build",
-                "-LabVIEWMinorRevision",
-                "-Commit",
-                "-CompanyName",
-                "-AuthorName",
-                ".github/actions/build/Build.ps1"
-            )
-            foreach ($req in $required) {
-                $command | Should -Match $req
-            }
+            # Ensure both branches (full pipeline and package-only) are wired with required flags
+            $command | Should -Match "\.github/actions/build/Build\.ps1"
+            $command | Should -Match "scripts/build-vip-single-arch\.ps1"
+            $command | Should -Match "-RepositoryPath"
+            $command | Should -Match "-Major"
+            $command | Should -Match "-Minor"
+            $command | Should -Match "-Patch"
+            $command | Should -Match "-Build"
+            $command | Should -Match "-LabVIEWMinorRevision"
+            $command | Should -Match "-Commit"
+            $command | Should -Match "-CompanyName"
+            $command | Should -Match "-AuthorName"
+            $command | Should -Match "-SupportedBitness"
         }
     }
 }
