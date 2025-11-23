@@ -131,6 +131,18 @@ if ($sourceFilesNode -and -not $vipb.SelectSingleNode("//Exclusions[Path='$other
     [void]$sourceFilesNode.AppendChild($exclusion)
 }
 
+# Normalize Package_LabVIEW_Version to match the selected bitness
+try {
+    $lvMajor = [int]$packageVersion - 2000
+    $lvMinor = [int]$LabVIEWMinorRevision
+    $bitnessSuffix = if ($SupportedBitness -eq '64') { " (64-bit)" } else { "" }
+    $normalizedLv = "{0}.{1}{2}" -f $lvMajor, $lvMinor, $bitnessSuffix
+    $vipb.VI_Package_Builder_Settings.Library_General_Settings.Package_LabVIEW_Version = $normalizedLv
+}
+catch {
+    Write-Warning ("Unable to normalize Package_LabVIEW_Version for bitness {0}: {1}" -f $SupportedBitness, $_.Exception.Message)
+}
+
 $outDir = Split-Path -Parent $OutputVIPBPath
 if ($outDir -and -not (Test-Path -LiteralPath $outDir)) {
     New-Item -ItemType Directory -Path $outDir -Force | Out-Null
