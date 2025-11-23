@@ -128,5 +128,56 @@ Describe "VSCode Build Task wiring" {
             $buildTask | Should -Not -BeNullOrEmpty
             ($buildTask.args -join ' ') | Should -Match '\${input:buildMode}'
         }
+
+        It "quotes buildMode assignment and comparisons to avoid parser errors" {
+            $tasksPath = Join-Path $script:RepoRoot '.vscode/tasks.json'
+            Test-Path -LiteralPath $tasksPath | Should -BeTrue
+            $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
+
+            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
+            $buildTask | Should -Not -BeNullOrEmpty
+            $command = ($buildTask.args -join ' ')
+
+            # Ensure the mode is assigned with quotes and compared against quoted literals
+            $command | Should -Match '\$mode\s*=\s*''\${input:buildMode}'''
+            $command | Should -Match '\[string\]::IsNullOrWhiteSpace\(\$mode\)'
+            $command | Should -Match '\$mode\s*-eq\s*''full'''
+            $command | Should -Match '\selse\s*\{'
+        }
+
+        It "parses after substituting sample values to catch mode/operator parser errors" {
+            $tasksPath = Join-Path $script:RepoRoot '.vscode/tasks.json'
+            $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
+            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
+            $buildTask | Should -Not -BeNullOrEmpty
+            $command = ($buildTask.args -join ' ')
+
+            # Replace placeholders with sample values to simulate VS Code expansion
+            $sample = $command
+            $replacements = @{
+                '\$\{input:buildMode\}'      = 'full'
+                '\$\{input:repoPath\}'       = 'C:\repo'
+                '\$\{workspaceFolder\}'      = 'C:\repo'
+                '\$\{input:semverMajor\}'    = '0'
+                '\$\{input:semverMinor\}'    = '1'
+                '\$\{input:semverPatch\}'    = '0'
+                '\$\{input:buildNumber\}'    = '1'
+                '\$\{input:commitHash\}'     = 'manual'
+                '\$\{input:companyName\}'    = 'Company'
+                '\$\{input:authorName\}'     = 'Author'
+                '\$\{input:lvlibpBitness\}'  = '64'
+            }
+            foreach ($pattern in $replacements.Keys) {
+                $sample = [regex]::Replace($sample, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $replacements[$pattern] })
+            }
+
+            # Extract the script block content after -Command
+            $scriptBlockText = $sample -replace '.*-Command\s*&\s*\{', ''
+            $scriptBlockText = $scriptBlockText -replace '\}\s*$', ''
+
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseInput($scriptBlockText, [ref]$null, [ref]$parseErrors) | Out-Null
+            $parseErrors | Should -BeNullOrEmpty
+        }
     }
 }
