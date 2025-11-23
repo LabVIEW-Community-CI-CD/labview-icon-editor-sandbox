@@ -14,12 +14,6 @@
       "default": "21.0"
     },
     {
-      "id": "repoPath",
-      "type": "promptString",
-      "description": "Path to the repository root",
-      "default": ""
-    },
-    {
       "id": "buildMode",
       "type": "pickString",
       "description": "Artifact type: VIP + lvlibp builds, or single-arch VIP only",
@@ -122,8 +116,6 @@
         "${workspaceFolder}/scripts/run-build-or-package.ps1",
         "-BuildMode",
         "${input:buildMode}",
-        "-RepositoryPath",
-        "${input:repoPath}",
         "-WorkspacePath",
         "${workspaceFolder}",
         "-SemverMajor",

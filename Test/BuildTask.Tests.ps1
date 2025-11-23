@@ -100,7 +100,6 @@ Describe "VSCode Build Task wiring" {
             # Ensure the wrapper script and expected flags are present
             $command | Should -Match "scripts/run-build-or-package\.ps1"
             $command | Should -Match "-BuildMode"
-            $command | Should -Match "-RepositoryPath"
             $command | Should -Match "-WorkspacePath"
             $command | Should -Match "-SemverMajor"
             $command | Should -Match "-SemverMinor"
