@@ -154,6 +154,20 @@
       "problemMatcher": []
     },
     {
+      "label": "Analyze VI Package (Pester) [headless defaults]",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "& { $vip = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_VIP_ARTIFACT_PATH)) { $Env:ICONEDITOR_VIP_ARTIFACT_PATH } else { 'builds/VI Package/' }; $minLv = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_MIN_LV_VERSION)) { $Env:ICONEDITOR_MIN_LV_VERSION } else { '21.0' }; & \"${workspaceFolder}/.github/actions/analyze-vi-package/run-local.ps1\" -VipArtifactPath $vip -MinLabVIEW $minLv }"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Build VI Package (Build.ps1)",
       "type": "shell",
       "command": "pwsh",
@@ -179,6 +193,21 @@
         "${input:companyName}",
         "-AuthorName",
         "${input:authorName}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Build VI Package (Build.ps1) [headless defaults]",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "& { $repo = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_REPO_PATH)) { $Env:ICONEDITOR_REPO_PATH } else { \"${workspaceFolder}\" }; $major = if ($Env:ICONEDITOR_SEMVER_MAJOR) { [int]$Env:ICONEDITOR_SEMVER_MAJOR } else { 0 }; $minor = if ($Env:ICONEDITOR_SEMVER_MINOR) { [int]$Env:ICONEDITOR_SEMVER_MINOR } else { 1 }; $patch = if ($Env:ICONEDITOR_SEMVER_PATCH) { [int]$Env:ICONEDITOR_SEMVER_PATCH } else { 0 }; $build = if ($Env:ICONEDITOR_BUILD_NUMBER) { [int]$Env:ICONEDITOR_BUILD_NUMBER } else { 1 }; $commit = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_COMMIT_HASH)) { $Env:ICONEDITOR_COMMIT_HASH } else { 'manual' }; $company = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_COMPANY_NAME)) { $Env:ICONEDITOR_COMPANY_NAME } else { 'LabVIEW-Community-CI-CD' }; $author = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_AUTHOR_NAME)) { $Env:ICONEDITOR_AUTHOR_NAME } else { 'LabVIEW Icon Editor CI' }; & \"${workspaceFolder}/.github/actions/build/Build.ps1\" -RepositoryPath $repo -Major $major -Minor $minor -Patch $patch -Build $build -LabVIEWMinorRevision 3 -Commit $commit -CompanyName $company -AuthorName $author }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -339,6 +368,20 @@
       "problemMatcher": []
     },
     {
+      "label": "Create draft GitHub release (local artifacts) [headless defaults]",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "& { $repo = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_REPO_PATH)) { $Env:ICONEDITOR_REPO_PATH } else { \"${workspaceFolder}\" }; $vipPath = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_VIP_ARTIFACT_PATH)) { $Env:ICONEDITOR_VIP_ARTIFACT_PATH } else { 'builds/VI Package/' }; $notes = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_RELEASE_NOTES_PATH)) { $Env:ICONEDITOR_RELEASE_NOTES_PATH } else { 'Tooling/deployment/release_notes.md' }; $tag = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_RELEASE_TAG)) { $Env:ICONEDITOR_RELEASE_TAG } else { 'auto' }; $title = if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_RELEASE_TITLE)) { $Env:ICONEDITOR_RELEASE_TITLE } else { 'auto' }; $major = if ($Env:ICONEDITOR_SEMVER_MAJOR) { [int]$Env:ICONEDITOR_SEMVER_MAJOR } else { 0 }; $minor = if ($Env:ICONEDITOR_SEMVER_MINOR) { [int]$Env:ICONEDITOR_SEMVER_MINOR } else { 1 }; $patch = if ($Env:ICONEDITOR_SEMVER_PATCH) { [int]$Env:ICONEDITOR_SEMVER_PATCH } else { 0 }; $build = if ($Env:ICONEDITOR_BUILD_NUMBER) { [int]$Env:ICONEDITOR_BUILD_NUMBER } else { 1 }; $prerelease = $true; if (-not [string]::IsNullOrWhiteSpace($Env:ICONEDITOR_RELEASE_PRERELEASE)) { $normalized = $Env:ICONEDITOR_RELEASE_PRERELEASE.Trim().ToLowerInvariant(); $prerelease = $normalized -in @('true', '1', 'yes', 'y', 'on') }; & \"${workspaceFolder}/.github/scripts/create-draft-release.ps1\" -RepositoryPath $repo -VipPath $vipPath -ReleaseNotesPath $notes -Tag $tag -Title $title -Major $major -Minor $minor -Patch $patch -Build $build -Prerelease $prerelease }"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Build and Draft Release (compound)",
       "dependsOn": [
         "Build VI Package (Build.ps1)",
@@ -351,9 +394,9 @@
     {
       "label": "Build, Analyze, Draft Release (compound)",
       "dependsOn": [
-        "Build VI Package (Build.ps1)",
-        "Analyze VI Package (Pester)",
-        "Create draft GitHub release (local artifacts)"
+        "Build VI Package (Build.ps1) [headless defaults]",
+        "Analyze VI Package (Pester) [headless defaults]",
+        "Create draft GitHub release (local artifacts) [headless defaults]"
       ],
       "dependsOrder": "sequence",
       "group": "build",
