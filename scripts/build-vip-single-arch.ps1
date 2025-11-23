@@ -32,7 +32,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$RepositoryPath,
 
-    [string]$VIPBPath = "Tooling/deployment/NI Icon editor.vipb",
+    [string]$VIPBPath,
     [string]$OutputVIPBPath,
 
     [int]$LabVIEWMinorRevision = 3,
