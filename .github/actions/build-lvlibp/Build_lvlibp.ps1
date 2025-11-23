@@ -78,9 +78,9 @@ catch {
     Write-Information ("Falling back to provided build number: {0} (commit count unavailable)" -f $Build) -InformationAction Continue
     $global:LASTEXITCODE = 0
 }
-    $Build = $DerivedBuild
-    Write-Output "PPL Version: $Major.$Minor.$Patch.$Build"
-    Write-Output "Commit: $Commit"
+$Build = $DerivedBuild
+Write-Output "PPL Version: $Major.$Minor.$Patch.$Build"
+Write-Output "Commit: $Commit"
 
 $buildArgs = @(
 "--lv-ver", $Package_LabVIEW_Version,
