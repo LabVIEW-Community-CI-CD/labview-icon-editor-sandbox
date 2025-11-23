@@ -9,14 +9,14 @@ Scope: LabVIEW Icon Editor community project CM practices mapped to ISO 10007 cl
   - Product baselines: `lv_icon_editor.lvproj`, `resource/`, `vi.lib/` (checked-in LabVIEW code), `Test/`.
   - Requirements/test design baselines: `docs/requirements/rtm.csv` (with model_id/coverage_item_id/procedure_path), `docs/requirements/TRW_Verification_Checklist.*`, test models/specs/procedures under `docs/testing/models/`, `docs/testing/specs/`, `docs/testing/procedures/`, templates in `docs/testing/templates/`, status/completion/readiness logs in `reports/`.
   - Architecture/decision baseline: `docs/adr/adr-index.md`, `docs/adr/ADR-*.md`.
-  - Release baseline: SemVer tags `vX.Y.Z` plus uploaded VIP/package artifacts via `.github/workflows/tag-and-release.yml` and attached test completion report.
+  - Release baseline: SemVer tags `vX.Y.Z` plus uploaded VIP/package artifacts via `.github/workflows/draft-release.yml` (draft) and attached test completion report.
 - Change vehicles: pull requests; emergency fixes via hotfix branches (`hotfix/*`) with same gates.
 
 ## 5.3 Configuration identification
 - Items uniquely identified by path + git commit; releases identified by SemVer tag (`vX.Y.Z`) and GitHub Release page.
 - Traceability maintained in `docs/requirements/rtm.csv` (id → code_path/test_path), validated by `.github/scripts/validate_rtm.py`.
 - ADRs indexed in `docs/adr/adr-index.md`; templates in `docs/adr/adr-template.md`.
-- Workflows governing CM evidence: `docs-link-check.yml`, `rtm-validate.yml`, `rtm-coverage.yml`, `adr-lint.yml`, `dod-aggregator.yml`, `tag-and-release.yml`.
+- Workflows governing CM evidence: `docs-link-check.yml`, `rtm-validate.yml`, `rtm-coverage.yml`, `adr-lint.yml`, `dod-aggregator.yml`, `draft-release.yml`.
 
 ## 5.4 Configuration change control
 - Entry: Proposed changes via PR with linked requirement/ADR; mandatory gates listed in `docs/dod.md`.
@@ -32,7 +32,7 @@ Scope: LabVIEW Icon Editor community project CM practices mapped to ISO 10007 cl
 - Status sources:
   - GitHub PR checks (DoD Aggregator summary, RTM, coverage, ADR lint, link check, unit tests).
   - RTM and test artifacts: `docs/requirements/rtm.csv`, `docs/requirements/TRW_Verification_Checklist.*`, test models/specs/procedures (`docs/testing/models/`, `docs/testing/specs/`, `docs/testing/procedures/`), readiness logs (`reports/test-data-readiness-*.md`, `reports/test-env-readiness-*.md`), execution logs, structured results (`reports/test-results-*.json`), and status/completion reports.
-  - Release records: GitHub Releases with VIP/package artifacts and notes (from `.github/workflows/tag-and-release.yml`), completion report attached.
+- Release records: GitHub Releases with VIP/package artifacts and notes (from `.github/workflows/draft-release.yml`), completion report attached.
 - Reports:
   - DoD summary artifact (aggregated gate outcomes).
   - Test execution, readiness, and structured results artifacts attached by CI.
@@ -41,7 +41,7 @@ Scope: LabVIEW Icon Editor community project CM practices mapped to ISO 10007 cl
 
 ## 5.6 Configuration audit
 - Functional/configuration audit prerequisites: DoD Aggregator must be green (valid RTM, coverage, ADR lint, link check); test readiness (data/env) and execution logs present.
-- Physical audit: release tag `vX.Y.Z` must exist and match HEAD; artifacts uploaded via tag-and-release workflow including completion report and structured results.
+- Physical audit: release tag `vX.Y.Z` must exist and match HEAD; artifacts uploaded via draft-release workflow including completion report and structured results.
 - RTM/model/spec audits: run `.github/scripts/validate_rtm.py` and `.github/scripts/check_rtm_coverage.py` locally before PR; ensure RTM links to model_id, coverage_item_id, procedure_path; test models/specs/procedures present for touched RTM rows.
 - ADR audit: ensure `docs/adr/adr-index.md` updated and ADRs pass lint.
 - Release audit checklist (pre-release):
@@ -63,12 +63,11 @@ CI/PR:
 - Dedicated gates also run: RTM validate (`rtm-validate.yml`), RTM coverage (`rtm-coverage.yml`), ADR lint (`adr-lint.yml`), Docs Link Check (`docs-link-check.yml`).
 
 Release:
-- Merge to release/*/main triggers CI; tag via `.github/workflows/tag-and-release.yml` to publish `vX.Y.Z` plus artifacts and release notes.
- - Tag workflow checks for completion report presence and attached test artifacts (structured results, readiness, execution log) before release assets.
+- Merge to release/*/main triggers CI; publish via `.github/workflows/draft-release.yml` to stage `vX.Y.Z` artifacts and release notes (draft). Verify completion report and test artifacts (structured results, readiness, execution log) before finalizing.
 
 ## References
 - Definition of Done: `docs/dod.md`
 - Traceability: `docs/requirements/rtm.csv`
 - TRW checklist: `docs/requirements/TRW_Verification_Checklist.md`
 - ADR index: `docs/adr/adr-index.md`
-- Release workflow: `.github/workflows/tag-and-release.yml`
+- Release workflow: `.github/workflows/draft-release.yml`

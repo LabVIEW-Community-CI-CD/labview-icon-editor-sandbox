@@ -1,7 +1,7 @@
 # Tag & Release Trigger Test Model (§8.2)
 
 - UID: `TM-TRW-001`
-- Objective: Model the gate logic for the tag-and-release workflow so tests verify triggers, branch policy, and concurrency deduping.
+- Objective: Model the gate logic for the draft-release workflow so tests verify triggers, branch policy, and concurrency deduping.
 - Priority: High (TRW-001).
 - Strategy extract: Static/compliance gates (RTM validation, coverage, ADR lint, link check) plus workflow checks guard release automation (`docs/testing/strategy.md`, Approach).
 

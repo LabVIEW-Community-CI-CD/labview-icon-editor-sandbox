@@ -16,7 +16,7 @@ _Generated: 2025-11-20_
 - Only `workflow_run` is declared with `workflows: [CI Pipeline (Composite)]` and `types: [completed]`.
 
 **Agent Procedure:**
-- Open `.github/workflows/tag-and-release.yml`.
+- Open `.github/workflows/draft-release.yml`.
 - Verify `on.workflow_run.workflows` includes `CI Pipeline (Composite)` and `on.workflow_run.types` includes `completed`.
 - Confirm no other event triggers (`push`, `pull_request`, schedule) are defined for this workflow.
 **Evidence to Collect:** Workflow YAML snippet showing the `on: workflow_run` section.; Screenshot or log of event payload proving trigger source.
@@ -29,7 +29,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 109; Verified .github/workflows/tag-and-release.yml allows only workflow_run from CI Pipeline (Composite) with type completed; no other triggers.
+**Notes:** Derived from SRS line 109; Verified .github/workflows/draft-release.yml allows only workflow_run from CI Pipeline (Composite) with type completed; no other triggers.
 
 ---
 
@@ -48,7 +48,7 @@ _Generated: 2025-11-20_
 
 **Agent Procedure:**
 - Create a controlled upstream run with `conclusion=success` and another with `conclusion=failure` (e.g., dispatch or replay).
-- Observe tag-and-release workflow behavior for both upstream runs.
+- Observe draft-release workflow behavior for both upstream runs.
 **Evidence to Collect:** Two run URLs with conclusions and downstream run status.; Logs showing conditional gate `github.event.workflow_run.conclusion == 'success'`.
 
 **Owner/Role:** Automation QA (Agent)  
@@ -59,7 +59,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 110; Guard present in .github/workflows/tag-and-release.yml to exit unless workflow_run.conclusion == success.
+**Notes:** Derived from SRS line 110; Guard present in .github/workflows/draft-release.yml to exit unless workflow_run.conclusion == success.
 
 ---
 
@@ -89,7 +89,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 111; Guard present in .github/workflows/tag-and-release.yml to exit unless workflow_run.event == push.
+**Notes:** Derived from SRS line 111; Guard present in .github/workflows/draft-release.yml to exit unless workflow_run.event == push.
 
 ---
 
@@ -120,7 +120,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 112; Allow-list enforced in .github/workflows/tag-and-release.yml with defaults (main, develop, release-alpha/*, release-beta/*, release-rc/*) and optional extensions via ALLOWED_BRANCH_PATTERNS.
+**Notes:** Derived from SRS line 112; Allow-list enforced in .github/workflows/draft-release.yml with defaults (main, develop, release-alpha/*, release-beta/*, release-rc/*) and optional extensions via ALLOWED_BRANCH_PATTERNS.
 
 ---
 
@@ -150,7 +150,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 113; Branch allow-list gate in .github/workflows/tag-and-release.yml exits before tag/release steps for disallowed branches.
+**Notes:** Derived from SRS line 113; Branch allow-list gate in .github/workflows/draft-release.yml exits before tag/release steps for disallowed branches.
 
 ---
 
@@ -181,7 +181,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 114; Concurrency configured in .github/workflows/tag-and-release.yml with group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha }} and cancel-in-progress: true to ensure one run per commit.
+**Notes:** Derived from SRS line 114; Concurrency configured in .github/workflows/draft-release.yml with group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha }} and cancel-in-progress: true to ensure one run per commit.
 
 ---
 
@@ -1069,7 +1069,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 179; tag-and-release job contains a single actions/checkout step.
+**Notes:** Derived from SRS line 179; draft-release job contains a single actions/checkout step.
 
 ---
 
@@ -1098,7 +1098,7 @@ _Generated: 2025-11-20_
 **Test Case ID / Link:**   
 **Upstream Trace:**   
 **Downstream Trace:**   
-**Notes:** Derived from SRS line 180; tag-and-release checkout uses fetch-depth: 0 to ensure full history for reachability and commit counting.
+**Notes:** Derived from SRS line 180; draft-release checkout uses fetch-depth: 0 to ensure full history for reachability and commit counting.
 
 ---
 

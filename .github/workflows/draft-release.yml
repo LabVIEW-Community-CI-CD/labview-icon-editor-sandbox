@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: "Workflow run ID from the successful CI build (usually ci-composite)"
+        description: "Workflow run ID from the successful CI build (usually ci.yml)"
         required: true
       tag:
         description: "Optional tag/release name (defaults to computed version without -build suffix)"

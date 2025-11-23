@@ -248,7 +248,7 @@ jobs:
             import yaml  # type: ignore
           from pathlib import Path
 
-          data = yaml.safe_load(Path(".github/workflows/ci-composite.yml").read_text())
+          data = yaml.safe_load(Path(".github/workflows/ci.yml").read_text())
           jobs = data.get("jobs", {})
           exempt = {"verify-checklist-sync", "enforce-verify-checklist-needs"}
           missing = []

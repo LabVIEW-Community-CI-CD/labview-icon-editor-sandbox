@@ -21,7 +21,7 @@ Invoke **`RunUnitTests.ps1`** to execute LabVIEW unit tests and output a result 
 ## How version resolution flows through CI
 
 1. The `resolve-labview-version` job normalizes the minimum LabVIEW version from `scripts/get-package-lv-version.ps1` and exposes it as `needs.resolve-labview-version.outputs.minimum_supported_lv_version`.
-2. Downstream jobs export that value to `LABVIEW_VERSION` and pass it explicitly into this action’s `labview_version` input (see `ci-composite.yml`).
+2. Downstream jobs export that value to `LABVIEW_VERSION` and pass it explicitly into this action’s `labview_version` input (see `ci.yml`).
 3. `RunUnitTests.ps1` consumes only the supplied version; it does **not** recalculate the version and throws if the workflow omits it.
 
 ## License

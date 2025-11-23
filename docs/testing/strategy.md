@@ -88,7 +88,7 @@ Scope: project-level strategy for the LabVIEW Icon Editor in this repository. It
 ## Staffing (§7.2.9)
 - Maintainer: final authority for waivers and release/block decisions; ensures performance/portability waivers are documented in RTM and completion reports.
 - Automation QA: maintains RTM/TRW, curates test templates, instruments performance samples when triggered, and prepares status/completion reports.
-- Release Manager: drives tag-and-release workflow, confirms required reports/artifacts are attached, and checks that portability/performance gates are satisfied or waived by Maintainer.
+- Release Manager: drives draft-release workflow, confirms required reports/artifacts are attached, and checks that portability/performance gates are satisfied or waived by Maintainer.
 - Contributors: map changes to RTM IDs in PR descriptions, run the DoD aggregator locally, and flag performance/portability risk in the PR when touching relevant areas.
 
 ## Communication (§7.2.5)
@@ -105,7 +105,7 @@ Scope: project-level strategy for the LabVIEW Icon Editor in this repository. It
 
 ## Entry/Exit Hooks
 - Entry (development/PR): DoD Aggregator green, RTM validation, RTM coverage, ADR lint, Docs Link Check; performance/portability checks triggered when the change touches High/Critical RTM items; test status report uploaded for the run.
-- Exit (release): tag-and-release workflow succeeds, completion report attached for the tag, RTM thresholds met, performance sample recorded or waived, portability verified on both architectures, no broken links.
+- Exit (release): draft-release workflow completes, completion report attached for the tag, RTM thresholds met, performance sample recorded or waived, portability verified on both architectures, no broken links.
 
 ## Change History
 | Date | Version | Description |
