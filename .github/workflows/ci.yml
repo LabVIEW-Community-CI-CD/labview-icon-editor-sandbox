@@ -512,7 +512,7 @@ jobs:
 
   version:
     name: Compute Version
-    needs: [serialize-before-version]
+    needs: [serialize-before-version, verify-checklist-sync]
     runs-on: self-hosted-windows-lv
     outputs:
       VERSION:       ${{ steps.compute.outputs.VERSION }}
