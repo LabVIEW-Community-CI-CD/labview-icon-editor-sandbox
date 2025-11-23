@@ -118,8 +118,6 @@
         "${input:buildMode}",
         "-WorkspacePath",
         "${workspaceFolder}",
-        "-BuildNumber",
-        "${input:buildNumber}",
         "-LabVIEWMinorRevision",
         "3",
         "-CommitHash",

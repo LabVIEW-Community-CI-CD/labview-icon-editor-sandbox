@@ -34,7 +34,6 @@ $required = @(
     "scripts/run-build-or-package.ps1",
     "-BuildMode",
     "-WorkspacePath",
-    "-BuildNumber",
     "-LabVIEWMinorRevision",
     "-CommitHash",
     "-CompanyName",
