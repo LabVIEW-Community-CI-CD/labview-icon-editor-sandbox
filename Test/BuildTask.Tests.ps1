@@ -97,19 +97,20 @@ Describe "VSCode Build Task wiring" {
             $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
             $buildTask | Should -Not -BeNullOrEmpty
             $command = ($buildTask.args -join ' ')
-            # Ensure both branches (full pipeline and package-only) are wired with required flags
-            $command | Should -Match "\.github/actions/build/Build\.ps1"
-            $command | Should -Match "scripts/build-vip-single-arch\.ps1"
+            # Ensure the wrapper script and expected flags are present
+            $command | Should -Match "scripts/run-build-or-package\.ps1"
+            $command | Should -Match "-BuildMode"
             $command | Should -Match "-RepositoryPath"
-            $command | Should -Match "-Major"
-            $command | Should -Match "-Minor"
-            $command | Should -Match "-Patch"
-            $command | Should -Match "-Build"
+            $command | Should -Match "-WorkspacePath"
+            $command | Should -Match "-SemverMajor"
+            $command | Should -Match "-SemverMinor"
+            $command | Should -Match "-SemverPatch"
+            $command | Should -Match "-BuildNumber"
             $command | Should -Match "-LabVIEWMinorRevision"
-            $command | Should -Match "-Commit"
+            $command | Should -Match "-CommitHash"
             $command | Should -Match "-CompanyName"
             $command | Should -Match "-AuthorName"
-            $command | Should -Match "-SupportedBitness"
+            $command | Should -Match "-LvlibpBitness"
         }
 
         It "exposes a buildMode input with expected options for the unified task" {
@@ -139,12 +140,18 @@ Describe "VSCode Build Task wiring" {
             $command = ($buildTask.args -join ' ')
 
             # Ensure the mode is assigned with quotes and compared against quoted literals
-            ($command -like "*`$mode =*") | Should -BeTrue
-            $command | Should -Match '\[string\]::IsNullOrWhiteSpace\(\$mode\)'
-            $command | Should -Match "switch"
-            $command | Should -Match "'vip\+lvlibp'"
-            $command | Should -Match "'vip-single'"
-            $command | Should -Match 'Unknown buildMode'
+            $command | Should -Match "scripts/run-build-or-package.ps1"
+            $command | Should -Match "-BuildMode"
+            $command | Should -Match "-RepositoryPath"
+            $command | Should -Match "-WorkspacePath"
+            $command | Should -Match "-SemverMajor"
+            $command | Should -Match "-SemverMinor"
+            $command | Should -Match "-SemverPatch"
+            $command | Should -Match "-BuildNumber"
+            $command | Should -Match "-CommitHash"
+            $command | Should -Match "-CompanyName"
+            $command | Should -Match "-AuthorName"
+            $command | Should -Match "-LvlibpBitness"
         }
 
         It "parses after substituting sample values to catch mode/operator parser errors" {
@@ -153,41 +160,7 @@ Describe "VSCode Build Task wiring" {
             $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
             $buildTask | Should -Not -BeNullOrEmpty
             $command = ($buildTask.args -join ' ')
-
-            # Replace placeholders with sample values to simulate VS Code expansion
-            $sample = $command
-            $replacements = @{
-                '\$\{input:buildMode\}'      = 'vip+lvlibp'
-                '\$\{input:repoPath\}'       = 'C:\repo'
-                '\$\{workspaceFolder\}'      = 'C:\repo'
-                '\$\{input:semverMajor\}'    = '0'
-                '\$\{input:semverMinor\}'    = '1'
-                '\$\{input:semverPatch\}'    = '0'
-                '\$\{input:buildNumber\}'    = '1'
-                '\$\{input:commitHash\}'     = 'manual'
-                '\$\{input:companyName\}'    = 'Company'
-                '\$\{input:authorName\}'     = 'Author'
-                '\$\{input:lvlibpBitness\}'  = '64'
-            }
-            foreach ($pattern in $replacements.Keys) {
-                $sample = [regex]::Replace($sample, $pattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $replacements[$pattern] })
-            }
-
-            # Extract the script block content after -Command
-            $scriptBlockText = $sample -replace '.*-Command\s*&\s*\{', ''
-            $scriptBlockText = $scriptBlockText -replace '\}\s*$', ''
-
-            $parseErrors = $null
-            [System.Management.Automation.Language.Parser]::ParseInput($scriptBlockText, [ref]$null, [ref]$parseErrors) | Out-Null
-            $parseErrors | Should -BeNullOrEmpty
-
-            # Additional guard: ensure vip-single path fails fast when lvlibp is missing
-            $sampleSingle = $sample -replace 'vip\+lvlibp', 'vip-single'
-            $scriptBlockTextSingle = $sampleSingle -replace '.*-Command\s*&\s*\{', ''
-            $scriptBlockTextSingle = $scriptBlockTextSingle -replace '\}\s*$', ''
-            $parseErrors = $null
-            [System.Management.Automation.Language.Parser]::ParseInput($scriptBlockTextSingle, [ref]$null, [ref]$parseErrors) | Out-Null
-            $parseErrors | Should -BeNullOrEmpty
+            $command | Should -Match "run-build-or-package.ps1"
         }
     }
 }

@@ -31,19 +31,19 @@ if (-not $buildTask) {
 # Required substrings in the command
 $command = ($buildTask.args -join ' ')
 $required = @(
-    "-buildMode",
-    ".github/actions/build/Build.ps1",
-    "scripts/build-vip-single-arch.ps1",
+    "scripts/run-build-or-package.ps1",
+    "-BuildMode",
     "-RepositoryPath",
-    "-Major",
-    "-Minor",
-    "-Patch",
-    "-Build",
+    "-WorkspacePath",
+    "-SemverMajor",
+    "-SemverMinor",
+    "-SemverPatch",
+    "-BuildNumber",
     "-LabVIEWMinorRevision",
-    "-Commit",
+    "-CommitHash",
     "-CompanyName",
     "-AuthorName",
-    "-SupportedBitness"
+    "-LvlibpBitness"
 )
 
 $missing = $required | Where-Object { $command -notmatch [regex]::Escape($_) }

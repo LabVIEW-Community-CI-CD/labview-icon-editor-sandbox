@@ -17,7 +17,7 @@
       "id": "repoPath",
       "type": "promptString",
       "description": "Path to the repository root",
-      "default": "${workspaceFolder}"
+      "default": ""
     },
     {
       "id": "buildMode",
@@ -118,8 +118,32 @@
       "command": "pwsh",
       "args": [
         "-NoProfile",
-        "-Command",
-        "& { $mode = '${input:buildMode}'; if ([string]::IsNullOrWhiteSpace($mode)) { $mode = 'vip+lvlibp' }; switch ($mode) { 'vip+lvlibp' { & \"${workspaceFolder}/.github/actions/build/Build.ps1\" -RepositoryPath \"${input:repoPath}\" -Major \"${input:semverMajor}\" -Minor \"${input:semverMinor}\" -Patch \"${input:semverPatch}\" -Build \"${input:buildNumber}\" -LabVIEWMinorRevision 3 -Commit \"${input:commitHash}\" -CompanyName \"${input:companyName}\" -AuthorName \"${input:authorName}\"; break } 'vip-single' { & \"${workspaceFolder}/scripts/build-vip-single-arch.ps1\" -SupportedBitness \"${input:lvlibpBitness}\" -RepositoryPath \"${input:repoPath}\" -VIPBPath \"Tooling/deployment/NI Icon editor.vipb\" -LabVIEWMinorRevision 3 -Major \"${input:semverMajor}\" -Minor \"${input:semverMinor}\" -Patch \"${input:semverPatch}\" -Build \"${input:buildNumber}\" -Commit \"${input:commitHash}\" -ReleaseNotesFile \"${workspaceFolder}/Tooling/deployment/release_notes.md\" -DisplayInformationJSON \"{}\"; break } default { throw \"Unknown buildMode '$mode'\" } } }"
+        "-File",
+        "${workspaceFolder}/scripts/run-build-or-package.ps1",
+        "-BuildMode",
+        "${input:buildMode}",
+        "-RepositoryPath",
+        "${input:repoPath}",
+        "-WorkspacePath",
+        "${workspaceFolder}",
+        "-SemverMajor",
+        "${input:semverMajor}",
+        "-SemverMinor",
+        "${input:semverMinor}",
+        "-SemverPatch",
+        "${input:semverPatch}",
+        "-BuildNumber",
+        "${input:buildNumber}",
+        "-LabVIEWMinorRevision",
+        "3",
+        "-CommitHash",
+        "${input:commitHash}",
+        "-CompanyName",
+        "${input:companyName}",
+        "-AuthorName",
+        "${input:authorName}",
+        "-LvlibpBitness",
+        "${input:lvlibpBitness}"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
