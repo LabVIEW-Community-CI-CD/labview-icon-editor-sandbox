@@ -31,6 +31,8 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
     throw "GitHub CLI (gh) not found. Install gh and ensure GH_TOKEN/GITHUB_TOKEN is available."
 }
 
+$authHint = "Run: gh auth login -> GitHub.com -> HTTPS -> Login with a web browser, copy code, press Enter to open https://github.com/login/device."
+
 # Ensure gh has a token; prefer GH_TOKEN, fall back to GITHUB_TOKEN
 if (-not $env:GH_TOKEN -and $env:GITHUB_TOKEN) {
     $env:GH_TOKEN = $env:GITHUB_TOKEN
@@ -40,7 +42,7 @@ try {
     gh auth status -h github.com 2>$null | Out-Null
 }
 catch {
-    throw "gh auth status failed. Login with 'gh auth login' or set GH_TOKEN/GITHUB_TOKEN with repo access."
+    throw "gh auth status failed. Login with 'gh auth login' (GitHub.com -> HTTPS -> web browser) or set GH_TOKEN/GITHUB_TOKEN with repo access. $authHint"
 }
 
 # Determine repo owner/name
@@ -69,7 +71,7 @@ $workflowName = [System.IO.Path]::GetFileName($workflowPath)
 Write-Info "Querying GitHub Actions for workflow '$workflowName' on $owner/$name..."
 $json = gh api "/repos/$owner/$name/actions/workflows/$workflowName/runs" -f head_sha=$sha -F per_page=1 -q '.' 2>$null
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($json)) {
-    throw "Unable to query workflow runs via gh api. Ensure GH_TOKEN/GITHUB_TOKEN is set and gh is authenticated."
+    throw "Unable to query workflow runs via gh api. Ensure GH_TOKEN/GITHUB_TOKEN is set and gh is authenticated. $authHint"
 }
 
 try {
