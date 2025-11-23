@@ -66,7 +66,7 @@ Scope: this policy applies to the LabVIEW Icon Editor project in this repository
 ## Applicable Standards and References
 - ISO/IEC/IEEE 29119-3 (Test Documentation): tailored document set and reporting structure.
 - RTM source: `docs/requirements/rtm.csv`; TRW checkpoints: `docs/requirements/TRW_Verification_Checklist.md`.
-- CI gates: `.github/workflows/dod-aggregator.yml`, `rtm-validate.yml`, `rtm-coverage.yml`, `docs-link-check.yml`, `test-report.yml`, `tag-and-release.yml`.
+- CI gates: `.github/workflows/dod-aggregator.yml`, `rtm-validate.yml`, `rtm-coverage.yml`, `docs-link-check.yml`, `test-report.yml`, `draft-release.yml`.
 - Templates: `docs/testing/templates/test-report-template.md` (ISO 29119-3 §8 progress/completion template).
 
 ## Change History

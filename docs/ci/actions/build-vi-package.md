@@ -93,11 +93,11 @@ It eliminates confusion around versioning, keeps everything in one pipeline, and
 ## 3. **Action Configuration & Usage**
 
 ### 3.1 How the Action Is Triggered
-The `build-vip` directory defines a **composite action**. It does not listen for events on its own; instead, the CI workflow in [`ci-composite.yml`](../../../.github/workflows/ci-composite.yml) invokes it.
+The `build-vip` directory defines a **composite action**. It does not listen for events on its own; instead, the CI workflow in [`ci.yml`](../../../.github/workflows/ci.yml) invokes it.
 That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events. The `issue-status` and `changes` jobs run on GitHub-hosted `ubuntu-latest`. Subsequent jobs that require LabVIEW—`apply-deps`, `version`, `test`, `build-ppl`, and `build-vip`—execute on a self-hosted Windows runner (`self-hosted-windows-lv`). Only Windows-specific jobs (e.g., `test`, `build-ppl`, `build-vip`) require the self-hosted runner. Linux support is considered a future or custom expansion: you would need to extend the matrix and provide a corresponding runner label (for example, `self-hosted-linux-lv`). Pushes are limited to `main`, `develop`, `release-alpha/*`, `release-beta/*`, `release-rc/*`, `feature/*`, `hotfix/*`, and `issue-*` branches, and pull requests must target one of those branches. However, `build-vip` executes only if the `issue-status` job allows the pipeline to continue: the source branch name must contain `issue-<number>` (for example, `issue-123` or `feature/issue-123`) and the linked issue's Status must be **In Progress**. For pull requests, the `issue-status` gate evaluates the PR’s head branch before running the `version` and `build-ppl` jobs, which depend on this gate.
 
 ### 3.2 Configurable Inputs / Parameters
-`ci-composite.yml` calls this action and provides all required inputs automatically. When invoking
+`ci.yml` calls this action and provides all required inputs automatically. When invoking
 `build-vip` from another workflow, supply the following parameters
 (see [action.yml](../../../.github/actions/build-vip/action.yml) for details):
 
@@ -116,11 +116,11 @@ That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events. Th
 | `display_information_json` | DisplayInformation JSON string. |
 | `fail_on_multiple_vips` | If `true`, fail when more than one `.vip` is found post-build. |
 
-The action reads the LabVIEW major version from the repository’s VIPB via `scripts/get-package-lv-version.ps1`, so no LabVIEW-version input or override is accepted. The default CI workflow points `vipb_path` to `.github/actions/build-vip/NI Icon editor.vipb`.
+The action reads the LabVIEW major version from the repository’s VIPB via `scripts/get-package-lv-version.ps1`, so no LabVIEW-version input or override is accepted. The default CI workflow points `vipb_path` to the auto-detected VIPB in the repo.
 
 The `major`, `minor`, and `patch` inputs are derived from pull-request labels (`major`,
 `minor`, `patch`) by the `version` job (which runs the `compute-version` action) in
-`ci-composite.yml`. If a pull request lacks these labels, the `compute-version` action
+`ci.yml`. If a pull request lacks these labels, the `compute-version` action
 defaults to bumping the patch version. For direct pushes without labels, the version
 components remain unchanged and only the build number increases.
 
@@ -244,7 +244,7 @@ components remain unchanged and only the build number increases.
 
 ### 7.3 Working on a Release Branch
 - **Scenario**: You branch off `release-rc/1.2`.
-- **Action**: The workflow appends `-rc.<commitCount>` each time you commit to that pre-release branch, e.g. `v1.2.0-rc.50-build50`. Branches named `release-alpha/1.2` or `release-beta/1.2` would similarly append `-alpha.<commitCount>` or `-beta.<commitCount>`; these patterns correspond to the `release-alpha/*`, `release-beta/*`, and `release-rc/*` rules in `ci-composite.yml`.
+- **Action**: The workflow appends `-rc.<commitCount>` each time you commit to that pre-release branch, e.g. `v1.2.0-rc.50-build50`. Branches named `release-alpha/1.2` or `release-beta/1.2` would similarly append `-alpha.<commitCount>` or `-beta.<commitCount>`; these patterns correspond to the `release-alpha/*`, `release-beta/*`, and `release-rc/*` rules in `ci.yml`.
 - **Result**: Merging `release-rc/1.2` back to `main` finalizes `v1.2.0-build51`.
 
 ### 7.4 Manually Triggering (workflow_dispatch)
@@ -259,7 +259,7 @@ components remain unchanged and only the build number increases.
 
 
 ### 8.1 Fork Testing
-1. **Fork the Repo**: Copy `.github/workflows/ci-composite.yml` to your fork.
+1. **Fork the Repo**: Copy `.github/workflows/ci.yml` to your fork.
 2. **Push Changes**: Create or modify a branch in your fork.
 3. **Open PR (optional)**: If you label it, watch the logs to see if the version increments properly.
 4. **Check Artifacts**: Ensure a `.vip` file is built and uploaded as an artifact for your run.
