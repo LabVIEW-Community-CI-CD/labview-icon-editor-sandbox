@@ -36,6 +36,8 @@ param(
     [ValidateSet('both','64')]
     [string]$LvlibpBitness = 'both',
 
+    [string]$VIPBPath = 'Tooling\deployment\NI Icon editor.vipb',
+
     # New parameters that will populate the JSON fields
     [Parameter(Mandatory = $true)]
     [string]$CompanyName,

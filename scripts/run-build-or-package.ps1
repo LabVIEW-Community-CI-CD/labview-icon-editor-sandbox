@@ -6,7 +6,8 @@ param(
     [string]$LabVIEWMinorRevision = '3',
     [string]$CompanyName,
     [string]$AuthorName,
-    [string]$LvlibpBitness = '64'
+    [string]$LvlibpBitness = '64',
+    [string]$VipbPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -145,6 +146,22 @@ $repo = Resolve-PathSafe $ws
 $gitRoot = Resolve-GitRoot -BasePath $ws
 if ($gitRoot) { $repo = $gitRoot }
 
+$resolvedVipb = $VipbPath
+if (-not $resolvedVipb) {
+    $vipb = Get-ChildItem -Path $repo -Filter *.vipb -File -Recurse | Select-Object -First 1
+    if (-not $vipb) { throw "No .vipb file found under $repo" }
+    $resolvedVipb = $vipb.FullName
+}
+else {
+    if (-not [System.IO.Path]::IsPathRooted($resolvedVipb)) {
+        $resolvedVipb = Join-Path -Path $repo -ChildPath $resolvedVipb
+    }
+    if (-not (Test-Path -LiteralPath $resolvedVipb -PathType Leaf)) {
+        throw "VIPBPath not found: $resolvedVipb"
+    }
+}
+Write-Information ("Using VIPB: {0}" -f $resolvedVipb) -InformationAction Continue
+
 $semver = Resolve-SemverFromLatestTag -RepoRoot $repo
 Write-Information ("Using semantic version from latest tag: v{0}.{1}.{2} (raw: {3})" -f $semver.Major, $semver.Minor, $semver.Patch, $semver.Raw) -InformationAction Continue
 
@@ -220,17 +237,17 @@ switch ($BuildMode) {
                     build = $buildNumber
                 }
             } | ConvertTo-Json -Depth 3
-            & $singleScript -SupportedBitness '32' -RepositoryPath $repo -VIPBPath "Tooling/deployment/NI Icon editor.vipb" -LabVIEWMinorRevision $LabVIEWMinorRevision -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -Commit $commitHash -ReleaseNotesFile (Join-Path $ws "Tooling/deployment/release_notes.md") -DisplayInformationJSON $displayInfo
+            & $singleScript -SupportedBitness '32' -RepositoryPath $repo -VIPBPath $resolvedVipb -LabVIEWMinorRevision $LabVIEWMinorRevision -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -Commit $commitHash -ReleaseNotesFile (Join-Path $ws "Tooling/deployment/release_notes.md") -DisplayInformationJSON $displayInfo
         }
         else {
             # Enforce selected bitness preflight; warn on the other arch
             Assert-DevModePaths -Repo $repo -Arch '64'
-            & $buildScript -RepositoryPath $repo -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -LabVIEWMinorRevision $LabVIEWMinorRevision -Commit $commitHash -CompanyName $CompanyName -AuthorName $AuthorName -LvlibpBitness $LvlibpBitness
+            & $buildScript -RepositoryPath $repo -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -LabVIEWMinorRevision $LabVIEWMinorRevision -Commit $commitHash -CompanyName $CompanyName -AuthorName $AuthorName -LvlibpBitness $LvlibpBitness -VIPBPath $resolvedVipb
         }
     }
     'vip-single' {
         Assert-DevModePaths -Repo $repo -Arch $LvlibpBitness
-        & $singleScript -SupportedBitness $LvlibpBitness -RepositoryPath $repo -VIPBPath "Tooling/deployment/NI Icon editor.vipb" -LabVIEWMinorRevision $LabVIEWMinorRevision -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -Commit $commitHash -ReleaseNotesFile (Join-Path $ws "Tooling/deployment/release_notes.md") -DisplayInformationJSON "{}"
+        & $singleScript -SupportedBitness $LvlibpBitness -RepositoryPath $repo -VIPBPath $resolvedVipb -LabVIEWMinorRevision $LabVIEWMinorRevision -Major $semver.Major -Minor $semver.Minor -Patch $semver.Patch -Build $buildNumber -Commit $commitHash -ReleaseNotesFile (Join-Path $ws "Tooling/deployment/release_notes.md") -DisplayInformationJSON "{}"
     }
     default { throw "Unknown buildMode '$BuildMode'" }
 }
