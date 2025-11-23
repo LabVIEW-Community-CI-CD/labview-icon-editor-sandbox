@@ -33,6 +33,11 @@ param(
     [Parameter(Mandatory = $false)]
     [int]$LabVIEWMinorRevision = 3,
 
+    [ValidateSet('both','64')]
+    [string]$LvlibpBitness = 'both',
+
+    [string]$VIPBPath = 'Tooling\deployment\NI Icon editor.vipb',
+
     # New parameters that will populate the JSON fields
     [Parameter(Mandatory = $true)]
     [string]$CompanyName,
@@ -161,6 +166,7 @@ try {
     Write-Verbose " - Build: $Build"
     Write-Verbose " - Commit: $Commit"
     Write-Verbose " - LabVIEWMinorRevision: $LabVIEWMinorRevision"
+    Write-Verbose " - LvlibpBitness: $LvlibpBitness"
     Write-Verbose " - CompanyName: $CompanyName"
     Write-Verbose " - AuthorName: $AuthorName"
 
@@ -168,6 +174,25 @@ try {
     if (-not (Test-Path -LiteralPath $RepositoryPath)) {
         Write-Error "RepositoryPath does not exist: $RepositoryPath"
         exit 1
+    }
+
+    # Derive build number from total commits when available
+    try {
+        git -C $RepositoryPath fetch --unshallow 2>$null | Out-Null
+    }
+    catch {
+        $global:LASTEXITCODE = 0
+    }
+    try {
+        $commitCount = git -C $RepositoryPath rev-list --count HEAD 2>$null
+        if ($LASTEXITCODE -eq 0 -and $commitCount) {
+            $Build = [int]$commitCount
+            Write-Information ("Using commit count for build number: {0}" -f $Build) -InformationAction Continue
+        }
+    }
+    catch {
+        Write-Verbose "Commit count unavailable; using provided build number." -Verbose
+        $global:LASTEXITCODE = 0
     }
 
     # Derive LabVIEW version from VIPB as the first consumer step
@@ -193,11 +218,11 @@ try {
     Write-Information "Cleaning up old .lvlibp files in plugins folder..." -InformationAction Continue
     Write-Verbose "Looking for .lvlibp files in $($RepositoryPath)\resource\plugins..."
     try {
-        $PluginFiles = Get-ChildItem -Path "$RepositoryPath\resource\plugins" -Filter '*.lvlibp' -ErrorAction Stop
+        $PluginFiles = @(Get-ChildItem -Path "$RepositoryPath\resource\plugins" -Filter '*.lvlibp' -ErrorAction Stop)
         if ($PluginFiles) {
             $pluginNames = $PluginFiles | ForEach-Object { $_.Name }
             Write-Verbose "Found $($PluginFiles.Count) file(s): $($pluginNames -join ', ')"
-            $PluginFiles | Remove-Item -Force
+            $PluginFiles | Remove-Item -Force -Recurse -Confirm:$false
             Write-Information "Deleted .lvlibp files from plugins folder." -InformationAction Continue
         }
         else {
@@ -209,65 +234,71 @@ try {
         Write-Verbose "Stack Trace: $($_.Exception.StackTrace)"
     }
 
-    # 2) Apply VIPC (32-bit)
-    Write-Information "Applying VIPC (dependencies) for 32-bit..." -InformationAction Continue
     $ApplyVIPC = Join-Path $ActionsPath "apply-vipc/ApplyVIPC.ps1"
-    Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
-        Package_LabVIEW_Version   = $lvVersion
-        SupportedBitness          = '32'
-        RepositoryPath            = $RepositoryPath
-        VIPCPath                  = 'Tooling\deployment\runner_dependencies.vipc'
-    }
-
-    # 2.1) Preflight missing items using existing missing-in-project helper (32-bit)
-    Write-Information "Preflight: checking for missing project items via missing-in-project..." -InformationAction Continue
     $MissingHelper = Join-Path $ActionsPath "missing-in-project/Invoke-MissingInProjectCLI.ps1"
-    Invoke-ScriptSafe -ScriptPath $MissingHelper -ArgumentMap @{
-        LVVersion   = $lvVersion
-        Arch        = '32'
-        ProjectFile = (Join-Path $RepositoryPath 'lv_icon_editor.lvproj')
-    }
-
-    # 3) Build LV Library (32-bit)
-    Write-Verbose "Building LV library (32-bit)..."
     $BuildLvlibp = Join-Path $ActionsPath "build-lvlibp/Build_lvlibp.ps1"
-    $argsLvlibp32 = @{
-        Package_LabVIEW_Version   = $lvVersion
-        SupportedBitness          = '32'
-        RepositoryPath            = $RepositoryPath
-        Major                     = $Major
-        Minor                     = $Minor
-        Patch                     = $Patch
-        Build                     = $Build
-        Commit                    = $Commit
-    }
-    & $BuildLvlibp @argsLvlibp32
-
-    # 4) Close LabVIEW (32-bit)
-    Write-Verbose "Closing LabVIEW (32-bit)..."
     $CloseLabVIEW = Join-Path $ActionsPath "close-labview/Close_LabVIEW.ps1"
-    Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentMap @{
-        Package_LabVIEW_Version = $lvVersion
-        SupportedBitness        = '32'
-    }
-
-    # 5) Rename .lvlibp -> lv_icon_x86.lvlibp
-    Write-Verbose "Renaming .lvlibp file to lv_icon_x86.lvlibp..."
     $RenameFile = Join-Path $ActionsPath "rename-file/Rename-file.ps1"
-    Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentMap @{
-        CurrentFilename = "$RepositoryPath\resource\plugins\lv_icon.lvlibp"
-        NewFilename     = 'lv_icon_x86.lvlibp'
-    }
 
-    # 5.1) Restore project to avoid cross-bitness saves before 64-bit build
-    if (Get-Command git -ErrorAction SilentlyContinue) {
-        Write-Verbose "Restoring lv_icon_editor.lvproj from source control before 64-bit build..."
-        $restore = & git -C $RepositoryPath checkout -- "lv_icon_editor.lvproj" 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Failed to restore lv_icon_editor.lvproj: $($restore -join '; ')"
+    if ($LvlibpBitness -eq 'both') {
+        # 2) Apply VIPC (32-bit)
+        Write-Information "Applying VIPC (dependencies) for 32-bit..." -InformationAction Continue
+        Invoke-ScriptSafe -ScriptPath $ApplyVIPC -ArgumentMap @{
+            Package_LabVIEW_Version   = $lvVersion
+            SupportedBitness          = '32'
+            RepositoryPath            = $RepositoryPath
+            VIPCPath                  = 'Tooling\deployment\runner_dependencies.vipc'
         }
-    } else {
-        Write-Warning "git not found; skipping lvproj restore before 64-bit build."
+
+        # 2.1) Preflight missing items using existing missing-in-project helper (32-bit)
+        Write-Information "Preflight: checking for missing project items via missing-in-project..." -InformationAction Continue
+        Invoke-ScriptSafe -ScriptPath $MissingHelper -ArgumentMap @{
+            LVVersion   = $lvVersion
+            Arch        = '32'
+            ProjectFile = (Join-Path $RepositoryPath 'lv_icon_editor.lvproj')
+        }
+
+        # 3) Build LV Library (32-bit)
+        Write-Verbose "Building LV library (32-bit)..."
+        $argsLvlibp32 = @{
+            Package_LabVIEW_Version   = $lvVersion
+            SupportedBitness          = '32'
+            RepositoryPath            = $RepositoryPath
+            Major                     = $Major
+            Minor                     = $Minor
+            Patch                     = $Patch
+            Build                     = $Build
+            Commit                    = $Commit
+        }
+        & $BuildLvlibp @argsLvlibp32
+
+        # 4) Close LabVIEW (32-bit)
+        Write-Verbose "Closing LabVIEW (32-bit)..."
+        Invoke-ScriptSafe -ScriptPath $CloseLabVIEW -ArgumentMap @{
+            Package_LabVIEW_Version = $lvVersion
+            SupportedBitness        = '32'
+        }
+
+        # 5) Rename .lvlibp -> lv_icon_x86.lvlibp
+        Write-Verbose "Renaming .lvlibp file to lv_icon_x86.lvlibp..."
+        Invoke-ScriptSafe -ScriptPath $RenameFile -ArgumentMap @{
+            CurrentFilename = "$RepositoryPath\resource\plugins\lv_icon.lvlibp"
+            NewFilename     = 'lv_icon_x86.lvlibp'
+        }
+
+        # 5.1) Restore project to avoid cross-bitness saves before 64-bit build
+        if (Get-Command git -ErrorAction SilentlyContinue) {
+            Write-Verbose "Restoring lv_icon_editor.lvproj from source control before 64-bit build..."
+            $restore = & git -C $RepositoryPath checkout -- "lv_icon_editor.lvproj" 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning "Failed to restore lv_icon_editor.lvproj: $($restore -join '; ')"
+            }
+        } else {
+            Write-Warning "git not found; skipping lvproj restore before 64-bit build."
+        }
+    }
+    else {
+        Write-Information "Skipping 32-bit dependency/apply/build steps (LvlibpBitness=$LvlibpBitness)." -InformationAction Continue
     }
 
     # 6) Apply VIPC (64-bit)

@@ -94,24 +94,57 @@ Describe "VSCode Build Task wiring" {
             $tasksPath | Should -Not -BeNullOrEmpty
             Test-Path -LiteralPath $tasksPath | Should -BeTrue
             $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
-            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build VI Package (Build.ps1)" } | Select-Object -First 1
+            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
             $buildTask | Should -Not -BeNullOrEmpty
             $command = ($buildTask.args -join ' ')
-            $required = @(
-                "-RepositoryPath",
-                "-Major",
-                "-Minor",
-                "-Patch",
-                "-Build",
-                "-LabVIEWMinorRevision",
-                "-Commit",
-                "-CompanyName",
-                "-AuthorName",
-                ".github/actions/build/Build.ps1"
-            )
-            foreach ($req in $required) {
-                $command | Should -Match $req
-            }
+            # Ensure the wrapper script and expected flags are present
+            $command | Should -Match "scripts/run-build-or-package\.ps1"
+            $command | Should -Match "-BuildMode"
+            $command | Should -Match "-WorkspacePath"
+            $command | Should -Match "-LabVIEWMinorRevision"
+            $command | Should -Match "-LvlibpBitness"
+        }
+
+        It "exposes a buildMode input with expected options for the unified task" {
+            $tasksPath = Join-Path $script:RepoRoot '.vscode/tasks.json'
+            Test-Path -LiteralPath $tasksPath | Should -BeTrue
+            $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
+
+            $modeInput = $json.inputs | Where-Object { $_.id -eq 'buildMode' } | Select-Object -First 1
+            $modeInput | Should -Not -BeNullOrEmpty
+            $modeInput.type | Should -Be 'pickString'
+            $modeInput.default | Should -Be 'vip+lvlibp'
+            $modeInput.options | Should -Contain 'vip+lvlibp'
+            $modeInput.options | Should -Contain 'vip-single'
+
+            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
+            $buildTask | Should -Not -BeNullOrEmpty
+            ($buildTask.args -join ' ') | Should -Match '\${input:buildMode}'
+        }
+
+        It "quotes buildMode assignment and comparisons to avoid parser errors" {
+            $tasksPath = Join-Path $script:RepoRoot '.vscode/tasks.json'
+            Test-Path -LiteralPath $tasksPath | Should -BeTrue
+            $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
+
+            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
+            $buildTask | Should -Not -BeNullOrEmpty
+            $command = ($buildTask.args -join ' ')
+
+            # Ensure the mode is assigned with quotes and compared against quoted literals
+            $command | Should -Match "scripts/run-build-or-package.ps1"
+            $command | Should -Match "-BuildMode"
+            $command | Should -Match "-WorkspacePath"
+            $command | Should -Match "-LvlibpBitness"
+        }
+
+        It "parses after substituting sample values to catch mode/operator parser errors" {
+            $tasksPath = Join-Path $script:RepoRoot '.vscode/tasks.json'
+            $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
+            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
+            $buildTask | Should -Not -BeNullOrEmpty
+            $command = ($buildTask.args -join ' ')
+            $command | Should -Match "run-build-or-package.ps1"
         }
     }
 }

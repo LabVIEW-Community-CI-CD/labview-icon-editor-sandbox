@@ -24,19 +24,21 @@
 [Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","Package_LabVIEW_Version",Justification="Used in nested functions and g-cli invocation")]
 [Diagnostics.CodeAnalysis.SuppressMessage("PSReviewUnusedParameter","SupportedBitness",Justification="Used in nested functions and g-cli invocation")]
 param(
-    [Parameter(Mandatory=$true)]
     [Alias('MinimumSupportedLVVersion')]
     [string]
-    $Package_LabVIEW_Version,
+    $Package_LabVIEW_Version = "",
 
     [Parameter(Mandatory=$true)]
     [ValidateSet("32","64")]
     [string]
-    $SupportedBitness
+    $SupportedBitness,
+
+    [string]
+    $AbsoluteProjectPath
 )
 
 # --------------------------------------------------------------------
-# 1) Locate exactly one .lvproj file by searching upward from $PSScriptRoot
+# 1) Locate exactly one .lvproj file (use provided path when available, else search upward)
 # --------------------------------------------------------------------
 Write-Information "Starting directory for .lvproj search: $PSScriptRoot" -InformationAction Continue
 
@@ -57,9 +59,9 @@ function Get-SingleLvproj {
         }
         elseif ($lvprojFiles.Count -gt 1) {
             # Found multiple .lvproj files
-            Write-Error "Error: Multiple .lvproj files found in '$currentDir'. Please ensure only one .lvproj is present."
-            $lvprojFiles | ForEach-Object { Write-Information (" - {0}" -f $_.FullName) -InformationAction Continue }
-            return $null
+            $list = $lvprojFiles | ForEach-Object { " - {0}" -f $_.FullName }
+            throw ("Multiple .lvproj files found in '{0}' (count={1}). Ensure only one is present. Found:{2}{3}" -f `
+                    $currentDir, $lvprojFiles.Count, [Environment]::NewLine, ($list -join [Environment]::NewLine))
         }
 
         # If none found, move one level up
@@ -76,16 +78,25 @@ function Get-SingleLvproj {
     }
 }
 
-$AbsoluteProjectPath = Get-SingleLvproj -StartFolder $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($AbsoluteProjectPath)) {
+    $AbsoluteProjectPath = Get-SingleLvproj -StartFolder $PSScriptRoot
+}
+else {
+    if (-not (Test-Path $AbsoluteProjectPath)) {
+        throw "Provided project path does not exist: $AbsoluteProjectPath"
+    }
+    $AbsoluteProjectPath = (Resolve-Path $AbsoluteProjectPath).Path
+}
 
 if (-not $AbsoluteProjectPath) {
     # We failed to find exactly one .lvproj in any ancestor up to the level before root
     exit 3
 }
 Write-Information "Using LabVIEW project file: $AbsoluteProjectPath" -InformationAction Continue
-$repoRoot = Split-Path -Parent $AbsoluteProjectPath
-$Package_LabVIEW_Version = & (Join-Path $PSScriptRoot '..\..\scripts\get-package-lv-version.ps1') -RepositoryPath $repoRoot
-Write-Information ("Resolved LabVIEW version from VIPB: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
+if ([string]::IsNullOrWhiteSpace($Package_LabVIEW_Version)) {
+    throw "LabVIEW version is required but was not provided. Ensure the composite action supplies inputs.labview_version or LABVIEW_VERSION."
+}
+Write-Information ("Using LabVIEW version provided by workflow: {0}" -f $Package_LabVIEW_Version) -InformationAction Continue
 
 # Script-level variables to track exit states
 $Script:OriginalExitCode = 0

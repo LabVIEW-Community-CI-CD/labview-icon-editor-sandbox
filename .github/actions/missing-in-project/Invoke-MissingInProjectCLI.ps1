@@ -52,12 +52,16 @@ function MainSequence {
         $pathsScript = Join-Path $repoRoot 'scripts/read-library-paths.ps1'
         if (Test-Path $pathsScript) {
             & $pathsScript -RepositoryPath $repoRoot -SupportedBitness $Arch -FailOnMissing
+            if ($LASTEXITCODE -ne 0) {
+                throw "LocalHost.LibraryPaths preflight failed with exit code $LASTEXITCODE."
+            }
         } else {
             Write-Warning "read-library-paths.ps1 not found; skipping preflight display."
         }
     }
     catch {
-        Write-Warning ("Preflight LocalHost.LibraryPaths check failed: {0}" -f $_.Exception.Message)
+        Write-Error ("Preflight LocalHost.LibraryPaths check failed: {0}" -f $_.Exception.Message)
+        exit 50
     }
     Write-Information "Invoking missing-file check via helper script ...`n" -InformationAction Continue
 

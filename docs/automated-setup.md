@@ -73,7 +73,7 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
    cd .github\actions\build
    ```
 
-4. **Run** `Build.ps1`:
+4. **Run** `Build.ps1` (build number comes from total commit count; ensure full history is available):
    ```powershell
    .\Build.ps1 `
       -RepositoryPath "C:\labview-icon-editor" `
@@ -82,7 +82,7 @@ This document describes how to **build, test, and distribute** the **LabVIEW Ico
     -LabVIEWMinorRevision 3 `
     -Verbose
     ```
-    This generates a `.vip` in `builds\VI Package`.
+    This generates a `.vip` in `builds\VI Package`. The script will override `-Build` with the total commit count when git history is available.
 
    *Branding tip:* Add optional metadata fields such as `-CompanyName` and `-AuthorName` to the command above to embed your organization or repository name in the package. These values appear in the final VI Package metadata, helping identify builds from different forks.
 

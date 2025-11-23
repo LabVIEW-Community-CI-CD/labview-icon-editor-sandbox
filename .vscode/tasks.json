@@ -8,45 +8,25 @@
       "default": "builds/VI Package/"
     },
     {
-      "label": "g-cli --help (dump)",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-File",
-        "${workspaceFolder}/.github/scripts/dump-gcli-help.ps1"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
       "id": "minLv",
       "type": "promptString",
       "description": "Minimum LabVIEW version (major.minor)",
       "default": "21.0"
     },
     {
-      "id": "repoPath",
-      "type": "promptString",
-      "description": "Path to the repository root",
-      "default": "${workspaceFolder}"
+      "id": "buildMode",
+      "type": "pickString",
+      "description": "Artifact type: VIP + lvlibp builds, or single-arch VIP only",
+      "options": [
+        "vip+lvlibp",
+        "vip-single"
+      ],
+      "default": "vip+lvlibp"
     },
     {
       "id": "devModeBitness",
       "type": "pickString",
       "description": "Target LabVIEW bitness for dev-mode tasks",
-      "options": [
-        "32",
-        "64"
-      ],
-      "default": "64"
-    },
-    {
-      "id": "libraryPathsBitness",
-      "type": "pickString",
-      "description": "Bitness for reading LocalHost.LibraryPaths entries",
       "options": [
         "32",
         "64"
@@ -87,24 +67,6 @@
       "description": "Build number",
       "default": "1"
     },
-    {
-      "id": "commitHash",
-      "type": "promptString",
-      "description": "Git commit hash for stamping artifacts",
-      "default": "manual"
-    },
-    {
-      "id": "companyName",
-      "type": "promptString",
-      "description": "Company name for metadata",
-      "default": "LabVIEW-Community-CI-CD"
-    },
-    {
-      "id": "authorName",
-      "type": "promptString",
-      "description": "Author/Packager name for metadata",
-      "default": "LabVIEW Icon Editor CI"
-    }
   ],
   "tasks": [
     {
@@ -116,7 +78,7 @@
         "-File",
         "${workspaceFolder}/.github/actions/analyze-vi-package/run-local.ps1",
         "-VipArtifactPath",
-        "builds/VI Package/${workspaceFolderBasename}_64bit_*",
+        "${input:vipArtifactPath}",
         "-MinLabVIEW",
         "${input:minLv}"
       ],
@@ -126,31 +88,22 @@
       "problemMatcher": []
     },
     {
-      "label": "Build VI Package (Build.ps1)",
+      "label": "Build/Package VIP",
+      "detail": "Choose artifact type via buildMode: vip+lvlibp (full pipeline) or vip-single (single-arch package)",
       "type": "shell",
       "command": "pwsh",
       "args": [
         "-NoProfile",
         "-File",
-        "${workspaceFolder}/.github/actions/build/Build.ps1",
-        "-RepositoryPath",
-        "${input:repoPath}",
-        "-Major",
-        "${input:semverMajor}",
-        "-Minor",
-        "${input:semverMinor}",
-        "-Patch",
-        "${input:semverPatch}",
-        "-Build",
-        "${input:buildNumber}",
+        "${workspaceFolder}/scripts/run-build-or-package.ps1",
+        "-BuildMode",
+        "${input:buildMode}",
+        "-WorkspacePath",
+        "${workspaceFolder}",
         "-LabVIEWMinorRevision",
         "3",
-        "-Commit",
-        "${input:commitHash}",
-        "-CompanyName",
-        "${input:companyName}",
-        "-AuthorName",
-        "${input:authorName}"
+        "-LvlibpBitness",
+        "${input:lvlibpBitness}"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -159,42 +112,17 @@
       "problemMatcher": []
     },
     {
-      "label": "Build VIP (stemmed artifact naming)",
+      "label": "Build lvlibp (LabVIEW)",
       "type": "shell",
       "command": "pwsh",
       "args": [
         "-NoProfile",
-        "-File",
-        "${workspaceFolder}/.github/actions/build-vip/build_vip.ps1",
-        "-SupportedBitness",
-        "${input:lvlibpBitness}",
-        "-RepositoryPath",
-        "${input:repoPath}",
-        "-VIPBPath",
-        ".github/actions/build-vip/NI Icon editor.vipb",
-        "-Package_LabVIEW_Version",
-        "$(pwsh -NoProfile -File ${workspaceFolder}/scripts/get-package-lv-version.ps1 -RepositoryPath ${workspaceFolder})",
-        "-LabVIEWMinorRevision",
-        "3",
-        "-Major",
-        "${input:semverMajor}",
-        "-Minor",
-        "${input:semverMinor}",
-        "-Patch",
-        "${input:semverPatch}",
-        "-Build",
-        "${input:buildNumber}",
-        "-Commit",
-        "${input:commitHash}",
-        "-ReleaseNotesFile",
-        "${workspaceFolder}/Tooling/deployment/release_notes.md",
-        "-DisplayInformationJSON",
-        "{}"
+        "-Command",
+        "& { $ver = & \"${workspaceFolder}/scripts/get-package-lv-version.ps1\" -RepositoryPath \"${workspaceFolder}\"; & \"${workspaceFolder}/.github/actions/build-lvlibp/Build_lvlibp.ps1\" -Package_LabVIEW_Version $ver -SupportedBitness \"${input:lvlibpBitness}\" -RepositoryPath \"${workspaceFolder}\" -Major 0 -Minor 0 -Patch 0 -Build 0 -Commit \"manual\" }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "group": "build",
       "problemMatcher": []
     },
     {
@@ -223,53 +151,6 @@
         "${workspaceFolder}/.github/actions/revert-development-mode/run-dev-mode.ps1",
         "-SupportedBitness",
         "${input:devModeBitness}"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Build lvlibp (LabVIEW)",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-Command",
-        "& { $ver = & \"${workspaceFolder}/scripts/get-package-lv-version.ps1\" -RepositoryPath \"${workspaceFolder}\"; & \"${workspaceFolder}/.github/actions/build-lvlibp/Build_lvlibp.ps1\" -Package_LabVIEW_Version $ver -SupportedBitness \"${input:lvlibpBitness}\" -RepositoryPath \"${workspaceFolder}\" -Major 0 -Minor 0 -Patch 0 -Build 0 -Commit \"manual\" }"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Show LocalHost.LibraryPaths (LabVIEW)",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-File",
-        "${workspaceFolder}/scripts/read-library-paths.ps1",
-        "-RepositoryPath",
-        "${workspaceFolder}",
-        "-SupportedBitness",
-        "${input:libraryPathsBitness}",
-        "-FailOnMissing"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Apply VIPC (VIPM CLI troubleshoot)",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-Command",
-        "& { $ver = & \"${workspaceFolder}/scripts/get-package-lv-version.ps1\" -RepositoryPath \"${workspaceFolder}\"; & \"${workspaceFolder}/.github/actions/apply-vipc/ApplyVIPC.ps1\" -Package_LabVIEW_Version $ver -SupportedBitness \"64\" -RepositoryPath \"${workspaceFolder}\" -VIPCPath \".github/actions/apply-vipc/runner_dependencies.vipc\" -Verbose }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

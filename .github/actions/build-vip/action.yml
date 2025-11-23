@@ -27,7 +27,19 @@ runs:
         New-Item -ItemType Directory -Path $logDir -Force | Out-Null
         $logFile = Join-Path -Path $logDir -ChildPath "gcli-preflight.log"
 
-        $lvVer = pwsh -NoProfile -File "${{ github.action_path }}/../../scripts/get-package-lv-version.ps1" -RepositoryPath "${{ inputs.repository_path }}"
+        $repo = "${{ inputs.repository_path }}"
+        $candidates = @(
+          (Join-Path $repo 'scripts/get-package-lv-version.ps1'),
+          (Join-Path $repo '.github/scripts/get-package-lv-version.ps1')
+        )
+        $lvScript = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if (-not $lvScript) {
+          throw "Unable to locate get-package-lv-version.ps1 under '$repo/scripts' or '$repo/.github/scripts'."
+        }
+
+        $lvVer = pwsh -NoProfile -File $lvScript -RepositoryPath $repo
+        Write-Host ("Resolved LabVIEW version script: {0}" -f $lvScript)
+        Write-Host ("Resolved LabVIEW version: {0}" -f $lvVer)
         $gcliArgs = @(
           "--lv-ver", $lvVer,
           "--arch", "${{ inputs.supported_bitness }}",
@@ -109,7 +121,17 @@ runs:
       run: |
         $displayInformationJson = $Env:DISPLAY_INFORMATION_JSON
 
-        $lvVer = pwsh -NoProfile -File "${{ github.action_path }}/../../scripts/get-package-lv-version.ps1" -RepositoryPath "${{ inputs.repository_path }}"
+        $repo = "${{ inputs.repository_path }}"
+        $candidates = @(
+          (Join-Path $repo 'scripts/get-package-lv-version.ps1'),
+          (Join-Path $repo '.github/scripts/get-package-lv-version.ps1')
+        )
+        $lvScript = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+        if (-not $lvScript) {
+          throw "Unable to locate get-package-lv-version.ps1 under '$repo/scripts' or '$repo/.github/scripts'."
+        }
+
+        $lvVer = pwsh -NoProfile -File $lvScript -RepositoryPath $repo
 
         & "${{ github.action_path }}/build_vip.ps1" `
           -SupportedBitness ${{ inputs.supported_bitness }} `

@@ -229,7 +229,8 @@ $requiredFields = @(
     'Product Description'
 )
 
-$missingFields = $requiredFields | Where-Object { [string]::IsNullOrWhiteSpace($jsonObj.PSObject.Properties[$_].Value) }
+# Ensure we always have an array even when zero/one items to avoid StrictMode Count errors
+$missingFields = @($requiredFields | Where-Object { [string]::IsNullOrWhiteSpace($jsonObj.PSObject.Properties[$_].Value) })
 if ($missingFields.Count -gt 0) {
     $providedKeys = ($jsonObj.PSObject.Properties.Name -join ', ')
     $inputHash    = [System.BitConverter]::ToString((New-Object System.Security.Cryptography.SHA256Managed).ComputeHash([System.Text.Encoding]::UTF8.GetBytes($DisplayInformationJSON))).Replace("-", "")
@@ -428,7 +429,7 @@ $recognizedKeys = @(
     'Package Version'
 )
 
-$unhandledKeys = $jsonObj.PSObject.Properties | Where-Object { $_.Name -notin $recognizedKeys }
+$unhandledKeys = @($jsonObj.PSObject.Properties | Where-Object { $_.Name -notin $recognizedKeys })
 if ($unhandledKeys.Count -gt 0) {
     $detailKeys = $unhandledKeys | ForEach-Object { $_.Name }
     Write-ErrorPayload -Error "DisplayInformationJSON contains unhandled field(s). Update the mapping to keep metadata in sync." `
@@ -456,3 +457,6 @@ catch {
         -Details $_.Exception.Message `
         -Path $ResolvedVIPBPath
 }
+
+# Avoid leaking a non-zero $LASTEXITCODE from any auxiliary git/lookups that ran successfully
+$global:LASTEXITCODE = 0

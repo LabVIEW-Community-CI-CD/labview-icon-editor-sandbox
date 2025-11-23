@@ -71,7 +71,12 @@ param (
 # 1) Resolve paths
 try {
     $ResolvedRepositoryPath = Resolve-Path -Path $RepositoryPath -ErrorAction Stop
-    $ResolvedVIPBPath = Join-Path -Path $ResolvedRepositoryPath -ChildPath $VIPBPath -ErrorAction Stop
+    if ([System.IO.Path]::IsPathRooted($VIPBPath)) {
+        $ResolvedVIPBPath = Resolve-Path -Path $VIPBPath -ErrorAction Stop
+    }
+    else {
+        $ResolvedVIPBPath = Join-Path -Path $ResolvedRepositoryPath -ChildPath $VIPBPath -ErrorAction Stop
+    }
     Write-Verbose "RepositoryPath resolved to $ResolvedRepositoryPath"
     Write-Verbose "VIPBPath resolved to $ResolvedVIPBPath"
     if ($Commit) {
