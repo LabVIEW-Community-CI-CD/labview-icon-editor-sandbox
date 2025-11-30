@@ -10,7 +10,7 @@ dotnet build Tooling/dotnet/IntegrationEngineCli/IntegrationEngineCli.csproj
 ## Usage
 From repo root:
 ```bash
-dotnet run --project Tooling/dotnet/IntegrationEngineCli -- \
+pwsh scripts/common/invoke-repo-cli.ps1 -Cli IntegrationEngineCli -- \
   --repo . \
   --ref HEAD \
   --bitness 64 \

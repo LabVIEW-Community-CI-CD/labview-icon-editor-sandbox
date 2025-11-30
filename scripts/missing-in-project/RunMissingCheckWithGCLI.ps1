@@ -25,7 +25,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Write-Information "[GCLI] Starting Missing-in-Project check ..." -InformationAction Continue
 
-Write-Warning "Deprecated: prefer 'dotnet run --project Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj -- missing-check --repo <path> --bitness <both|64|32> --project <lvproj> --lv-version <year>'; this script remains as a delegate."
+Write-Warning "Deprecated: prefer 'pwsh scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- missing-check --repo <path> --bitness <both|64|32> --project <lvproj> --lv-version <year>'; this script remains as a delegate."
 Write-Information "[legacy-ps] missing-check delegate invoked" -InformationAction Continue
 
 $projectInput = $ProjectFile

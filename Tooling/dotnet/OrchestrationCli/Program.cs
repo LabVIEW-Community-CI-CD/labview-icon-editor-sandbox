@@ -3176,7 +3176,7 @@ public static class Program
     {
         Console.WriteLine("OrchestrationCli");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  dotnet run --project Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj -- <subcommand> [options]");
+        Console.WriteLine("  pwsh scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- <subcommand> [options]");
         Console.WriteLine("Subcommands:");
         Console.WriteLine("  devmode-bind      Bind LocalHost.LibraryPaths for specified bitness.");
         Console.WriteLine("  devmode-unbind    Unbind dev mode for specified bitness.");
