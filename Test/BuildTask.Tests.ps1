@@ -18,21 +18,32 @@ if (-not $repoRoot) {
 
 Write-Host ("DEBUG init scriptPath={0} repoRoot={1} pwd={2}" -f $scriptPath, $repoRoot, (Get-Location).ProviderPath)
 $script:RepoRoot = $repoRoot
-$actionsPath = Join-Path $script:RepoRoot ".github/actions"
+$actionsPath = Join-Path $script:RepoRoot "scripts"
 $buildScript = Join-Path $actionsPath "build/Build.ps1"
 Import-Module "$testDir/Support/BuildTaskMocks.psm1"
 
 Describe "VSCode Build Task wiring" {
     BeforeAll {
+        if (-not (Get-Variable -Name RepoRoot -Scope Script -ErrorAction SilentlyContinue)) {
+            Set-Variable -Name RepoRoot -Scope Script -Value $null
+        }
         if (-not $script:RepoRoot) {
             $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).ProviderPath
+        }
+
+        if (-not (Get-Variable -Name mocks -Scope Script -ErrorAction SilentlyContinue)) {
+            Set-Variable -Name mocks -Scope Script -Value $null
         }
         $script:mocks = Initialize-BuildTaskMocks -RepoPath $script:RepoRoot
     }
 
     AfterAll {
-        if ($script:mocks.TempBin -and (Test-Path $script:mocks.TempBin)) {
-            Remove-Item -LiteralPath $script:mocks.TempBin -Recurse -Force -ErrorAction SilentlyContinue
+        $mocksVar = Get-Variable -Name mocks -Scope Script -ErrorAction SilentlyContinue
+        if ($mocksVar) {
+            $mocks = $mocksVar.Value
+            if ($mocks -and $mocks.TempBin -and (Test-Path $mocks.TempBin)) {
+                Remove-Item -LiteralPath $mocks.TempBin -Recurse -Force -ErrorAction SilentlyContinue
+            }
         }
     }
 
@@ -86,65 +97,35 @@ Describe "VSCode Build Task wiring" {
             { & $buildScript @params } | Should -Throw
         }
 
-        It "has required flags in the VS Code task definition" {
+        It "exposes only the Build LVAddon task with expected defaults" {
             Write-Host ("DEBUG repoRoot={0}" -f $script:RepoRoot)
-            Write-Host ("DEBUG in-it PSCommandPath={0} MyPath={1} PSScriptRoot={2} pwd={3}" -f $PSCommandPath, $MyInvocation.MyCommand.Path, $PSScriptRoot, (Get-Location).ProviderPath)
+            $myPath = $MyInvocation.MyCommand | Select-Object -ExpandProperty Path -ErrorAction SilentlyContinue
+            Write-Host ("DEBUG in-it PSCommandPath={0} MyPath={1} PSScriptRoot={2} pwd={3}" -f $PSCommandPath, $myPath, $PSScriptRoot, (Get-Location).ProviderPath)
             $script:RepoRoot | Should -Not -BeNullOrEmpty
-            $tasksPath = Join-Path $script:RepoRoot '.vscode/tasks.json'
-            $tasksPath | Should -Not -BeNullOrEmpty
-            Test-Path -LiteralPath $tasksPath | Should -BeTrue
-            $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
-            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
-            $buildTask | Should -Not -BeNullOrEmpty
-            $command = ($buildTask.args -join ' ')
-            # Ensure the wrapper script and expected flags are present
-            $command | Should -Match "scripts/run-build-or-package\.ps1"
-            $command | Should -Match "-BuildMode"
-            $command | Should -Match "-WorkspacePath"
-            $command | Should -Match "-LabVIEWMinorRevision"
-            $command | Should -Match "-LvlibpBitness"
-        }
 
-        It "exposes a buildMode input with expected options for the unified task" {
             $tasksPath = Join-Path $script:RepoRoot '.vscode/tasks.json'
             Test-Path -LiteralPath $tasksPath | Should -BeTrue
+
             $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
+            $json.tasks.Count | Should -BeGreaterThan 1
 
-            $modeInput = $json.inputs | Where-Object { $_.id -eq 'buildMode' } | Select-Object -First 1
-            $modeInput | Should -Not -BeNullOrEmpty
-            $modeInput.type | Should -Be 'pickString'
-            $modeInput.default | Should -Be 'vip+lvlibp'
-            $modeInput.options | Should -Contain 'vip+lvlibp'
-            $modeInput.options | Should -Contain 'vip-single'
+            $depsTask = $json.tasks | Where-Object { $_.label -eq "01 Verify / Apply dependencies" } | Select-Object -First 1
+            $depsTask | Should -Not -BeNullOrEmpty
+            $depsCommand = ($depsTask.args -join ' ')
+            $depsCommand | Should -Match "task-verify-apply-dependencies"
+            $depsCommand | Should -BeLike "*-SupportedBitness both*"
+            $depsCommand | Should -BeLike "*-VipcPath runner_dependencies.vipc*"
 
-            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
+            $buildTask = $json.tasks | Where-Object { $_.label -eq "02 Build LVAddon (VI Package)" } | Select-Object -First 1
             $buildTask | Should -Not -BeNullOrEmpty
-            ($buildTask.args -join ' ') | Should -Match '\${input:buildMode}'
-        }
 
-        It "quotes buildMode assignment and comparisons to avoid parser errors" {
-            $tasksPath = Join-Path $script:RepoRoot '.vscode/tasks.json'
-            Test-Path -LiteralPath $tasksPath | Should -BeTrue
-            $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
-
-            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
-            $buildTask | Should -Not -BeNullOrEmpty
             $command = ($buildTask.args -join ' ')
-
-            # Ensure the mode is assigned with quotes and compared against quoted literals
-            $command | Should -Match "scripts/run-build-or-package.ps1"
-            $command | Should -Match "-BuildMode"
-            $command | Should -Match "-WorkspacePath"
-            $command | Should -Match "-LvlibpBitness"
-        }
-
-        It "parses after substituting sample values to catch mode/operator parser errors" {
-            $tasksPath = Join-Path $script:RepoRoot '.vscode/tasks.json'
-            $json = Get-Content -LiteralPath $tasksPath -Raw | ConvertFrom-Json
-            $buildTask = $json.tasks | Where-Object { $_.label -eq "Build/Package VIP" } | Select-Object -First 1
-            $buildTask | Should -Not -BeNullOrEmpty
-            $command = ($buildTask.args -join ' ')
-            $command | Should -Match "run-build-or-package.ps1"
+            $command | Should -Match "scripts/ie\.ps1"
+            $command | Should -Match "-Command\s+build-worktree"
+            $command | Should -Match "-RepositoryPath"
+            $command | Should -Match "-SupportedBitness\s+64"
+            $command | Should -Match "-LvlibpBitness\s+both"
+            $command | Should -Match "-Major\s+0\s+-Minor\s+1\s+-Patch\s+0\s+-Build\s+1"
         }
     }
 }

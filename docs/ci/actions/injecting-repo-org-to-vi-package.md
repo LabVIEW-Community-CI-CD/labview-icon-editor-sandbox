@@ -55,7 +55,7 @@ jobs:
         with:
           fetch-depth: 0
       - id: compute-version
-        uses: ./.github/actions/compute-version
+        uses: ./scripts/compute-version
     outputs:
       MAJOR: ${{ steps.compute-version.outputs.MAJOR }}
       MINOR: ${{ steps.compute-version.outputs.MINOR }}
@@ -69,7 +69,7 @@ jobs:
         bitness: [32, 64]
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/build-lvlibp
+      - uses: ./scripts/build-lvlibp
         with:
           supported_bitness: ${{ matrix.bitness }}
           repository_path: ${{ github.workspace }}
@@ -93,9 +93,8 @@ jobs:
             "Author Name (Person or Company)" = "${{ github.event.repository.name }}"
           }
           "json=$($info | ConvertTo-Json -Depth 5 -Compress)" >> $Env:GITHUB_OUTPUT
-      - uses: ./.github/actions/modify-vipb-display-info
+      - uses: ./scripts/modify-vipb-display-info
         with:
-          vipb_path: .github/actions/build-vip/NI Icon editor.vipb
           labview_minor_revision: 3
           repository_path: ${{ github.workspace }}
           supported_bitness: 64
@@ -106,11 +105,10 @@ jobs:
           commit: ${{ github.sha }}
           release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
           display_information_json: ${{ steps.display-info.outputs.json }}
-      - uses: ./.github/actions/build-vip
+      - uses: ./scripts/build-vip
         with:
           labview_minor_revision: 3
           repository_path: ${{ github.workspace }}
-          vipb_path: .github/actions/build-vip/NI Icon editor.vipb
           supported_bitness: 64
           major: ${{ needs.version.outputs.MAJOR }}
           minor: ${{ needs.version.outputs.MINOR }}
@@ -121,7 +119,7 @@ jobs:
           display_information_json: ${{ steps.display-info.outputs.json }}
 ```
 
-> **Note:** `build-vip` runs outside the bitness matrix because the Icon Editor ships only a 64-bit VI Package; packaging the 32-bit output would duplicate artifacts. The LabVIEW major version is resolved automatically from the repo’s VIPB via `scripts/get-package-lv-version.ps1`, so no version override is needed.
+> **Note:** Both actions auto-discover the single `.vipb` in the repository, so `vipb_path` is optional. `build-vip` runs outside the bitness matrix because the Icon Editor ships only a 64-bit VI Package; packaging the 32-bit output would duplicate artifacts. The LabVIEW major version is resolved automatically from the repo’s VIPB via `scripts/get-package-lv-version.ps1`, so no version override is needed.
 
 **Key points**:
 - **`${{ github.repository_owner }}`** is the **organization** (or user) that owns the repo.
@@ -175,3 +173,4 @@ This legacy script produces a `.vip` file that, when inspected in VIPM or LabVIE
 - Each fork or organization can **uniquely** brand its builds.
 - CI/CD with **GitHub Actions** automatically **populates** build metadata, removing manual steps.  
 - You have a **clear**, **traceable** record of each build’s origin—particularly useful in multi-team or open-source projects.
+
