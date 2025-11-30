@@ -1,0 +1,1890 @@
+[
+  {
+    "path": "Program Files\\National Instruments\\LabVIEW 2021\\resource\\dialog\\lvconfig.llb\\LV Config Read Numeric (I32).vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10840
+  },
+  {
+    "path": "Program Files\\National Instruments\\LabVIEW 2021\\resource\\dialog\\lvconfig.llb\\LV Config Write Color.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7797
+  },
+  {
+    "path": "Program Files\\National Instruments\\LabVIEW 2021\\resource\\dialog\\lvconfig.llb\\LV Config Write String.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7810
+  },
+  {
+    "path": "t\\extract\\Program Files\\National Instruments\\LabVIEW 2021\\resource\\dialog\\lvconfig.llb\\LV Config Read Boolean.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10678
+  },
+  {
+    "path": "t\\extract\\Program Files\\National Instruments\\LabVIEW 2021\\resource\\dialog\\lvconfig.llb\\LV Config Read Color.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10808
+  },
+  {
+    "path": "t\\extract\\Program Files\\National Instruments\\LabVIEW 2021\\resource\\dialog\\lvconfig.llb\\LV Config Read String.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 13325
+  },
+  {
+    "path": "t\\extract\\Program Files\\National Instruments\\LabVIEW 2021\\resource\\dialog\\lvconfig.llb\\LV Config Write Boolean.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7715
+  },
+  {
+    "path": "t\\extract\\Program Files\\National Instruments\\LabVIEW 2021\\resource\\plugins\\IconEditor\\Discover Who Invoked The Icon Editor.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9292
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\lv_icon.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 180151
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\lv_IconEditor.lvlib",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 1999
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Launch Icon Editor From String.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9062
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Ants\\Ants.lvclass",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 40208
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Ants\\GET\\GET_AntsLine.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8180
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Ants\\GET\\GET_DelayRestartTL.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7814
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Ants\\GET\\GET_DelayTL.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7791
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Ants\\GET\\GET_Notifier.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8652
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Ants\\GET\\GET_Picture.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7867
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Ants\\Initialization\\Ants Initialization.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 33399
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Ants\\Misc\\CheckBoundsAndIncrement.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 16911
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Ants\\Misc\\FireAntsEvent.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10965
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Ants\\Misc\\InsideBoundaries.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7396
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Ants\\Misc\\RunningAnts.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 17911
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\FakedArray.lvclass",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 66068
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\GET\\GET_ActiveData.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 13146
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\GET\\GET_AllData.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7959
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\GET\\GET_Icon.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9704
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\GET\\GET_RowsCols.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8256
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\GET\\GET_Scrollbar Position.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8078
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\GET\\GET_SupportData.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8847
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Initialization\\Initialize FakedArray.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 39465
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Initialization\\ResetColor.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8874
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Initialization\\SetActiveData_LoadedFromVI.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 31822
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\ArrowUpDown.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11899
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\Ensure Visible.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11422
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\Get Cluster Label Number.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8344
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\Get Pointer From Label.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 6406
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\GetReference.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11212
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\Layer_Get Active Clusters.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 13765
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\Layer_Set Active Data BG Color.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10054
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\Process Template Graphics.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 39129
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\Set active Layer programmatically.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 35629
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\SetActiveGraphic.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 12044
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\Templates_Set Active Data BG Color.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10174
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\UpdateScrollbar.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10023
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\UpdateSelectedData.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11186
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\Misc\\UpdateVisibleData.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 26369
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\SET\\SET_ActiveData.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7986
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\SET\\SET_Data.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7684
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\SET\\SET_ScrollbarPosition.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8189
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\FakedArray\\ToMoreSpecificClass\\ClusterRef_2_DisplayTemplatesRef.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8088
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Icon Library\\Glyph.lvclass",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 38064
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Icon Library\\GET\\GET_ActiveGlyph.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9027
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Icon Library\\GET\\GET_Glyphs [].vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9253
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Icon Library\\Initialization\\Glyphs Initialization.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 37309
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Icon Library\\Misc\\FilterGlyphs.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10012
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Icon Library\\Misc\\SearchGlyphs.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 12616
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Icon Library\\SET\\SET_ActiveGlyph.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8511
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Icon Library\\SET\\SET_Glyphs [].vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9265
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Settings\\Settings.lvclass",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 46172
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Settings\\GET\\GET_3rd party Templates.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8239
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Settings\\GET\\GET_Save_Layers_with_VI.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7891
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Settings\\GET\\GET_Show.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7272
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Settings\\GET\\GET_Text.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9860
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Settings\\Initialization\\Settings Initialization.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 33667
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Settings\\SET\\SET_3rdPartyTemplates.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8157
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Settings\\SET\\SET_SaveLayersWithVI.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7804
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Settings\\SET\\SET_Show.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7812
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Settings\\SET\\SET_Text.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9908
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\Circle.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10882
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\Dropper.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 39783
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\Eraser.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 62014
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\Fill.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 45912
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\Line.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9540
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\Move.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 57832
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\Pen.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9627
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\Rectangle.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10893
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\Selection.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9705
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\Tools Paint.lvclass",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 96975
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\GET\\GET_ActiveTool.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 28898
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\Misc\\DoubleClick.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 48087
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Class\\Tools\\SET\\SET_ActiveTool.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 28906
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Editor Position\\Read Editor Position from INI.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 16177
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Editor Position\\Save Editor Position to INI.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 14487
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Editor Position\\Set Editor Position.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 19339
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Global Variables\\Data.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 5116
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\INI\\Read Data From LabVIEW INI.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 60986
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\INI\\Write Data to LabVIEW INI.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 45473
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\AssessRectangle.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 28403
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Buffer for lossless tracking.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 23712
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\CalculateAntsRect.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 6033
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Classes Initialization.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 64626
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Connector Pane Initialization.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 39961
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\CoordinatesCorrection.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 6713
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Create new layer_LayerName_Picture.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 36706
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\DealWithScrollbars.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 15470
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Extract LV Icon Data.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 30396
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Finalize Movement.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 32789
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Finalize Text.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 31725
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Flip color refs.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 5583
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Get Monochrome Icon from Caller.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9855
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\GetComparisonResult4Graphis.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7159
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\ImageDataToIconPreview.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11122
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\IsAntsRectValid.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 6287
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\ListGlyphsAndTemplates.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 35958
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Glyph from File.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 27804
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Magic Active Layer Constant.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 4255
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\MoveLayers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 37902
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\PrepareData4HTML.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10264
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\PrepareTemporaryView.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 34052
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Process Temporary View Layers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 34993
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Remove invalid characters.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9725
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\SetCursor.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 52681
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Settings Init.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 37261
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Settings Requested Path.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 5467
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Settings Shutdown.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 34141
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Specify Path Enum.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 5669
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Truncate string.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8295
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Clipboard\\IE Read from Clipboard.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 33010
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Clipboard\\IE Write to Clipboard.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 33101
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Def FP Updates\\Defer_FP_Updates.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 6704
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Draw\\Const Temp Coordinate 2 points.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 4914
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Draw\\Const Temp Coordinate 4 points.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 5138
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Draw\\DrawIcon.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 56056
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Draw\\IsCoordinateConstant.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 5076
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Draw\\Origin_or_TempCoordinate.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 5896
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Draw\\PixelValue.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7946
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Font\\Linux.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 12097
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Font\\Mac.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11167
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Font\\Populate Font ComboBox.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8026
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Font\\Windows.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 12823
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Glyphs\\Glyph_MouseDown.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 42383
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Glyphs\\Populate Graphics.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 32565
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Glyphs\\Prepare Glyphs for Display.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9254
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Glyphs\\SET_Glyph.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 38805
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Glyphs\\SET_ToolGraphic.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 43395
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Glyphs\\TemporaryGlyphView.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11014
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Graphics\\BuildCategories.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 14531
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Graphics\\ChangeRefreshGraphicsState.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7418
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Graphics\\CorruptIconErrorMessage.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 3703
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Graphics\\Filter Graphics by File Name.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9836
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Graphics\\Filter Graphics by Folder Name.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11342
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Graphics\\Launch Dynamically Load Graphics.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 12136
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Graphics\\LoadGraphics.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 24932
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Graphics\\LoadTemplates.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 36417
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Graphics\\Populate Tree with Categories.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11541
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Graphics\\Pull data from disc.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 15291
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Add new Layer.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 35237
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Alignment Value Change.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 31634
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Call Keep IE in Memory.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 6570
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Change Mouse Cursor.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 14255
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Clear User Layers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 32609
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Delete Selected Layers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 32762
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Escape.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 35146
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Fire Body Text Change event.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 6267
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Get Icon Editor Context.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 12531
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Icon Editor Init Refs.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 21753
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Icon Initialization.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 46051
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\IE Save dialog build path.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 13509
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Keep IE in Memory.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 5053
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\LayerCluster_ValueChange.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 41080
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\MenuSelection(User).vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 94779
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Mouse Down_Glyphs.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 30865
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Mouse Down_Templates.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 31088
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Mouse Down_Tree.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7963
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Mouse Down_User Layers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 36446
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\MouseDown_Body Text.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 31563
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\MouseDown.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 48053
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\MouseMove.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 55613
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\PictureControl_MouseUp.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 39094
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\populate tree.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 18709
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Reset layer template selection.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 39898
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\RotateFlip.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 35386
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Save Graphic Overwrite.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 14194
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Save Graphic.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 51284
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Template_MouseDown.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 37374
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Update glyph path string.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 31676
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\UpdateLayerView_ScrollbarChanged.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 33192
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Value Change_Body Text.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 36898
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Icon Editor\\Value Change_Top or Bottom Layer.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 35220
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Key Down Up\\Key Down Up Layers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 39590
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Key Down Up\\KeyDown.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 98507
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Key Down Up\\KeyUp.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 33593
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Key Down Up\\Move Selected Layers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 36664
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Key Down Up\\Process Active Data Shift Key.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11485
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Layer\\DeleteLayer.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 43003
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Layer\\DeselectLayer.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 32237
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Layer\\LayerGraphicManipulation.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 34980
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Layer\\Separate Selected Layers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7552
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Layer\\Split_Layers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 7748
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Layer\\ViewLayer.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 34493
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Export_Clipboard.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 30120
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Flatten Icon.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9312
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Flatten Layers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10738
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Get Color Icon from Caller.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11158
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Import_Clipboard.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10872
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Load.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 34348
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Read Data from Caller.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 26537
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Read Glyphs from  File.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11586
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Reset Layer VI.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10154
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Unflatten Icon.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9802
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Unflatten Layers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 11556
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Write Data to Caller.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10612
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Write Glyphs to  File.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10649
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Load Unload\\Write INI Tokens and VI Tags.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 46148
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Menubar\\EnableDisable Combine Layers.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8740
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Menubar\\ShowTerminals.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 31709
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\ni.com_iconlibrary\\Analyze XML stream.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8490
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\ni.com_iconlibrary\\Check whether installed.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8663
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\ni.com_iconlibrary\\Download iconlibrary files.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 13298
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\ni.com_iconlibrary\\ExtractDataFromXML.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 27674
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\ni.com_iconlibrary\\GET HTTP.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 13172
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\ni.com_iconlibrary\\IconlibraryStuffInProgress.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 14666
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\ni.com_iconlibrary\\Install Glyphs.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 12186
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\ni.com_iconlibrary\\Manual User Input.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 13629
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\ni.com_iconlibrary\\ni.com_iconlibrary.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 36626
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Tools\\Mouse Down.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 41686
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Tools\\Selection_PrepareIcon.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 14053
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Tools\\Selection_SetNewData.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 37176
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Tools\\Value Change_Tools.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 52714
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Tools\\ValueSignalingTool.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 50502
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Tools\\VisibleTextMarker.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 32525
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Tools\\WriteText.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 40329
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Undo Redo\\Add Data to History.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 39735
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Undo Redo\\FGV_Undo Redo.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 18457
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\Undo Redo\\Replay Data from History.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 44236
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Miscellaneous\\User Events\\Initialization_UserEvents.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 34429
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Support\\Create or Substitute NI_Layer layer.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 10683
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Support\\DefaultIconGlyphData.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 213284
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Support\\Icon Editor First Call.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 22614
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Support\\IE_Open Help Link.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 13273
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Support\\IE_Resolve Symbolic Paths.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 8561
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\Support\\lv_icon.rtm",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 2591
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\User Dialogs\\IconEditorSettings.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 45650
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\User Dialogs\\Verify Cancel.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 20621
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\User Dialogs\\SubVIs\\Center Dialog on Caller.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 13707
+  },
+  {
+    "path": "t\\extract\\repos\\labview-icon-editor-final-fork\\resource\\plugins\\NIIconEditor\\User Dialogs\\SubVIs\\Initialize_IconEditorSettings_Tree.vi",
+    "last_commit": null,
+    "commit_author": null,
+    "commit_date": null,
+    "commit_source": "file",
+    "size_bytes": 9986
+  }
+]
