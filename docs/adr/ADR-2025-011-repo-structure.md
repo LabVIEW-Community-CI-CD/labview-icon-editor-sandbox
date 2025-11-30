@@ -11,7 +11,7 @@ IntegrationEngine, x-cli, DevModeAgentCli, and PowerShell orchestration grew aro
 - Keep orchestration/tooling at the repo root (`scripts/`, `Tooling/`, `configs/`, `docs/`); keep shared libraries/modules under `src/` (e.g., `src/tools/*`, provider specs). Do not relocate root build scripts/tooling into `src/`.
 - Keep shared modules in `src/tools/*.psm1`; keep LabVIEWCLI/provider specs in `src/tools/providers/`; retain `tools/VendorTools.psm1` as a thin loader into `src/tools/VendorTools.psm1`.
 - Anchor `src/` at the repo root; tasks/CI resolve paths from the root rather than moving assets into `src/`.
-- Managed CLI preflights must check for required modules/specs in these locations before running scripts.
+- Managed CLI preflights shall check for required modules/specs in these locations before running scripts.
 
 ## Consequences
 - **+** Predictable paths for tasks/CI and future imports; less drift when adding tooling.

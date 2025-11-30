@@ -5,7 +5,7 @@
 - **Date**: 2025-11-26
 
 ## Context
-Contributors need fast, repeatable summaries of `docs/requirements/requirements.csv` for reviews and CI without risking edits to the source CSV. The tool must run inside the devcontainer (dotnet 8 + PowerShell) and support filtering/sorting so teams can focus on priority/status slices while emitting Markdown/HTML artifacts for traceability.
+Contributors need fast, repeatable summaries of `docs/requirements/requirements.csv` for reviews and CI without risking edits to the source CSV. The tool shall run inside the devcontainer (dotnet 8 + PowerShell) and support filtering/sorting so teams can focus on priority/status slices while emitting Markdown/HTML artifacts for traceability.
 
 ## Options
 - **A** - Maintain manual spreadsheets or ad-hoc scripts (non-reproducible; high drift risk).

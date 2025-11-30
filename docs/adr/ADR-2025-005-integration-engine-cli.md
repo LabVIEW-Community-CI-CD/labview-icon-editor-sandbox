@@ -5,7 +5,7 @@
 - **Date**: 2025-11-26
 
 ## Context
-The Integration Engine build must run both in automation (devcontainer/CI) and on a Windows host with LabVIEW/VIPM. Historically only the PowerShell wrapper `scripts/ie.ps1` existed, leaving no structured entry point for managed orchestration, inconsistent argument validation, and weak visibility into failures. Managed execution also has hard constraints (Windows, LabVIEW installed) while the wrapper needs to keep working cross-platform for dry runs and log collection.
+The Integration Engine build shall run both in automation (devcontainer/CI) and on a Windows host with LabVIEW/VIPM. Historically only the PowerShell wrapper `scripts/ie.ps1` existed, leaving no structured entry point for managed orchestration, inconsistent argument validation, and weak visibility into failures. Managed execution also has hard constraints (Windows, LabVIEW installed) while the wrapper shall keep working cross-platform for dry runs and log collection.
 
 ## Options
 - **A** - Keep only the PowerShell wrapper and document its arguments (minimal change; no managed path; harder to validate inputs).

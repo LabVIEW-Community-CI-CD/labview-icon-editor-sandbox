@@ -18,7 +18,7 @@ Proposed
 
 ## Consequences
 - Pros: Users can regenerate Source Distribution and PPL from the artifact alone, with VS Code tasks wired to the bundled CLI; reduced setup friction and clearer reproducibility.
-- Cons: Slightly larger zip; must refresh bundled CLI/tasks when tooling changes; hard requirement on short roots and local LabVIEW/g-cli installs.
+- Cons: Slightly larger zip; should refresh bundled CLI/tasks when tooling changes; hard requirement on short roots and local LabVIEW/g-cli installs.
 - Risks: Path-length issues if extracted under deep paths; mitigated by short-root requirement and validation. Version drift between bundled CLI and installed LabVIEW/g-cli; mitigated by clear prerequisites and provenance logging.
 
 ## Implementation sketch
