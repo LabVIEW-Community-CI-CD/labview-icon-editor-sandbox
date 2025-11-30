@@ -37,7 +37,7 @@ param(
 $AbsoluteProjectPath
 )
 
-Write-Warning "Deprecated: prefer 'dotnet run --project Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj -- unit-tests --repo <path> --bitness <both|64|32> --lv-version <year> --project <lvproj>'; this script remains as a delegate."
+Write-Warning "Deprecated: prefer 'pwsh scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- unit-tests --repo <path> --bitness <both|64|32> --lv-version <year> --project <lvproj>'; this script remains as a delegate."
 Write-Information "[legacy-ps] unit-tests delegate invoked" -InformationAction Continue
 
 # Helpers for LabVIEW process handling (bitness-aware)

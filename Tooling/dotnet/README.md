@@ -16,10 +16,10 @@ A Dev Container is provided in `.devcontainer/` (Dockerfile + devcontainer.json)
 
 - Build any CLI: `dotnet build Tooling/dotnet/IntegrationEngineCli/IntegrationEngineCli.csproj` (swap project path as needed).
 - Requirements summary (also available as a VS Code task):  
-  `dotnet run --project Tooling/dotnet/RequirementsSummarizer/RequirementsSummarizer.csproj -- --csv docs/requirements/requirements.csv --summary-output reports/requirements-summary.md --summary-full --details --details-open`
+  `pwsh scripts/common/invoke-repo-cli.ps1 -Cli RequirementsSummarizer -- --csv docs/requirements/requirements.csv --summary-output reports/requirements-summary.md --summary-full --details --details-open`
 - Requirements summary (filtered):  
-  `dotnet run --project Tooling/dotnet/RequirementsSummarizer/RequirementsSummarizer.csproj -- --csv docs/requirements/requirements.csv --summary-output reports/requirements-summary-high.md --filter-priority High --sort Priority --summary-full --details --details-open`
+  `pwsh scripts/common/invoke-repo-cli.ps1 -Cli RequirementsSummarizer -- --csv docs/requirements/requirements.csv --summary-output reports/requirements-summary-high.md --filter-priority High --sort Priority --summary-full --details --details-open`
 - Vipb/Lvproj conversion example:  
-  `dotnet run --project Tooling/dotnet/VipbJsonTool/VipbJsonTool.csproj -- vipb2json Tooling/deployment/seed.vipb builds/seed.json`
+  `pwsh scripts/common/invoke-repo-cli.ps1 -Cli VipbJsonTool -- vipb2json Tooling/deployment/seed.vipb builds/seed.json`
 - Tests (wrapper over `scripts/test/Test.ps1`):  
-  `dotnet run --project Tooling/dotnet/TestsCli/TestsCli.csproj -- --repo . --bitness both`
+  `pwsh scripts/common/invoke-repo-cli.ps1 -Cli TestsCli -- --repo . --bitness both`

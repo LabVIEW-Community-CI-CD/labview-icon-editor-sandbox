@@ -6,33 +6,28 @@ param(
 )
 
 $repoRoot = Resolve-Path -Path '.' -ErrorAction Stop
-$exePath = Join-Path $repoRoot 'Tooling/bin/win-x64/RequirementsSummarizer.exe'
-$projectPath = Join-Path $repoRoot 'Tooling/dotnet/RequirementsSummarizer/RequirementsSummarizer.csproj'
+$invokeCli = Join-Path $repoRoot 'scripts/common/invoke-repo-cli.ps1'
 $csvPath = Resolve-Path -Path $Csv -ErrorAction Stop
 $summaryPath = Join-Path $repoRoot $Summary
 $htmlPath = Join-Path $repoRoot $Html
 $highSummaryPath = Join-Path $repoRoot $HighPrioritySummary
+
+if (-not (Test-Path -LiteralPath $invokeCli -PathType Leaf)) {
+    throw "invoke-repo-cli helper not found at $invokeCli"
+}
 
 function Invoke-Summarizer {
     param(
         [string[]] $Args
     )
 
-    $output = @()
-    $exitCode = 0
-    if (Test-Path $exePath) {
-        $output = & $exePath @Args 2>&1
-        $exitCode = $LASTEXITCODE
-    }
-    else {
-        $output = & dotnet run --project $projectPath @Args 2>&1
-        $exitCode = $LASTEXITCODE
-    }
+    $output = & $invokeCli -CliName 'RequirementsSummarizer' -RepoRoot $repoRoot -Args $Args 2>&1
+    $exitCode = $LASTEXITCODE
 
     $output | ForEach-Object { Write-Host $_ }
 
     if ($exitCode -ne 0) {
-        throw "dotnet run failed with exit code $exitCode"
+        throw "RequirementsSummarizer failed with exit code $exitCode"
     }
 }
 
@@ -44,7 +39,6 @@ Start-Transcript -Path $logFile -Force
 try {
     Write-Host "Generating requirements summary (full) from $csvPath"
     Invoke-Summarizer -Args @(
-        '--',
         '--csv', $csvPath,
         '--summary-output', $summaryPath,
         '--html-output', $htmlPath,
@@ -54,7 +48,6 @@ try {
 
     Write-Host "Generating high-priority filtered summary"
     Invoke-Summarizer -Args @(
-        '--',
         '--csv', $csvPath,
         '--summary-output', $highSummaryPath,
         '--filter-priority', 'High',

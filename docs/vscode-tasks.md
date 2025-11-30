@@ -28,7 +28,7 @@ Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driv
 - Enforces a standard temp dir, stops stale XCli processes, and emits step/heartbeat/duration logs; artifacts land under `builds/` (manifest/csv/zip) when successful.
 
 ## 21 Verify: Source Distribution
-- Runs `dotnet run --project Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj -- source-dist-verify --repo . --source-dist-log-stash --source-dist-strict`.
+- Runs `pwsh scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- source-dist-verify --repo . --source-dist-log-stash --source-dist-strict`.
 - Validates `builds/artifacts/source-distribution.zip` by checking every non-null `last_commit` in the manifest against repo git history and writes reports under `builds/reports/source-distribution-verify/<timestamp>/`.
 - Strict mode treats missing/null commit hashes as failures; drop `--source-dist-strict` to allow nulls. Depends on task 20 to ensure the zip/manifest exist before verification.
 
@@ -43,14 +43,14 @@ Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driv
 - Logs phase durations and publishes a log-stash bundle when available; pass `--labviewcli-path/--labview-path/--lv-port/--temp-root/--log-root` to override defaults.
 
 ## 08 x-cli: VI Analyzer
-- Runs `dotnet run --project Tooling/x-cli/src/XCli/XCli.csproj -- vi-analyzer-run --request configs/vi-analyzer-request.sample.json`.
+- Runs `pwsh scripts/common/invoke-repo-cli.ps1 -Cli XCli -- vi-analyzer-run --request configs/vi-analyzer-request.sample.json`.
 - Requires Windows with LabVIEW/LabVIEWCLI and `src/tools/icon-editor/Invoke-VIAnalyzer.ps1` (included) plus a VI Analyzer config (`src/configs/vi-analyzer/missing-in-project.viancfg` by default).
 - Sets `XCLI_ALLOW_PROCESS_START=1` and `XCLI_REPO_ROOT` automatically; edit the request JSON to point at your LabVIEW version/paths and desired output locations.
 - Results land under `tests/results/_agent/vi-analyzer/<label>` with `vi-analyzer.json`, report HTML, and optional RSL file.
 - Depends on **DevMode: Bind (DevModeAgentCli)** to populate LocalHost.LibraryPaths before running.
 
 ## 09 x-cli: VI History (vi-compare-run)
-- Runs `dotnet run --project Tooling/x-cli/src/XCli/XCli.csproj -- vi-compare-run --request configs/vi-compare-run-request.sample.json`.
+- Runs `pwsh scripts/common/invoke-repo-cli.ps1 -Cli XCli -- vi-compare-run --request configs/vi-compare-run-request.sample.json`.
 - Shells into `tools/icon-editor/Replay-ViCompareScenario.ps1` to replay a VI compare scenario; requires LabVIEW and a scenario JSON (sample at `scenarios/sample/vi-diff-requests.json`).
 - Sets `XCLI_ALLOW_PROCESS_START=1` and `XCLI_REPO_ROOT` automatically; adjust the request JSON to your LabVIEW path, scenario, and output directories.
 - Outputs a `vi-comparison-summary.json` plus optional bundles under `.tmp-tests/vi-compare-replays/…`.

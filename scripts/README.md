@@ -3,7 +3,7 @@
 PowerShell scripts remain for compatibility, but the supported entrypoint is the Orchestration CLI:
 
 ```
-dotnet run --project Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj -- <subcommand> [options]
+pwsh scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- <subcommand> [options]
 ```
 
 Subcommands cover apply-deps, restore-sources, labview-close, unit-tests, vi-analyzer, missing-check, and package-build. Prefer these over calling scripts directly; the scripts now emit a deprecation warning and act as thin delegates.

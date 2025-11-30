@@ -16,8 +16,8 @@ The seed VIPB and LVPROJ artifacts (`Tooling/deployment/seed.vipb`, `Tooling/see
 - Use the .NET 8 console `VipbJsonTool` as the canonical converter. It accepts `VipbJsonTool <mode> <input> <output>`, creates the output directory, preserves XML whitespace, and enforces allowed roots before writing output. Modes: `vipb2json`/`json2vipb`, `lvproj2json`/`json2lvproj`, and `buildspec2json`/`json2buildspec` (the latter dispatches based on file extension).
 - **Scope/out-of-scope**: In scope: convert VIPB/LVPROJ specs to/from JSON with structural root validation and explicit non-zero exits on errors. Out of scope: editing contents, mutating source files in place, or performing semantic validation of package/build settings.
 - **Interfaces/CLI examples**:  
-  `dotnet run --project Tooling/dotnet/VipbJsonTool/VipbJsonTool.csproj -- vipb2json Tooling/deployment/seed.vipb reports/tooling/seed.vipb.json`  
-  `dotnet run --project Tooling/dotnet/VipbJsonTool/VipbJsonTool.csproj -- json2vipb reports/tooling/seed.vipb.json reports/tooling/seed_roundtrip.vipb`
+  `pwsh scripts/common/invoke-repo-cli.ps1 -Cli VipbJsonTool -- vipb2json Tooling/deployment/seed.vipb reports/tooling/seed.vipb.json`  
+  `pwsh scripts/common/invoke-repo-cli.ps1 -Cli VipbJsonTool -- json2vipb reports/tooling/seed.vipb.json reports/tooling/seed_roundtrip.vipb`
 - **Verification**: TOOL-005 (round-trip `seed.vipb` and `seed.lvproj` retains `<Package`/`<Project>` roots, exit 0) and TOOL-006 (missing or wrong-root inputs return non-zero with clear errors). TOOL-001/TOOL-002 are covered by running the same commands inside the devcontainer.
 
 ## Consequences

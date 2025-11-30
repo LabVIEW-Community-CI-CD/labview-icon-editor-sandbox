@@ -17,7 +17,7 @@ Run **Terminal → Run Task → 01 Verify / Apply dependencies** to confirm `vip
 
 ### 02 Build LVAddon (VI Package)
 
-Use **Terminal → Run Task → 02 Build LVAddon (VI Package)** in VS Code to run the IntegrationEngineCli (`dotnet run --project Tooling/dotnet/IntegrationEngineCli`). By default it shells into the PowerShell wrapper to mirror CI; on Windows the task adds `--managed` to drive the managed orchestration directly. Outputs land in `builds/vip-stash/` (VIP artifact) and `resource/plugins/lv_icon.lvlibp` (overwritten for each bitness built). This task assumes dependencies have already been applied.
+Use **Terminal → Run Task → 02 Build LVAddon (VI Package)** in VS Code to run the IntegrationEngineCli (`pwsh scripts/common/invoke-repo-cli.ps1 -Cli IntegrationEngineCli -- --repo . --ref HEAD ...`). By default it shells into the PowerShell wrapper to mirror CI; on Windows the task adds `--managed` to drive the managed orchestration directly. Outputs land in `builds/vip-stash/` (VIP artifact) and `resource/plugins/lv_icon.lvlibp` (overwritten for each bitness built). This task assumes dependencies have already been applied.
 Default version inputs are `Major=0`, `Minor=1`, `Patch=0`, and `Build=1` (override in `.vscode/tasks.json` or when invoking the task).
 
 VIPM not available?
@@ -38,7 +38,7 @@ More details: see `docs/vscode-tasks.md`.
 - Dev container: `.devcontainer/` (VS Code "Reopen in Container" with .NET 8 + PowerShell). On create, it restores and builds `Tooling/dotnet/RequirementsSummarizer` as a health check.
 - Dotnet CLIs: see `Tooling/dotnet/README.md` for IntegrationEngineCli, VipbJsonTool, LvprojJsonTool, and RequirementsSummarizer usage.
 - Requirements summary task: **Terminal → Run Task → Requirements summary (dotnet)** renders `reports/requirements-summary.md` from `docs/requirements/requirements.csv`.
-- x-cli: vendored at `Tooling/x-cli/` (vi-analyzer and vi-compare helpers). Build with `dotnet build Tooling/x-cli/XCli.sln`; run with `dotnet run --project Tooling/x-cli/src/XCli/XCli.csproj -- --help`. VS Code tasks exist for `vi-analyzer-run` and `vi-compare-run` (see `.vscode/tasks.json`).
+- x-cli: vendored at `Tooling/x-cli/` (vi-analyzer and vi-compare helpers). Invoke via the repo helper: `pwsh scripts/common/invoke-repo-cli.ps1 -Cli XCli -- --help`. VS Code tasks exist for `vi-analyzer-run` and `vi-compare-run` (see `.vscode/tasks.json`).
 
 ## Requirements & ISO/IEC/IEEE 29148 artifacts
 - Source of truth: `docs/requirements/requirements.csv` (gated in CI by language and attribute checks).

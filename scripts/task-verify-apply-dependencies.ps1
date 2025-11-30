@@ -14,7 +14,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $global:LASTEXITCODE = 0
 
-Write-Warning "Deprecated: prefer 'dotnet run --project Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj -- apply-deps --repo <path> --bitness both --vipc-path runner_dependencies.vipc'; this script remains as a delegate."
+Write-Warning "Deprecated: prefer 'pwsh scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- apply-deps --repo <path> --bitness both --vipc-path runner_dependencies.vipc'; this script remains as a delegate."
 Write-Information "[legacy-ps] apply-deps delegate invoked" -InformationAction Continue
 
 if (-not $IsWindows) {

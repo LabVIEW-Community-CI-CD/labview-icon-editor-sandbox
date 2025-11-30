@@ -622,42 +622,39 @@ jobs:
           $ErrorActionPreference = 'Stop'
           pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/build-source-distribution/Build_Source_Distribution.ps1" `
             -RepositoryPath "$env:GITHUB_WORKSPACE"
+      - name: Stage Source Distribution under builds-isolated
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $srcDist   = Join-Path $env:GITHUB_WORKSPACE 'builds/Source Distribution'
+          $srcZip    = Join-Path $env:GITHUB_WORKSPACE 'builds/artifacts/source-distribution.zip'
+          $isoDist   = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/Source Distribution'
+          $isoZipDir = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/artifacts'
+
+          if (-not (Test-Path -LiteralPath $srcDist -PathType Container)) {
+            throw "Expected source distribution folder at $srcDist"
+          }
+          if (-not (Test-Path -LiteralPath $srcZip -PathType Leaf)) {
+            throw "Expected source distribution zip at $srcZip"
+          }
+
+          New-Item -ItemType Directory -Path $isoDist, $isoZipDir -Force | Out-Null
+          Copy-Item -Path (Join-Path $srcDist '*') -Destination $isoDist -Recurse -Force
+          Copy-Item -LiteralPath $srcZip -Destination (Join-Path $isoZipDir (Split-Path $srcZip -Leaf)) -Force
       - name: Locate Source Distribution artifacts
         id: locate-sd
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $candidates = @(
-            @{
-              Label = 'isolated'
-              Dist  = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/Source Distribution'
-              Zip   = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/artifacts/source-distribution.zip'
-            },
-            @{
-              Label = 'primary'
-              Dist  = Join-Path $env:GITHUB_WORKSPACE 'builds/Source Distribution'
-              Zip   = Join-Path $env:GITHUB_WORKSPACE 'builds/artifacts/source-distribution.zip'
-            }
-          )
+          $distRoot = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/Source Distribution'
+          $zip      = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/artifacts/source-distribution.zip'
 
-          $found = $null
-          foreach ($c in $candidates) {
-            if ((Test-Path -LiteralPath $c.Dist -PathType Container) -and (Test-Path -LiteralPath $c.Zip -PathType Leaf)) {
-              $found = $c
-              break
-            }
+          if (-not (Test-Path -LiteralPath $distRoot -PathType Container)) {
+            throw "Source Distribution folder not found at $distRoot"
           }
-
-          if (-not $found) {
-            throw "Source Distribution artifacts not found in any expected location: $($candidates.Dist -join ', ')"
+          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) {
+            throw "source-distribution.zip not found at $zip"
           }
-
-          if ($found.Label -eq 'primary') {
-            Write-Warning "builds-isolated copy not found; using builds/Source Distribution instead."
-          }
-
-          $distRoot = $found.Dist
-          $zip = $found.Zip
 
           $manifestJson = Join-Path $distRoot 'manifest.json'
           $manifestCsv  = Join-Path $distRoot 'manifest.csv'
@@ -678,6 +675,19 @@ jobs:
             ${{ steps.locate-sd.outputs.sd_manifest_json }}
             ${{ steps.locate-sd.outputs.sd_manifest_csv }}
           if-no-files-found: error
+      - name: Stage build reports under builds-isolated
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $srcReports = Join-Path $env:GITHUB_WORKSPACE 'builds/reports'
+          $dstReports = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/reports'
+          New-Item -ItemType Directory -Path $dstReports -Force | Out-Null
+          if (Test-Path -LiteralPath $srcReports -PathType Container) {
+            Copy-Item -Path (Join-Path $srcReports '*') -Destination $dstReports -Recurse -Force
+          } else {
+            'No build reports generated in this run.' | Out-File -FilePath (Join-Path $dstReports 'README.txt') -Encoding utf8 -Force
+          }
       - name: Upload build reports
         if: always()
         uses: actions/upload-artifact@v4

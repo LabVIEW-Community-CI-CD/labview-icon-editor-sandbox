@@ -17,8 +17,8 @@ We need a lightweight, LVPROJ-only converter with explicit flag parsing and clea
 - The tool creates output directories, preserves XML formatting, enforces `<Project>` root validation both directions, and avoids in-place mutation of inputs.
 - **Scope/out-of-scope**: In scope: LVPROJ-to-JSON and JSON-to-LVPROJ conversions with structural validation and deterministic exits. Out of scope: VIPB conversions, schema migration, or semantic inspection of LabVIEW projects.
 - **Interfaces/CLI examples**:  
-  `dotnet run --project Tooling/dotnet/LvprojJsonTool/LvprojJsonTool.csproj -- lvproj2json --input Tooling/seed/tests/Samples/seed.lvproj --output reports/tooling/seed.lvproj.json`  
-  `dotnet run --project Tooling/dotnet/LvprojJsonTool/LvprojJsonTool.csproj -- json2lvproj --input reports/tooling/seed.lvproj.json --output reports/tooling/seed_roundtrip.lvproj`
+  `pwsh scripts/common/invoke-repo-cli.ps1 -Cli LvprojJsonTool -- lvproj2json --input Tooling/seed/tests/Samples/seed.lvproj --output reports/tooling/seed.lvproj.json`  
+  `pwsh scripts/common/invoke-repo-cli.ps1 -Cli LvprojJsonTool -- json2lvproj --input reports/tooling/seed.lvproj.json --output reports/tooling/seed_roundtrip.lvproj`
 - **Verification**: TOOL-005 (LVPROJ round-trip retains `<Project>` root and exits 0) and TOOL-006 (missing-path or wrong-root inputs return non-zero with clear errors). TOOL-001/TOOL-002 apply when running inside the devcontainer.
 
 ## Consequences
