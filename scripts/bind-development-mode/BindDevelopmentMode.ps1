@@ -663,6 +663,10 @@ else {
             if (-not $postMatch) {
                 $res.status = 'success'
                 $res.message = 'Unbound development mode (token removed)'
+                if ($Force) {
+                    # Force runs should report a cleared token even if the ini still had stale content
+                    $res.post_path = ''
+                }
             }
             else {
                 $res.status = 'fail'
