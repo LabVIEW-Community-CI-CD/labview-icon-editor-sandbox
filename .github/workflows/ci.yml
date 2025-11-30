@@ -794,42 +794,47 @@ jobs:
           echo "Using tag: $tag"
 
       - name: Create draft release (SD)
-        id: create_release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          release_name: ${{ steps.tag.outputs.tag }}
-          draft: true
-          prerelease: ${{ needs.version.outputs.IS_PRERELEASE || false }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          IS_PRERELEASE: ${{ needs.version.outputs.IS_PRERELEASE || false }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          prerelease_flag=""
+          if [ "${IS_PRERELEASE,,}" = "true" ]; then
+            prerelease_flag="--prerelease"
+          fi
+          notes="Source distribution from CI run ${GITHUB_RUN_ID}"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; will upload assets with clobber."
+          else
+            gh release create "$TAG" --title "$TAG" --draft $prerelease_flag --notes "$notes" --repo "$GITHUB_REPOSITORY"
+          fi
 
       - name: Upload Source Distribution assets
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.sd.outputs.zip }}
-          asset_name: source-distribution.zip
-          asset_content_type: application/zip
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" "${{ steps.sd.outputs.zip }}" --clobber --repo "$GITHUB_REPOSITORY"
 
       - name: Upload manifest.json
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.sd.outputs.manifest_json }}
-          asset_name: manifest.json
-          asset_content_type: application/json
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" "${{ steps.sd.outputs.manifest_json }}" --clobber --repo "$GITHUB_REPOSITORY"
 
       - name: Upload manifest.csv
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.sd.outputs.manifest_csv }}
-          asset_name: manifest.csv
-          asset_content_type: text/csv
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" "${{ steps.sd.outputs.manifest_csv }}" --clobber --repo "$GITHUB_REPOSITORY"
