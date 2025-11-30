@@ -1,5 +1,9 @@
 name: Draft Release
 
+defaults:
+  run:
+    working-directory: './'
+
 on:
   workflow_dispatch:
     inputs:

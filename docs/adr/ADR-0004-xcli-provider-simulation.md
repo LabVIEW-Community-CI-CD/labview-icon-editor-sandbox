@@ -21,24 +21,24 @@ Accepted
 ## Consequences
 - Tests/CI can run x-cli without invoking LabVIEW/g-cli by setting `XCLI_PROVIDER=sim`.
 - Future backends (e.g., remote executor) can implement `ILabviewProvider` without touching command logic.
-- Provider behavior must remain functionally equivalent to the prior direct process spawning when not in sim mode.
+- Provider behavior shall remain functionally equivalent to the prior direct process spawning when not in sim mode.
 
 ## Provider requirements (initial)
-- Must execute PowerShell/g-cli commands or simulate them with:
+- Shall execute PowerShell/g-cli commands or simulate them with:
   - Captured `StdOut`/`StdErr`, `ExitCode`, `Success`, and `DurationMs`.
   - Timeout handling (124 exit) in default provider; sim provider may honor delay envs.
-- Must be selectable via env (`XCLI_PROVIDER`) with safe default (real provider).
-- Sim provider must be side-effect free (no file/process creation) and deterministic based on env knobs.
-- Default provider must preserve existing behavior and logging; no CLI flag changes allowed.
+- Shall be selectable via env (`XCLI_PROVIDER`) with a safe default (real provider).
+- Sim provider shall be side-effect free (no file/process creation) and deterministic based on env knobs.
+- Default provider shall preserve existing behavior and logging; no CLI flag changes allowed.
 - Extensibility: adding a new provider should not require changes to command parsing or response schemas.
 
 ## Additional requirements
-- Verification consistency: provider must surface errors/warnings through existing stdout/stderr so downstream parsers don’t break; no schema changes to command outputs (JSON responses).
-- Testability: simulated provider must be usable for all subcommands wired to providers (analyzer run/verify, compare run, VIPM apply/build) and should be harmless if invoked by future commands (returning success by default).
+- Verification consistency: provider shall surface errors/warnings through existing stdout/stderr so downstream parsers don’t break; no schema changes to command outputs (JSON responses).
+- Testability: simulated provider shall be usable for all subcommands wired to providers (analyzer run/verify, compare run, VIPM apply/build) and should be harmless if invoked by future commands (returning success by default).
 - Timeout semantics: default provider should respect per-command timeouts where they existed; sim provider should allow injection of delays for timeout testing.
 - Error injection: via env (sim) to force non-zero exit codes without touching command code.
-- Logging/telemetry: provider changes must not suppress current logs; stdout/stderr are still written for host logging.
-- Backward compatibility: commands must remain operational without setting any new env vars; the factory must default to the real provider.
+- Logging/telemetry: provider changes shall not suppress current logs; stdout/stderr are still written for host logging.
+- Backward compatibility: commands shall remain operational without setting any new env vars; the factory shall default to the real provider.
 
 ## Coverage and next targets
 - Currently using providers: `vi-analyzer-run`, `vi-analyzer-verify`, `vi-compare-run`, `vipm-apply-vipc`, `vipm-build-vip`.

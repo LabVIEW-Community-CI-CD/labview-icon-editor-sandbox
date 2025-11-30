@@ -435,6 +435,30 @@ jobs:
         with:
           set-safe-directory: true
           fetch-depth: 1
+      - name: Prepublish repo CLIs to tooling cache
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $clis = @{
+            OrchestrationCli     = 'Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj'
+            DevModeAgentCli      = 'Tooling/dotnet/DevModeAgentCli/DevModeAgentCli.csproj'
+            IntegrationEngineCli = 'Tooling/dotnet/IntegrationEngineCli/IntegrationEngineCli.csproj'
+            XCli                 = 'Tooling/x-cli/src/XCli/XCli.csproj'
+          }
+          $sha = git rev-parse HEAD
+          foreach ($cli in $clis.Keys) {
+            $proj = $clis[$cli]
+            if (-not (Test-Path -LiteralPath $proj -PathType Leaf)) {
+              Write-Host "Skipping $cli because project path is missing: $proj"
+              continue
+            }
+            $out = Join-Path $env:LOCALAPPDATA "labview-icon-editor/tooling-cache/$cli/$sha/win-x64/publish"
+            New-Item -ItemType Directory -Path $out -Force | Out-Null
+            dotnet publish $proj -c Release -r win-x64 --self-contained false -o $out
+            if ($LASTEXITCODE -ne 0) {
+              throw "Publish failed for $cli (exit $LASTEXITCODE)"
+            }
+          }
       - name: Ensure Pester 5 is available
         shell: pwsh
         run: |
@@ -447,7 +471,11 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          Invoke-Pester -Path 'Test/BindDevelopmentMode.Tests.ps1' -Output Detailed -EnableExit
+          Invoke-Pester -Configuration @{
+            Run    = @{ Path = 'Test/BindDevelopmentMode.Tests.ps1' }
+            Output = @{ Verbosity = 'Detailed' }
+            CI     = $true
+          }
 
   seed-containerized:
     name: Seed + Analyze (containerized)
@@ -599,16 +627,40 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $distRoot = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/Source Distribution'
-          if (-not (Test-Path -LiteralPath $distRoot -PathType Container)) {
-            throw "Source Distribution folder not found at $distRoot"
+          $candidates = @(
+            @{
+              Label = 'isolated'
+              Dist  = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/Source Distribution'
+              Zip   = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/artifacts/source-distribution.zip'
+            },
+            @{
+              Label = 'primary'
+              Dist  = Join-Path $env:GITHUB_WORKSPACE 'builds/Source Distribution'
+              Zip   = Join-Path $env:GITHUB_WORKSPACE 'builds/artifacts/source-distribution.zip'
+            }
+          )
+
+          $found = $null
+          foreach ($c in $candidates) {
+            if ((Test-Path -LiteralPath $c.Dist -PathType Container) -and (Test-Path -LiteralPath $c.Zip -PathType Leaf)) {
+              $found = $c
+              break
+            }
           }
-          $zip = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/artifacts/source-distribution.zip'
-          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) {
-            throw "source-distribution.zip not found at $zip"
+
+          if (-not $found) {
+            throw "Source Distribution artifacts not found in any expected location: $($candidates.Dist -join ', ')"
           }
+
+          if ($found.Label -eq 'primary') {
+            Write-Warning "builds-isolated copy not found; using builds/Source Distribution instead."
+          }
+
+          $distRoot = $found.Dist
+          $zip = $found.Zip
+
           $manifestJson = Join-Path $distRoot 'manifest.json'
-          $manifestCsv = Join-Path $distRoot 'manifest.csv'
+          $manifestCsv  = Join-Path $distRoot 'manifest.csv'
           foreach ($p in @($manifestJson, $manifestCsv)) {
             if (-not (Test-Path -LiteralPath $p -PathType Leaf)) {
               throw "Missing manifest file: $p"
@@ -678,6 +730,7 @@ jobs:
 
   unify-artifacts:
     name: Publish Source Distribution draft release
+    if: ${{ github.event_name != 'pull_request' }}
     needs:
       - verify-checklist-sync
       - build-worktree
@@ -686,6 +739,8 @@ jobs:
       - docs-quality
       - version
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: "Guard: Linux runner"
         if: ${{ runner.os != 'Linux' }}

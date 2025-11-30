@@ -67,10 +67,10 @@ Probe in this order for each CLI binary:
 
 3) **Scope**
    - Apply this pattern to: DevModeAgentCli, OrchestrationCli, x-cli, IntegrationEngineCli (and future repo CLIs).
-   - New CLIs added to the repo must opt into this probe/build/cache helper as part of their initial adoption checklist.
+   - New CLIs added to the repo shall opt into this probe/build/cache helper as part of their initial adoption checklist.
 
 4) **Tasks/flows**
-   - Tasks invoking these CLIs must use the probe order above and must not assume the source repo contains the tooling or that the CLI is available on `PATH`.
+   - Tasks invoking these CLIs shall use the probe order above and shall not assume the source repo contains the tooling or that the CLI is available on `PATH`.
    - Tasks should treat the probe/build/cache behavior as a stable contract and rely only on:
      - the CLI name,
      - the requested `<version>` (or "current branch head" when implicit),
@@ -101,6 +101,6 @@ Probe in this order for each CLI binary:
 - Only use the cached publish when sources are absent or unavailable.
 - Include clear logging of which probe tier was used, which cache key was resolved, and where the binary was sourced from.
 - Document the helper API so that future CLIs can adopt it without re-implementing probe logic.
-- Provide a task for cache maintenance: VS Code task “Tooling: Clear CLI cache entry” runs `scripts/clear-tooling-cache.ps1 -CliName <...> -Version <...> -Rid <...>`; after clearing, the next helper run will publish on miss and repopulate `<CLI>/<version>/<rid>/publish/`. Use this for TOOL-016 scenarios and cache corruption recovery.
+- Provide a task for cache maintenance: VS Code task "Tooling: Clear CLI cache entry" runs `scripts/clear-tooling-cache.ps1 -CliName <...> -Version <...> -Rid <...>`; after clearing, the next helper run shall publish on miss and repopulate `<CLI>/<version>/<rid>/publish/`. Use this for TOOL-016 scenarios and cache corruption recovery.
 - CLI provenance: `--print-provenance` on DevModeAgentCli/OrchestrationCli/IntegrationEngineCli emits path, tier, cacheKey, and rid. When invoked via the helper, tier and cacheKey reflect the resolved provenance. Helper enforces expected cache key when provided to catch mismatch (TOOL-012/013).
 - Rollback: tasks/workflows call CLIs via the helper; cache layout is internal. To bypass caching (if ADR is rolled back), run the helper in a mode that prefers worktree/source without cache, keeping the same task inputs/outputs.

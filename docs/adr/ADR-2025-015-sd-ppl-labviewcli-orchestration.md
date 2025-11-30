@@ -16,7 +16,7 @@ Add a new OrchestrationCLI subcommand (`sd-ppl-lvcli`) that:
   - Build spec: “Source Distribution” (lv_icon_editor.lvproj, target “My Computer”).
   - Build spec: “Editor Packed Library” (same project/target, optionally against the extracted SD).
 - Runs all phases **serially** with a per-run lock/guard to avoid concurrent LabVIEWCLI/g-cli activity.
-- Enforces a **standard temp/log** location per run (user-local temp subfolder) and ensures log/extract dirs exist; fails fast if temp/log cannot be created. Supports overrides for LabVIEWCLI/LabVIEW path/port and temp/log roots. For packaged SD use, we expect callers to have short roots `C:\t` (temp/log/extract) and `C:\w` (worktrees) present and writable; the flow will fail fast if they are missing/unwritable.
+- Enforces a **standard temp/log** location per run (user-local temp subfolder) and ensures log/extract dirs exist; fails fast if temp/log cannot be created. Supports overrides for LabVIEWCLI/LabVIEW path/port and temp/log roots. For packaged SD use, we expect callers to have short roots `C:\t` (temp/log/extract) and `C:\w` (worktrees) present and writable; the flow shall fail fast if they are missing/unwritable.
 - Creates an **isolated git worktree** from the current HEAD under the temp root, runs the SD and PPL builds in that worktree, then copies Source Distribution/artifacts/PPL outputs back to the main repo before removing the worktree.
 - After each build, calls QuitLabVIEW/close to release INI/VI references before the next phase.
 - Binds/unbinds between contexts to avoid token conflicts (repo → extracted SD).
@@ -24,7 +24,7 @@ Add a new OrchestrationCLI subcommand (`sd-ppl-lvcli`) that:
 - When extracting, copies `scripts/` and `Tooling/` into the SD so the PPL build can run in-place from the artifact; creates the zip from the built Source Distribution if missing.
 - Emits guardrails and observability: logs provenance (repo, CLI path, git SHA, RID), validates repo (.git present, not under Program Files), prunes stale locks before acquiring a new one, and keeps clear phase/heartbeat/duration logs (with LabVIEWCLI log paths).
 - Optionally writes log-stash entries.
-- Allows runner selection in VS Code via `sourceDistRunner` input; defaults to g-cli for x-cli flows, but this subcommand will use LabVIEWCLI for builds by default.
+- Allows runner selection in VS Code via `sourceDistRunner` input; defaults to g-cli for x-cli flows, but this subcommand shall use LabVIEWCLI for builds by default.
 
 ## Implementation sketch
 Subcommand flow (OrchestrationCLI):

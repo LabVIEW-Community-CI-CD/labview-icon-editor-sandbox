@@ -45,3 +45,6 @@ Tooling/docker/vipm/.env
 builds/log-stash/
 builds/vipb-stash/
 reports/logs/
+builds/artifacts/source-distribution.zip
+builds/Source Distribution/manifest.csv
+builds/Source Distribution/manifest.json

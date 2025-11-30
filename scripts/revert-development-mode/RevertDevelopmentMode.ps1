@@ -113,28 +113,54 @@ try {
 
     if (Should-RunRestore -RepoPath $RepositoryPath -LvVersion $Package_LabVIEW_Version -Bitness $arch) {
         $resolver = Join-Path $ScriptDirectory '..\common\resolve-repo-cli.ps1'
-        if (-not (Test-Path -LiteralPath $resolver -PathType Leaf)) {
-            throw "CLI resolver not found at $resolver"
+        $prov = $null
+        try {
+            if (-not (Test-Path -LiteralPath $resolver -PathType Leaf)) {
+                throw "CLI resolver not found at $resolver"
+            }
+            $prov = & $resolver -CliName 'OrchestrationCli' -RepoPath $RepositoryPath -SourceRepoPath $RepositoryPath -PrintProvenance:$false
+        } catch {
+            $warnMsg = ("Skipping restore because OrchestrationCli could not be resolved: {0}" -f $_.Exception.Message)
+            if ($env:CI) {
+                Write-Information $warnMsg -InformationAction Continue
+            } else {
+                Write-Warning $warnMsg
+            }
         }
-        $prov = & $resolver -CliName 'OrchestrationCli' -RepoPath $RepositoryPath -SourceRepoPath $RepositoryPath -PrintProvenance:$false
-        $orchestrationArgs = @(
-            'restore-sources',
-            '--repo', $RepositoryPath,
-            '--bitness', $arch,
-            '--lv-version', $Package_LabVIEW_Version
-        )
-        Write-Information ("Restore via OrchestrationCli: {0}" -f (($prov.Command + $orchestrationArgs) -join ' ')) -InformationAction Continue
-        & $prov.Command[0] @($prov.Command[1..($prov.Command.Count-1)]) @orchestrationArgs
-        if ($LASTEXITCODE -ne 0) {
-            throw ("restore-sources failed with exit {0} for {1}-bit LabVIEW {2}" -f $LASTEXITCODE, $arch, $Package_LabVIEW_Version)
+
+        if ($prov) {
+            $orchestrationArgs = @(
+                'restore-sources',
+                '--repo', $RepositoryPath,
+                '--bitness', $arch,
+                '--lv-version', $Package_LabVIEW_Version
+            )
+            Write-Information ("Restore via OrchestrationCli: {0}" -f (($prov.Command + $orchestrationArgs) -join ' ')) -InformationAction Continue
+            & $prov.Command[0] @($prov.Command[1..($prov.Command.Count-1)]) @orchestrationArgs
+            if ($LASTEXITCODE -ne 0) {
+                throw ("restore-sources failed with exit {0} for {1}-bit LabVIEW {2}" -f $LASTEXITCODE, $arch, $Package_LabVIEW_Version)
+            }
+        }
+        else {
+            Write-Information "Restore skipped because OrchestrationCli is unavailable; continuing unbind cleanup." -InformationAction Continue
         }
     } else {
         Write-Information "Restore skipped because this repo is not currently bound in LabVIEW.ini." -InformationAction Continue
     }
 
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = $arch
+    if (Test-Path -LiteralPath $CloseScript -PathType Leaf) {
+        Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
+            MinimumSupportedLVVersion = $Package_LabVIEW_Version
+            SupportedBitness          = $arch
+        }
+    }
+    else {
+        $warnMsg = ("Close_LabVIEW.ps1 not found at {0}; skipping close step." -f $CloseScript)
+        if ($env:CI) {
+            Write-Information $warnMsg -InformationAction Continue
+        } else {
+            Write-Warning $warnMsg
+        }
     }
 
 } catch {

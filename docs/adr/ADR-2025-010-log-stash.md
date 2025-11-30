@@ -5,7 +5,7 @@
 - **Date**: 2025-11-27
 
 ## Context
-Build, test, and binder scripts emit logs under `builds/logs/` with ad-hoc names and no structured index. `test-stash` tracks results but only stores a relative log path; build/VIP/devmode flows lack consistent metadata. CI artifacts must guess paths, reruns are hard to correlate to commits, and there is no retention policy or discoverability for troubleshooting, audits, or DoD evidence.
+Build, test, and binder scripts emit logs under `builds/logs/` with ad-hoc names and no structured index. `test-stash` tracks results but only stores a relative log path; build/VIP/devmode flows lack consistent metadata. CI artifacts otherwise guess paths, reruns are hard to correlate to commits, and there is no retention policy or discoverability for troubleshooting, audits, or DoD evidence.
 
 ## Options
 - **A — Status quo**: keep per-script log names in `builds/logs/` and rely on ad-hoc references.  
@@ -16,13 +16,13 @@ Build, test, and binder scripts emit logs under `builds/logs/` with ad-hoc names
   - **+** Structured, traceable, easy CI upload, supports attachments/retention, backward compatible with `builds/logs`. **-** Requires wiring scripts and adding cleanup logic.
 
 ## Decision
-Choose **C**. We will adopt a commit-keyed log stash (`builds/log-stash/`) with per-bundle manifests, optional bundle zips, and a shared helper to standardize log capture across build, test, VIPM, devmode, and analyzer flows. Layout, manifest schema, retention knobs, and integration points are defined in `docs/ci/log-stash-design.md`. Existing paths under `builds/logs/` remain as the source; the stash copies them to structured bundles and maintains an index for CI and troubleshooting.
+Choose **C**. We shall adopt a commit-keyed log stash (`builds/log-stash/`) with per-bundle manifests, optional bundle zips, and a shared helper to standardize log capture across build, test, VIPM, devmode, and analyzer flows. Layout, manifest schema, retention knobs, and integration points are defined in `docs/ci/log-stash-design.md`. Existing paths under `builds/logs/` remain as the source; the stash copies them to structured bundles and maintains an index for CI and troubleshooting.
 
 ## Consequences
 - **+** Consistent, traceable logs per commit/job with metadata (bitness, LV version, producer, status).  
 - **+** CI artifact uploads become predictable (bundle zips) and reports can deep-link via the index.  
 - **+** Retention/cleanup prevents unbounded growth on runners and local worktrees.  
-- **-** Initial wiring effort across scripts and workflows; helper must stay in sync with new producers.  
+- **-** Initial wiring effort across scripts and workflows; helper should stay in sync with new producers.  
 - **-** Extra file I/O to copy logs into bundles (mitigated by optional compression/cleanup).
 
 ## Follow-ups

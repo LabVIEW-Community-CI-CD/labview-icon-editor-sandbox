@@ -19,7 +19,7 @@ The CLI returns the generated file list and non-zero exit codes on failure, whic
 
 ## Decision (minimum LabVIEW 2020+)
 
-We will adopt LabVIEWCLI’s `ExecuteBuildSpec` operation to automate Source Distribution builds in CI/DevMode tasks when an additional artifact beyond `.vip` is required. The steps are:
+We shall adopt LabVIEWCLI's `ExecuteBuildSpec` operation to automate Source Distribution builds in CI/DevMode tasks when an additional artifact beyond `.vip` is required. The steps are:
 
 1. Configure a Source Distribution build spec in the project with the necessary `Always Included` VIs, enable VI Server, and add any pre/post build VIs that perform stamping or artifact staging.
 2. Invoke LabVIEWCLI from our automation runner (DevMode agent, CI job, or scripts) with `-ProjectPath`, `-TargetName` (typically `My Computer`), and `-BuildSpecName`.
@@ -30,12 +30,12 @@ We will adopt LabVIEWCLI’s `ExecuteBuildSpec` operation to automate Source Dis
 ### Tasking, manifest, and artifacts
 
 - Add a **VS Code task** (`20 Build: Source Distribution`) and IntegrationEngine step (`scripts/ie.ps1 build-source-distribution`, also invoked inside managed/worktree builds) that run `scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath .` alongside the lvlibp + VI Package flow. Both paths log artifacts for CI/local parity.
-- Emit **manifest JSON + CSV** alongside the Source Distribution output. Each file entry must include: relative path as emitted in the build output, `last_commit`, `commit_author`, `commit_date`, `commit_source` (file vs. llb_container), and `size_bytes`. Top-level metadata should capture project path, target, build spec name, LabVIEW version, and timestamp. This manifest must be updated any time the Source Distribution is rebuilt.
-- Publish the **Source Distribution folder + manifest** as a zipped artifact for CI/DevMode runs (`builds/artifacts/source-distribution.zip`) so requirements evidence can reference a stable bundle. Artifact upload/log-stash hooks must be wired into the new task and CI job.
+- Emit **manifest JSON + CSV** alongside the Source Distribution output. Each file entry shall include: relative path as emitted in the build output, `last_commit`, `commit_author`, `commit_date`, `commit_source` (file vs. llb_container), and `size_bytes`. Top-level metadata should capture project path, target, build spec name, LabVIEW version, and timestamp. This manifest shall be updated any time the Source Distribution is rebuilt.
+- Publish the **Source Distribution folder + manifest** as a zipped artifact for CI/DevMode runs (`builds/artifacts/source-distribution.zip`) so requirements evidence can reference a stable bundle. Artifact upload/log-stash hooks shall be wired into the new task and CI job.
 
 ## Consequences
 
 - **Automated source artifact**: We can now produce source-level deliverables via CLI with minimal custom LabVIEW scripting while retaining audit trails via CLI exit/log & the build spec’s output list. This flow assumes LabVIEW 2020+ is available on the build agents so the CLI and Application Builder capabilities are present.
 - **CI integration**: The CLI's structured output and exit codes collaborate with existing CI scripts (PowerShell/ps1 wrappers) for logging, artifact archives, and failure notifications.
-- **Dual artifact maintenance**: Teams must now care for both `.vip` and source distribution specs (pre/post build VIs, packaging logic), which increases configuration overhead but improves traceability/security for source consumers.
-- **Future work**: If additional control is required (e.g., dynamic spec updates or multi-step build logic), the Application Builder API remains available. For most cases the CLI path will suffice, but we can revisit the more complex scripting approach if we need to modify specs at runtime.
+- **Dual artifact maintenance**: Teams shall care for both `.vip` and source distribution specs (pre/post build VIs, packaging logic), which increases configuration overhead but improves traceability/security for source consumers.
+- **Future work**: If additional control is required (e.g., dynamic spec updates or multi-step build logic), the Application Builder API remains available. For most cases the CLI path should suffice, but we can revisit the more complex scripting approach if runtime specification changes are required.

@@ -1,4 +1,5 @@
 name: Traceability Gate / rtm
+
 on:
   pull_request:
     branches: [ main, develop, release/*, feature/*, hotfix/* ]

@@ -38,7 +38,7 @@ See `adr-template.md` for the full template and `adr-template-lite.md` for a 1â€
 - ADR-2025-010 - [Centralized log stash for build/test workflows](ADR-2025-010-log-stash.md).
 - ADR-2025-011 - [Repository layout and tooling placement](ADR-2025-011-repo-structure.md).
 - ADR-2025-012 - [x-cli staged publish, RunnerProfile gating, and VI compare artifacts](ADR-2025-012-xcli-staged-publish-and-vi-compare.md).
-- ADR-2025-013 - [Common probe/build/cache strategy for repo CLIs](ADR-2025-013-cli-probe-and-cache.md).
+- ADR-2025-013 - [Common probe/build/cache strategy for repo CLIs](ADR-2025-013-common-probe-build-cache.md).
 - ADR-2025-014 - [LabVIEW Source Distributions manifests and verification](ADR-2025-014-labview-source-distributions.md).
 - ADR-2025-015 - [Source Distribution â†’ PPL orchestration via OrchestrationCLI](ADR-2025-015-sd-ppl-labviewcli-orchestration.md).
 - ADR-2025-016 - [Bundle minimal tooling in Source Distribution for VS Code use](ADR-2025-016-tooling-included-in-source-distribution.md).

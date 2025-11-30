@@ -1,5 +1,9 @@
 name: CODEOWNERS Guard
 
+defaults:
+  run:
+    working-directory: './'
+
 on:
   pull_request:
     branches:

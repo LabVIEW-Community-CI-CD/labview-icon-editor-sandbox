@@ -1,4 +1,5 @@
 name: Docs Link Check / lychee
+
 on:
   pull_request:
     branches: [ main, develop, release/*, feature/*, hotfix/* ]

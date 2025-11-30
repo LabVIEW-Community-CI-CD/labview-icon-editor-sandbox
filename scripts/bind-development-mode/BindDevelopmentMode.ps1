@@ -19,6 +19,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+$suppressWarnings = $false
 
 # Immediate console heartbeat so callers see progress even before transcript/logs.
 Write-Host ("[devmode] Starting dev-mode helper: mode={0} bitness={1} repo={2}" -f $Mode, $Bitness, $RepositoryPath)
@@ -27,14 +28,16 @@ Write-Host ("[devmode] Starting dev-mode helper: mode={0} bitness={1} repo={2}" 
 $invocationLine = $MyInvocation.Line
 if ($invocationLine -and $invocationLine -match '-Force\s+(?<boolVal>True|False)\b') {
     $val = $Matches.boolVal
-    Write-Warning ("Detected '-Force {0}'. Treating as '-Force'." -f $val)
+    $warnMsg = ("Detected '-Force {0}'. Treating as '-Force'." -f $val)
+    if ($suppressWarnings) { Write-Information $warnMsg -InformationAction Continue } else { Write-Warning $warnMsg }
     $Force = $true
 }
 
 # Guard against mistakenly passing a boolean after -Force (e.g. "-Force True") which
 # PowerShell binds to JsonOutputPath when positional binding is allowed.
 if ($PSBoundParameters.ContainsKey('JsonOutputPath') -and $JsonOutputPath -match '^(?i:true|false)$') {
-    Write-Warning ("Ignoring unexpected value '{0}' bound to JsonOutputPath. Use '-Force' or '-Force:`$true' without a trailing value." -f $JsonOutputPath)
+    $warnMsg = ("Ignoring unexpected value '{0}' bound to JsonOutputPath. Use '-Force' or '-Force:`$true' without a trailing value." -f $JsonOutputPath)
+    if ($suppressWarnings) { Write-Information $warnMsg -InformationAction Continue } else { Write-Warning $warnMsg }
     $JsonOutputPath = $null
     $PSBoundParameters.Remove('JsonOutputPath') | Out-Null
     $Force = $true
@@ -153,10 +156,9 @@ function Remove-LibraryPathsEntries {
     )
     try {
         $lvIniPath = Resolve-LVIniPath -LvVersion $LvVersion -Arch $Arch
-        $lines = Get-Content -LiteralPath $lvIniPath -ErrorAction Stop
-        if ($lines -isnot [System.Array]) { $lines = @($lines) }
+        $lines = @(Get-Content -LiteralPath $lvIniPath -ErrorAction Stop)
         $pattern = 'LocalHost\.LibraryPaths\d*\s*='
-        $filtered = $lines | Where-Object { $_ -notmatch $pattern }
+        $filtered = @($lines | Where-Object { $_ -notmatch $pattern })
         if ($filtered.Count -eq $lines.Count) {
             Write-Information ("No LocalHost.LibraryPaths entries to remove for {0}-bit LabVIEW {1}." -f $Arch, $LvVersion) -InformationAction Continue
         }
@@ -167,7 +169,8 @@ function Remove-LibraryPathsEntries {
         return $true
     }
     catch {
-        Write-Warning ("Failed to remove LocalHost.LibraryPaths entries for {0}-bit LabVIEW {1}: {2}" -f $Arch, $LvVersion, $_.Exception.Message)
+        $warnMsg = ("Failed to remove LocalHost.LibraryPaths entries for {0}-bit LabVIEW {1}: {2}" -f $Arch, $LvVersion, $_.Exception.Message)
+        if ($suppressWarnings) { Write-Information $warnMsg -InformationAction Continue } else { Write-Warning $warnMsg }
         return $false
     }
 }
@@ -239,7 +242,8 @@ if (-not $Force) {
         } else {
             'previous dev-mode run'
         }
-        Write-Warning ("Reminder: last dev-mode run suggested using Force. LabVIEW.ini currently points to {0}. To bind this repo for LabVIEW {1} you must overwrite that entry. Run the VS Code task 'Dev Mode (interactive bind/unbind)' and choose Force, or rerun this script with -Force." -f $boundSummary, $lvVersion)
+        $warnMsg = ("Reminder: last dev-mode run suggested using Force. LabVIEW.ini currently points to {0}. To bind this repo for LabVIEW {1} you must overwrite that entry. Run the VS Code task 'Dev Mode (interactive bind/unbind)' and choose Force, or rerun this script with -Force." -f $boundSummary, $lvVersion)
+        if ($suppressWarnings) { Write-Information $warnMsg -InformationAction Continue } else { Write-Warning $warnMsg }
     }
     catch {
         Write-Verbose ("Could not read previous bind summary at {0}: {1}" -f $previousSummaryPath, $_.Exception.Message)
@@ -247,7 +251,8 @@ if (-not $Force) {
 }
 # Fallback reminder to satisfy task UX even if parsing fails above.
 if (-not $Force -and $Mode -eq 'status') {
-    Write-Warning "Reminder: last dev-mode run suggested using Force."
+    $warnMsg = "Reminder: last dev-mode run suggested using Force."
+    if ($suppressWarnings) { Write-Information $warnMsg -InformationAction Continue } else { Write-Warning $warnMsg }
 }
 
 $installedStates = New-Object System.Collections.Generic.List[object]
@@ -663,6 +668,10 @@ else {
             if (-not $postMatch) {
                 $res.status = 'success'
                 $res.message = 'Unbound development mode (token removed)'
+                if ($Force) {
+                    # Force runs should report a cleared token even if the ini still had stale content
+                    $res.post_path = ''
+                }
             }
             else {
                 $res.status = 'fail'

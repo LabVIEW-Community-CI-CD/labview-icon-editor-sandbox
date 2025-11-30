@@ -1,5 +1,9 @@
 name: Release Source Distribution to Sandbox
 
+defaults:
+  run:
+    working-directory: './'
+
 on:
   workflow_dispatch:
     inputs:
