@@ -41,7 +41,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-Write-Warning "Deprecated: prefer 'dotnet run --project Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj -- restore-sources --repo <path> --bitness <both|64|32> --lv-version <year>'; this script remains as a delegate."
+Write-Warning "Deprecated: prefer 'pwsh scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- restore-sources --repo <path> --bitness <both|64|32> --lv-version <year>'; this script remains as a delegate."
 Write-Information "[legacy-ps] restore-sources delegate invoked" -InformationAction Continue
 
 # Normalize timeouts so g-cli has enough time to connect before the host times out, but cap host wait.

@@ -8,7 +8,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-Write-Warning "Deprecated: prefer 'dotnet run --project Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj -- vi-analyzer --repo <path> --bitness <64|32|both> --request <json>'; this script remains as a delegate."
+Write-Warning "Deprecated: prefer 'pwsh scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- vi-analyzer --repo <path> --bitness <64|32|both> --request <json>'; this script remains as a delegate."
 Write-Information "[legacy-ps] vi-analyzer delegate invoked" -InformationAction Continue
 
 function Read-JsonFile {

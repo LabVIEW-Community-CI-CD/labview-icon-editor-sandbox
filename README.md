@@ -17,7 +17,7 @@ Run **Terminal → Run Task → 01 Verify / Apply dependencies** to confirm `vip
 
 ### 02 Build LVAddon (VI Package)
 
-Use **Terminal → Run Task → 02 Build LVAddon (VI Package)** in VS Code to run the IntegrationEngineCli (`dotnet run --project Tooling/dotnet/IntegrationEngineCli`). By default it shells into the PowerShell wrapper to mirror CI; on Windows the task adds `--managed` to drive the managed orchestration directly. Outputs land in `builds/vip-stash/` (VIP artifact) and `resource/plugins/lv_icon.lvlibp` (overwritten for each bitness built). This task assumes dependencies have already been applied.
+Use **Terminal → Run Task → 02 Build LVAddon (VI Package)** in VS Code to run the IntegrationEngineCli (`pwsh scripts/common/invoke-repo-cli.ps1 -Cli IntegrationEngineCli -- --repo . --ref HEAD ...`). By default it shells into the PowerShell wrapper to mirror CI; on Windows the task adds `--managed` to drive the managed orchestration directly. Outputs land in `builds/vip-stash/` (VIP artifact) and `resource/plugins/lv_icon.lvlibp` (overwritten for each bitness built). This task assumes dependencies have already been applied.
 Default version inputs are `Major=0`, `Minor=1`, `Patch=0`, and `Build=1` (override in `.vscode/tasks.json` or when invoking the task).
 
 VIPM not available?

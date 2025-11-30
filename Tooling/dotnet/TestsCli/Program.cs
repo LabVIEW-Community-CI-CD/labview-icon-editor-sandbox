@@ -222,7 +222,7 @@ internal static class Program
     {
         Console.WriteLine("TestsCli - runs scripts/test/Test.ps1");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  dotnet run --project Tooling/dotnet/TestsCli/TestsCli.csproj -- [options]");
+        Console.WriteLine("  pwsh scripts/common/invoke-repo-cli.ps1 -Cli TestsCli -- [options]");
         Console.WriteLine("Options:");
         Console.WriteLine("  --repo <path>         Repository path (default: current directory)");
         Console.WriteLine("  --bitness <both|64|32>  Supported bitness for tests (default: both)");
