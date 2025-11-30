@@ -120,7 +120,12 @@ try {
             }
             $prov = & $resolver -CliName 'OrchestrationCli' -RepoPath $RepositoryPath -SourceRepoPath $RepositoryPath -PrintProvenance:$false
         } catch {
-            Write-Warning ("Skipping restore because OrchestrationCli could not be resolved: {0}" -f $_.Exception.Message)
+            $warnMsg = ("Skipping restore because OrchestrationCli could not be resolved: {0}" -f $_.Exception.Message)
+            if ($env:CI) {
+                Write-Information $warnMsg -InformationAction Continue
+            } else {
+                Write-Warning $warnMsg
+            }
         }
 
         if ($prov) {
@@ -150,7 +155,12 @@ try {
         }
     }
     else {
-        Write-Warning ("Close_LabVIEW.ps1 not found at {0}; skipping close step." -f $CloseScript)
+        $warnMsg = ("Close_LabVIEW.ps1 not found at {0}; skipping close step." -f $CloseScript)
+        if ($env:CI) {
+            Write-Information $warnMsg -InformationAction Continue
+        } else {
+            Write-Warning $warnMsg
+        }
     }
 
 } catch {
