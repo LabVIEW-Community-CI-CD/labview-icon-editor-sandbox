@@ -369,6 +369,16 @@ Write-Stamp -Level "INFO" -Message "Build spec succeeded (pre-manifest/zip); loc
 $distRoot = Get-DistRoot -Repo $repoRoot
 Write-Stamp -Level "INFO" -Message ("Using Source Distribution folder: {0}" -f $distRoot)
 
+# Ensure downstream consumers (e.g., ppl-from-sd) have the project file inside the SD.
+try {
+    $projDest = Join-Path $distRoot 'lv_icon_editor.lvproj'
+    Copy-Item -LiteralPath $projectPath -Destination $projDest -Force
+    Write-Stamp -Level "INFO" -Message ("Included lv_icon_editor.lvproj in Source Distribution at {0}" -f $projDest)
+}
+catch {
+    Write-Warning ("[lvsd] Failed to copy lv_icon_editor.lvproj into distribution: {0}" -f $_.Exception.Message)
+}
+
 # Create manifest
 $manifestPath = Join-Path $distRoot 'manifest.json'
 $manifestStartTime = Get-Date
