@@ -642,7 +642,7 @@ jobs:
 
           $found = $null
           foreach ($c in $candidates) {
-            if (Test-Path -LiteralPath $c.Dist -PathType Container -and (Test-Path -LiteralPath $c.Zip -PathType Leaf)) {
+            if ((Test-Path -LiteralPath $c.Dist -PathType Container) -and (Test-Path -LiteralPath $c.Zip -PathType Leaf)) {
               $found = $c
               break
             }
