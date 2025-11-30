@@ -1,9 +1,5 @@
 name: "Toggle Development Mode"
 
-defaults:
-  run:
-    working-directory: './'
-
 on:
   # 1) Called by other workflows
   workflow_call:

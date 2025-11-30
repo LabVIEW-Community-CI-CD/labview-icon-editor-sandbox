@@ -1,9 +1,5 @@
 name: Docs Link Check / lychee
 
-defaults:
-  run:
-    working-directory: './'
-
 on:
   pull_request:
     branches: [ main, develop, release/*, feature/*, hotfix/* ]

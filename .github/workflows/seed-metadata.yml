@@ -1,9 +1,5 @@
 name: Seed Metadata Checks
 
-defaults:
-  run:
-    working-directory: './'
-
 on:
   pull_request:
   workflow_dispatch:

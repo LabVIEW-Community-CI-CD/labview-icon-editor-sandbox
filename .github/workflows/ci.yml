@@ -14,10 +14,6 @@ concurrency:
 env:
   MIN_LABVIEW_POLICY: "21.0"
 
-defaults:
-  run:
-    working-directory: './'
-
 on:
   push:
     branches:

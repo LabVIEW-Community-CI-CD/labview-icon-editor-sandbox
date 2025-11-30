@@ -1,9 +1,5 @@
 name: Agent Config Check
 
-defaults:
-  run:
-    working-directory: './'
-
 on:
   pull_request:
     branches:

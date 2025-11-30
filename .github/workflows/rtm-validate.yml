@@ -1,9 +1,5 @@
 name: Traceability Gate / rtm
 
-defaults:
-  run:
-    working-directory: './'
-
 on:
   pull_request:
     branches: [ main, develop, release/*, feature/*, hotfix/* ]
