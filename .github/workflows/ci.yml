@@ -730,6 +730,7 @@ jobs:
 
   unify-artifacts:
     name: Publish Source Distribution draft release
+    if: ${{ github.event_name != 'pull_request' }}
     needs:
       - verify-checklist-sync
       - build-worktree
@@ -738,6 +739,8 @@ jobs:
       - docs-quality
       - version
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: "Guard: Linux runner"
         if: ${{ runner.os != 'Linux' }}
