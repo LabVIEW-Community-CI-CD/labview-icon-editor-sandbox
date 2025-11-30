@@ -57,20 +57,28 @@ jobs:
           path: artifacts
 
       - name: Create draft release
-        id: create_release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          release_name: ${{ steps.tag.outputs.tag }}
-          draft: true
-          prerelease: ${{ steps.version.outputs.IS_PRERELEASE }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          IS_PRERELEASE: ${{ steps.version.outputs.IS_PRERELEASE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          prerelease_flag=""
+          if [ "${IS_PRERELEASE,,}" = "true" ]; then
+            prerelease_flag="--prerelease"
+          fi
+          notes="Draft release for CI run ${{ github.event.inputs.run_id }}"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; keeping existing draft/published state."
+          else
+            gh release create "$TAG" --title "$TAG" --draft $prerelease_flag --notes "$notes" --repo "$GITHUB_REPOSITORY"
+          fi
 
       - name: Upload artifacts
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_ID: ${{ steps.create_release.outputs.id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
         shell: bash
         run: |
           set -euo pipefail
@@ -82,7 +90,7 @@ jobs:
             name=$(basename "$f")
             echo "Uploading $f as $name"
             found=1
-            gh release upload "$RELEASE_ID" "$f" --clobber --repo "$GITHUB_REPOSITORY"
+            gh release upload "$TAG" "$f" --clobber --repo "$GITHUB_REPOSITORY"
           done
           if [ "$found" -eq 0 ]; then
             echo "No files found under $root to upload." >&2
