@@ -202,7 +202,7 @@ public static class Program
         var script = mode == "bind"
             ? Path.Combine(scriptRoot, "scripts", "bind-development-mode", "BindDevelopmentMode.ps1")
             : Path.Combine(scriptRoot, "scripts", "revert-development-mode", "RevertDevelopmentMode.ps1");
-        var lvVersion = ResolveLabviewVersion(repo, opts, log, fallback: "2023");
+        var lvVersion = ResolveLabviewVersion(repo, opts, log, fallback: "2021");
 
         var argList = new List<string> { "-NoProfile", "-File" };
         if (mode == "bind")
@@ -264,25 +264,6 @@ public static class Program
         var tokenPresent = tokenPresentOverride ?? TokenPresent(repo, lvVersion, bitness);
         var viPath = Path.Combine(repo, "Tooling", "RestoreSetupLVSourceCore.vi");
         var projectPath = Path.Combine(repo, "lv_icon_editor.lvproj");
-        var labviewPath = ResolveLabviewExePath(lvVersion, bitness, opts.LabviewPath, log);
-
-        if (opts.Subcommand.Equals("sd-ppl-lvcli", StringComparison.OrdinalIgnoreCase))
-        {
-            sw.Stop();
-            log($"restore packaged sources ({bitness}-bit) skipped for sd-ppl-lvcli (LabVIEWCLI-only flow).");
-            return new CommandResult("restore-sources", "skip", 0, sw.ElapsedMilliseconds, new
-            {
-                bitness,
-                lvVersion,
-                tokenPresent = tokenPresent,
-                viPath,
-                projectPath,
-                reason = "Skipped by sd-ppl-lvcli",
-                gcliExit = 0,
-                stdout = string.Empty,
-                stderr = string.Empty
-            });
-        }
 
         if (!tokenPresent)
         {
@@ -316,6 +297,7 @@ public static class Program
             projectPath,
             "Editor Packed Library"
         };
+
         log($"restore packaged sources ({bitness}-bit) via g-cli...");
         var result = RunProcess("g-cli", repo, gcliArgs, opts.TimeoutSeconds);
         var connectionIssue = IsConnectionIssue(result.StdOut) || IsConnectionIssue(result.StdErr);
@@ -597,17 +579,10 @@ public static class Program
         var failures = new List<object>();
         var nullCommits = new List<object>();
         var warnings = new List<object>();
-        var invalidPaths = new List<object>();
         var checkedCount = 0;
         foreach (var entry in entries)
         {
             var relPath = entry.Path ?? string.Empty;
-            var lowered = relPath.Trim().ToLowerInvariant();
-            if (lowered.StartsWith("program files") || lowered.Contains(":\\program files"))
-            {
-                invalidPaths.Add(new { path = relPath, reason = "Path under Program Files is not allowed in Source Distribution" });
-                continue;
-            }
             var commit = entry.LastCommit ?? string.Empty;
             if (string.IsNullOrWhiteSpace(commit))
             {
@@ -643,8 +618,7 @@ public static class Program
             nullCommitCount = nullCommits.Count,
             failures,
             nullCommits,
-            warnings,
-            invalidPaths
+            warnings
         };
 
         Directory.CreateDirectory(outputRoot);
@@ -746,19 +720,11 @@ public static class Program
         string? pplLogFile = null;
         var copyOnFail = opts.CopyOnFail;
         var labviewCliPath = string.IsNullOrWhiteSpace(opts.LabviewCliPath) ? "LabVIEWCLI" : opts.LabviewCliPath!;
-        var lvVersion = ResolveLabviewVersion(repo, opts, log, fallback: "2023");
+        var lvVersion = ResolveLabviewVersion(repo, opts, log, fallback: "2021");
         var bitness = ResolveLabviewBitness(repo, opts, log, fallback: "64");
         var optsWithVersion = opts with { LvVersion = lvVersion, Bitness = bitness };
         var labviewPath = ResolveLabviewExePath(lvVersion, bitness, opts.LabviewPath, log);
-        int? portNumber = null;
-        try
-        {
-            portNumber = opts.LabviewPort ?? ResolveLabviewPort(labviewPath, lvVersion, bitness, log);
-        }
-        catch (Exception ex)
-        {
-            return new CommandResult("sd-ppl-lvcli", "fail", 1, sw.ElapsedMilliseconds, new { lvVersion, bitness, labviewPath, error = $"Failed to resolve LabVIEW port: {ex.Message}" });
-        }
+        var portNumber = opts.LabviewPort ?? ResolveLabviewPort(labviewPath);
         var pipelineOk = true;
         var repoBound = false;
         var extractedBound = false;
@@ -830,8 +796,6 @@ public static class Program
             return result;
         }
 
-        void PhaseStart(string phase) => log($"[sd-ppl-lvcli][{phase}] start");
-
         CommandResult RunLabviewCliBuild(string buildSpec, string project, string workingDir, string logFilePath)
         {
             var lvcliTimeout = opts.LabviewCliTimeoutSec.HasValue && opts.LabviewCliTimeoutSec.Value > 0
@@ -894,80 +858,11 @@ public static class Program
                 });
                 if (result.ExitCode == 0 || attempt == attempts)
                 {
-                    if (!string.Equals(status, "success", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(logFilePath) && File.Exists(logFilePath))
-                    {
-                        var tail = ReadTail(logFilePath);
-                        if (!string.IsNullOrWhiteSpace(tail))
-                        {
-                            log($"[sd-ppl-lvcli] tail of {logFilePath}:{Environment.NewLine}{tail}");
-                        }
-                    }
                     return last;
                 }
                 log($"[sd-ppl-lvcli] attempt {attempt} failed for \"{buildSpec}\" (exit {result.ExitCode}); retrying...");
             }
             return last!;
-        }
-
-        CommandResult RunLabviewCliMassCompile(string directoryToCompile, string workingDir, string logFilePath)
-        {
-            var lvcliTimeout = opts.LabviewCliTimeoutSec.HasValue && opts.LabviewCliTimeoutSec.Value > 0
-                ? opts.LabviewCliTimeoutSec.Value
-                : opts.TimeoutSeconds;
-
-            var args = new List<string>
-            {
-                "-OperationName", "MassCompile",
-                "-DirectoryToCompile", directoryToCompile
-            };
-            if (!string.IsNullOrWhiteSpace(logFilePath))
-            {
-                try
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(logFilePath)!);
-                }
-                catch { }
-                args.AddRange(new[] { "-MassCompileLogFile", logFilePath });
-            }
-            if (!string.IsNullOrWhiteSpace(labviewPath))
-            {
-                args.AddRange(new[] { "-LabVIEWPath", labviewPath! });
-            }
-            if (portNumber.HasValue)
-            {
-                args.AddRange(new[] { "-PortNumber", portNumber.Value.ToString() });
-            }
-
-            log($"[sd-ppl-lvcli] LabVIEWCLI MassCompile ({bitness}-bit {lvVersion}) dir={directoryToCompile}...");
-            var result = RunProcess(labviewCliPath, workingDir, args, lvcliTimeout);
-            if (!string.IsNullOrWhiteSpace(logFilePath) && File.Exists(logFilePath) && !logPaths.Contains(logFilePath))
-            {
-                logPaths.Add(logFilePath);
-            }
-
-            var status = result.ExitCode == 0 ? "success" : "fail";
-            summaryLogs.Add(logFilePath ?? string.Empty);
-            if (!string.Equals(status, "success", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(logFilePath) && File.Exists(logFilePath))
-            {
-                var tail = ReadTail(logFilePath);
-                if (!string.IsNullOrWhiteSpace(tail))
-                {
-                    log($"[sd-ppl-lvcli] tail of {logFilePath}:{Environment.NewLine}{tail}");
-                }
-            }
-            return new CommandResult("labviewcli-mass-compile", status, result.ExitCode, result.DurationMs, new
-            {
-                directoryToCompile,
-                bitness,
-                lvVersion,
-                labviewCliPath,
-                labviewPath,
-                portNumber,
-                logFilePath,
-                exit = result.ExitCode,
-                stdout = result.StdOut,
-                stderr = result.StdErr
-            });
         }
 
         CommandResult RunLabviewCliClose(string workingDir, string? logFilePath = null)
@@ -1252,16 +1147,6 @@ public static class Program
             log($"[sd-ppl-lvcli] temp={tempRoot}, logs={logsDir}, extract={extractDir}");
             log($"[sd-ppl-lvcli] lv-version={lvVersion}, bitness={bitness}, labview-cli={labviewCliPath}, labview.exe={(labviewPath ?? "(auto)")}, port={(portNumber?.ToString() ?? "auto")}");
 
-            if (string.IsNullOrWhiteSpace(labviewPath))
-            {
-                return new CommandResult("sd-ppl-lvcli", "fail", 1, sw.ElapsedMilliseconds, new { lvVersion, bitness, error = "LabVIEW.exe not found for requested version/bitness" });
-            }
-
-            if (!portNumber.HasValue)
-            {
-                return new CommandResult("sd-ppl-lvcli", "fail", 1, sw.ElapsedMilliseconds, new { lvVersion, bitness, labviewPath, error = "Unable to resolve LabVIEW server.tcp.port (missing in INI and no fallback available)" });
-            }
-
             if (!string.IsNullOrWhiteSpace(labviewCliPath) && Path.IsPathRooted(labviewCliPath) && !File.Exists(labviewCliPath))
             {
                 return new CommandResult("sd-ppl-lvcli", "fail", 1, sw.ElapsedMilliseconds, new { labviewCliPath, error = "Specified LabVIEWCLI path not found" });
@@ -1286,13 +1171,11 @@ public static class Program
 
             if (pipelineOk)
             {
-                PhaseStart("unbind-current");
                 Record(RunBindUnbind(log, optsWithVersion, repo, bitness, mode: "unbind"), "unbind-current");
             }
 
             if (pipelineOk)
             {
-                PhaseStart("worktree-add");
                 try
                 {
                     if (Directory.Exists(worktreePath))
@@ -1341,12 +1224,7 @@ public static class Program
                         }
                         optsWithVersion = optsWithVersion with { LvVersion = lvVersion, Bitness = bitness };
                         labviewPath = ResolveLabviewExePath(lvVersion, bitness, opts.LabviewPath, log);
-                        portNumber = opts.LabviewPort ?? ResolveLabviewPort(labviewPath, lvVersion, bitness, log);
-                        if (string.IsNullOrWhiteSpace(labviewPath) || !portNumber.HasValue)
-                        {
-                            Record(new CommandResult("worktree-add", "fail", 1, 0, new { worktreePath, lvVersion, bitness, labviewPath, port = portNumber, error = "Resolved LabVIEW path/port is missing after worktree detection" }), "worktree-add");
-                            pipelineOk = false;
-                        }
+                        portNumber = opts.LabviewPort ?? ResolveLabviewPort(labviewPath);
                     }
                 }
                 catch (Exception ex)
@@ -1362,7 +1240,6 @@ public static class Program
                 {
                     log($"[sd-ppl-lvcli] WARNING: Found conflicting LocalHost.LibraryPaths token for {lvVersion} {bitness}-bit; proceeding may reuse a different repo. Consider unbinding first.");
                 }
-                PhaseStart("bind-repo");
                 var bindRepo = Record(RunBindUnbind(log, optsWithVersion, workingRepo, bitness, mode: "bind"), "bind-repo");
                 repoBound = string.Equals(bindRepo.Status, "success", StringComparison.OrdinalIgnoreCase);
             }
@@ -1372,26 +1249,22 @@ public static class Program
             if (pipelineOk)
             {
                 sdLogFile = Path.Combine(logsDir, $"{SanitizeFileName($"source-distribution-{bitness}")}.log");
-                PhaseStart("build-source-distribution");
                 Record(RunLabviewCliBuild("Source Distribution", projectPath, Path.GetDirectoryName(projectPath) ?? workingRepo, sdLogFile), "build-source-distribution");
             }
 
             if (pipelineOk)
             {
-                PhaseStart("close-after-sd");
                 Record(RunLabviewCliClose(workingRepo, Path.Combine(logsDir, $"{SanitizeFileName($"close-after-sd-{bitness}")}.log")), "close-after-sd", affectsOutcome: false);
             }
 
             if (repoBound)
             {
-                PhaseStart("unbind-repo-post-sd");
                 Record(RunBindUnbind(log, optsWithVersion, workingRepo, bitness, mode: "unbind"), "unbind-repo-post-sd", affectsOutcome: pipelineOk);
                 repoBound = false;
             }
 
             if (pipelineOk)
             {
-                PhaseStart("requirements-summary");
                 Record(RunRequirementsSummary(log, optsWithVersion, workingRepo), "requirements-summary");
 
                 if (baselineLvproj != null)
@@ -1458,13 +1331,11 @@ public static class Program
                     log($"[sd-ppl-lvcli] WARNING: failed to bundle tooling into Source Distribution: {ex.Message}");
                 }
 
-                PhaseStart("zip-source-dist");
                 Record(EnsureSourceDistZip(sourceDistZip, workingRepo), "zip-source-dist");
             }
 
             if (pipelineOk)
             {
-                PhaseStart("extract-source-dist");
                 var extractResult = Record(ExtractSourceDist(sourceDistZip, extractDir, out extractedRoot), "extract-source-dist");
                 pipelineOk = pipelineOk && string.Equals(extractResult.Status, "success", StringComparison.OrdinalIgnoreCase) && extractedRoot != null;
             }
@@ -1517,7 +1388,6 @@ public static class Program
                 {
                     log($"[sd-ppl-lvcli] WARNING: Conflicting LocalHost.LibraryPaths token detected for extracted SD ({lvVersion} {bitness}-bit); proceeding may reuse another repo.");
                 }
-                PhaseStart("bind-extracted-sd");
                 var bindExtract = Record(RunBindUnbind(log, optsWithVersion, extractedRoot, bitness, mode: "bind"), "bind-extracted-sd");
                 extractedBound = string.Equals(bindExtract.Status, "success", StringComparison.OrdinalIgnoreCase);
             }
@@ -1526,15 +1396,12 @@ public static class Program
             {
                 pplLogFile = Path.Combine(logsDir, $"{SanitizeFileName($"ppl-{bitness}")}.log");
                 var pplProject = Path.Combine(extractedRoot, "lv_icon_editor.lvproj");
-                PhaseStart("build-ppl");
                 Record(RunLabviewCliBuild("Editor Packed Library", pplProject, extractedRoot, pplLogFile), "build-ppl");
             }
 
             if (extractedBound && extractedRoot != null)
             {
-                PhaseStart("close-after-ppl");
                 Record(RunLabviewCliClose(extractedRoot, Path.Combine(logsDir, $"{SanitizeFileName($"close-after-ppl-{bitness}")}.log")), "close-after-ppl", affectsOutcome: false);
-                PhaseStart("unbind-extracted-sd");
                 Record(RunBindUnbind(log, optsWithVersion, extractedRoot, bitness, mode: "unbind"), "unbind-extracted-sd", affectsOutcome: pipelineOk);
                 extractedBound = false;
             }
@@ -1543,17 +1410,13 @@ public static class Program
         {
             if (extractedBound && extractedRoot != null)
             {
-                PhaseStart("close-after-ppl-final");
                 Record(RunLabviewCliClose(extractedRoot, Path.Combine(logsDir, $"{SanitizeFileName($"close-after-ppl-final-{bitness}")}.log")), "close-after-ppl-final", affectsOutcome: false);
-                PhaseStart("unbind-extracted-final");
                 Record(RunBindUnbind(log, optsWithVersion, extractedRoot, bitness, mode: "unbind"), "unbind-extracted-final", affectsOutcome: false);
                 extractedBound = false;
             }
             if (repoBound)
             {
-                PhaseStart("close-repo-final");
                 Record(RunLabviewCliClose(workingRepo, Path.Combine(logsDir, $"{SanitizeFileName($"close-repo-final-{bitness}")}.log")), "close-repo-final", affectsOutcome: false);
-                PhaseStart("unbind-repo-final");
                 Record(RunBindUnbind(log, optsWithVersion, workingRepo, bitness, mode: "unbind"), "unbind-repo-final", affectsOutcome: false);
                 repoBound = false;
             }
@@ -2456,7 +2319,7 @@ public static class Program
             projectPath = Path.Combine(repo, projectPath);
         }
 
-        var lvVersion = ResolveLabviewVersion(repo, opts, log, fallback: "2023");
+        var lvVersion = ResolveLabviewVersion(repo, opts, log, fallback: "2021");
         var argList = new List<string>
         {
             "-NoProfile",
@@ -2746,7 +2609,7 @@ public static class Program
         };
     }
 
-    private static string ResolveLabviewVersion(string repo, Options opts, Action<string>? log, string fallback = "2023")
+    private static string ResolveLabviewVersion(string repo, Options opts, Action<string>? log, string fallback = "2021")
     {
         if (!string.IsNullOrWhiteSpace(opts.LvVersion))
         {
@@ -2938,41 +2801,19 @@ public static class Program
         }
     }
 
-    private static bool IsPortInUse(int port)
-    {
-        try
-        {
-            using var client = new System.Net.Sockets.TcpClient();
-            var task = client.ConnectAsync("127.0.0.1", port);
-            if (!task.Wait(TimeSpan.FromMilliseconds(200)))
-            {
-                return false;
-            }
-            return client.Connected;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static int? ResolveLabviewPort(string? labviewPath, string lvVersion, string bitness, Action<string>? log)
+    private static int? ResolveLabviewPort(string? labviewPath)
     {
         if (string.IsNullOrWhiteSpace(labviewPath)) return null;
-        int? portFromIni = null;
         try
         {
             var ini = Path.Combine(Path.GetDirectoryName(labviewPath) ?? string.Empty, "LabVIEW.ini");
-            if (File.Exists(ini))
+            if (!File.Exists(ini)) return null;
+            foreach (var line in File.ReadAllLines(ini))
             {
-                foreach (var line in File.ReadAllLines(ini))
+                var match = Regex.Match(line, "^\\s*server\\.tcp\\.port\\s*=\\s*(?<port>\\d+)", RegexOptions.IgnoreCase);
+                if (match.Success && int.TryParse(match.Groups["port"].Value, out var port))
                 {
-                    var match = Regex.Match(line, "^\\s*server\\.tcp\\.port\\s*=\\s*(?<port>\\d+)", RegexOptions.IgnoreCase);
-                    if (match.Success && int.TryParse(match.Groups["port"].Value, out var port))
-                    {
-                        portFromIni = port;
-                        break;
-                    }
+                    return port;
                 }
             }
         }
@@ -2980,25 +2821,7 @@ public static class Program
         {
             // ignore
         }
-
-        int fallbackPort = bitness == "32" ? 3367 : 3365;
-        var selected = portFromIni ?? fallbackPort;
-
-        if (portFromIni.HasValue)
-        {
-            log?.Invoke($"[sd-ppl-lvcli] resolved LabVIEW port {selected} from LabVIEW.ini ({lvVersion} {bitness}-bit)");
-        }
-        else
-        {
-            log?.Invoke($"[sd-ppl-lvcli] server.tcp.port not found in LabVIEW.ini ({lvVersion} {bitness}-bit); using fallback port {selected}");
-        }
-
-        if (IsPortInUse(selected))
-        {
-            throw new InvalidOperationException($"Port {selected} appears in use; cannot launch LabVIEWCLI for {lvVersion} {bitness}-bit. Free the port or override with --lv-port.");
-        }
-
-        return selected;
+        return null;
     }
 
     private static (int ExitCode, string StdOut, string StdErr, long DurationMs) RunPwsh(Options opts, IEnumerable<string> argList, int timeoutSec)
@@ -3006,35 +2829,8 @@ public static class Program
         return RunProcess(opts.Pwsh, opts.Repo, argList, timeoutSec);
     }
 
-    private static string QuoteArg(string arg)
-    {
-        if (string.IsNullOrEmpty(arg)) return "\"\"";
-        if (arg.Any(ch => char.IsWhiteSpace(ch) || ch == '\"'))
-        {
-            return $"\"{arg.Replace("\"", "\\\"")}\"";
-        }
-        return arg;
-    }
-
-    private static string ReadTail(string path, int lines = 40)
-    {
-        try
-        {
-            var tail = File.ReadLines(path).TakeLast(lines);
-            return string.Join(Environment.NewLine, tail);
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
-
     private static (int ExitCode, string StdOut, string StdErr, long DurationMs) RunProcess(string fileName, string workingDirectory, IEnumerable<string> argList, int timeoutSec)
     {
-        var argsMaterialized = argList.ToList();
-        var renderedArgs = string.Join(" ", argsMaterialized.Select(QuoteArg));
-        Console.WriteLine($"[orchestration-cli][proc] {fileName} {renderedArgs} (cwd={workingDirectory}, timeout={(timeoutSec <= 0 ? "none" : $"{timeoutSec}s")})");
-
         var psi = new ProcessStartInfo
         {
             FileName = fileName,
@@ -3043,7 +2839,7 @@ public static class Program
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
-        foreach (var a in argsMaterialized) psi.ArgumentList.Add(a);
+        foreach (var a in argList) psi.ArgumentList.Add(a);
 
         var stdout = new StringBuilder();
         var stderr = new StringBuilder();
@@ -3079,18 +2875,6 @@ public static class Program
 
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();
-
-        var heartbeat = Task.Run(async () =>
-        {
-            while (!proc.HasExited)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(25));
-                if (!proc.HasExited)
-                {
-                    Console.WriteLine($"[orchestration-cli][proc][{fileName}] running {sw.Elapsed.TotalSeconds:F1}s (pid={proc.Id}, cwd={workingDirectory})");
-                }
-            }
-        });
 
         var timedOut = false;
         var exited = timeoutSec > 0 ? proc.WaitForExit(timeoutSec * 1000) : proc.WaitForExit(int.MaxValue);
