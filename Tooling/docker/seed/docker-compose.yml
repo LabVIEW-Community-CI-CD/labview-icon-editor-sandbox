@@ -1,8 +1,8 @@
 services:
   seed:
     build:
-      context: ../../seed
-      dockerfile: Dockerfile
+      context: ../../..
+      dockerfile: Tooling/seed/Dockerfile
     image: seed-local:latest
     pull_policy: never
     stdin_open: true
