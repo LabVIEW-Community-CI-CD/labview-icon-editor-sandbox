@@ -435,6 +435,30 @@ jobs:
         with:
           set-safe-directory: true
           fetch-depth: 1
+      - name: Prepublish repo CLIs to tooling cache
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $clis = @{
+            OrchestrationCli     = 'Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj'
+            DevModeAgentCli      = 'Tooling/dotnet/DevModeAgentCli/DevModeAgentCli.csproj'
+            IntegrationEngineCli = 'Tooling/dotnet/IntegrationEngineCli/IntegrationEngineCli.csproj'
+            XCli                 = 'Tooling/x-cli/src/XCli/XCli.csproj'
+          }
+          $sha = git rev-parse HEAD
+          foreach ($cli in $clis.Keys) {
+            $proj = $clis[$cli]
+            if (-not (Test-Path -LiteralPath $proj -PathType Leaf)) {
+              Write-Host "Skipping $cli because project path is missing: $proj"
+              continue
+            }
+            $out = Join-Path $env:LOCALAPPDATA "labview-icon-editor/tooling-cache/$cli/$sha/win-x64/publish"
+            New-Item -ItemType Directory -Path $out -Force | Out-Null
+            dotnet publish $proj -c Release -r win-x64 --self-contained false -o $out
+            if ($LASTEXITCODE -ne 0) {
+              throw "Publish failed for $cli (exit $LASTEXITCODE)"
+            }
+          }
       - name: Ensure Pester 5 is available
         shell: pwsh
         run: |
