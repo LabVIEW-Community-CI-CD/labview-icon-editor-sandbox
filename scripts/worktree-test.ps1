@@ -19,9 +19,13 @@ function Ensure-Command {
 }
 
 Ensure-Command -Name git
-Ensure-Command -Name dotnet
 
 $SourceRepoPath = (Resolve-Path -LiteralPath $SourceRepoPath).Path
+
+$invokeCli = Join-Path -Path $SourceRepoPath -ChildPath 'scripts/common/invoke-repo-cli.ps1'
+if (-not (Test-Path -LiteralPath $invokeCli -PathType Leaf)) {
+    throw "invoke-repo-cli helper not found at $invokeCli"
+}
 
 if (-not $WorktreePath) {
     $baseRoot = if ($env:LVIE_WORKTREE_BASE) { $env:LVIE_WORKTREE_BASE } else { [System.IO.Path]::GetTempPath() }
@@ -78,13 +82,8 @@ try {
         Copy-Item -LiteralPath $sourceRevertDir -Destination $worktreeRevertDir -Recurse -Force
     }
 
-    $testsCliProj = Join-Path -Path $WorktreePath -ChildPath 'Tooling/dotnet/TestsCli/TestsCli.csproj'
-    if (-not (Test-Path -LiteralPath $testsCliProj -PathType Leaf)) {
-        throw "TestsCli project not found at $testsCliProj"
-    }
-
     Write-Host "Running TestsCli in isolated worktree..."
-    dotnet run --project $testsCliProj -- --repo $WorktreePath --bitness $SupportedBitness
+    & $invokeCli -CliName 'TestsCli' -RepoRoot $WorktreePath -Args @('--repo', $WorktreePath, '--bitness', $SupportedBitness)
     $code = $LASTEXITCODE
 
     if ($OutputDirectory) {
