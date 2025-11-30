@@ -571,7 +571,7 @@ jobs:
           if (-not $env:GH_REPO) { throw "GITHUB_REPOSITORY is not set." }
           pwsh -NoProfile -File $script -Repo $env:GH_REPO -Token $env:GH_TOKEN
   build-worktree:
-    name: Build (worktree)
+    name: Build (Source Distribution)
     needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, version, resolve-labview-version, test-compute-version-bump, test-tag-existence-check, rtm-gates, docs-quality, dev-mode-binder-tests, list-collaborators]
     runs-on: self-hosted-windows-lv
     defaults:
@@ -588,39 +588,12 @@ jobs:
       - name: "Guard: Windows runner"
         if: ${{ runner.os != 'Windows' }}
         run: exit 1
-      - name: Build via worktree (includes VIPC, missing-in-project, lvlibp, VIP)
+      - name: Build Source Distribution via worktree
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/worktree-build.ps1" `
-            -SourceRepoPath "$env:GITHUB_WORKSPACE" `
-            -Ref "${{ github.sha }}" `
-            -SupportedBitness 64 `
-            -LvlibpBitness both `
-            -Major ${{ needs.version.outputs.MAJOR }} `
-            -Minor ${{ needs.version.outputs.MINOR }} `
-            -Patch ${{ needs.version.outputs.PATCH }} `
-            -Build ${{ needs.version.outputs.BUILD }} `
-            -CompanyName "$env:COMPANY_NAME" `
-            -AuthorName "$env:AUTHOR_NAME" `
-            -OutputDirectory "$env:GITHUB_WORKSPACE/builds-isolated" `
-            -AnalyzeVIP:$false
-      - name: Locate built artifacts
-        id: locate-build
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $plugins = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/resource/plugins'
-          $vipDir = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/VI Package'
-          if (-not (Test-Path -LiteralPath $vipDir)) { throw "VIP output directory not found at $vipDir" }
-          $vip = Get-ChildItem -Path $vipDir -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $vip) { throw "No .vip found under '$vipDir' after build." }
-          "vip_path=$($vip.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          if (Test-Path -LiteralPath $plugins) {
-            "plugins_dir=$plugins" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          } else {
-            "plugins_dir=" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          }
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/build-source-distribution/Build_Source_Distribution.ps1" `
+            -RepositoryPath "$env:GITHUB_WORKSPACE"
       - name: Locate Source Distribution artifacts
         id: locate-sd
         shell: pwsh
@@ -644,13 +617,6 @@ jobs:
           "sd_zip=$zip" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
           "sd_manifest_json=$manifestJson" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
           "sd_manifest_csv=$manifestCsv" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-      - name: Upload PPL artifacts
-        if: steps.locate-build.outputs.plugins_dir != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-worktree
-          path: ${{ steps.locate-build.outputs.plugins_dir }}
-          if-no-files-found: error
       - name: Upload Source Distribution artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -660,24 +626,6 @@ jobs:
             ${{ steps.locate-sd.outputs.sd_manifest_json }}
             ${{ steps.locate-sd.outputs.sd_manifest_csv }}
           if-no-files-found: error
-      - name: Upload VI Package artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-vip
-          path: ${{ steps.locate-build.outputs.vip_path }}
-          if-no-files-found: error
-      - name: Analyze built VI package
-        id: analyze-vip
-        uses: ./.github/actions/analyze-vi-package
-        with:
-          vip_artifact_path: ${{ steps.locate-build.outputs.vip_path }}
-          min_labview: ${{ env.MIN_LABVIEW_POLICY }}
-      - name: Upload VI package analysis results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-vip-analysis-junit
-          path: ${{ steps.analyze-vip.outputs.junit }}
       - name: Upload build reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -729,13 +677,14 @@ jobs:
           }
 
   unify-artifacts:
-    name: Unify artifacts
+    name: Publish Source Distribution draft release
     needs:
       - verify-checklist-sync
       - build-worktree
       - seed-containerized
       - rtm-gates
       - docs-quality
+      - version
     runs-on: ubuntu-latest
     steps:
       - name: "Guard: Linux runner"
@@ -748,28 +697,84 @@ jobs:
           set-safe-directory: true
           fetch-depth: 1
 
-      - name: Prepare staging
-        run: mkdir -p artifacts/unified
-
-      - name: Download artifacts
+      - name: Download Source Distribution artifact
         uses: actions/download-artifact@v4
         with:
-          path: artifacts/unified/downloads
-        continue-on-error: true
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-source-distribution
+          path: artifacts/sd
 
       - name: List downloaded artifacts
         run: |
-          echo "Downloaded artifacts tree:"
-          ls -R artifacts/unified/downloads || true
+          echo "Downloaded Source Distribution contents:"
+          ls -R artifacts/sd
 
-      - name: Zip unified bundle
+      - name: Locate SD payload
+        id: sd
+        shell: bash
         run: |
-          cd artifacts/unified/downloads
-          zip -r ../unified-bundle.zip .
+          set -euo pipefail
+          zip=$(find artifacts/sd -name "source-distribution.zip" -type f | head -n1 || true)
+          mj=$(find artifacts/sd -name "manifest.json" -type f | head -n1 || true)
+          mc=$(find artifacts/sd -name "manifest.csv" -type f | head -n1 || true)
+          for f in "$zip" "$mj" "$mc"; do
+            if [ -z "$f" ]; then
+              echo "Missing SD payload components (zip/manifest)." >&2
+              exit 1
+            fi
+          done
+          echo "zip=$zip" >> "$GITHUB_OUTPUT"
+          echo "manifest_json=$mj" >> "$GITHUB_OUTPUT"
+          echo "manifest_csv=$mc" >> "$GITHUB_OUTPUT"
+          ls -lh "$zip" "$mj" "$mc"
 
-      - name: Upload unified bundle
-        uses: actions/upload-artifact@v4
+      - name: Compute tag/name
+        id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ needs.version.outputs.VERSION }}" || true
+          tag="${tag:-sd-${GITHUB_RUN_ID}}"
+          tag="${tag/-build/}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Using tag: $tag"
+
+      - name: Create draft release (SD)
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: unified-artifacts
-          path: artifacts/unified/unified-bundle.zip
-          if-no-files-found: error
+          tag_name: ${{ steps.tag.outputs.tag }}
+          release_name: ${{ steps.tag.outputs.tag }}
+          draft: true
+          prerelease: ${{ needs.version.outputs.IS_PRERELEASE || false }}
+
+      - name: Upload Source Distribution assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.sd.outputs.zip }}
+          asset_name: source-distribution.zip
+          asset_content_type: application/zip
+
+      - name: Upload manifest.json
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.sd.outputs.manifest_json }}
+          asset_name: manifest.json
+          asset_content_type: application/json
+
+      - name: Upload manifest.csv
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.sd.outputs.manifest_csv }}
+          asset_name: manifest.csv
+          asset_content_type: text/csv
