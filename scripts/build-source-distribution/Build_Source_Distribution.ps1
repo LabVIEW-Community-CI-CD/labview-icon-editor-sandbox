@@ -57,6 +57,52 @@ function Write-Stamp {
     Write-Host ("[{0}] {1} {2}" -f $Level, (Get-Elapsed -StartTime $StartTime), $Message)
 }
 
+function Sync-IconEditorAssets {
+    param(
+        [Parameter(Mandatory)][string]$RepoRoot,
+        [Parameter(Mandatory)][string]$LabVIEWVersion
+    )
+    # g-cli builds look for Icon Editor assets under the LabVIEW install; populate them from the repo if missing.
+    $lvRoot = Join-Path 'C:\Program Files\National Instruments' ("LabVIEW {0}" -f $LabVIEWVersion)
+    if (-not (Test-Path -LiteralPath $lvRoot -PathType Container)) {
+        Write-Stamp -Level "WARN" -Message ("LabVIEW root not found at {0}; skipping Icon Editor asset sync." -f $lvRoot)
+        return
+    }
+
+    $pairs = @(
+        @{
+            Label  = 'Icon Editor plugins'
+            Source = Join-Path $RepoRoot 'resource\plugins'
+            Dest   = Join-Path $lvRoot 'resource\plugins'
+        },
+        @{
+            Label  = 'LabVIEW Icon API'
+            Source = Join-Path $RepoRoot 'vi.lib\LabVIEW Icon API'
+            Dest   = Join-Path $lvRoot 'vi.lib\LabVIEW Icon API'
+        }
+    )
+
+    foreach ($p in $pairs) {
+        if (-not (Test-Path -LiteralPath $p.Source -PathType Container)) {
+            Write-Stamp -Level "WARN" -Message ("[{0}] Source missing; skipping copy: {1}" -f $p.Label, $p.Source)
+            continue
+        }
+        Write-Stamp -Level "INFO" -Message ("[{0}] Syncing assets -> {1}" -f $p.Label, $p.Dest)
+        $args = @(
+            $p.Source,
+            $p.Dest,
+            '/E', '/COPY:DAT', '/R:1', '/W:1',
+            '/NFL', '/NDL', '/NJH', '/NJS'
+        )
+        & robocopy @args | Out-Null
+        $rc = $LASTEXITCODE
+        # Robocopy returns 0–7 for success / minor issues; anything higher is failure.
+        if ($rc -gt 7) {
+            throw ("Robocopy failed ({0}) while syncing {1} -> {2}" -f $rc, $p.Source, $p.Dest)
+        }
+    }
+}
+
 function Start-Heartbeat {
     try {
         $script:HeartbeatTimer = New-Object System.Timers.Timer
@@ -281,8 +327,12 @@ if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) {
 $gcli = Get-Command g-cli -ErrorAction SilentlyContinue
 if (-not $gcli) { throw "g-cli is required but was not found on PATH." }
 
+# Ensure LabVIEW has the Icon Editor assets that the build depends on
+Sync-IconEditorAssets -RepoRoot $repoRoot -LabVIEWVersion $Package_LabVIEW_Version
+
 Start-Heartbeat
-Write-Stamp -Level "INFO" -Message "Expected durations: build ~60-120s depending on LabVIEW startup; manifest/zip ~10-30s."
+try {
+    Write-Stamp -Level "INFO" -Message "Expected durations: build ~60-120s depending on LabVIEW startup; manifest/zip ~10-30s."
 
 # Build the Source Distribution
 Set-Phase -Name "g-cli build"
@@ -495,4 +545,7 @@ if (Test-Path -LiteralPath $logStashScript -PathType Leaf) {
     }
 }
 
-Stop-Heartbeat
+}
+finally {
+    Stop-Heartbeat
+}
