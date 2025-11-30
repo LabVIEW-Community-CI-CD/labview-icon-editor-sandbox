@@ -25,6 +25,8 @@ permissions:
 
 jobs:
   release-source-distribution:
+    # GITHUB_TOKEN in pull_request events lacks release permissions; skip instead of failing
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (for version helpers)
