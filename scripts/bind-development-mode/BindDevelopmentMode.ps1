@@ -19,7 +19,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-$suppressWarnings = [bool]$env:CI
+$suppressWarnings = $false
 
 # Immediate console heartbeat so callers see progress even before transcript/logs.
 Write-Host ("[devmode] Starting dev-mode helper: mode={0} bitness={1} repo={2}" -f $Mode, $Bitness, $RepositoryPath)
