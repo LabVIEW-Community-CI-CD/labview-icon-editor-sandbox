@@ -58,6 +58,7 @@ function Get-CliProjectPath {
         'OrchestrationCli'  = 'Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj'
         'IntegrationEngineCli' = 'Tooling/dotnet/IntegrationEngineCli/IntegrationEngineCli.csproj'
         'XCli'              = 'Tooling/x-cli/src/XCli/XCli.csproj'
+        'RequirementsSummarizer' = 'Tooling/dotnet/RequirementsSummarizer/RequirementsSummarizer.csproj'
     }
     if (-not $map.ContainsKey($Name)) { return $null }
     $candidate = Join-Path (Resolve-Path -LiteralPath $Root).Path $map[$Name]

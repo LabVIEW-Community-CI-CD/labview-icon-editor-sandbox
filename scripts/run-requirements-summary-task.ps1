@@ -21,7 +21,7 @@ function Invoke-Summarizer {
         [string[]] $Args
     )
 
-    $output = & pwsh -NoProfile -File $invokeCli -CliName 'RequirementsSummarizer' -RepoRoot $repoRoot -Args $Args 2>&1
+    $output = & $invokeCli -CliName 'RequirementsSummarizer' -RepoRoot $repoRoot -Args $Args 2>&1
     $exitCode = $LASTEXITCODE
 
     $output | ForEach-Object { Write-Host $_ }
@@ -39,7 +39,6 @@ Start-Transcript -Path $logFile -Force
 try {
     Write-Host "Generating requirements summary (full) from $csvPath"
     Invoke-Summarizer -Args @(
-        '--',
         '--csv', $csvPath,
         '--summary-output', $summaryPath,
         '--html-output', $htmlPath,
@@ -49,7 +48,6 @@ try {
 
     Write-Host "Generating high-priority filtered summary"
     Invoke-Summarizer -Args @(
-        '--',
         '--csv', $csvPath,
         '--summary-output', $highSummaryPath,
         '--filter-priority', 'High',
