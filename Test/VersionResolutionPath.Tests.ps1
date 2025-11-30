@@ -23,13 +23,12 @@ Describe "LabVIEW version resolution wiring" {
 
         $script:repoRoot = $repoRoot
         $script:workflowPath = Join-Path $script:repoRoot '.github/workflows/ci.yml'
-        $script:actionPath = Join-Path $script:repoRoot '.github/actions/run-unit-tests/action.yml'
+        $script:actionPath = Join-Path $script:repoRoot 'scripts/run-unit-tests/RunUnitTests.ps1'
 
         Test-Path -LiteralPath $script:workflowPath | Should -BeTrue
         Test-Path -LiteralPath $script:actionPath   | Should -BeTrue
 
         $script:Workflow = Get-Content -LiteralPath $script:workflowPath -Raw | ConvertFrom-Yaml
-        $script:Action   = Get-Content -LiteralPath $script:actionPath -Raw   | ConvertFrom-Yaml
     }
 
     Context "resolve-labview-version job" {
@@ -56,22 +55,16 @@ Describe "LabVIEW version resolution wiring" {
 
                 $job.env.LABVIEW_VERSION | Should -Be $script:ExpectedVersionExpr
 
-                $unitStep = @($job.steps) | Where-Object { $_.uses -eq './.github/actions/run-unit-tests' }
-                $unitStep | Should -Not -BeNullOrEmpty
-                $unitStep.with.labview_version | Should -Be $script:ExpectedVersionExpr
+                $runs = @($job.steps | ForEach-Object { $_.run }) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+                $runs | Should -Not -BeNullOrEmpty
+
+                $unitRuns = $runs | Where-Object { $_ -match 'run-unit-tests/RunUnitTests\.ps1' }
+                $unitRuns | Should -Not -BeNullOrEmpty
+
+                $pattern = '-Package_LabVIEW_Version\s+"?\${{ needs\.resolve-labview-version\.outputs\.minimum_supported_lv_version }}"?'
+                ($unitRuns | Where-Object { $_ -match $pattern }) | Should -Not -BeNullOrEmpty
             }
         }
     }
 
-    Context "run-unit-tests composite action" {
-        It "relies on provided labview_version input or LABVIEW_VERSION env and passes it to RunUnitTests.ps1" {
-            $runStep = @($script:Action.runs.steps) | Where-Object { $_.name -eq 'Run RunUnitTests.ps1' }
-            $runStep | Should -Not -BeNullOrEmpty
-
-            $scriptBlock = $runStep.run
-            $scriptBlock | Should -Match '\$Env:LABVIEW_VERSION'
-            $scriptBlock | Should -Match '-Package_LabVIEW_Version \$lvVer'
-            $scriptBlock | Should -Not -Match 'get-package-lv-version\.ps1'
-        }
-    }
 }

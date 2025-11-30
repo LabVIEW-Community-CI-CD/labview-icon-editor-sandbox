@@ -1,0 +1,70 @@
+name: Build and Release Source Distribution
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Optional tag/release name (defaults to sd-<run>-<short-sha>)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release-sd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute tag
+        id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            tag="${{ github.event.inputs.tag }}"
+          else
+            short_sha=$(echo "${GITHUB_SHA:-unknown}" | head -c 8)
+            tag="sd-${GITHUB_RUN_NUMBER}-${short_sha}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $tag"
+
+      - name: Create source-distribution zip
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          zip -r artifacts/source-distribution.zip . \
+            -x ".git/*" \
+               "artifacts/*" \
+               "*.gitignore" \
+               ".github/workflows/*run*" \
+               ".github/workflows/*release*" \
+               "builds/*"
+          ls -lh artifacts
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          release_name: ${{ steps.tag.outputs.tag }}
+          draft: false
+          prerelease: false
+
+      - name: Upload source-distribution asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/source-distribution.zip
+          asset_name: source-distribution.zip
+          asset_content_type: application/zip

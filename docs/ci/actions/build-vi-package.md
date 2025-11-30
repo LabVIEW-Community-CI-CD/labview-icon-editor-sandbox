@@ -99,14 +99,14 @@ That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events. Th
 ### 3.2 Configurable Inputs / Parameters
 `ci.yml` calls this action and provides all required inputs automatically. When invoking
 `build-vip` from another workflow, supply the following parameters
-(see [action.yml](../../../.github/actions/build-vip/action.yml) for details):
+(see [action.yml](../../../scripts/build-vip/action.yml) for details):
 
 | Input | Description |
 | --- | --- |
 | `supported_bitness` | `32` or `64`; selects the VI Package bitness. |
 | `labview_minor_revision` | LabVIEW minor revision (defaults to `3`). |
 | `repository_path` | Workspace root path. |
-| `vipb_path` | Path to the VIPB file (relative to the workspace). |
+| `vipb_path` | Path to the VIPB file (relative to the workspace). Leave blank to auto-discover a single `.vipb` under `repository_path`. |
 | `major` | Major version component. |
 | `minor` | Minor version component. |
 | `patch` | Patch version component. |
@@ -116,7 +116,14 @@ That workflow runs on `push`, `pull_request`, and `workflow_dispatch` events. Th
 | `display_information_json` | DisplayInformation JSON string. |
 | `fail_on_multiple_vips` | If `true`, fail when more than one `.vip` is found post-build. |
 
-The action reads the LabVIEW major version from the repository’s VIPB via `scripts/get-package-lv-version.ps1`, so no LabVIEW-version input or override is accepted. The default CI workflow points `vipb_path` to the auto-detected VIPB in the repo.
+The action reads the LabVIEW major version from the repository’s VIPB via `scripts/get-package-lv-version.ps1`, so no LabVIEW-version input or override is accepted. If `vipb_path` is omitted or invalid, the action auto-discovers the single `.vipb` under `repository_path`.
+
+**PPL staging expectations (build-vip preflight):**
+- `resource/plugins/lv_icon.lvlibp` (neutral)
+- `resource/plugins/lv_icon.lvlibp.windows_x64`
+- `resource/plugins/lv_icon.lvlibp.windows_x86`
+
+`build-ppl-x64` uploads both the neutral PPL and the windows_x64 variant; `build-ppl-x86` uploads the windows_x86 variant. The `build-vip` job downloads these artifacts into `resource/plugins` so the VIPB references resolve without additional renames. The preflight in `build_vip.ps1` will fail fast if any of the above three files are missing.
 
 The `major`, `minor`, and `patch` inputs are derived from pull-request labels (`major`,
 `minor`, `patch`) by the `version` job (which runs the `compute-version` action) in
@@ -153,7 +160,7 @@ components remain unchanged and only the build number increases.
 
 4. **Compute Final Version**
    - Merges the label-based bump with existing tags (if any).
-   - If on `release-alpha/*`, `release-beta/*`, or `release-rc/*`, appends `-alpha.<commitCount>`, `-beta.<commitCount>`, or `-rc.<commitCount>` respectively. Here `<N>` equals the commit count, matching [`compute-version`](../../../.github/actions/compute-version/action.yml).
+   - If on `release-alpha/*`, `release-beta/*`, or `release-rc/*`, appends `-alpha.<commitCount>`, `-beta.<commitCount>`, or `-rc.<commitCount>` respectively. Here `<N>` equals the commit count, matching [`compute-version`](../../../scripts/compute-version/action.yml).
    - Always adds `-build<BUILD_NUMBER>` last, e.g. `v1.2.3-rc.37-build37`. Because both values use the commit count, the pre-release number and build number are identical.
 
 5. **Build the Icon Editor VI Package**
@@ -272,7 +279,7 @@ components remain unchanged and only the build number increases.
 ### 8.3 LabVIEW-Specific QA
 - If you have LabVIEW unit tests, integrate them by adding a step in the YAML:
   ```yaml
-  - uses: ./.github/actions/run-unit-tests
+  - uses: ./scripts/run-unit-tests
     with:
       repository_path: ${{ github.workspace }}
       supported_bitness: ${{ matrix.bitness }}
@@ -322,5 +329,6 @@ components remain unchanged and only the build number increases.
 ## 11. **Conclusion**
 
 By properly setting up environment variables, referencing your LabVIEW environment on a self-hosted runner, and using label-based version increments plus a commit-based build number, this GitHub Action automates your `.vip` build and artifact upload process. Maintainers can extend the pipeline with tagging or release steps if desired. Follow the troubleshooting steps if anything goes awry, and enjoy streamlined LabVIEW CI/CD!
+
 
 

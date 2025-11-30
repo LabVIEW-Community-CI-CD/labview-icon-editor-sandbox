@@ -1,5 +1,10 @@
 name: CI Pipeline (Composite)
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 concurrency:
   # Enforce one run at a time per branch/PR to avoid overlapping fixes on the same feature branch.
   # Deduplicate by commit (PR head SHA when available); cancel older runs for the same commit.
@@ -36,78 +41,77 @@ on:
 
 jobs:
   verify-checklist-sync:
-    name: TRW checklist CSV (informational)
+    name: Requirements
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
+        run: exit 1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
-          fetch-depth: 0
-      - name: Print checklist CSV (formatted sample)
+          set-safe-directory: true
+          fetch-depth: 1
+      - name: Summarize TRW checklist CSV
+        run: dotnet run --project Tooling/dotnet/RequirementsSummarizer/RequirementsSummarizer.csproj -- --csv docs/requirements/requirements.csv --rows 5 --summary-full --details --section-details --details-label "Requirements (full table)" --title "Requirements Checklist" --repo "${{ github.repository }}" --summary-output "${GITHUB_STEP_SUMMARY:-}" --full-output "${{ github.workspace }}/reports/req-full.md" --json-output "${{ github.workspace }}/reports/requirements.json" --html-output "${{ github.workspace }}/reports/requirements.html"
+      - name: Upload requirements artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: requirements-full-table
+          path: |
+            reports/req-full.md
+            reports/requirements.json
+            reports/requirements.html
+          if-no-files-found: error
+      - name: Comment links on PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            Requirements report for this PR:
+            - Summary: (see Checks → Requirements job summary)
+            - HTML: [requirements.html (download artifact)](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - JSON: [requirements.json (download artifact)](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+  requirements-language-lint:
+    name: Lint requirements language (ISO 29148)
+    needs: [verify-checklist-sync]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
+        run: exit 1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+          fetch-depth: 1
+      - name: Lint requirements language
+        run: python3 .github/scripts/lint_requirements_29148.py
+
+  requirements-attributes:
+    name: Requirements attributes completeness
+    needs: [verify-checklist-sync]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
+        run: exit 1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+          fetch-depth: 1
+      - name: Check requirement attributes and traceability readiness
+        run: python3 .github/scripts/check_requirements_attributes.py
+      - name: Check set quality (no TBD/TBR placeholders)
+        run: python3 .github/scripts/check_requirements_set_quality.py
+      - name: Verify glossary and checklist present
         run: |
-          python3 - <<'PY'
-          import csv
-          from pathlib import Path
-
-          path = Path("docs/requirements/TRW_Verification_Checklist.csv")
-          rows = list(csv.reader(path.open("r", encoding="utf-8", newline="")))
-          if not rows:
-              print(f"{path} is empty.")
-              raise SystemExit(0)
-
-          header, body = rows[0], rows[1:]
-          total_rows = len(rows)
-          total_data_rows = len(body)
-          cols = len(header)
-          keep_head, keep_tail = 10, 5
-          sample = body
-          ellipsis_row = None
-          if total_data_rows > keep_head + keep_tail:
-              ellipsis_row = ["…"] * cols
-              sample = body[:keep_head] + [ellipsis_row] + body[-keep_tail:]
-
-          def widths_for(headers, data):
-              widths = [len(h) for h in headers]
-              for row in data:
-                  for i in range(cols):
-                      if i < len(row):
-                          widths[i] = max(widths[i], len(row[i]))
-              # cap overly long cells for readability
-              return [min(w, 60) for w in widths]
-
-          widths = widths_for(header, sample)
-
-          def trunc(text, width):
-              if len(text) <= width:
-                  return text
-              if width <= 1:
-                  return text[:width]
-              return text[: width - 1] + "…"
-
-          def fmt(row):
-              cells = []
-              for i in range(cols):
-                  val = row[i] if i < len(row) else ""
-                  cells.append(trunc(val, widths[i]).ljust(widths[i]))
-              return "| " + " | ".join(cells) + " |"
-
-          sep = "|-" + "-|-".join("-" * w for w in widths) + "-|"
-
-          print(f"File: {path}")
-          print(f"Rows: {total_rows} (1 header + {total_data_rows} data), Columns: {cols}")
-          if ellipsis_row:
-              print(f"Showing first {keep_head} and last {keep_tail} data rows (middle collapsed).")
-          else:
-              print("Showing all rows.")
-          print()
-          print(fmt(header))
-          print(sep)
-          for row in sample:
-              print(fmt(row))
-          PY
+          test -f docs/requirements/glossary.md
+          test -f docs/requirements/set-quality-checklist.md
+          test -f docs/requirements/README.md
 
   test-compute-version-bump:
     name: Test compute-version bump selection (matrix)
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, enforce-verify-checklist-needs]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -229,9 +233,12 @@ jobs:
 
   test-tag-existence-check:
     name: Test tag existence check logic
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, enforce-verify-checklist-needs]
     runs-on: ubuntu-latest
     steps:
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
+        run: exit 1
       - name: Simulate tag existence/mismatch scenarios
         shell: bash
         run: |
@@ -285,9 +292,13 @@ jobs:
     name: Enforce jobs depend on verify-checklist-sync
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
+        run: exit 1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
-          fetch-depth: 0
+          set-safe-directory: true
+          fetch-depth: 1
       - name: Check job dependencies include verify-checklist-sync
         run: |
           python3 - <<'PY'
@@ -321,10 +332,15 @@ jobs:
 
   rtm-gates:
     name: RTM validation and coverage gate
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, enforce-verify-checklist-needs]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
+        run: exit 1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -358,10 +374,15 @@ jobs:
 
   docs-quality:
     name: Docs link check and ADR lint
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
+    needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, enforce-verify-checklist-needs]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
+        run: exit 1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -402,33 +423,73 @@ jobs:
           path: lychee/report.json
           if-no-files-found: error
 
-  changes:
-    name: Detect VIPC changes
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality, ps-coverage]
-    runs-on: ubuntu-latest
-    outputs:
-      vipc: ${{ steps.filter.outputs.vipc }}
+  dev-mode-binder-tests:
+    name: Dev-mode binder tests
+    needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, enforce-verify-checklist-needs]
+    runs-on: self-hosted-windows-lv
     steps:
-      - uses: actions/checkout@v4
+      - name: "Guard: Windows runner"
+        if: ${{ runner.os != 'Windows' }}
+        run: exit 1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
+          set-safe-directory: true
+          fetch-depth: 1
+      - name: Ensure Pester 5 is available
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $hasPester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 }
+          if (-not $hasPester) {
+            Install-Module -Name Pester -MinimumVersion 5.3.3 -Scope CurrentUser -Force -SkipPublisherCheck
+          }
+      - name: Run dev-mode binder Pester suite
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-Pester -Path 'Test/BindDevelopmentMode.Tests.ps1' -Output Detailed -EnableExit
+
+  seed-containerized:
+    name: Seed + Analyze (containerized)
+    needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, enforce-verify-checklist-needs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
+        run: exit 1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
           fetch-depth: 0
-      - id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            vipc:
-              - '**/*.vipc'
+      - name: Seed + Analyze
+        env:
+          WORKSPACE_HOST_PATH: ${{ github.workspace }}
+          # Optional overrides:
+          # PESTER_VERSION: "5.7.1"
+          # PESTER_SHA256: "3c6dad5fb143faf19709dfb28c31c873989944705a087e160e23b7ce462e37a1"
+          # PESTER_URL: "https://globalcdn.nuget.org/packages/pester.5.7.1.nupkg"
+          # CA_CERT_BUNDLE_BASE64: ""
+          # ALLOW_INSECURE_PESTER_DOWNLOAD: "0"
+          # PESTER_GH_REPO: ""
+          # PESTER_GH_TAG: ""
+          # PESTER_GH_ASSET: ""
+          # GH_TOKEN: ""
+        run: pwsh -NoProfile -File ./scripts/run-seed-runner.ps1
 
   resolve-labview-version:
     name: Resolve LabVIEW version from VIPB
-    needs: [verify-checklist-sync]
+    needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes]
     runs-on: ubuntu-latest
     outputs:
       minimum_supported_lv_version: ${{ steps.read.outputs.lv_version }}
     steps:
-      - uses: actions/checkout@v4
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
+        run: exit 1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
-          fetch-depth: 0
+          set-safe-directory: true
+          fetch-depth: 1
       - id: read
         name: Gate minimum LabVIEW policy vs VIPB
         shell: pwsh
@@ -457,63 +518,13 @@ jobs:
           "lv_version=$derived" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
           Write-Host ("LabVIEW version check passed: env policy {0} == VIPB {1} (normalized {2})." -f $env:EXPECTED_MIN_LV, $derivedRaw, $derived)
 
-  apply-deps-x64:
-    name: Apply VIPC (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
-    needs: [verify-checklist-sync, changes, resolve-labview-version, ps-coverage]
-    runs-on: self-hosted-windows-lv
-    steps:
-      - uses: ./.github/actions/apply-vipc
-        if: needs.changes.outputs.vipc == 'true'
-        with:
-          package_labview_version:      ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
-          supported_bitness:            64
-          repository_path:              ${{ github.workspace }}
-          vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
-      - run: echo "No .vipc changes detected; skipping dependency application."
-        if: needs.changes.outputs.vipc != 'true'
-
-  apply-deps-x86:
-    name: Apply VIPC (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
-    needs: [verify-checklist-sync, apply-deps-x64, changes, resolve-labview-version]
-    runs-on: self-hosted-windows-lv
-    steps:
-      - uses: ./.github/actions/apply-vipc
-        if: needs.changes.outputs.vipc == 'true'
-        with:
-          package_labview_version:      ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
-          supported_bitness:            32
-          repository_path:              ${{ github.workspace }}
-          vipc_path:                    ".github/actions/apply-vipc/runner_dependencies.vipc"
-      - run: echo "No .vipc changes detected; skipping dependency application."
-        if: needs.changes.outputs.vipc != 'true'
-
-  check-library-paths:
-    name: Check LocalHost.LibraryPaths (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }})
-    needs: [verify-checklist-sync, apply-deps-x86, resolve-labview-version]
-    runs-on: self-hosted-windows-lv
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Validate LocalHost.LibraryPaths entries (64-bit)
-        shell: pwsh
-        run: |
-          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/read-library-paths.ps1" `
-            -RepositoryPath "$env:GITHUB_WORKSPACE" `
-            -SupportedBitness 64 `
-            -FailOnMissing
-      - name: Validate LocalHost.LibraryPaths entries (32-bit)
-        shell: pwsh
-        run: |
-          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/read-library-paths.ps1" `
-            -RepositoryPath "$env:GITHUB_WORKSPACE" `
-            -SupportedBitness 32 `
-            -FailOnMissing
-
   version:
     name: Compute Version
-    needs: [serialize-before-version, verify-checklist-sync]
+    needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes]
     runs-on: self-hosted-windows-lv
+    defaults:
+      run:
+        shell: pwsh
     outputs:
       VERSION:       ${{ steps.compute.outputs.VERSION }}
       MAJOR:         ${{ steps.compute.outputs.MAJOR }}
@@ -522,512 +533,144 @@ jobs:
       BUILD:         ${{ steps.compute.outputs.BUILD }}
       IS_PRERELEASE: ${{ steps.compute.outputs.IS_PRERELEASE }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
+          set-safe-directory: true
           fetch-depth: 0
+      - name: "Guard: Windows runner"
+        if: ${{ runner.os != 'Windows' }}
+        run: exit 1
       - id: compute
         uses: ./.github/actions/compute-version
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  serialize-before-version:
-    name: Serialize workflow before Compute Version
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs, rtm-gates, docs-quality, ps-coverage]
+  list-collaborators:
+    name: List Repo Collaborators
+    needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes]
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for other ci.yml runs to finish
-        uses: softprops/turnstyle@v1
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
+        run: exit 1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
-          poll-interval-seconds: 30
+          set-safe-directory: true
+          fetch-depth: 1
+
+      - name: List collaborators and permissions
+        shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  missing-in-project-x64:
-    name: Test Missing-In-Project (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
-    needs: [verify-checklist-sync, apply-deps-x64, check-library-paths, resolve-labview-version]
-    runs-on: self-hosted-windows-lv
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: true
-      - uses: ./.github/actions/missing-in-project
-        with:
-          lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
-          arch:         "64"
-      - name: Detect unexpected workspace changes (x64)
-        id: guard_x64
-        if: always()
-        shell: pwsh
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/report-lvproj-diffs.ps1" `
-            -Label "missing-in-project-x64" `
-            -DiffPrefix "x64" `
-            -Workspace "$env:GITHUB_WORKSPACE"
-      - name: Upload lvproj diffs (x64, if any)
-        if: always() && steps.guard_x64.outputs.found_diff == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: lvproj-diffs-x64
-          path: post_mip_dirty_x64_*.diff
-          if-no-files-found: ignore
-
-  missing-in-project-x86:
-    name: Test Missing-In-Project (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
-    needs: [verify-checklist-sync, missing-in-project-x64, check-library-paths, resolve-labview-version]
+          $ErrorActionPreference = 'Stop'
+          $script = Join-Path $env:GITHUB_WORKSPACE ".github/scripts/list-collaborators.ps1"
+          if (-not (Test-Path $script)) { throw "Script not found at $script" }
+          if (-not $env:GH_TOKEN) { throw "GITHUB_TOKEN is not available." }
+          if (-not $env:GH_REPO) { throw "GITHUB_REPOSITORY is not set." }
+          pwsh -NoProfile -File $script -Repo $env:GH_REPO -Token $env:GH_TOKEN
+  build-worktree:
+    name: Build (worktree)
+    needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, version, resolve-labview-version, test-compute-version-bump, test-tag-existence-check, rtm-gates, docs-quality, dev-mode-binder-tests, list-collaborators]
     runs-on: self-hosted-windows-lv
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: true
-      - uses: ./.github/actions/missing-in-project
-        with:
-          lv-ver:       ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
-          arch:         "32"
-      - name: Detect unexpected workspace changes (x86)
-        id: guard_x86
-        if: always()
+    defaults:
+      run:
         shell: pwsh
-        run: |
-          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/report-lvproj-diffs.ps1" `
-            -Label "missing-in-project-x86" `
-            -DiffPrefix "x86" `
-            -Workspace "$env:GITHUB_WORKSPACE"
-      - name: Upload lvproj diffs (x86, if any)
-        if: always() && steps.guard_x86.outputs.found_diff == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: lvproj-diffs-x86
-          path: post_mip_dirty_x86_*.diff
-          if-no-files-found: ignore
-
-  test-x64:
-    name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x64)
-    needs: [verify-checklist-sync, missing-in-project-x86, resolve-labview-version]
-    runs-on: self-hosted-windows-lv
     env:
-      LABVIEW_VERSION: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
+      COMPANY_NAME: ${{ github.repository_owner }}
+      AUTHOR_NAME: ${{ github.actor }}
     steps:
-      - uses: ./.github/actions/run-unit-tests
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
-          repository_path: ${{ github.workspace }}
-          supported_bitness:            "64"
-          labview_version:  ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
-      - if: always()
-        name: Close LabVIEW ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} 64-bit after unit tests
-        uses: ./.github/actions/close-labview
-        with:
-          repository_path: ${{ github.workspace }}
-          supported_bitness: 64
-      - name: Upload unit test report (x64)
-        id: check_report_x64
-        if: always()
-        shell: pwsh
-        run: |
-          if (Test-Path '.github/actions/run-unit-tests/UnitTestReport.xml') {
-            "found_report=true" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append -Encoding utf8
-          } else {
-            "found_report=false" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append -Encoding utf8
-          }
-      - name: Upload unit test report (x64)
-        if: always() && steps.check_report_x64.outputs.found_report == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-unit-test-report-64bit
-          path: .github/actions/run-unit-tests/UnitTestReport.xml
-          if-no-files-found: ignore
-
-  test-x86:
-    name: Run Unit Tests (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} x86)
-    needs: [verify-checklist-sync, test-x64, resolve-labview-version]
-    runs-on: self-hosted-windows-lv
-    env:
-      LABVIEW_VERSION: ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
-    steps:
-      - uses: ./.github/actions/run-unit-tests
-        with:
-          repository_path: ${{ github.workspace }}
-          supported_bitness:            "32"
-          labview_version:  ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }}
-      - if: always()
-        name: Close LabVIEW ${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }} 32-bit after unit tests
-        uses: ./.github/actions/close-labview
-        with:
-          repository_path: ${{ github.workspace }}
-          supported_bitness: 32
-      - name: Upload unit test report (x86)
-        id: check_report_x86
-        if: always()
-        shell: pwsh
-        run: |
-          if (Test-Path '.github/actions/run-unit-tests/UnitTestReport.xml') {
-            "found_report=true" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append -Encoding utf8
-          } else {
-            "found_report=false" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append -Encoding utf8
-          }
-      - name: Upload unit test report (x86)
-        if: always() && steps.check_report_x86.outputs.found_report == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-unit-test-report-32bit
-          path: .github/actions/run-unit-tests/UnitTestReport.xml
-          if-no-files-found: ignore
-
-  publish-performance-and-portability:
-    name: Publish Performance/Portability JSON
-    needs: [verify-checklist-sync, test-x86]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download unit test reports
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - name: Build performance/portability reports
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json
-          import xml.etree.ElementTree as ET
-          from pathlib import Path
-
-          repo = "${{ github.event.repository.name || 'labview-icon-editor' }}"
-
-          reports = {
-              "test-x64": Path(f"artifacts/{repo}-unit-test-report-64bit/UnitTestReport.xml"),
-              "test-x86": Path(f"artifacts/{repo}-unit-test-report-32bit/UnitTestReport.xml"),
-          }
-
-          perf_entries = []
-          port_entries = []
-
-          for arch, path in reports.items():
-              note = ""
-              status = "fail"
-              duration = None
-
-              if path.exists():
-                  try:
-                      tree = ET.parse(path)
-                      duration = sum(float(tc.get("time") or 0.0) for tc in tree.findall(".//testcase"))
-                      status = "pass"
-                      note = "Unit tests completed"
-                  except Exception as exc:
-                      note = f"Failed to parse UnitTestReport.xml: {exc}"
-              else:
-                  note = "UnitTestReport.xml not found"
-
-              if duration is not None:
-                  perf_entries.append(
-                      {
-                          "scenario": "LabVIEW unit tests",
-                          "architecture": arch,
-                          "metric": "unit_tests_duration_s",
-                          "unit": "s",
-                          "value": round(duration, 3),
-                          "source": str(path),
-                      }
-                  )
-
-              port_entries.append(
-                  {
-                      "architecture": arch,
-                      "status": status,
-                      "notes": note,
-                  }
-              )
-
-          out_dir = Path("reports")
-          out_dir.mkdir(parents=True, exist_ok=True)
-          (out_dir / "performance-measurements.json").write_text(json.dumps(perf_entries, indent=2))
-          (out_dir / "portability-status.json").write_text(json.dumps(port_entries, indent=2))
-          print("Performance entries:", json.dumps(perf_entries, indent=2))
-          print("Portability entries:", json.dumps(port_entries, indent=2))
-          PY
-      - name: Upload performance/portability reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-reports-json
-          path: |
-            reports/performance-measurements.json
-            reports/portability-status.json
-
-  ps-coverage:
-    name: PowerShell Tests & Coverage
-    needs: [verify-checklist-sync, enforce-verify-checklist-needs]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
+          set-safe-directory: true
           fetch-depth: 0
-      - name: Install Pester 5.7.1
-        shell: pwsh
-        run: |
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -Scope CurrentUser -Force -RequiredVersion 5.7.1
-          Install-Module powershell-yaml -Scope CurrentUser -Force
-      - name: Run Pester with coverage
+      - name: "Guard: Windows runner"
+        if: ${{ runner.os != 'Windows' }}
+        run: exit 1
+      - name: Build via worktree (includes VIPC, missing-in-project, lvlibp, VIP)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $coverageTargets = @(
-            '.github/actions/add-token-to-labview/LocalhostLibraryPaths.ps1',
-            '.github/actions/set-development-mode/run-dev-mode.ps1',
-            '.github/actions/set-development-mode/Set_Development_Mode.ps1',
-            '.github/actions/prepare-labview-source/Prepare_LabVIEW_source.ps1',
-            '.github/actions/build/Build.ps1',
-            'scripts/read-library-paths.ps1',
-            'scripts/show-ini.ps1',
-            'scripts/verify-dev-mode-state.ps1'
-          )
-          $pesterConfig = New-PesterConfiguration
-          $pesterConfig.Run.Container = New-PesterContainer -Path 'Test'
-          $pesterConfig.TestResult.Enabled = $true
-          $pesterConfig.TestResult.OutputPath = 'pester-results.xml'
-          $pesterConfig.CodeCoverage.Enabled = $true
-          $pesterConfig.CodeCoverage.Path = $coverageTargets
-          $pesterConfig.CodeCoverage.OutputPath = 'coverage.xml'
-          $pesterConfig.CodeCoverage.OutputFormat = 'JaCoCo'
-          $pesterConfig.Run.PassThru = $true
-          $pesterConfig.Output.Verbosity = 'Detailed'
-          Invoke-Pester -Configuration $pesterConfig
-      - name: Upload Pester results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-pester-results
-          path: pester-results.xml
-      - name: Upload Pester coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-pester-coverage
-          path: coverage.xml
-
-  build-ppl-x86:
-    name: Build 32-bit Packed Library (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }})
-    needs: [verify-checklist-sync, build-ppl-x64, version, resolve-labview-version]
-    runs-on: self-hosted-windows-lv
-    steps:
-      - uses: ./.github/actions/build-lvlibp
-        with:
-          supported_bitness: 32
-          repository_path: ${{ github.workspace }}
-          major: ${{ needs.version.outputs.MAJOR }}
-          minor: ${{ needs.version.outputs.MINOR }}
-          patch: ${{ needs.version.outputs.PATCH }}
-          build: ${{ needs.version.outputs.BUILD }}
-          commit: ${{ github.sha }}
-      - if: always()
-        uses: ./.github/actions/close-labview
-        with:
-          repository_path: ${{ github.workspace }}
-          supported_bitness: 32
-      - uses: ./.github/actions/rename-file
-        with:
-          current_filename: ${{ github.workspace }}/resource/plugins/lv_icon.lvlibp
-          new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x86.lvlibp
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-32bit
-          path: resource/plugins/lv_icon_x86.lvlibp
-
-  build-ppl-x64:
-    name: Build 64-bit Packed Library (${{ needs.resolve-labview-version.outputs.minimum_supported_lv_version }})
-    needs: [verify-checklist-sync, test-x86, version, resolve-labview-version]
-    runs-on: self-hosted-windows-lv
-    steps:
-      - uses: ./.github/actions/build-lvlibp
-        with:
-          supported_bitness: 64
-          repository_path: ${{ github.workspace }}
-          major: ${{ needs.version.outputs.MAJOR }}
-          minor: ${{ needs.version.outputs.MINOR }}
-          patch: ${{ needs.version.outputs.PATCH }}
-          build: ${{ needs.version.outputs.BUILD }}
-          commit: ${{ github.sha }}
-      - if: always()
-        uses: ./.github/actions/close-labview
-        with:
-          repository_path: ${{ github.workspace }}
-          supported_bitness: 64
-      - uses: ./.github/actions/rename-file
-        with:
-          current_filename: ${{ github.workspace }}/resource/plugins/lv_icon.lvlibp
-          new_filename: ${{ github.workspace }}/resource/plugins/lv_icon_x64.lvlibp
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-64bit
-          path: resource/plugins/lv_icon_x64.lvlibp
-
-  build-vip:
-    name: Build VI Package
-    # Chain after 32-bit build, which already depends on 64-bit, to enforce x64 -> x86 -> build-vip ordering
-    needs: [verify-checklist-sync, build-ppl-x86, version]
-    outputs:
-      vip_artifact: ${{ steps.build-vip.outputs.vip_artifact }}
-      vip_path: ${{ steps.build-vip.outputs.vip_path }}
-      release_notes_artifact: ${{ steps.release-notes.outputs.artifact_name }}
-    runs-on: self-hosted-windows-lv
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Generate release notes
-        id: release-notes
-        uses: ./.github/actions/generate-release-notes
-        # output_path defaults to Tooling/deployment/release_notes.md
-      - uses: actions/download-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-32bit
-          path: resource/plugins
-      - uses: actions/download-artifact@v4
-        with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-64bit
-          path: resource/plugins
-      - name: Generate display information JSON
-        id: display-info
-        shell: pwsh
-        env:
-          RELEASE_NOTES_PATH: ${{ github.workspace }}/Tooling/deployment/release_notes.md
-          REPO_NAME: ${{ github.event.repository.name }}
-          REPO_DESCRIPTION: ${{ github.event.repository.description }}
-          REPO_URL: ${{ github.event.repository.html_url }}
-          COMPANY: ${{ github.repository_owner }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          $releaseNotes = if (Test-Path $Env:RELEASE_NOTES_PATH) {
-            Get-Content -Raw -Path $Env:RELEASE_NOTES_PATH
-          } else {
-            "Release notes file not generated."
-          }
-
-          $productName = if ([string]::IsNullOrWhiteSpace($Env:REPO_NAME)) {
-            $Env:REPOSITORY
-          } else {
-            $Env:REPO_NAME
-          }
-
-          $description = if ([string]::IsNullOrWhiteSpace($Env:REPO_DESCRIPTION)) {
-            "$($Env:REPO_NAME) VI Package build for $($Env:REPOSITORY)."
-          } else {
-            $Env:REPO_DESCRIPTION
-          }
-
-          $info = @{
-            "Package Version" = @{
-              "major" = ${{ needs.version.outputs.MAJOR }}
-              "minor" = ${{ needs.version.outputs.MINOR }}
-              "patch" = ${{ needs.version.outputs.PATCH }}
-              "build" = ${{ needs.version.outputs.BUILD }}
-            }
-            "Product Name" = $productName
-            "Company Name" = $Env:COMPANY
-            "Author Name (Person or Company)" = $Env:REPOSITORY
-            "Product Homepage (URL)" = if ([string]::IsNullOrWhiteSpace($Env:REPO_URL)) {
-              "https://github.com/$($Env:REPOSITORY)"
-            } else {
-              $Env:REPO_URL
-            }
-            "Legal Copyright" = "© $(Get-Date -Format yyyy) $($Env:COMPANY)"
-            "License Agreement Name" = "LICENSE"
-            "Product Description Summary" = $description
-            "Product Description" = $description
-            "Release Notes - Change Log" = $releaseNotes
-          }
-
-          $json = $info | ConvertTo-Json -Depth 5 -Compress
-          "json=$json" >> $Env:GITHUB_OUTPUT
-      - uses: ./.github/actions/modify-vipb-display-info
-        with:
-          supported_bitness: 64
-          repository_path: ${{ github.workspace }}
-          vipb_path: Tooling/deployment/NI Icon editor.vipb
-          labview_minor_revision: 3
-          major: ${{ needs.version.outputs.MAJOR }}
-          minor: ${{ needs.version.outputs.MINOR }}
-          patch: ${{ needs.version.outputs.PATCH }}
-          build: ${{ needs.version.outputs.BUILD }}
-          commit: ${{ github.sha }}
-          release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
-          display_information_json: ${{ steps.display-info.outputs.json }}
-      - id: build-vip
-        uses: ./.github/actions/build-vip
-        with:
-          supported_bitness: 64
-          repository_path: ${{ github.workspace }}
-          vipb_path: Tooling/deployment/NI Icon editor.vipb
-          labview_minor_revision: 3
-          major: ${{ needs.version.outputs.MAJOR }}
-          minor: ${{ needs.version.outputs.MINOR }}
-          patch: ${{ needs.version.outputs.PATCH }}
-          build: ${{ needs.version.outputs.BUILD }}
-          commit: ${{ github.sha }}
-          release_notes_file: ${{ github.workspace }}/Tooling/deployment/release_notes.md
-          display_information_json: ${{ steps.display-info.outputs.json }}
-      - if: always()
-        uses: ./.github/actions/close-labview
-        with:
-          repository_path: ${{ github.workspace }}
-          supported_bitness: 64
-      - name: Validate tag matches computed version (if provided)
-        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.dispatch_tag != ''
-        shell: pwsh
-        env:
-          EXPECTED_TAG: v${{ needs.version.outputs.MAJOR }}.${{ needs.version.outputs.MINOR }}.${{ needs.version.outputs.PATCH }}.${{ needs.version.outputs.BUILD }}
-          REF_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
-          INPUT_TAG: ${{ github.event.inputs.dispatch_tag || '' }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $provided = if (-not [string]::IsNullOrWhiteSpace($Env:INPUT_TAG)) { $Env:INPUT_TAG } else { $Env:REF_TAG }
-          if ([string]::IsNullOrWhiteSpace($provided)) {
-            Write-Host 'No tag provided; skipping validation.'
-            exit 0
-          }
-          if ($provided -ne $Env:EXPECTED_TAG) {
-            Write-Error ("Provided tag '{0}' does not match computed tag '{1}'." -f $provided, $Env:EXPECTED_TAG)
-          } else {
-            Write-Host ("Tag validation ok: {0}" -f $provided)
-          }
-
-  analyze-vip:
-    name: Analyze VI Package
-    needs: [verify-checklist-sync, build-vip]
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Record analyze job start
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/worktree-build.ps1" `
+            -SourceRepoPath "$env:GITHUB_WORKSPACE" `
+            -Ref "${{ github.sha }}" `
+            -SupportedBitness 64 `
+            -LvlibpBitness both `
+            -Major ${{ needs.version.outputs.MAJOR }} `
+            -Minor ${{ needs.version.outputs.MINOR }} `
+            -Patch ${{ needs.version.outputs.PATCH }} `
+            -Build ${{ needs.version.outputs.BUILD }} `
+            -CompanyName "$env:COMPANY_NAME" `
+            -AuthorName "$env:AUTHOR_NAME" `
+            -OutputDirectory "$env:GITHUB_WORKSPACE/builds-isolated" `
+            -AnalyzeVIP:$false
+      - name: Locate built artifacts
+        id: locate-build
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $dir = "timings"
-          New-Item -ItemType Directory -Path $dir -Force | Out-Null
-          $path = Join-Path $dir "analyze-vip.txt"
-          "job=analyze-vip" | Out-File -FilePath $path -Encoding utf8
-          "server_time_start=$(Get-Date -Format o)" | Out-File -FilePath $path -Encoding utf8 -Append
-          "run_id=${{ github.run_id }}" | Out-File -FilePath $path -Encoding utf8 -Append
-          "ref=${{ github.ref }}" | Out-File -FilePath $path -Encoding utf8 -Append
-      - uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.build-vip.outputs.vip_artifact }}
-          path: builds/VI Package
-      - name: Locate downloaded VI package
-        id: locate-downloaded-vip
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $dir = "builds/VI Package"
-          $vip = Get-ChildItem -Path $dir -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $vip) {
-            Write-Error "No .vip found under '$dir' after artifact download."
-          }
+          $plugins = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/resource/plugins'
+          $vipDir = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/VI Package'
+          if (-not (Test-Path -LiteralPath $vipDir)) { throw "VIP output directory not found at $vipDir" }
+          $vip = Get-ChildItem -Path $vipDir -Filter *.vip -File -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $vip) { throw "No .vip found under '$vipDir' after build." }
           "vip_path=$($vip.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          if (Test-Path -LiteralPath $plugins) {
+            "plugins_dir=$plugins" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          } else {
+            "plugins_dir=" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          }
+      - name: Locate Source Distribution artifacts
+        id: locate-sd
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $distRoot = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/Source Distribution'
+          if (-not (Test-Path -LiteralPath $distRoot -PathType Container)) {
+            throw "Source Distribution folder not found at $distRoot"
+          }
+          $zip = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/artifacts/source-distribution.zip'
+          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) {
+            throw "source-distribution.zip not found at $zip"
+          }
+          $manifestJson = Join-Path $distRoot 'manifest.json'
+          $manifestCsv = Join-Path $distRoot 'manifest.csv'
+          foreach ($p in @($manifestJson, $manifestCsv)) {
+            if (-not (Test-Path -LiteralPath $p -PathType Leaf)) {
+              throw "Missing manifest file: $p"
+            }
+          }
+          "sd_zip=$zip" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          "sd_manifest_json=$manifestJson" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          "sd_manifest_csv=$manifestCsv" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+      - name: Upload PPL artifacts
+        if: steps.locate-build.outputs.plugins_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-lvlibp-worktree
+          path: ${{ steps.locate-build.outputs.plugins_dir }}
+          if-no-files-found: error
+      - name: Upload Source Distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-source-distribution
+          path: |
+            ${{ steps.locate-sd.outputs.sd_zip }}
+            ${{ steps.locate-sd.outputs.sd_manifest_json }}
+            ${{ steps.locate-sd.outputs.sd_manifest_csv }}
+          if-no-files-found: error
+      - name: Upload VI Package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-vip
+          path: ${{ steps.locate-build.outputs.vip_path }}
+          if-no-files-found: error
       - name: Analyze built VI package
         id: analyze-vip
         uses: ./.github/actions/analyze-vi-package
         with:
-          vip_artifact_path: ${{ steps.locate-downloaded-vip.outputs.vip_path }}
+          vip_artifact_path: ${{ steps.locate-build.outputs.vip_path }}
           min_labview: ${{ env.MIN_LABVIEW_POLICY }}
       - name: Upload VI package analysis results
         if: always()
@@ -1035,20 +678,98 @@ jobs:
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-vip-analysis-junit
           path: ${{ steps.analyze-vip.outputs.junit }}
-      - name: Record analyze job end and upload timing
-        if: always()
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $path = "timings/analyze-vip.txt"
-          if (-not (Test-Path $path)) {
-            Write-Error "Timing file missing at $path"
-          }
-          "server_time_end=$(Get-Date -Format o)" | Out-File -FilePath $path -Encoding utf8 -Append
-        # Upload timing as its own artifact for duration analysis
-      - name: Upload analyze timing
+      - name: Upload build reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-analyze-vip-timing
-          path: timings/analyze-vip.txt
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-build-reports
+          path: builds-isolated/reports
+          if-no-files-found: warn
+      - name: Upload log-stash bundles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-log-stash
+          path: |
+            builds/log-stash
+            builds-isolated/builds/log-stash
+          if-no-files-found: ignore
+      - name: Validate compare bundles (if request present)
+        if: always()
+        shell: pwsh
+        run: |
+          $req = "${{ github.event.inputs.vi_compare_request || '' }}"
+          if ([string]::IsNullOrWhiteSpace($req)) {
+            Write-Host "No compare request provided; skipping compare bundle validation."
+            exit 0
+          }
+          $roots = @(
+            Join-Path $env:GITHUB_WORKSPACE 'builds/log-stash'
+            Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/log-stash'
+          )
+          $bundles = @()
+          foreach ($r in $roots) {
+            if (Test-Path -LiteralPath $r) {
+              $bundles += Get-ChildItem -LiteralPath $r -Recurse -Filter manifest.json | Where-Object { $_.FullName -like '*\\compare\\*' }
+            }
+          }
+          if (-not $bundles -or $bundles.Count -eq 0) {
+            Write-Error "Compare request provided but no compare bundles were found under builds/log-stash."
+            exit 1
+          }
+          Write-Host ("Found {0} compare bundle(s):" -f $bundles.Count)
+          $bundles | ForEach-Object { Write-Host (" - {0}" -f $_.FullName) }
+      - name: Cleanup log-stash (workspace)
+        if: always()
+        shell: pwsh
+        run: |
+          $script = Join-Path $env:GITHUB_WORKSPACE 'scripts/log-stash/Cleanup-LogStash.ps1'
+          if (Test-Path -LiteralPath $script) {
+            pwsh -NoProfile -File $script -RepositoryPath "$env:GITHUB_WORKSPACE" -MaxPerCategory 5 -MaxAgeDays 7
+          }
+
+  unify-artifacts:
+    name: Unify artifacts
+    needs:
+      - verify-checklist-sync
+      - build-worktree
+      - seed-containerized
+      - rtm-gates
+      - docs-quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
+        run: exit 1
+
+      - name: Checkout (for scripts)
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+          fetch-depth: 1
+
+      - name: Prepare staging
+        run: mkdir -p artifacts/unified
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/unified/downloads
+        continue-on-error: true
+
+      - name: List downloaded artifacts
+        run: |
+          echo "Downloaded artifacts tree:"
+          ls -R artifacts/unified/downloads || true
+
+      - name: Zip unified bundle
+        run: |
+          cd artifacts/unified/downloads
+          zip -r ../unified-bundle.zip .
+
+      - name: Upload unified bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-artifacts
+          path: artifacts/unified/unified-bundle.zip
+          if-no-files-found: error

@@ -14,6 +14,11 @@ on:
         type: string
         required: false
         default: "64"
+      runner_labels:
+        description: "JSON array of runner labels (default: [\"self-hosted-windows-lv\"]). Override in forks with a differently labeled LabVIEW runner."
+        type: string
+        required: false
+        default: "[\"self-hosted-windows-lv\"]"
 
   # 2) Triggered manually from the Actions tab
   workflow_dispatch:
@@ -34,26 +39,25 @@ on:
         options:
           - "32"
           - "64"
+      runner_labels:
+        description: "JSON array of runner labels (default: [\"self-hosted-windows-lv\"]). Override in forks with a differently labeled LabVIEW runner."
+        required: false
+        default: "[\"self-hosted-windows-lv\"]"
+        type: string
 
 jobs:
   toggle-dev-mode:
-    #
-    # -- FULLY DYNAMIC JOB NAME --
-    #
-    # If triggered by 'workflow_dispatch', read `github.event.inputs.mode`.
-    # Otherwise (workflow_call), read `inputs.mode`.
-    # Then display "Enable Dev Mode" or "Disable Dev Mode."
-    #
     name: ${{ 
       github.event_name == 'workflow_dispatch' && 
         (github.event.inputs.mode == 'enable' && 'Enable Dev Mode' || 'Disable Dev Mode') || 
         (inputs.mode == 'enable' && 'Enable Dev Mode' || 'Disable Dev Mode') }}
-
-    runs-on: [self-hosted-windows-lv]
+    runs-on: ${{ fromJson( github.event_name == 'workflow_dispatch' && github.event.inputs.runner_labels || inputs.runner_labels ) }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
 
       - name: Log context
         shell: pwsh
@@ -84,16 +88,16 @@ jobs:
 
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
             if ($mode -eq 'enable') {
-              ./.github/actions/set-development-mode/Set_Development_Mode.ps1 -RepositoryPath $env:GITHUB_WORKSPACE -SupportedBitness $bitness
+              ./scripts/set-development-mode/Set_Development_Mode.ps1 -RepositoryPath $env:GITHUB_WORKSPACE -SupportedBitness $bitness
             } else {
-              ./.github/actions/revert-development-mode/RevertDevelopmentMode.ps1 -RepositoryPath $env:GITHUB_WORKSPACE -SupportedBitness $bitness
+              ./scripts/revert-development-mode/RevertDevelopmentMode.ps1 -RepositoryPath $env:GITHUB_WORKSPACE -SupportedBitness $bitness
             }
           }
           else {
             if ($mode -eq 'enable') {
-              ./.github/actions/set-development-mode/Set_Development_Mode.ps1 -RepositoryPath $env:GITHUB_WORKSPACE -SupportedBitness $bitness
+              ./scripts/set-development-mode/Set_Development_Mode.ps1 -RepositoryPath $env:GITHUB_WORKSPACE -SupportedBitness $bitness
             } else {
-              ./.github/actions/revert-development-mode/RevertDevelopmentMode.ps1 -RepositoryPath $env:GITHUB_WORKSPACE -SupportedBitness $bitness
+              ./scripts/revert-development-mode/RevertDevelopmentMode.ps1 -RepositoryPath $env:GITHUB_WORKSPACE -SupportedBitness $bitness
             }
           }
       #
@@ -143,3 +147,4 @@ jobs:
 
     outputs:
       environment_details: ${{ steps.set_output.outputs.environment_details }}
+
