@@ -1,5 +1,9 @@
 name: Probe Helper Smoke
 
+defaults:
+  run:
+    working-directory: ${{ github.workspace }}
+
 on:
   push:
     branches: [ "**" ]

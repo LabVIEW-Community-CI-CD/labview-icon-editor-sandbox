@@ -1,4 +1,9 @@
 name: ADR Lint / adr-lint
+
+defaults:
+  run:
+    working-directory: ${{ github.workspace }}
+
 on:
   pull_request:
     branches: [ main, develop, release/*, feature/*, hotfix/* ]

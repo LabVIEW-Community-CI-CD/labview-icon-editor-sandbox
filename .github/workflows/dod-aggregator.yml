@@ -1,4 +1,9 @@
 name: DoD Aggregator / dod
+
+defaults:
+  run:
+    working-directory: ${{ github.workspace }}
+
 on:
   pull_request:
     branches: [ main, develop, release/*, feature/*, hotfix/* ]

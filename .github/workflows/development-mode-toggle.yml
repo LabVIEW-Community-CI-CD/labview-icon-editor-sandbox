@@ -1,5 +1,9 @@
 name: "Toggle Development Mode"
 
+defaults:
+  run:
+    working-directory: ${{ github.workspace }}
+
 on:
   # 1) Called by other workflows
   workflow_call:
