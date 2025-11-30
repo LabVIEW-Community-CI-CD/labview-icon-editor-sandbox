@@ -447,7 +447,11 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          Invoke-Pester -Path 'Test/BindDevelopmentMode.Tests.ps1' -Output Detailed -EnableExit
+          Invoke-Pester -Configuration @{
+            Run    = @{ Path = 'Test/BindDevelopmentMode.Tests.ps1' }
+            Output = @{ Verbosity = 'Detailed' }
+            CI     = $true
+          }
 
   seed-containerized:
     name: Seed + Analyze (containerized)
