@@ -38,7 +38,7 @@ More details: see `docs/vscode-tasks.md`.
 - Dev container: `.devcontainer/` (VS Code "Reopen in Container" with .NET 8 + PowerShell). On create, it restores and builds `Tooling/dotnet/RequirementsSummarizer` as a health check.
 - Dotnet CLIs: see `Tooling/dotnet/README.md` for IntegrationEngineCli, VipbJsonTool, LvprojJsonTool, and RequirementsSummarizer usage.
 - Requirements summary task: **Terminal → Run Task → Requirements summary (dotnet)** renders `reports/requirements-summary.md` from `docs/requirements/requirements.csv`.
-- x-cli: vendored at `Tooling/x-cli/` (vi-analyzer and vi-compare helpers). Build with `dotnet build Tooling/x-cli/XCli.sln`; run with `dotnet run --project Tooling/x-cli/src/XCli/XCli.csproj -- --help`. VS Code tasks exist for `vi-analyzer-run` and `vi-compare-run` (see `.vscode/tasks.json`).
+- x-cli: vendored at `Tooling/x-cli/` (vi-analyzer and vi-compare helpers). Invoke via the repo helper: `pwsh scripts/common/invoke-repo-cli.ps1 -Cli XCli -- --help`. VS Code tasks exist for `vi-analyzer-run` and `vi-compare-run` (see `.vscode/tasks.json`).
 
 ## Requirements & ISO/IEC/IEEE 29148 artifacts
 - Source of truth: `docs/requirements/requirements.csv` (gated in CI by language and attribute checks).
