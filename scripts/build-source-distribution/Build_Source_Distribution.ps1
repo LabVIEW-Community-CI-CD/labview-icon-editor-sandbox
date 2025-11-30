@@ -493,15 +493,43 @@ if (-not (Test-Path -LiteralPath $artifactDir)) {
 $zipPath = Join-Path $artifactDir 'source-distribution.zip'
 Write-Stamp -Level "STEP" -Message "Zipping Source Distribution..."
 Compress-Archive -Path (Join-Path $distRoot '*') -DestinationPath $zipPath -Force
-$zipEndTime = Get-Date
-$zipDuration = ($zipEndTime - $zipStartTime).TotalSeconds
-Write-Stamp -Level "INFO" -Message ("Zipped Source Distribution: {0}" -f $zipPath)
+    $zipEndTime = Get-Date
+    $zipDuration = ($zipEndTime - $zipStartTime).TotalSeconds
+    Write-Stamp -Level "INFO" -Message ("Zipped Source Distribution: {0}" -f $zipPath)
 
-$relJson = Get-RelativePathSafe -Base $repoRoot -Target $manifestPath
-$relCsv = Get-RelativePathSafe -Base $repoRoot -Target $manifestCsvPath
-$relZip = Get-RelativePathSafe -Base $repoRoot -Target $zipPath
-Write-Host ("[artifact][source-distribution] manifest.json: {0}" -f $relJson)
-Write-Host ("[artifact][source-distribution] manifest.csv: {0}" -f $relCsv)
+    # Mirror artifacts into builds-isolated/ for CI publish steps.
+    $isoRoot    = Join-Path $repoRoot 'builds-isolated'
+    $isoBuilds  = Join-Path $isoRoot 'builds'
+    $isoDist    = Join-Path $isoBuilds 'Source Distribution'
+    $isoArtifacts = Join-Path $isoBuilds 'artifacts'
+    foreach ($dir in @($isoDist, $isoArtifacts)) {
+        if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    }
+    # Copy the distribution folder (manifests + payload).
+    $copyDistArgs = @(
+        $distRoot,
+        $isoDist,
+        '/E', '/COPY:DAT', '/R:1', '/W:1',
+        '/NFL', '/NDL', '/NJH', '/NJS'
+    )
+    & robocopy @copyDistArgs | Out-Null
+    $rcDist = $LASTEXITCODE
+    if ($rcDist -gt 7) {
+        Write-Warning ("[info] Mirror to builds-isolated failed for dist (rc={0}); continuing with primary artifacts." -f $rcDist)
+    }
+    # Copy the zip
+    try {
+        Copy-Item -LiteralPath $zipPath -Destination (Join-Path $isoArtifacts 'source-distribution.zip') -Force
+    }
+    catch {
+        Write-Warning ("[info] Failed to copy zip to builds-isolated: {0}" -f $_.Exception.Message)
+    }
+
+    $relJson = Get-RelativePathSafe -Base $repoRoot -Target $manifestPath
+    $relCsv = Get-RelativePathSafe -Base $repoRoot -Target $manifestCsvPath
+    $relZip = Get-RelativePathSafe -Base $repoRoot -Target $zipPath
+    Write-Host ("[artifact][source-distribution] manifest.json: {0}" -f $relJson)
+    Write-Host ("[artifact][source-distribution] manifest.csv: {0}" -f $relCsv)
 Write-Host ("[artifact][source-distribution] zip: {0}" -f $relZip)
 Write-Host ("[info] Built with LabVIEW {0} ({1}-bit) based on VIPB." -f $Package_LabVIEW_Version, $SupportedBitness)
 Write-Host ("[info] Next steps: run task 21 (Verify: Source Distribution) to validate the manifest; or task 22 (Build PPL from Source Distribution) to produce the PPL from this zip.")
