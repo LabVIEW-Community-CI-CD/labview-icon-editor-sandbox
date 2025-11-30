@@ -2,7 +2,7 @@ name: Coverage Gate / coverage
 
 defaults:
   run:
-    working-directory: ${{ github.workspace }}
+    working-directory: './'
 
 on:
   pull_request:

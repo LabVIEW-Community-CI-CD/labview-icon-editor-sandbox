@@ -2,7 +2,7 @@ name: VIPB Bump (manual)
 
 defaults:
   run:
-    working-directory: ${{ github.workspace }}
+    working-directory: './'
 
 on:
   workflow_dispatch:
