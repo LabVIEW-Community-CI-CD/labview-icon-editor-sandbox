@@ -143,9 +143,14 @@ try {
         Write-Information "Restore skipped because this repo is not currently bound in LabVIEW.ini." -InformationAction Continue
     }
 
-    Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
-        MinimumSupportedLVVersion = $Package_LabVIEW_Version
-        SupportedBitness          = $arch
+    if (Test-Path -LiteralPath $CloseScript -PathType Leaf) {
+        Invoke-ScriptSafe -ScriptPath $CloseScript -ArgumentMap @{
+            MinimumSupportedLVVersion = $Package_LabVIEW_Version
+            SupportedBitness          = $arch
+        }
+    }
+    else {
+        Write-Warning ("Close_LabVIEW.ps1 not found at {0}; skipping close step." -f $CloseScript)
     }
 
 } catch {
