@@ -1,33 +1,37 @@
 # Scripts Manifest
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/add-token-to-labview/AddTokenToLabVIEW.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/add-token-to-labview/AddTokenToLabVIEW.ps1`
 - Inputs:
   - Package_LabVIEW_Version [String]
   - SupportedBitness [String]
   - RepositoryPath [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/add-token-to-labview/LocalhostLibraryPaths.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/add-token-to-labview/LocalhostLibraryPaths.ps1`
 - Inputs: *(none declared)*
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/analyze-vi-package/Analyze-VIP.Tests.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/analyze-vi-package/Analyze-VIP.Tests.ps1`
 - Inputs: *(none declared)*
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/analyze-vi-package/run-local.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/analyze-vi-package/run-local.ps1`
 - Inputs:
   - VipArtifactPath [String]
   - MinLabVIEW [String] default="21.0"
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/analyze-vi-package/run-workflow-local.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/analyze-vi-package/run-workflow-local.ps1`
 - Inputs:
-  - VipArtifactPath [String] default="builds/VI Package"
+  - VipArtifactPath [String] default="builds/vip-stash"
   - MinLabVIEW [String] default="21.0"
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/apply-vipc/ApplyVIPC.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/analyze-vi-package/VIPReader.psm1`
+- Inputs: *(module auto-loaded by analyzer workflows; consumes VIP paths passed by callers)*
+- Outputs: *(not explicitly declared; exposes parsing helpers for analysis scripts)*
+
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/apply-vipc/ApplyVIPC.ps1`
 - Inputs:
   - MinimumSupportedLVVersion [String]
   - VIP_LVVersion [String]
@@ -36,7 +40,7 @@
   - VIPCPath [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/build-lvlibp/Build_lvlibp.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/build-lvlibp/Build_lvlibp.ps1`
 - Inputs:
   - Package_LabVIEW_Version [String]
   - SupportedBitness [String]
@@ -48,7 +52,7 @@
   - Commit [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/build-vip/build_vip.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/build-vip/build_vip.ps1`
 - Inputs:
   - SupportedBitness [String]
   - RepositoryPath [String]
@@ -64,7 +68,7 @@
   - DisplayInformationJSON [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/build/Build.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/build/Build.ps1`
 - Inputs:
   - RepositoryPath [String]
   - Major [Int32] default=1
@@ -77,7 +81,7 @@
   - AuthorName [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/build/run-local-build.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/build/run-local-build.ps1`
 - Inputs:
   - RepositoryPath [String]
   - Major [Int32] default=0
@@ -89,41 +93,41 @@
   - LabVIEWMinorRevision [Int32] default=3
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/close-labview/Close_LabVIEW.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/close-labview/Close_LabVIEW.ps1`
 - Inputs:
   - Package_LabVIEW_Version [String]
   - SupportedBitness [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/compute-version/Get-LastTag.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/compute-version/Get-LastTag.ps1`
 - Inputs:
   - AsJson [SwitchParameter]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/compute-version/tests/test_first_release_detection.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/compute-version/tests/test_first_release_detection.ps1`
 - Inputs: *(none declared)*
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/generate-release-notes/GenerateReleaseNotes.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/generate-release-notes/GenerateReleaseNotes.ps1`
 - Inputs:
   - OutputPath [String] default="Tooling/deployment/release_notes.md"
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/missing-in-project/Invoke-MissingInProjectCLI.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/missing-in-project/Invoke-MissingInProjectCLI.ps1`
 - Inputs:
   - LVVersion [String]
   - Arch [String]
   - ProjectFile [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/missing-in-project/RunMissingCheckWithGCLI.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/missing-in-project/RunMissingCheckWithGCLI.ps1`
 - Inputs:
   - LVVersion [String]
   - Arch [String]
   - ProjectFile [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/modify-vipb-display-info/ModifyVIPBDisplayInfo.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/modify-vipb-display-info/ModifyVIPBDisplayInfo.ps1`
 - Inputs:
   - SupportedBitness [String]
   - RepositoryPath [String]
@@ -139,7 +143,7 @@
   - DisplayInformationJSON [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/prepare-labview-source/Prepare_LabVIEW_source.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/prepare-labview-source/Prepare_LabVIEW_source.ps1`
 - Inputs:
   - Package_LabVIEW_Version [String]
   - SupportedBitness [String]
@@ -148,13 +152,13 @@
   - Build_Spec [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/rename-file/Rename-file.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/rename-file/Rename-file.ps1`
 - Inputs:
   - CurrentFilename [String]
   - NewFilename [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/restore-setup-lv-source/RestoreSetupLVSource.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/restore-setup-lv-source/RestoreSetupLVSource.ps1`
 - Inputs:
   - Package_LabVIEW_Version [String]
   - SupportedBitness [String]
@@ -163,39 +167,39 @@
   - Build_Spec [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/revert-development-mode/RevertDevelopmentMode.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/revert-development-mode/RevertDevelopmentMode.ps1`
 - Inputs:
   - RepositoryPath [String]
   - Package_LabVIEW_Version [String]
   - SupportedBitness [String] default='64'
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/revert-development-mode/run-dev-mode.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/revert-development-mode/run-dev-mode.ps1`
 - Inputs:
   - RepositoryPath [String]
   - SupportedBitness [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/run-unit-tests/RunUnitTests.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/run-unit-tests/RunUnitTests.ps1`
 - Inputs:
   - Package_LabVIEW_Version [String]
   - SupportedBitness [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/set-development-mode/run-dev-mode.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/set-development-mode/run-dev-mode.ps1`
 - Inputs:
   - RepositoryPath [String]
   - SupportedBitness [String]
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/set-development-mode/Set_Development_Mode.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/set-development-mode/Set_Development_Mode.ps1`
 - Inputs:
   - RepositoryPath [String]
   - Package_LabVIEW_Version [String]
   - SupportedBitness [String] default='64'
 - Outputs: *(not explicitly declared)*
 
-## `/mnt/c/repos/labview-icon-editor-community-ci-cd/.github/actions/unit-tests/unit_tests.ps1`
+## `/mnt/c/repos/labview-icon-editor-community-ci-cd/scripts/unit-tests/unit_tests.ps1`
 - Inputs:
   - RepositoryPath [String]
 - Outputs: *(not explicitly declared)*
@@ -242,4 +246,5 @@
 ## `/mnt/c/repos/labview-icon-editor-community-ci-cd/Test/ModifyVIPBDisplayInfo.Tests.ps1`
 - Inputs: *(none declared)*
 - Outputs: *(not explicitly declared)*
+
 

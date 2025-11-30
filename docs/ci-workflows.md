@@ -14,7 +14,7 @@ Versioning & metadata
 
 Key jobs
 - `issue-status` — branch/issue gate
-- `changes` / `apply-deps` — detect/apply VIPC when needed
+- `changes` / `apply-deps` — detect/apply VIPC when needed (via Orchestration CLI)
 - `version` — compute version components
 - `missing-in-project-check` — validate project membership
 - `test` — run unit tests (LabVIEW 2021 32/64)
@@ -26,5 +26,11 @@ Artifacts
 - Release notes: `Tooling/deployment/release_notes.md`
 
 Related workflows
-- Dev mode toggle: `.github/actions/set-development-mode/run-dev-mode.ps1` and `revert-development-mode/run-dev-mode.ps1`
-- Draft release (manual): `.github/workflows/draft-release.yml` (use VS Code task “Draft GitHub Release” with CI run ID)
+- Dev mode toggle: `scripts/set-development-mode/run-dev-mode.ps1` and `revert-development-mode/run-dev-mode.ps1`
+- Draft release (manual): `.github/workflows/draft-release.yml` (invoke via **Run workflow** in GitHub and supply the CI run ID)
+
+## VIPM Docker helper (Linux)
+- Location: `Tooling/docker/vipm/README.md` (builds a LabVIEW 2025 Linux image with VIPM CLI and mounts the repo at `/workspace`).
+- Use cases: quick VIPM CLI checks (`vipm install /workspace/icon-editor-developer.vipc`, `vipm list --installed`) or previewing VIPM behavior without installing on the host.
+- Limitations: not the release path; our official packaging stays on Windows/LabVIEW 2021. VIPM build on Linux is experimental.
+

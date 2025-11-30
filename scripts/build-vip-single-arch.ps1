@@ -15,7 +15,7 @@ Path to the repository root.
 Relative path to the source VIPB. Defaults to the main project VIPB.
 
 .PARAMETER OutputVIPBPath
-Where to write the pruned VIPB. Defaults to builds/tmp/NI Icon editor.<bitness>.vipb under the repo.
+Where to write the pruned VIPB. Defaults to builds/tmp/seed.<bitness>.vipb under the repo.
 
 .PARAMETER LabVIEWMinorRevision
 LabVIEW minor revision (0 or 3) forwarded to build_vip.ps1.
@@ -74,7 +74,7 @@ foreach ($key in $semverInputs.Keys) {
 }
 $isUnc = $repoRoot -like "\\\\*"
 if ($isUnc) {
-    Write-Warning "RepositoryPath is a UNC path ($repoRoot). g-cli and VIPM can behave poorly on UNC paths; consider mapping a drive."
+    Write-Warning "RepositoryPath is a UNC path ($repoRoot). VIPM can behave poorly on UNC paths; consider mapping a drive."
 }
 $sourceVIPB = if ([System.IO.Path]::IsPathRooted($VIPBPath)) {
     $VIPBPath
@@ -91,7 +91,7 @@ if (-not $OutputVIPBPath) {
         $OutputVIPBPath = $sourceVIPB
     }
     else {
-        $OutputVIPBPath = Join-Path -Path $repoRoot -ChildPath ("builds/tmp/NI Icon editor.{0}.vipb" -f $SupportedBitness)
+        $OutputVIPBPath = Join-Path -Path $repoRoot -ChildPath ("builds/tmp/seed.{0}.vipb" -f $SupportedBitness)
     }
 } elseif (-not [System.IO.Path]::IsPathRooted($OutputVIPBPath)) {
     $OutputVIPBPath = Join-Path -Path $repoRoot -ChildPath $OutputVIPBPath
@@ -118,7 +118,7 @@ if (-not $targetDestNodes -or $targetDestNodes.Count -eq 0) {
     throw "Pruned VIPB is missing destination for $targetToken; cannot package this arch."
 }
 
-# Preflight: ensure the target lvlibp exists before invoking g-cli
+# Preflight: ensure the target lvlibp exists before packaging
 $targetLvlibp = Join-Path -Path $repoRoot -ChildPath ("resource/plugins/lv_icon_{0}.lvlibp" -f ($SupportedBitness -eq '64' ? 'x64' : 'x86'))
 $otherLvlibp = Join-Path -Path $repoRoot -ChildPath ("resource/plugins/lv_icon_{0}.lvlibp" -f ($SupportedBitness -eq '64' ? 'x86' : 'x64'))
 if (-not (Test-Path -LiteralPath $targetLvlibp)) {
@@ -173,11 +173,11 @@ if (-not (Test-Path -LiteralPath $versionScript)) {
 }
 $packageVersion = & $versionScript -RepositoryPath $repoRoot
 
-if (-not (Get-Command g-cli -ErrorAction SilentlyContinue)) {
-    throw "g-cli not found on PATH. Install VIPM CLI and ensure g-cli is available before packaging."
+if (-not (Get-Command vipm -ErrorAction SilentlyContinue)) {
+    throw "vipm CLI not found on PATH. Install VIPM CLI before packaging."
 }
 
-$buildVipScript = Join-Path -Path $repoRoot -ChildPath ".github/actions/build-vip/build_vip.ps1"
+$buildVipScript = Join-Path -Path $repoRoot -ChildPath "scripts/build-vip/build_vip.ps1"
 if (-not (Test-Path -LiteralPath $buildVipScript)) {
     throw "build_vip.ps1 not found at $buildVipScript"
 }
@@ -233,7 +233,7 @@ try {
     $vipsAfter = @(Get-ChildItem -Path (Join-Path $repoRoot 'builds') -Filter *.vip -Recurse -ErrorAction SilentlyContinue)
     $newVips = if ($vipsAfter) { @($vipsAfter | Where-Object { $_.LastWriteTime -ge $startTime }) } else { @() }
     if (-not $newVips -or $newVips.Count -eq 0) {
-        throw "No .vip artifact found after packaging. Check g-cli logs under builds/logs."
+        throw "No .vip artifact found after packaging. Check vipm logs under builds/logs."
     }
     $newVips | Sort-Object LastWriteTime -Descending | Select-Object -First 3 | ForEach-Object {
         Write-Information ("Produced VIP: {0}" -f $_.FullName) -InformationAction Continue
