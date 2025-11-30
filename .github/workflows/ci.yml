@@ -627,22 +627,40 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $distRoot = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/Source Distribution'
-          $zip      = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/artifacts/source-distribution.zip'
-          if (-not (Test-Path -LiteralPath $distRoot -PathType Container)) {
-            # Fallback to primary builds/ location if isolated mirror is absent
-            $fallbackDist = Join-Path $env:GITHUB_WORKSPACE 'builds/Source Distribution'
-            $fallbackZip  = Join-Path $env:GITHUB_WORKSPACE 'builds/artifacts/source-distribution.zip'
-            if (Test-Path -LiteralPath $fallbackDist -PathType Container -and (Test-Path -LiteralPath $fallbackZip -PathType Leaf)) {
-              Write-Warning "builds-isolated copy not found; using builds/Source Distribution instead."
-              $distRoot = $fallbackDist
-              $zip      = $fallbackZip
+          $candidates = @(
+            @{
+              Label = 'isolated'
+              Dist  = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/Source Distribution'
+              Zip   = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/artifacts/source-distribution.zip'
+            },
+            @{
+              Label = 'primary'
+              Dist  = Join-Path $env:GITHUB_WORKSPACE 'builds/Source Distribution'
+              Zip   = Join-Path $env:GITHUB_WORKSPACE 'builds/artifacts/source-distribution.zip'
+            }
+          )
+
+          $found = $null
+          foreach ($c in $candidates) {
+            if (Test-Path -LiteralPath $c.Dist -PathType Container -and (Test-Path -LiteralPath $c.Zip -PathType Leaf)) {
+              $found = $c
+              break
             }
           }
-          if (-not (Test-Path -LiteralPath $distRoot -PathType Container)) { throw "Source Distribution folder not found at $distRoot" }
-          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) { throw "source-distribution.zip not found at $zip" }
+
+          if (-not $found) {
+            throw "Source Distribution artifacts not found in any expected location: $($candidates.Dist -join ', ')"
+          }
+
+          if ($found.Label -eq 'primary') {
+            Write-Warning "builds-isolated copy not found; using builds/Source Distribution instead."
+          }
+
+          $distRoot = $found.Dist
+          $zip = $found.Zip
+
           $manifestJson = Join-Path $distRoot 'manifest.json'
-          $manifestCsv = Join-Path $distRoot 'manifest.csv'
+          $manifestCsv  = Join-Path $distRoot 'manifest.csv'
           foreach ($p in @($manifestJson, $manifestCsv)) {
             if (-not (Test-Path -LiteralPath $p -PathType Leaf)) {
               throw "Missing manifest file: $p"
