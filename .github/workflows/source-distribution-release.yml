@@ -55,22 +55,16 @@ jobs:
           ls -lh artifacts
 
       - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          release_name: ${{ steps.tag.outputs.tag }}
-          draft: false
-          prerelease: false
-
-      - name: Upload source-distribution asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/source-distribution.zip
-          asset_name: source-distribution.zip
-          asset_content_type: application/zip
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; uploading asset with clobber."
+            gh release upload "$TAG" artifacts/source-distribution.zip --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            echo "Creating release $TAG and uploading asset."
+            gh release create "$TAG" --title "$TAG" --notes "Source distribution artifact" --repo "$GITHUB_REPOSITORY" artifacts/source-distribution.zip
+          fi
