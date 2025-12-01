@@ -727,7 +727,7 @@ jobs:
   build-tooling:
     name: Build (Tooling Distribution)
     needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, version, resolve-labview-version, test-compute-version-bump, test-tag-existence-check, rtm-gates, docs-quality]
-    runs-on: self-hosted-windows-lv
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: pwsh
@@ -754,8 +754,8 @@ jobs:
         with:
           set-safe-directory: true
           fetch-depth: 0
-      - name: "Guard: Windows runner"
-        if: ${{ runner.os != 'Windows' }}
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
         run: exit 1
       - name: Pre-clean run-scoped tooling roots
         shell: pwsh
