@@ -52,7 +52,11 @@ public static class Program
         bool ForceWorktree,
         bool CopyOnFail,
         int RetryBuilds,
-        string? ExpectSha);
+        string? ExpectSha,
+        string? RunKey,
+        string? LockPath,
+        int LockTtlSec,
+        bool ForceLock);
 
     public sealed record CommandResult(
         string Command,
@@ -212,18 +216,10 @@ public static class Program
     {
         var sw = Stopwatch.StartNew();
         var steps = new List<object>();
-        var runKey = Environment.GetEnvironmentVariable("ORCH_RUN_KEY");
-        if (string.IsNullOrWhiteSpace(runKey))
-        {
-            runKey = $"local-sd-{DateTime.UtcNow:yyyyMMdd-HHmmss}";
-        }
-        var lockPathEnv = Environment.GetEnvironmentVariable("ORCH_LOCK_PATH");
-        var lockPath = string.IsNullOrWhiteSpace(lockPathEnv) ? Path.Combine(repo, ".locks", "orchestration.lock") : lockPathEnv!;
-        var ttlEnv = Environment.GetEnvironmentVariable("ORCH_LOCK_TTL_SEC");
-        var lockTtlSec = 0;
-        lockTtlSec = int.TryParse(ttlEnv, out var parsedTtl) && parsedTtl > 0 ? parsedTtl : 900;
-        var force = string.Equals(Environment.GetEnvironmentVariable("ORCH_FORCE"), "1", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(Environment.GetEnvironmentVariable("ORCH_FORCE"), "true", StringComparison.OrdinalIgnoreCase);
+        var runKey = string.IsNullOrWhiteSpace(opts.RunKey) ? $"local-sd-{DateTime.UtcNow:yyyyMMdd-HHmmss}" : opts.RunKey!;
+        var lockPath = string.IsNullOrWhiteSpace(opts.LockPath) ? Path.Combine(repo, ".locks", "orchestration.lock") : opts.LockPath!;
+        var lockTtlSec = opts.LockTtlSec > 0 ? opts.LockTtlSec : 900;
+        var force = opts.ForceLock;
 
         log($"[local-sd] runKey={runKey} lock={lockPath} ttl={lockTtlSec}s force={force}");
 
@@ -2685,6 +2681,13 @@ public static class Program
         var copyOnFail = false;
         var retryBuilds = 0;
         string? expectSha = null;
+        var runKeyArg = Environment.GetEnvironmentVariable("ORCH_RUN_KEY");
+        var lockPathArg = Environment.GetEnvironmentVariable("ORCH_LOCK_PATH");
+        var lockTtlSec = 0;
+        var ttlEnv = Environment.GetEnvironmentVariable("ORCH_LOCK_TTL_SEC");
+        lockTtlSec = int.TryParse(ttlEnv, out var parsedTtl) && parsedTtl > 0 ? parsedTtl : 900;
+        var forceLock = string.Equals(Environment.GetEnvironmentVariable("ORCH_FORCE"), "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Environment.GetEnvironmentVariable("ORCH_FORCE"), "true", StringComparison.OrdinalIgnoreCase);
 
         try
         {
@@ -2847,6 +2850,21 @@ public static class Program
                     case "--expect-sha":
                         expectSha = RequireNext(args, ref i, "--expect-sha");
                         break;
+                    case "--run-key":
+                        runKeyArg = RequireNext(args, ref i, "--run-key");
+                        break;
+                    case "--lock-path":
+                        lockPathArg = RequireNext(args, ref i, "--lock-path");
+                        break;
+                    case "--lock-ttl-sec":
+                        if (!int.TryParse(RequireNext(args, ref i, "--lock-ttl-sec"), out lockTtlSec) || lockTtlSec <= 0)
+                        {
+                            return (null, "Invalid --lock-ttl-sec", false);
+                        }
+                        break;
+                    case "--force-lock":
+                        forceLock = true;
+                        break;
                     case "--verbose":
                         verbose = true;
                         break;
@@ -2881,7 +2899,10 @@ public static class Program
             return (null, $"Repository path not found: {repoFull}", false);
         }
 
-        return (new Options(sub, repoFull, bitness, pwsh, refName, lvlibpBitness, major, minor, patch, build, company, author, labviewMinor, runBothBitnessSeparately, managed, lv, vipc, requestPath, projectPath, scenarioPath, vipmManifestPath, worktreeRoot, skipWorktree, skipPreflight, requireDevmode, autoBindDevmode, timeoutSec, plain, verbose, sourceDistZip, sourceDistOutput, sourceDistStrict, sourceDistLogStash, labviewCliPath, labviewPath, labviewPort, tempRoot, logRoot, labviewCliTimeoutSec, forceWorktree, copyOnFail, retryBuilds, expectSha), null, false);
+        var runKeyResolved = string.IsNullOrWhiteSpace(runKeyArg) ? $"local-sd-{DateTime.UtcNow:yyyyMMdd-HHmmss}" : runKeyArg!;
+        var lockPathResolved = string.IsNullOrWhiteSpace(lockPathArg) ? Path.Combine(repoFull, ".locks", "orchestration.lock") : lockPathArg!;
+
+        return (new Options(sub, repoFull, bitness, pwsh, refName, lvlibpBitness, major, minor, patch, build, company, author, labviewMinor, runBothBitnessSeparately, managed, lv, vipc, requestPath, projectPath, scenarioPath, vipmManifestPath, worktreeRoot, skipWorktree, skipPreflight, requireDevmode, autoBindDevmode, timeoutSec, plain, verbose, sourceDistZip, sourceDistOutput, sourceDistStrict, sourceDistLogStash, labviewCliPath, labviewPath, labviewPort, tempRoot, logRoot, labviewCliTimeoutSec, forceWorktree, copyOnFail, retryBuilds, expectSha, runKeyResolved, lockPathResolved, lockTtlSec, forceLock), null, false);
     }
 
     private static List<string> ResolveBitness(string value)
