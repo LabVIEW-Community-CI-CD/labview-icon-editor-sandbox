@@ -42,6 +42,10 @@ on:
         description: "Optional prior run ID to reuse artifacts from (fallbacks to current run if omitted)"
         required: false
         type: string
+      upstream_repo:
+        description: "Optional upstream repo owner/name for artifact reuse (default: current repo)"
+        required: false
+        type: string
 
 jobs:
   verify-checklist-sync:
@@ -1015,6 +1019,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      UPSTREAM_REPO: ${{ inputs.upstream_repo || github.repository }}
     steps:
       - name: "Guard: Linux runner"
         if: ${{ runner.os != 'Linux' }}
@@ -1025,10 +1031,11 @@ jobs:
         shell: bash
         env:
           HAS_TOKEN: ${{ secrets.UPSTREAM_TOKEN != '' }}
+          UPSTREAM_REPO: ${{ env.UPSTREAM_REPO }}
         run: |
           set -euo pipefail
           if [ "${HAS_TOKEN}" != "true" ]; then
-            echo "previous_run_id provided but secrets.UPSTREAM_TOKEN is missing; add a PAT with actions:read,contents:read scoped to upstream." >&2
+            echo "previous_run_id provided but secrets.UPSTREAM_TOKEN is missing; add a PAT with actions:read,contents:read scoped to ${UPSTREAM_REPO}." >&2
             exit 1
           fi
 
@@ -1043,8 +1050,8 @@ jobs:
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-labview-icon-api
           path: artifacts/sd
-          repository: ${{ inputs.previous_run_id && 'LabVIEW-Community-CI-CD/labview-icon-editor-sandbox' || github.repository }}
-          token: ${{ inputs.previous_run_id && secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN }}
+          repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
+          token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Tooling Distribution artifact
@@ -1052,8 +1059,8 @@ jobs:
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-tooling-distribution
           path: artifacts/tooling
-          repository: ${{ inputs.previous_run_id && 'LabVIEW-Community-CI-CD/labview-icon-editor-sandbox' || github.repository }}
-          token: ${{ inputs.previous_run_id && secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN }}
+          repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
+          token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Source Distribution commit index artifact
@@ -1062,8 +1069,8 @@ jobs:
         with:
           name: commit-index-sd
           path: artifacts/commit-index-sd
-          repository: ${{ inputs.previous_run_id && 'LabVIEW-Community-CI-CD/labview-icon-editor-sandbox' || github.repository }}
-          token: ${{ inputs.previous_run_id && secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN }}
+          repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
+          token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Tooling commit index artifact
@@ -1072,8 +1079,8 @@ jobs:
         with:
           name: commit-index-tooling
           path: artifacts/commit-index-tooling
-          repository: ${{ inputs.previous_run_id && 'LabVIEW-Community-CI-CD/labview-icon-editor-sandbox' || github.repository }}
-          token: ${{ inputs.previous_run_id && secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN }}
+          repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
+          token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: List downloaded artifacts
