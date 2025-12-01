@@ -1059,6 +1059,8 @@ jobs:
         shell: pwsh
         env:
           PUBLISH_SKIP_COMMIT_INDEX: ${{ env.PUBLISH_SKIP_COMMIT_INDEX || '' }}
+          TAG: ${{ needs.version.outputs.VERSION }}
+          VERSION: ${{ needs.version.outputs.VERSION }}
         run: |
           $ErrorActionPreference = 'Stop'
           $isMainOrTag = ($env.GITHUB_REF -like 'refs/heads/main' -or $env.GITHUB_REF -like 'refs/tags/*')
