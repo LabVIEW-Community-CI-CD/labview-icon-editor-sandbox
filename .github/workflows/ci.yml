@@ -599,7 +599,7 @@ jobs:
           if (-not $env:GH_REPO) { throw "GITHUB_REPOSITORY is not set." }
           pwsh -NoProfile -File $script -Repo $env:GH_REPO -Token $env:GH_TOKEN
   build-worktree:
-    name: Build (Source Distribution)
+    name: Build (LabVIEW Icon API Distribution)
     needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, version, resolve-labview-version, test-compute-version-bump, test-tag-existence-check, rtm-gates, docs-quality, dev-mode-binder-tests, list-collaborators]
     runs-on: self-hosted-windows-lv
     defaults:
@@ -648,7 +648,7 @@ jobs:
               Remove-Item -LiteralPath $p -Recurse -Force -ErrorAction SilentlyContinue
             }
           }
-      - name: Build Source Distribution via worktree
+      - name: Build LabVIEW Icon API Source Distribution via worktree
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -658,23 +658,23 @@ jobs:
           pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/build-source-distribution/Build_Source_Distribution.ps1" `
             -RepositoryPath "$env:GITHUB_WORKSPACE" `
             -CommitIndexPath (Join-Path $env:GITHUB_WORKSPACE 'builds/cache/commit-index.json')
-      - name: Stage Source Distribution under run-scoped builds/builds-isolated
+      - name: Stage LabVIEW Icon API SD under run-scoped builds/builds-isolated
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $runKey    = "${{ steps.runkey.outputs.run_key }}"
-          $srcDist   = Join-Path $env:GITHUB_WORKSPACE 'builds/Source Distribution'
-          $srcZip    = Join-Path $env:GITHUB_WORKSPACE 'builds/artifacts/source-distribution.zip'
-          $runDist   = Join-Path $env:GITHUB_WORKSPACE "builds/$runKey/Source Distribution"
+          $srcDist   = Join-Path $env:GITHUB_WORKSPACE 'builds/LabVIEWIconAPI'
+          $srcZip    = Join-Path $env:GITHUB_WORKSPACE 'builds/artifacts/labview-icon-api.zip'
+          $runDist   = Join-Path $env:GITHUB_WORKSPACE "builds/$runKey/LabVIEWIconAPI"
           $runZipDir = Join-Path $env:GITHUB_WORKSPACE "builds/$runKey/artifacts"
-          $isoDist   = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/Source Distribution"
+          $isoDist   = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/LabVIEWIconAPI"
           $isoZipDir = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/artifacts"
 
           if (-not (Test-Path -LiteralPath $srcDist -PathType Container)) {
-            throw "Expected source distribution folder at $srcDist"
+            throw "Expected LabVIEWIconAPI distribution folder at $srcDist"
           }
           if (-not (Test-Path -LiteralPath $srcZip -PathType Leaf)) {
-            throw "Expected source distribution zip at $srcZip"
+            throw "Expected LabVIEWIconAPI distribution zip at $srcZip"
           }
 
           Remove-Item -LiteralPath $runDist -Recurse -Force -ErrorAction SilentlyContinue
@@ -688,20 +688,20 @@ jobs:
           New-Item -ItemType Directory -Path $isoDist, $isoZipDir -Force | Out-Null
           Copy-Item -Path (Join-Path $runDist '*') -Destination $isoDist -Recurse -Force
           Copy-Item -LiteralPath (Join-Path $runZipDir (Split-Path $srcZip -Leaf)) -Destination (Join-Path $isoZipDir (Split-Path $srcZip -Leaf)) -Force
-      - name: Locate Source Distribution artifacts
+      - name: Locate LabVIEW Icon API artifacts
         id: locate-sd
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $runKey   = "${{ steps.runkey.outputs.run_key }}"
-          $distRoot = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/Source Distribution"
-          $zip      = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/artifacts/source-distribution.zip"
+          $distRoot = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/LabVIEWIconAPI"
+          $zip      = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/artifacts/labview-icon-api.zip"
 
           if (-not (Test-Path -LiteralPath $distRoot -PathType Container)) {
-            throw "Source Distribution folder not found at $distRoot"
+            throw "LabVIEWIconAPI Source Distribution folder not found at $distRoot"
           }
           if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) {
-            throw "source-distribution.zip not found at $zip"
+            throw "labview-icon-api.zip not found at $zip"
           }
 
           $manifestJson = Join-Path $distRoot 'manifest.json'
@@ -711,28 +711,17 @@ jobs:
               throw "Missing manifest file: $p"
             }
           }
-          $iconManifest = Join-Path $distRoot 'icon-api-manifest.json'
-          $iconZip      = Join-Path $distRoot 'icon-api.zip'
-          foreach ($p in @($iconManifest, $iconZip)) {
-            if (-not (Test-Path -LiteralPath $p -PathType Leaf)) {
-              throw "Missing Icon API payload artifact: $p"
-            }
-          }
           "sd_zip=$zip" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
           "sd_manifest_json=$manifestJson" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
           "sd_manifest_csv=$manifestCsv" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          "icon_manifest=$iconManifest" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          "icon_zip=$iconZip" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-      - name: Upload Source Distribution artifacts
+      - name: Upload LabVIEW Icon API artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-source-distribution
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-labview-icon-api
           path: |
             ${{ steps.locate-sd.outputs.sd_zip }}
             ${{ steps.locate-sd.outputs.sd_manifest_json }}
             ${{ steps.locate-sd.outputs.sd_manifest_csv }}
-            ${{ steps.locate-sd.outputs.icon_manifest }}
-            ${{ steps.locate-sd.outputs.icon_zip }}
           if-no-files-found: error
       - name: Stage build reports under builds-isolated
         if: always()
@@ -823,7 +812,7 @@ jobs:
           }
 
   unify-artifacts:
-    name: Publish Source Distribution draft release
+    name: Publish LabVIEW Icon API draft release
     if: ${{ github.event_name != 'pull_request' }}
     needs:
       - verify-checklist-sync
@@ -846,23 +835,23 @@ jobs:
           set-safe-directory: true
           fetch-depth: 1
 
-      - name: Download Source Distribution artifact
+      - name: Download LabVIEW Icon API artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-source-distribution
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-labview-icon-api
           path: artifacts/sd
 
       - name: List downloaded artifacts
         run: |
-          echo "Downloaded Source Distribution contents:"
+          echo "Downloaded LabVIEW Icon API distribution contents:"
           ls -R artifacts/sd
 
-      - name: Locate SD payload
+      - name: Locate LabVIEW Icon API payload
         id: sd
         shell: bash
         run: |
           set -euo pipefail
-          zip=$(find artifacts/sd -name "source-distribution.zip" -type f | head -n1 || true)
+          zip=$(find artifacts/sd -name "labview-icon-api.zip" -type f | head -n1 || true)
           mj=$(find artifacts/sd -name "manifest.json" -type f | head -n1 || true)
           mc=$(find artifacts/sd -name "manifest.csv" -type f | head -n1 || true)
           for f in "$zip" "$mj" "$mc"; do
@@ -887,7 +876,7 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "Using tag: $tag"
 
-      - name: Create draft release (SD)
+      - name: Create draft release (LabVIEW Icon API)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.tag.outputs.tag }}
@@ -899,14 +888,14 @@ jobs:
           if [ "${IS_PRERELEASE,,}" = "true" ]; then
             prerelease_flag="--prerelease"
           fi
-          notes="Source distribution from CI run ${GITHUB_RUN_ID}"
+          notes="LabVIEW Icon API source distribution from CI run ${GITHUB_RUN_ID}"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $TAG already exists; will upload assets with clobber."
           else
             gh release create "$TAG" --title "$TAG" --draft $prerelease_flag --notes "$notes" --repo "$GITHUB_REPOSITORY"
           fi
 
-      - name: Upload Source Distribution assets
+      - name: Upload LabVIEW Icon API assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.tag.outputs.tag }}

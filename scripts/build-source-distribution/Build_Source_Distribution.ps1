@@ -297,8 +297,7 @@ function Map-RelativePath {
     )
     $p = $RelativePath.Replace('\','/')
     $rewrites = @(
-        @{ from = ("repos/{0}/" -f $RepoName); to = '' },
-        @{ from = 'Program Files/National Instruments/LabVIEW 2021/resource/'; to = 'resource/' }
+        @{ from = ("repos/{0}/" -f $RepoName); to = '' }
     )
     foreach ($rule in $rewrites) {
         if ($p.StartsWith($rule.from, [StringComparison]::OrdinalIgnoreCase)) {
@@ -306,6 +305,29 @@ function Map-RelativePath {
             break
         }
     }
+
+    # Normalize installed LabVIEW resource paths regardless of version/bitness.
+    $resourcePattern = '^Program Files/National Instruments/LabVIEW [^/]+/resource/'
+    if ($p -match $resourcePattern) {
+        $p = 'resource/' + $p.Substring($matches[0].Length)
+    }
+
+    # Trim anything before the key payload roots in case other absolute prefixes sneak in.
+    foreach ($anchor in @('resource/', 'vi.lib/LabVIEW Icon API/', 'Test/Unit tests/')) {
+        $idxAnchor = $p.IndexOf($anchor, [StringComparison]::OrdinalIgnoreCase)
+        if ($idxAnchor -ge 0) {
+            $p = $p.Substring($idxAnchor)
+            break
+        }
+    }
+
+    # Generic: if an absolute runner path contains the repo name, trim everything before it.
+    $repoSeg = ("/{0}/" -f $RepoName)
+    $idx = $p.IndexOf($repoSeg, [StringComparison]::OrdinalIgnoreCase)
+    if ($idx -ge 0) {
+        $p = $p.Substring($idx + $repoSeg.Length)
+    }
+
     return $p.TrimStart('/')
 }
 
@@ -482,25 +504,7 @@ $headCommitInfo = Get-HeadCommitInfo -Repo $repoRootResolved
         Write-Stamp -Level "INFO" -Message ("Using existing commit index at {0}" -f $CommitIndexPath)
       }
       else {
-        $script:CurrentPhase = "commit-index"
-        foreach ($f in $files) {
-            $relDist = [IO.Path]::GetRelativePath($distRoot, $f.FullName)
-            $mappedRel = Map-RelativePath -RelativePath $relDist -RepoName $repoName
-            if ($mappedRel) { $pathsForIndex.Add($mappedRel) | Out-Null }
-        }
-        $uniquePaths = $pathsForIndex | Where-Object { $_ } | Sort-Object -Unique
-        if ($uniquePaths.Count -gt 0) {
-          Write-Stamp -Level "STEP" -Message ("Generating commit index from built files ({0} paths)..." -f $uniquePaths.Count)
-          $pathsArray = @($uniquePaths)
-          $commitIndexParams = @{
-              RepositoryPath = $repoRoot
-              OutputPath     = $CommitIndexPath
-              InputPaths     = $pathsArray
-              AllowDirty     = $true
-          }
-          & pwsh -NoProfile -File $commitIndexScript @commitIndexParams | Out-Null
-          Write-Stamp -Level "INFO" -Message ("Commit index generated at {0}" -f $CommitIndexPath)
-        }
+        throw "Commit index path not found: $CommitIndexPath. Generate it before building."
       }
     }
 
