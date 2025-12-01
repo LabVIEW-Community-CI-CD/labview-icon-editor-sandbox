@@ -157,6 +157,62 @@ jobs:
             (cd "$dir" && sha256sum -c "$base")
           done
 
+      - name: Generate release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.tag.outputs.tag }}"
+          run_id="${{ github.event.inputs.run_id }}"
+          inv_path="release-asset-inventory.txt"
+          notes="release-notes.md"
+          cat > "$notes" <<EOF
+# $tag (Draft)
+
+CI run: $run_id
+
+<details>
+  <summary>✅ Requirements Snapshot</summary>
+
+  - requirements.html / requirements.json
+  - ISO 29148 lint report
+</details>
+
+<details>
+  <summary>📦 Source & Tooling Manifests</summary>
+
+  - SD/Tooling manifest.json / manifest.csv
+  - commit-index.json / commit-index.csv
+  - VS Code tasks manifest
+</details>
+
+<details>
+  <summary>🧾 Version & Integrity</summary>
+
+  - version.json / version.txt (VERSION_STRING, BUILD_NUMBER, tag)
+  - sha256 checksum files for all artifacts
+</details>
+
+<details>
+  <summary>🛠 CI Evidence</summary>
+
+  - build/verify logs
+  - draft-release log
+  - log-stash summary/manifest (if produced)
+</details>
+
+<details>
+  <summary>🔁 Repro Recipe</summary>
+
+  - pinned container spec or one-shot rebuild script for SD/Tooling
+</details>
+
+<details>
+  <summary>📑 Inventory</summary>
+
+  - $inv_path
+</details>
+EOF
+
       - name: Create draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -169,11 +225,12 @@ jobs:
           if [ "${IS_PRERELEASE,,}" = "true" ]; then
             prerelease_flag="--prerelease"
           fi
-          notes="Draft release for CI run ${{ github.event.inputs.run_id }}"
+          notes_file="release-notes.md"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release $TAG already exists; keeping existing draft/published state."
+            echo "Release $TAG already exists; updating notes."
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$notes_file"
           else
-            gh release create "$TAG" --title "$TAG" --draft $prerelease_flag --notes "$notes" --repo "$GITHUB_REPOSITORY"
+            gh release create "$TAG" --title "$TAG" --draft $prerelease_flag --notes-file "$notes_file" --repo "$GITHUB_REPOSITORY"
           fi
 
       - name: Upload artifacts
