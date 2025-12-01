@@ -29,6 +29,15 @@ Related workflows
 - Dev mode toggle: `scripts/set-development-mode/run-dev-mode.ps1` and `revert-development-mode/run-dev-mode.ps1`
 - Draft release (manual): `.github/workflows/draft-release.yml` (invoke via **Run workflow** in GitHub and supply the CI run ID)
 
+## Release assets: high-effort TODOs
+
+Low-effort release evidence is already planned (requirements snapshot, version report, SD/Tooling manifests and commit-indexes, CI logs, VS Code task manifest, integrity hashes, repro recipe). Higher-effort items to stage as follow-ups:
+- SBOMs (CycloneDX/SPDX) for SD and Tooling payloads
+- Diff packs between releases (add/remove/change and hash deltas)
+- Coverage and test evidence bundles aligned to the tag
+- Security scan outputs (SCA/SAST) with policy status
+- Provenance attestation (in-toto/SLSA) chaining commit -> build -> artifacts
+
 ## VIPM Docker helper (Linux)
 - Location: `Tooling/docker/vipm/README.md` (builds a LabVIEW 2025 Linux image with VIPM CLI and mounts the repo at `/workspace`).
 - Use cases: quick VIPM CLI checks (`vipm install /workspace/icon-editor-developer.vipc`, `vipm list --installed`) or previewing VIPM behavior without installing on the host.
