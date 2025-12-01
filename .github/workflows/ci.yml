@@ -326,7 +326,7 @@ jobs:
             if "verify-checklist-sync" not in needs_list:
               missing.append(name)
           if missing:
-            print("These jobs must declare needs: verify-checklist-sync ->", ", ".join(sorted(missing)), file=sys.stderr)
+            print("These jobs shall declare needs: verify-checklist-sync ->", ", ".join(sorted(missing)), file=sys.stderr)
             sys.exit(1)
           PY
 
