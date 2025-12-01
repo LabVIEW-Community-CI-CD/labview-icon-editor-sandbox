@@ -750,7 +750,13 @@ jobs:
           if (Test-Path -LiteralPath $isoRoot) { Remove-Item -LiteralPath $isoRoot -Recurse -Force -ErrorAction SilentlyContinue }
           New-Item -ItemType Directory -Path $dstRoot, $isoRoot -Force | Out-Null
           if (Test-Path -LiteralPath $srcRoot -PathType Container) {
-            Copy-Item -Path (Join-Path $srcRoot '*') -Destination $dstRoot -Recurse -Force
+            $existingRunScoped = Join-Path $srcRoot $runKey
+            if (Test-Path -LiteralPath $existingRunScoped -PathType Container) {
+              # If producers already wrote run-scoped log-stash, mirror it into dst/iso without copying a folder onto itself.
+              Copy-Item -Path (Join-Path $existingRunScoped '*') -Destination $dstRoot -Recurse -Force
+            } else {
+              Copy-Item -Path (Join-Path $srcRoot '*') -Destination $dstRoot -Recurse -Force
+            }
             Copy-Item -Path (Join-Path $dstRoot '*') -Destination $isoRoot -Recurse -Force
           }
       - name: Upload build reports
