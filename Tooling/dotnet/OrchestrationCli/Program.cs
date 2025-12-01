@@ -56,7 +56,8 @@ public static class Program
         string? RunKey,
         string? LockPath,
         int LockTtlSec,
-        bool ForceLock);
+        bool ForceLock,
+        bool SkipLocalSdBuild);
 
     public sealed record CommandResult(
         string Command,
@@ -230,15 +231,18 @@ public static class Program
 
         try
         {
-        var stepDefs = new[]
+        var stepDefs = new List<object>
         {
             new { Name = "prereq", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/setup-runner/Verify-RunnerPrereqs.ps1" } },
             new { Name = "commit-index-sd", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/New-CommitIndex.ps1", "-RepositoryPath", repo, "-OutputPath", "artifacts/commit-index-sd/commit-index.json", "-CsvOutputPath", "artifacts/commit-index-sd/commit-index.csv", "-AllowDirty" } },
             new { Name = "commit-index-tooling", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/New-CommitIndex.ps1", "-RepositoryPath", repo, "-IncludePaths", ".vscode,configs,scenarios,runner_dependencies.vipc,scripts,Tooling,Tooling/x-cli/src/XCli,Tooling/x-cli/src/Telemetry", "-OutputPath", "artifacts/commit-index-tooling/tooling-commit-index.json", "-CsvOutputPath", "artifacts/commit-index-tooling/tooling-commit-index.csv", "-AllowDirty" } },
-            new { Name = "build-sd", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/Build_Source_Distribution.ps1", "-RepositoryPath", repo, "-CommitIndexPath", "artifacts/commit-index-sd/commit-index.json" } },
-            new { Name = "hash-artifacts", Args = new [] { "-NoProfile", "-Command", "$root='artifacts'; $files = Get-ChildItem -Path $root -Recurse -File; if (-not $files) { throw 'No artifacts to hash' } $out=@(); foreach ($f in $files) { $h = Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256; $out += ('{0}  {1}' -f $h.Hash, $h.Path) }; $out | Set-Content artifacts/sha256.txt" } },
-            new { Name = "stage-run", Args = new [] { "-NoProfile", "-Command", $"$runKey='{runKey}'; $dst=Join-Path 'builds-isolated' $runKey; New-Item -ItemType Directory -Path $dst -Force | Out-Null; Copy-Item -Path 'artifacts' -Destination $dst -Recurse -Force; Write-Host \"Staged artifacts under $dst\"" } }
         };
+        if (!opts.SkipLocalSdBuild)
+        {
+            stepDefs.Add(new { Name = "build-sd", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/Build_Source_Distribution.ps1", "-RepositoryPath", repo, "-CommitIndexPath", "artifacts/commit-index-sd/commit-index.json" } });
+        }
+        stepDefs.Add(new { Name = "hash-artifacts", Args = new [] { "-NoProfile", "-Command", "$root='artifacts'; $files = Get-ChildItem -Path $root -Recurse -File; if (-not $files) { throw 'No artifacts to hash' } $out=@(); foreach ($f in $files) { $h = Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256; $out += ('{0}  {1}' -f $h.Hash, $h.Path) }; $out | Set-Content artifacts/sha256.txt" } });
+        stepDefs.Add(new { Name = "stage-run", Args = new [] { "-NoProfile", "-Command", $"$runKey='{runKey}'; $dst=Join-Path 'builds-isolated' $runKey; New-Item -ItemType Directory -Path $dst -Force | Out-Null; Copy-Item -Path 'artifacts' -Destination $dst -Recurse -Force; Write-Host \"Staged artifacts under $dst\"" } });
 
         foreach (var step in stepDefs)
         {
@@ -2688,6 +2692,8 @@ public static class Program
         lockTtlSec = int.TryParse(ttlEnv, out var parsedTtl) && parsedTtl > 0 ? parsedTtl : 900;
         var forceLock = string.Equals(Environment.GetEnvironmentVariable("ORCH_FORCE"), "1", StringComparison.OrdinalIgnoreCase)
             || string.Equals(Environment.GetEnvironmentVariable("ORCH_FORCE"), "true", StringComparison.OrdinalIgnoreCase);
+        var skipLocalSdBuild = string.Equals(Environment.GetEnvironmentVariable("ORCH_SKIP_LOCAL_SD_BUILD"), "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Environment.GetEnvironmentVariable("ORCH_SKIP_LOCAL_SD_BUILD"), "true", StringComparison.OrdinalIgnoreCase);
 
         try
         {
@@ -2865,6 +2871,9 @@ public static class Program
                     case "--force-lock":
                         forceLock = true;
                         break;
+                    case "--skip-local-sd-build":
+                        skipLocalSdBuild = true;
+                        break;
                     case "--verbose":
                         verbose = true;
                         break;
@@ -2902,7 +2911,7 @@ public static class Program
         var runKeyResolved = string.IsNullOrWhiteSpace(runKeyArg) ? $"local-sd-{DateTime.UtcNow:yyyyMMdd-HHmmss}" : runKeyArg!;
         var lockPathResolved = string.IsNullOrWhiteSpace(lockPathArg) ? Path.Combine(repoFull, ".locks", "orchestration.lock") : lockPathArg!;
 
-        return (new Options(sub, repoFull, bitness, pwsh, refName, lvlibpBitness, major, minor, patch, build, company, author, labviewMinor, runBothBitnessSeparately, managed, lv, vipc, requestPath, projectPath, scenarioPath, vipmManifestPath, worktreeRoot, skipWorktree, skipPreflight, requireDevmode, autoBindDevmode, timeoutSec, plain, verbose, sourceDistZip, sourceDistOutput, sourceDistStrict, sourceDistLogStash, labviewCliPath, labviewPath, labviewPort, tempRoot, logRoot, labviewCliTimeoutSec, forceWorktree, copyOnFail, retryBuilds, expectSha, runKeyResolved, lockPathResolved, lockTtlSec, forceLock), null, false);
+        return (new Options(sub, repoFull, bitness, pwsh, refName, lvlibpBitness, major, minor, patch, build, company, author, labviewMinor, runBothBitnessSeparately, managed, lv, vipc, requestPath, projectPath, scenarioPath, vipmManifestPath, worktreeRoot, skipWorktree, skipPreflight, requireDevmode, autoBindDevmode, timeoutSec, plain, verbose, sourceDistZip, sourceDistOutput, sourceDistStrict, sourceDistLogStash, labviewCliPath, labviewPath, labviewPort, tempRoot, logRoot, labviewCliTimeoutSec, forceWorktree, copyOnFail, retryBuilds, expectSha, runKeyResolved, lockPathResolved, lockTtlSec, forceLock, skipLocalSdBuild), null, false);
     }
 
     private static List<string> ResolveBitness(string value)
