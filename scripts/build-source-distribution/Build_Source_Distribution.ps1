@@ -375,6 +375,32 @@ if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) {
 $gcli = Get-Command g-cli -ErrorAction SilentlyContinue
 if (-not $gcli) { throw "g-cli is required but was not found on PATH." }
 
+$script:AssetBackups = @()
+function Disable-LabVIEWAssets {
+    param([string[]]$Paths)
+    foreach ($p in $Paths) {
+        if (-not (Test-Path -LiteralPath $p)) { continue }
+        $backup = "$p.disabled"
+        if (Test-Path -LiteralPath $backup) {
+            Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        Move-Item -LiteralPath $p -Destination $backup -Force
+        $script:AssetBackups += @{ Original = $p; Backup = $backup }
+    }
+}
+
+function Restore-LabVIEWAssets {
+    foreach ($b in $script:AssetBackups) {
+        if (-not $b.Backup) { continue }
+        if (Test-Path -LiteralPath $b.Original) {
+            Remove-Item -LiteralPath $b.Original -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path -LiteralPath $b.Backup) {
+            Move-Item -LiteralPath $b.Backup -Destination $b.Original -Force
+        }
+    }
+}
+
 # Build a manifest/zip of the repo-staged Icon API payload for traceability and to detect drift.
 $iconApiSource   = Join-Path $repoRoot 'vi.lib\LabVIEW Icon API'
 $iconCacheRoot   = Join-Path $repoRoot 'builds/cache/icon-api'
@@ -390,6 +416,14 @@ Start-Heartbeat
 try {
     Write-Stamp -Level "INFO" -Message "Expected durations: build ~60-120s depending on LabVIEW startup; manifest/zip ~10-30s."
 
+$lvRootIsolation = Join-Path 'C:\\Program Files\\National Instruments' ("LabVIEW {0}" -f $Package_LabVIEW_Version)
+$isolationTargets = @(
+    Join-Path $lvRootIsolation 'resource\\plugins\\NIIconEditor'
+    Join-Path $lvRootIsolation 'vi.lib\\LabVIEW Icon API'
+)
+Disable-LabVIEWAssets -Paths $isolationTargets
+
+try {
 # Build the Icon API Source Distribution
 Set-Phase -Name "g-cli build"
 $buildStart = Get-Date
@@ -421,6 +455,11 @@ $buildDuration = ((Get-Date) - $buildStart).TotalSeconds
 Write-Stamp -Level "INFO" -Message ("g-cli build completed (duration={0:N1}s)" -f $buildDuration)
 Write-Stamp -Level "STEP" -Message "Source Distribution built; generating manifest and zip next..."
 Write-Stamp -Level "INFO" -Message "Build spec succeeded (pre-manifest/zip); locating distribution folder..."
+
+}
+finally {
+    Restore-LabVIEWAssets
+}
 
 $distRoot = Get-DistRoot -Repo $repoRoot
 Write-Stamp -Level "INFO" -Message ("Using Source Distribution folder: {0}" -f $distRoot)
