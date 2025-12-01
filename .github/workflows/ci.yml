@@ -938,6 +938,7 @@ jobs:
     needs:
       - verify-checklist-sync
       - build-worktree
+      - build-tooling
       - seed-containerized
       - rtm-gates
       - docs-quality
@@ -962,10 +963,18 @@ jobs:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-labview-icon-api
           path: artifacts/sd
 
+      - name: Download Tooling Distribution artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-tooling-distribution
+          path: artifacts/tooling
+
       - name: List downloaded artifacts
         run: |
           echo "Downloaded LabVIEW Icon API distribution contents:"
           ls -R artifacts/sd
+          echo "Downloaded Tooling Distribution contents:"
+          ls -R artifacts/tooling
 
       - name: Locate LabVIEW Icon API payload
         id: sd
@@ -978,6 +987,25 @@ jobs:
           for f in "$zip" "$mj" "$mc"; do
             if [ -z "$f" ]; then
               echo "Missing SD payload components (zip/manifest)." >&2
+              exit 1
+            fi
+          done
+          echo "zip=$zip" >> "$GITHUB_OUTPUT"
+          echo "manifest_json=$mj" >> "$GITHUB_OUTPUT"
+          echo "manifest_csv=$mc" >> "$GITHUB_OUTPUT"
+          ls -lh "$zip" "$mj" "$mc"
+
+      - name: Locate Tooling Distribution payload
+        id: tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip=$(find artifacts/tooling -name "tooling-distribution.zip" -type f | head -n1 || true)
+          mj=$(find artifacts/tooling -name "tooling-manifest.json" -type f | head -n1 || true)
+          mc=$(find artifacts/tooling -name "tooling-manifest.csv" -type f | head -n1 || true)
+          for f in "$zip" "$mj" "$mc"; do
+            if [ -z "$f" ]; then
+              echo "Missing tooling payload components (zip/manifest)." >&2
               exit 1
             fi
           done
@@ -1042,3 +1070,14 @@ jobs:
         run: |
           set -euo pipefail
           gh release upload "$TAG" "${{ steps.sd.outputs.manifest_csv }}" --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Upload Tooling Distribution assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" "${{ steps.tooling.outputs.zip }}" --clobber --repo "$GITHUB_REPOSITORY"
+          gh release upload "$TAG" "${{ steps.tooling.outputs.manifest_json }}" --clobber --repo "$GITHUB_REPOSITORY"
+          gh release upload "$TAG" "${{ steps.tooling.outputs.manifest_csv }}" --clobber --repo "$GITHUB_REPOSITORY"
