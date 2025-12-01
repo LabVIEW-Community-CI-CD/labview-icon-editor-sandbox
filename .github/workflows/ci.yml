@@ -1050,6 +1050,15 @@ jobs:
           echo "manifest_csv=$mc" >> "$GITHUB_OUTPUT"
           ls -lh "$zip" "$mj" "$mc"
 
+      - name: Upload Source Distribution commit index
+        uses: actions/upload-artifact@v4
+        with:
+          name: commit-index-sd
+          path: |
+            builds/cache/commit-index.json
+            builds/cache/commit-index.csv
+          if-no-files-found: error
+
       - name: Locate Tooling Distribution payload
         id: tooling
         shell: bash
@@ -1068,6 +1077,15 @@ jobs:
           echo "manifest_json=$mj" >> "$GITHUB_OUTPUT"
           echo "manifest_csv=$mc" >> "$GITHUB_OUTPUT"
           ls -lh "$zip" "$mj" "$mc"
+
+      - name: Upload Tooling commit index
+        uses: actions/upload-artifact@v4
+        with:
+          name: commit-index-tooling
+          path: |
+            builds/cache/tooling-commit-index.json
+            builds/cache/tooling-commit-index.csv
+          if-no-files-found: error
 
       - name: Compute tag/name
         id: tag
