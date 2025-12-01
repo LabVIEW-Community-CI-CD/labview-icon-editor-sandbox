@@ -298,7 +298,7 @@ function Load-CommitIndex {
         return @{ map = $map; llb = $llbMap; metadata = $raw.metadata }
     }
     catch {
-        throw "Failed to load commit index at $Path: $($_.Exception.Message)"
+        throw ("Failed to load commit index at {0}: {1}" -f $Path, $_.Exception.Message)
     }
 }
 
@@ -392,24 +392,36 @@ $manifest = @()
 $pathsForIndex = New-Object System.Collections.Generic.List[string]
 $headCommitInfo = Get-HeadCommitInfo -Repo $repoRootResolved
 
-# Build a commit index based on the actual built files (post-build).
-  $commitIndexMap = @{}
-  $commitIndexLlbMap = @{}
-  $commitIndexScript = Join-Path $repoRoot 'scripts/build-source-distribution/New-CommitIndex.ps1'
-  if ($CommitIndexPath -and (Test-Path -LiteralPath $commitIndexScript -PathType Leaf)) {
-    $script:CurrentPhase = "commit-index"
-    foreach ($f in $files) {
-        $relDist = [IO.Path]::GetRelativePath($distRoot, $f.FullName)
-        $mappedRel = Map-RelativePath -RelativePath $relDist -RepoName $repoName
-        if ($mappedRel) { $pathsForIndex.Add($mappedRel) | Out-Null }
-    }
-    $uniquePaths = $pathsForIndex | Where-Object { $_ } | Sort-Object -Unique
-    if ($uniquePaths.Count -gt 0) {
-        Write-Stamp -Level "STEP" -Message ("Generating commit index from built files ({0} paths)..." -f $uniquePaths.Count)
-          & pwsh -NoProfile -File $commitIndexScript -RepositoryPath $repoRoot -OutputPath $CommitIndexPath -InputPaths $uniquePaths -AllowDirty | Out-Null
-          Write-Stamp -Level "INFO" -Message ("Commit index generated at {0}" -f $CommitIndexPath)
+  # Build a commit index based on the actual built files (post-build) only if one does not already exist.
+    $commitIndexMap = @{}
+    $commitIndexLlbMap = @{}
+    $commitIndexScript = Join-Path $repoRoot 'scripts/build-source-distribution/New-CommitIndex.ps1'
+    if ($CommitIndexPath -and (Test-Path -LiteralPath $commitIndexScript -PathType Leaf)) {
+      if (Test-Path -LiteralPath $CommitIndexPath -PathType Leaf) {
+        Write-Stamp -Level "INFO" -Message ("Using existing commit index at {0}" -f $CommitIndexPath)
       }
-  }
+      else {
+        $script:CurrentPhase = "commit-index"
+        foreach ($f in $files) {
+            $relDist = [IO.Path]::GetRelativePath($distRoot, $f.FullName)
+            $mappedRel = Map-RelativePath -RelativePath $relDist -RepoName $repoName
+            if ($mappedRel) { $pathsForIndex.Add($mappedRel) | Out-Null }
+        }
+        $uniquePaths = $pathsForIndex | Where-Object { $_ } | Sort-Object -Unique
+        if ($uniquePaths.Count -gt 0) {
+          Write-Stamp -Level "STEP" -Message ("Generating commit index from built files ({0} paths)..." -f $uniquePaths.Count)
+          $pathsArray = @($uniquePaths)
+          $commitIndexParams = @{
+              RepositoryPath = $repoRoot
+              OutputPath     = $CommitIndexPath
+              InputPaths     = $pathsArray
+              AllowDirty     = $true
+          }
+          & pwsh -NoProfile -File $commitIndexScript @commitIndexParams | Out-Null
+          Write-Stamp -Level "INFO" -Message ("Commit index generated at {0}" -f $CommitIndexPath)
+        }
+      }
+    }
 
 # Load commit index if available
 $commitIndex = $null
