@@ -1055,27 +1055,100 @@ jobs:
           echo "Downloaded Tooling Distribution contents:"
           ls -R artifacts/tooling
 
-      - name: Verify commit index artifacts present
-        shell: bash
+      - name: Verify/generate commit index artifacts
+        shell: pwsh
         env:
           PUBLISH_SKIP_COMMIT_INDEX: ${{ env.PUBLISH_SKIP_COMMIT_INDEX || '' }}
         run: |
-          set -euo pipefail
-          sd_json=$(find artifacts/commit-index-sd -name "commit-index.json" -type f | head -n1 || true)
-          sd_csv=$(find artifacts/commit-index-sd -name "commit-index.csv" -type f | head -n1 || true)
-          tool_json=$(find artifacts/commit-index-tooling -name "tooling-commit-index.json" -type f | head -n1 || true)
-          tool_csv=$(find artifacts/commit-index-tooling -name "tooling-commit-index.csv" -type f | head -n1 || true)
-          missing=()
-          if [ -z "$sd_json" ] || [ -z "$sd_csv" ]; then missing+=("commit-index-sd"); fi
-          if [ -z "$tool_json" ] || [ -z "$tool_csv" ]; then missing+=("commit-index-tooling"); fi
-          if [ ${#missing[@]} -ne 0 ]; then
-            if [ "${PUBLISH_SKIP_COMMIT_INDEX,,}" = "true" ]; then
-              echo "Commit index artifact(s) missing (${missing[*]}), but PUBLISH_SKIP_COMMIT_INDEX=true -> continuing without them."
+          $ErrorActionPreference = 'Stop'
+          $isMainOrTag = ($env.GITHUB_REF -like 'refs/heads/main' -or $env.GITHUB_REF -like 'refs/tags/*')
+          $skip = ($env.PUBLISH_SKIP_COMMIT_INDEX -as [string]) -and ($env.PUBLISH_SKIP_COMMIT_INDEX.ToLower() -eq 'true')
+          if ($isMainOrTag -and $skip) {
+            throw 'PUBLISH_SKIP_COMMIT_INDEX=true is not allowed on main or tag refs; remove the bypass to publish.'
+          }
+
+          if (-not $env:TAG -or $env:TAG -notmatch '^v\d+\.\d+\.\d+.*') {
+            throw "TAG missing or malformed ('$env:TAG'); expected vMAJOR.MINOR.PATCH[...]"
+          }
+          if (-not $env:VERSION -or $env:VERSION -notmatch '^v\d+\.\d+\.\d+.*') {
+            throw "VERSION missing or malformed ('$env:VERSION'); expected vMAJOR.MINOR.PATCH[...]"
+          }
+
+          $repo = "$env:GITHUB_WORKSPACE"
+          $sdDir = Join-Path $repo 'artifacts/commit-index-sd'
+          $toolDir = Join-Path $repo 'artifacts/commit-index-tooling'
+          foreach ($d in @($sdDir, $toolDir)) { if (-not (Test-Path -LiteralPath $d)) { New-Item -ItemType Directory -Path $d -Force | Out-Null } }
+
+          function Get-IndexFiles([string]$dir,[string]$stem) {
+            $json = Get-ChildItem -LiteralPath $dir -Filter "$stem.json" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            $csv  = Get-ChildItem -LiteralPath $dir -Filter "$stem.csv" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            return @{ json = $json; csv = $csv }
+          }
+
+          $sd    = Get-IndexFiles -dir $sdDir   -stem 'commit-index'
+          $tool  = Get-IndexFiles -dir $toolDir -stem 'tooling-commit-index'
+          $missing = @()
+          if (-not $sd.json -or -not $sd.csv)   { $missing += 'commit-index-sd' }
+          if (-not $tool.json -or -not $tool.csv) { $missing += 'commit-index-tooling' }
+
+          if ($missing.Count -gt 0 -and -not $skip) {
+            Write-Host "Commit index artifact(s) missing ($($missing -join ', ')); generating locally..."
+            try {
+              $sdJsonOut = Join-Path $sdDir 'commit-index.json'
+              $sdCsvOut  = Join-Path $sdDir 'commit-index.csv'
+              & "$repo/scripts/build-source-distribution/New-CommitIndex.ps1" -RepositoryPath $repo -OutputPath $sdJsonOut -CsvOutputPath $sdCsvOut -AllowDirty
+            } catch {
+              Write-Error "Failed to generate commit-index-sd: $($_.Exception.Message)"
+            }
+
+            try {
+              $toolJsonOut = Join-Path $toolDir 'tooling-commit-index.json'
+              $toolCsvOut  = Join-Path $toolDir 'tooling-commit-index.csv'
+              $includePaths = @(
+                '.vscode','configs','scenarios','runner_dependencies.vipc',
+                'scripts/run-worktree-task.ps1','scripts/run-requirements-summary-task.ps1','scripts/task-devmode-bind.ps1',
+                'scripts/clear-labview-librarypaths-all.ps1','scripts/run-xcli.ps1','scripts/run-worktree-tests.ps1',
+                'scripts/test/Test.ps1','scripts/vi-compare','scripts/ppl-from-sd/Build_Ppl_From_SourceDistribution.ps1',
+                'scripts/labview/vipb-bump-worktree.ps1','scripts/clear-tooling-cache.ps1',
+                'Tooling/dotnet/OrchestrationCli','Tooling/dotnet/IntegrationEngineCli','Tooling/dotnet/DevModeAgentCli',
+                'Tooling/dotnet/RequirementsSummarizer','Tooling/dotnet/TestsCli','Tooling/x-cli/src/XCli','Tooling/x-cli/src/Telemetry'
+              )
+              & "$repo/scripts/build-source-distribution/New-CommitIndex.ps1" -RepositoryPath $repo -IncludePaths $includePaths -OutputPath $toolJsonOut -CsvOutputPath $toolCsvOut -AllowDirty
+            } catch {
+              Write-Error "Failed to generate commit-index-tooling: $($_.Exception.Message)"
+            }
+
+            # Re-evaluate
+            $sd    = Get-IndexFiles -dir $sdDir   -stem 'commit-index'
+            $tool  = Get-IndexFiles -dir $toolDir -stem 'tooling-commit-index'
+            $missing = @()
+            if (-not $sd.json -or -not $sd.csv)   { $missing += 'commit-index-sd' }
+            if (-not $tool.json -or -not $tool.csv) { $missing += 'commit-index-tooling' }
+          }
+
+          $toHash = @()
+          if ($sd.json)   { $toHash += $sd.json.FullName }
+          if ($sd.csv)    { $toHash += $sd.csv.FullName }
+          if ($tool.json) { $toHash += $tool.json.FullName }
+          if ($tool.csv)  { $toHash += $tool.csv.FullName }
+          foreach ($f in $toHash) {
+            if ((Get-Item $f).Length -eq 0) { Write-Error "Commit index file is empty: $f" }
+          }
+          if ($toHash.Count -gt 0) {
+            Write-Host "SHA256 of commit index files:"
+            $hashes = & sha256sum $toHash
+            $hashes | ForEach-Object { Write-Host $_ }
+          }
+
+          if ($missing.Count -gt 0) {
+            if ($skip) {
+              Write-Host "Commit index artifact(s) missing ($($missing -join ', ')), but PUBLISH_SKIP_COMMIT_INDEX=true -> continuing without them."
               exit 0
-            fi
-            echo "Required commit index artifact(s) missing: ${missing[*]}. Ensure upstream CI produced commit-index-sd and commit-index-tooling artifacts for this run, or set PUBLISH_SKIP_COMMIT_INDEX=true to bypass." >&2
-            exit 1
-          fi
+            }
+            Write-Error "Required commit index artifact(s) missing after generation attempt: $($missing -join ', '). Rerun CI with publish enabled so commit-index-sd and commit-index-tooling artifacts exist, or (non-main/non-tag only) set PUBLISH_SKIP_COMMIT_INDEX=true to bypass."
+          } else {
+            Write-Host "Commit index artifacts present."
+          }
 
       - name: Locate LabVIEW Icon API payload
         id: sd
