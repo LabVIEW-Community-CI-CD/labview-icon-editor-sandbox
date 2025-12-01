@@ -620,8 +620,12 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/build-source-distribution/New-CommitIndex.ps1" `
+            -RepositoryPath "$env:GITHUB_WORKSPACE" `
+            -OutputPath (Join-Path $env:GITHUB_WORKSPACE 'builds/cache/commit-index.json')
           pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/build-source-distribution/Build_Source_Distribution.ps1" `
-            -RepositoryPath "$env:GITHUB_WORKSPACE"
+            -RepositoryPath "$env:GITHUB_WORKSPACE" `
+            -CommitIndexPath (Join-Path $env:GITHUB_WORKSPACE 'builds/cache/commit-index.json')
       - name: Stage Source Distribution under builds-isolated
         shell: pwsh
         run: |
