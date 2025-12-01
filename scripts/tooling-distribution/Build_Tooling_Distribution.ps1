@@ -111,8 +111,14 @@ Get-ChildItem -LiteralPath $distRoot -File -Recurse | ForEach-Object {
     $rel = $_.FullName.Substring($distRoot.Length).TrimStart('\','/')
     $key = $rel.Replace('\','/').ToLowerInvariant()
     $commitInfo = $null
-    if ($commitMap.ContainsKey($key)) { $commitInfo = $commitMap[$key] }
+    $commitSource = 'commit-index'
+    if ($commitMap.ContainsKey($key)) {
+        $commitInfo = $commitMap[$key]
+    }
     # Some generated files (manifest/zip) are not part of the commit index; tolerate missing commit info.
+    if (-not $commitInfo -or -not $commitInfo.commit) {
+        $commitSource = 'generated'
+    }
     $manifest += [pscustomobject]@{
         path          = $rel.Replace('\','/')
         size_bytes    = $_.Length
@@ -120,7 +126,7 @@ Get-ChildItem -LiteralPath $distRoot -File -Recurse | ForEach-Object {
         commit        = if ($commitInfo) { $commitInfo.commit } else { $null }
         author        = if ($commitInfo) { $commitInfo.author } else { $null }
         date          = if ($commitInfo) { $commitInfo.date } else { $null }
-        commit_source = "commit-index"
+        commit_source = $commitSource
     }
 }
 
