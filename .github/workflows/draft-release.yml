@@ -112,6 +112,51 @@ jobs:
             echo "MISSING" >> "$inv"
           fi
 
+      - name: Verify required artifacts and hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="artifacts"
+
+          require() {
+            local label="$1"; shift
+            local patterns=("$@")
+            local found=""
+            for p in "${patterns[@]}"; do
+              if f=$(find "$root" -type f -name "$p" -print -quit); then
+                if [ -n "$f" ]; then
+                  found="yes"
+                  break
+                fi
+              fi
+            done
+            if [ -z "$found" ]; then
+              echo "Missing required artifact: $label (patterns: ${patterns[*]})" >&2
+              exit 1
+            fi
+          }
+
+          require "requirements snapshot" "requirements.*"
+          require "version report" "*version*.json"
+          require "SD/Tooling manifests" "*manifest*.json"
+          require "commit indexes" "*commit-index*.json"
+          require "VSCode tasks manifest" "*tasks*.json"
+          require "integrity hashes" "*.sha256*" "*sha256*.txt"
+
+          # Verify all sha256 files present are valid
+          shopt -s globstar
+          sha_files=($(find "$root" -type f -name "*.sha256*" -print))
+          if [ "${#sha_files[@]}" -eq 0 ]; then
+            echo "No sha256 files found under $root; expected integrity hashes." >&2
+            exit 1
+          fi
+          for sha in "${sha_files[@]}"; do
+            dir=$(dirname "$sha")
+            base=$(basename "$sha")
+            echo "Verifying checksums in $sha"
+            (cd "$dir" && sha256sum -c "$base")
+          done
+
       - name: Create draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
