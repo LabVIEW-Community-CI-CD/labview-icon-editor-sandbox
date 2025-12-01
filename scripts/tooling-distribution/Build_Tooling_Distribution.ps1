@@ -117,9 +117,9 @@ Get-ChildItem -LiteralPath $distRoot -File -Recurse | ForEach-Object {
         path          = $rel.Replace('\','/')
         size_bytes    = $_.Length
         sha256        = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
-        commit        = $commitInfo?.commit
-        author        = $commitInfo?.author
-        date          = $commitInfo?.date
+        commit        = if ($commitInfo) { $commitInfo.commit } else { $null }
+        author        = if ($commitInfo) { $commitInfo.author } else { $null }
+        date          = if ($commitInfo) { $commitInfo.date } else { $null }
         commit_source = "commit-index"
     }
 }
