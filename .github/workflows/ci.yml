@@ -723,6 +723,127 @@ jobs:
             ${{ steps.locate-sd.outputs.sd_manifest_json }}
             ${{ steps.locate-sd.outputs.sd_manifest_csv }}
           if-no-files-found: error
+
+  build-tooling:
+    name: Build (Tooling Distribution)
+    needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, version, resolve-labview-version, test-compute-version-bump, test-tag-existence-check, rtm-gates, docs-quality]
+    runs-on: self-hosted-windows-lv
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      COMPANY_NAME: ${{ github.repository_owner }}
+      AUTHOR_NAME: ${{ github.actor }}
+    steps:
+      - name: Compute run key
+        id: runkey
+        shell: pwsh
+        run: |
+          $runId = "${{ github.run_id }}"
+          $runAttempt = "${{ github.run_attempt }}"
+          if (-not [string]::IsNullOrEmpty($runAttempt) -and $runAttempt -ne '1') {
+            $key = "$runId-attempt$runAttempt"
+          } else {
+            $key = $runId
+          }
+          "run_id=$runId"  | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          "run_key=$key"   | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          Write-Host "run_key=$key"
+
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+          fetch-depth: 0
+      - name: "Guard: Windows runner"
+        if: ${{ runner.os != 'Windows' }}
+        run: exit 1
+      - name: Pre-clean run-scoped tooling roots
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $runKey = "${{ steps.runkey.outputs.run_key }}"
+          $paths = @(
+            "$env:GITHUB_WORKSPACE/builds/$runKey",
+            "$env:GITHUB_WORKSPACE/builds-isolated/$runKey",
+            "$env:GITHUB_WORKSPACE/builds/cache/tooling-commit-index.json"
+          )
+          foreach ($p in $paths) {
+            if (Test-Path -LiteralPath $p) {
+              Write-Host "Removing $p"
+              Remove-Item -LiteralPath $p -Recurse -Force -ErrorAction SilentlyContinue
+            }
+          }
+      - name: Build Tooling Distribution
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/tooling-distribution/Build_Tooling_Distribution.ps1" `
+            -RepositoryPath "$env:GITHUB_WORKSPACE"
+      - name: Stage Tooling Distribution under run-scoped builds/builds-isolated
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $runKey    = "${{ steps.runkey.outputs.run_key }}"
+          $srcDist   = Join-Path $env:GITHUB_WORKSPACE 'builds/ToolingDistribution'
+          $srcZip    = Join-Path $env:GITHUB_WORKSPACE 'builds/artifacts/tooling-distribution.zip'
+          $runDist   = Join-Path $env:GITHUB_WORKSPACE "builds/$runKey/ToolingDistribution"
+          $runZipDir = Join-Path $env:GITHUB_WORKSPACE "builds/$runKey/artifacts"
+          $isoDist   = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/ToolingDistribution"
+          $isoZipDir = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/artifacts"
+
+          if (-not (Test-Path -LiteralPath $srcDist -PathType Container)) {
+            throw "Expected tooling distribution folder at $srcDist"
+          }
+          if (-not (Test-Path -LiteralPath $srcZip -PathType Leaf)) {
+            throw "Expected tooling distribution zip at $srcZip"
+          }
+
+          Remove-Item -LiteralPath $runDist -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $runZipDir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $runDist, $runZipDir -Force | Out-Null
+          Copy-Item -Path (Join-Path $srcDist '*') -Destination $runDist -Recurse -Force
+          Copy-Item -LiteralPath $srcZip -Destination (Join-Path $runZipDir (Split-Path $srcZip -Leaf)) -Force
+
+          Remove-Item -LiteralPath $isoDist -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $isoZipDir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $isoDist, $isoZipDir -Force | Out-Null
+          Copy-Item -Path (Join-Path $runDist '*') -Destination $isoDist -Recurse -Force
+          Copy-Item -LiteralPath (Join-Path $runZipDir (Split-Path $srcZip -Leaf)) -Destination (Join-Path $isoZipDir (Split-Path $srcZip -Leaf)) -Force
+      - name: Locate Tooling Distribution artifacts
+        id: locate-tooling
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $runKey   = "${{ steps.runkey.outputs.run_key }}"
+          $distRoot = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/ToolingDistribution"
+          $zip      = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/artifacts/tooling-distribution.zip"
+
+          if (-not (Test-Path -LiteralPath $distRoot -PathType Container)) {
+            throw "Tooling Distribution folder not found at $distRoot"
+          }
+          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) {
+            throw "tooling-distribution.zip not found at $zip"
+          }
+
+          $manifestJson = Join-Path $distRoot 'tooling-manifest.json'
+          $manifestCsv  = Join-Path $distRoot 'tooling-manifest.csv'
+          foreach ($p in @($manifestJson, $manifestCsv)) {
+            if (-not (Test-Path -LiteralPath $p -PathType Leaf)) {
+              throw "Missing tooling manifest file: $p"
+            }
+          }
+          "tool_zip=$zip" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          "tool_manifest_json=$manifestJson" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          "tool_manifest_csv=$manifestCsv" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+      - name: Upload Tooling Distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name || 'labview-icon-editor' }}-tooling-distribution
+          path: |
+            ${{ steps.locate-tooling.outputs.tool_zip }}
+            ${{ steps.locate-tooling.outputs.tool_manifest_json }}
+            ${{ steps.locate-tooling.outputs.tool_manifest_csv }}
+          if-no-files-found: error
       - name: Stage build reports under builds-isolated
         if: always()
         shell: pwsh
