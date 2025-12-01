@@ -112,13 +112,14 @@ Get-ChildItem -LiteralPath $distRoot -File -Recurse | ForEach-Object {
     $key = $rel.Replace('\','/').ToLowerInvariant()
     $commitInfo = $null
     if ($commitMap.ContainsKey($key)) { $commitInfo = $commitMap[$key] }
+    # Some generated files (manifest/zip) are not part of the commit index; tolerate missing commit info.
     $manifest += [pscustomobject]@{
         path          = $rel.Replace('\','/')
         size_bytes    = $_.Length
         sha256        = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
-        commit        = $commitInfo.commit
-        author        = $commitInfo.author
-        date          = $commitInfo.date
+        commit        = $commitInfo?.commit
+        author        = $commitInfo?.author
+        date          = $commitInfo?.date
         commit_source = "commit-index"
     }
 }
