@@ -1024,6 +1024,18 @@ jobs:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-tooling-distribution
           path: artifacts/tooling
 
+      - name: Download Source Distribution commit index artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: commit-index-sd
+          path: artifacts/commit-index-sd
+
+      - name: Download Tooling commit index artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: commit-index-tooling
+          path: artifacts/commit-index-tooling
+
       - name: List downloaded artifacts
         run: |
           echo "Downloaded LabVIEW Icon API distribution contents:"
@@ -1050,15 +1062,6 @@ jobs:
           echo "manifest_csv=$mc" >> "$GITHUB_OUTPUT"
           ls -lh "$zip" "$mj" "$mc"
 
-      - name: Upload Source Distribution commit index
-        uses: actions/upload-artifact@v4
-        with:
-          name: commit-index-sd
-          path: |
-            builds/cache/commit-index.json
-            builds/cache/commit-index.csv
-          if-no-files-found: error
-
       - name: Locate Tooling Distribution payload
         id: tooling
         shell: bash
@@ -1078,14 +1081,26 @@ jobs:
           echo "manifest_csv=$mc" >> "$GITHUB_OUTPUT"
           ls -lh "$zip" "$mj" "$mc"
 
-      - name: Upload Tooling commit index
-        uses: actions/upload-artifact@v4
-        with:
-          name: commit-index-tooling
-          path: |
-            builds/cache/tooling-commit-index.json
-            builds/cache/tooling-commit-index.csv
-          if-no-files-found: error
+      - name: Locate commit index artifacts
+        id: commit-index
+        shell: bash
+        run: |
+          set -euo pipefail
+          sd_json=$(find artifacts/commit-index-sd -name "commit-index.json" -type f | head -n1 || true)
+          sd_csv=$(find artifacts/commit-index-sd -name "commit-index.csv" -type f | head -n1 || true)
+          tool_json=$(find artifacts/commit-index-tooling -name "tooling-commit-index.json" -type f | head -n1 || true)
+          tool_csv=$(find artifacts/commit-index-tooling -name "tooling-commit-index.csv" -type f | head -n1 || true)
+          for f in "$sd_json" "$sd_csv" "$tool_json" "$tool_csv"; do
+            if [ -z "$f" ]; then
+              echo "Missing commit index artifact component." >&2
+              exit 1
+            fi
+          done
+          echo "sd_json=$sd_json" >> "$GITHUB_OUTPUT"
+          echo "sd_csv=$sd_csv" >> "$GITHUB_OUTPUT"
+          echo "tool_json=$tool_json" >> "$GITHUB_OUTPUT"
+          echo "tool_csv=$tool_csv" >> "$GITHUB_OUTPUT"
+          ls -lh "$sd_json" "$sd_csv" "$tool_json" "$tool_csv"
 
       - name: Compute tag/name
         id: tag
@@ -1154,3 +1169,13 @@ jobs:
           gh release upload "$TAG" "${{ steps.tooling.outputs.zip }}" --clobber --repo "$GITHUB_REPOSITORY"
           gh release upload "$TAG" "${{ steps.tooling.outputs.manifest_json }}" --clobber --repo "$GITHUB_REPOSITORY"
           gh release upload "$TAG" "${{ steps.tooling.outputs.manifest_csv }}" --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Upload commit index artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" "${{ steps.commit-index.outputs.sd_json }}" "${{ steps.commit-index.outputs.sd_csv }}" --clobber --repo "$GITHUB_REPOSITORY"
+          gh release upload "$TAG" "${{ steps.commit-index.outputs.tool_json }}" "${{ steps.commit-index.outputs.tool_csv }}" --clobber --repo "$GITHUB_REPOSITORY"
