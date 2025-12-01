@@ -609,6 +609,21 @@ jobs:
       COMPANY_NAME: ${{ github.repository_owner }}
       AUTHOR_NAME: ${{ github.actor }}
     steps:
+      - name: Compute run key
+        id: runkey
+        shell: pwsh
+        run: |
+          $runId = "${{ github.run_id }}"
+          $runAttempt = "${{ github.run_attempt }}"
+          if (-not [string]::IsNullOrEmpty($runAttempt) -and $runAttempt -ne '1') {
+            $key = "$runId-attempt$runAttempt"
+          } else {
+            $key = $runId
+          }
+          "run_id=$runId"  | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          "run_key=$key"   | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          Write-Host "run_key=$key"
+
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           set-safe-directory: true
@@ -616,6 +631,23 @@ jobs:
       - name: "Guard: Windows runner"
         if: ${{ runner.os != 'Windows' }}
         run: exit 1
+      - name: Pre-clean run-scoped roots
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $runKey = "${{ steps.runkey.outputs.run_key }}"
+          $paths = @(
+            Join-Path $env:GITHUB_WORKSPACE ("builds/$runKey"),
+            Join-Path $env:GITHUB_WORKSPACE ("builds-isolated/$runKey"),
+            Join-Path $env:GITHUB_WORKSPACE ("builds/log-stash/$runKey"),
+            Join-Path $env:GITHUB_WORKSPACE 'builds/cache'
+          )
+          foreach ($p in $paths) {
+            if (Test-Path -LiteralPath $p) {
+              Write-Host "Removing $p"
+              Remove-Item -LiteralPath $p -Recurse -Force -ErrorAction SilentlyContinue
+            }
+          }
       - name: Build Source Distribution via worktree
         shell: pwsh
         run: |
@@ -626,14 +658,17 @@ jobs:
           pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/build-source-distribution/Build_Source_Distribution.ps1" `
             -RepositoryPath "$env:GITHUB_WORKSPACE" `
             -CommitIndexPath (Join-Path $env:GITHUB_WORKSPACE 'builds/cache/commit-index.json')
-      - name: Stage Source Distribution under builds-isolated
+      - name: Stage Source Distribution under run-scoped builds/builds-isolated
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $runKey    = "${{ steps.runkey.outputs.run_key }}"
           $srcDist   = Join-Path $env:GITHUB_WORKSPACE 'builds/Source Distribution'
           $srcZip    = Join-Path $env:GITHUB_WORKSPACE 'builds/artifacts/source-distribution.zip'
-          $isoDist   = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/Source Distribution'
-          $isoZipDir = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/artifacts'
+          $runDist   = Join-Path $env:GITHUB_WORKSPACE "builds/$runKey/Source Distribution"
+          $runZipDir = Join-Path $env:GITHUB_WORKSPACE "builds/$runKey/artifacts"
+          $isoDist   = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/Source Distribution"
+          $isoZipDir = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/artifacts"
 
           if (-not (Test-Path -LiteralPath $srcDist -PathType Container)) {
             throw "Expected source distribution folder at $srcDist"
@@ -642,16 +677,25 @@ jobs:
             throw "Expected source distribution zip at $srcZip"
           }
 
+          Remove-Item -LiteralPath $runDist -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $runZipDir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $runDist, $runZipDir -Force | Out-Null
+          Copy-Item -Path (Join-Path $srcDist '*') -Destination $runDist -Recurse -Force
+          Copy-Item -LiteralPath $srcZip -Destination (Join-Path $runZipDir (Split-Path $srcZip -Leaf)) -Force
+
+          Remove-Item -LiteralPath $isoDist -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $isoZipDir -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Path $isoDist, $isoZipDir -Force | Out-Null
-          Copy-Item -Path (Join-Path $srcDist '*') -Destination $isoDist -Recurse -Force
-          Copy-Item -LiteralPath $srcZip -Destination (Join-Path $isoZipDir (Split-Path $srcZip -Leaf)) -Force
+          Copy-Item -Path (Join-Path $runDist '*') -Destination $isoDist -Recurse -Force
+          Copy-Item -LiteralPath (Join-Path $runZipDir (Split-Path $srcZip -Leaf)) -Destination (Join-Path $isoZipDir (Split-Path $srcZip -Leaf)) -Force
       - name: Locate Source Distribution artifacts
         id: locate-sd
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $distRoot = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/Source Distribution'
-          $zip      = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/artifacts/source-distribution.zip'
+          $runKey   = "${{ steps.runkey.outputs.run_key }}"
+          $distRoot = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/Source Distribution"
+          $zip      = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/artifacts/source-distribution.zip"
 
           if (-not (Test-Path -LiteralPath $distRoot -PathType Container)) {
             throw "Source Distribution folder not found at $distRoot"
@@ -684,20 +728,40 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $runKey    = "${{ steps.runkey.outputs.run_key }}"
           $srcReports = Join-Path $env:GITHUB_WORKSPACE 'builds/reports'
-          $dstReports = Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/reports'
+          $dstReports = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/reports"
           New-Item -ItemType Directory -Path $dstReports -Force | Out-Null
           if (Test-Path -LiteralPath $srcReports -PathType Container) {
             Copy-Item -Path (Join-Path $srcReports '*') -Destination $dstReports -Recurse -Force
           } else {
             'No build reports generated in this run.' | Out-File -FilePath (Join-Path $dstReports 'README.txt') -Encoding utf8 -Force
           }
+      - name: Stage log-stash under run-scoped roots
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $runKey  = "${{ steps.runkey.outputs.run_key }}"
+          $srcRoot = Join-Path $env:GITHUB_WORKSPACE 'builds/log-stash'
+          $dstRoot = Join-Path $env:GITHUB_WORKSPACE "builds/log-stash/$runKey"
+          $isoRoot = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/log-stash"
+          if (Test-Path -LiteralPath $dstRoot) { Remove-Item -LiteralPath $dstRoot -Recurse -Force -ErrorAction SilentlyContinue }
+          if (Test-Path -LiteralPath $isoRoot) { Remove-Item -LiteralPath $isoRoot -Recurse -Force -ErrorAction SilentlyContinue }
+          New-Item -ItemType Directory -Path $dstRoot, $isoRoot -Force | Out-Null
+          if (Test-Path -LiteralPath $srcRoot -PathType Container) {
+            Get-ChildItem -LiteralPath $srcRoot | ForEach-Object {
+              Move-Item -LiteralPath $_.FullName -Destination $dstRoot -Force
+            }
+            Copy-Item -Path (Join-Path $dstRoot '*') -Destination $isoRoot -Recurse -Force
+          }
       - name: Upload build reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-build-reports
-          path: builds-isolated/reports
+          path: |
+            builds-isolated/${{ steps.runkey.outputs.run_key }}/reports
           if-no-files-found: warn
       - name: Upload log-stash bundles
         if: always()
@@ -705,8 +769,8 @@ jobs:
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-log-stash
           path: |
-            builds/log-stash
-            builds-isolated/builds/log-stash
+            builds/log-stash/${{ steps.runkey.outputs.run_key }}
+            builds-isolated/${{ steps.runkey.outputs.run_key }}/builds/log-stash
           if-no-files-found: ignore
       - name: Validate compare bundles (if request present)
         if: always()
@@ -717,9 +781,10 @@ jobs:
             Write-Host "No compare request provided; skipping compare bundle validation."
             exit 0
           }
+          $runKey = "${{ steps.runkey.outputs.run_key }}"
           $roots = @(
-            Join-Path $env:GITHUB_WORKSPACE 'builds/log-stash'
-            Join-Path $env:GITHUB_WORKSPACE 'builds-isolated/builds/log-stash'
+            Join-Path $env:GITHUB_WORKSPACE "builds/log-stash/$runKey"
+            Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/log-stash"
           )
           $bundles = @()
           foreach ($r in $roots) {
