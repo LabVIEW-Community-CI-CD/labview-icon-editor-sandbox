@@ -57,6 +57,53 @@ function Write-Stamp {
     Write-Host ("[{0}] {1} {2}" -f $Level, (Get-Elapsed -StartTime $StartTime), $Message)
 }
 
+function New-IconApiPayload {
+    param(
+        [Parameter(Mandatory)][string]$SourcePath,
+        [Parameter(Mandatory)][string]$ManifestPath,
+        [Parameter(Mandatory)][string]$ZipPath
+    )
+
+    if (-not (Test-Path -LiteralPath $SourcePath -PathType Container)) {
+        throw "Icon API payload folder not found at $SourcePath"
+    }
+    $files = Get-ChildItem -Path $SourcePath -File -Recurse | Sort-Object FullName
+    if ($files.Count -eq 0) {
+        throw "Icon API payload is empty at $SourcePath"
+    }
+
+    $entries = foreach ($f in $files) {
+        $rel = [IO.Path]::GetRelativePath($SourcePath, $f.FullName).Replace('\','/')
+        $hash = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash
+        [pscustomobject]@{
+            path      = $rel
+            size_bytes= $f.Length
+            sha256    = $hash
+        }
+    }
+
+    $manifestDir = Split-Path -Parent $ManifestPath
+    if (-not (Test-Path -LiteralPath $manifestDir)) {
+        New-Item -ItemType Directory -Path $manifestDir -Force | Out-Null
+    }
+    $entries | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $ManifestPath -Encoding utf8
+
+    $zipDir = Split-Path -Parent $ZipPath
+    if (-not (Test-Path -LiteralPath $zipDir)) {
+        New-Item -ItemType Directory -Path $zipDir -Force | Out-Null
+    }
+    if (Test-Path -LiteralPath $ZipPath) { Remove-Item -LiteralPath $ZipPath -Force }
+    Compress-Archive -Path (Join-Path $SourcePath '*') -DestinationPath $ZipPath -Force
+    $zipHash = (Get-FileHash -LiteralPath $ZipPath -Algorithm SHA256).Hash
+
+    return @{
+        manifest_path = $ManifestPath
+        zip_path      = $ZipPath
+        zip_hash      = $zipHash
+        entries_count = $entries.Count
+    }
+}
+
 function Sync-IconEditorAssets {
     param(
         [Parameter(Mandatory)][string]$RepoRoot,
@@ -328,7 +375,15 @@ if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) {
 $gcli = Get-Command g-cli -ErrorAction SilentlyContinue
 if (-not $gcli) { throw "g-cli is required but was not found on PATH." }
 
-# Ensure LabVIEW has the Icon Editor assets that the build depends on
+# Build a manifest/zip of the repo-staged Icon API payload for traceability and to detect drift.
+$iconApiSource   = Join-Path $repoRoot 'vi.lib\LabVIEW Icon API'
+$iconCacheRoot   = Join-Path $repoRoot 'builds/cache/icon-api'
+$iconManifest    = Join-Path $iconCacheRoot 'icon-api-manifest.json'
+$iconZip         = Join-Path $iconCacheRoot 'icon-api.zip'
+$iconPayloadInfo = New-IconApiPayload -SourcePath $iconApiSource -ManifestPath $iconManifest -ZipPath $iconZip
+Write-Stamp -Level "INFO" -Message ("Icon API payload: {0} files, zip SHA256={1}" -f $iconPayloadInfo.entries_count, $iconPayloadInfo.zip_hash)
+
+# Ensure LabVIEW has the Icon Editor assets that the build depends on (copied from the repo payload).
 Sync-IconEditorAssets -RepoRoot $repoRoot -LabVIEWVersion $Package_LabVIEW_Version
 
 Start-Heartbeat
@@ -487,6 +542,21 @@ foreach ($f in $files) {
         Write-Stamp -Level "INFO" -Message ("Processed {0}/{1} files for manifest..." -f $processed, $totalFiles)
     }
 }
+
+# Guard: commit_source must never fall back to repo_head and vi.lib content should stay within the Icon API scope.
+$badCommit = $manifest | Where-Object { $_.commit_source -eq 'repo_head' }
+if ($badCommit.Count -gt 0) {
+    $sample = $badCommit[0].path
+    throw "Manifest commit_source must not be repo_head (example path: $sample). Supply a commit index that covers all built files."
+}
+$nonIconViLib = $manifest | Where-Object {
+    $_.path -like 'vi.lib/*' -and (-not $_.path.StartsWith('vi.lib/LabVIEW Icon API/', [StringComparison]::OrdinalIgnoreCase))
+}
+if ($nonIconViLib.Count -gt 0) {
+    $sample = $nonIconViLib[0].path
+    throw "Manifest contains vi.lib content outside vi.lib/LabVIEW Icon API/ (example path: $sample)."
+}
+
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding utf8
 # Also emit CSV for spreadsheet/requirements ingestion.
 $manifestCsvPath = Join-Path $distRoot 'manifest.csv'
@@ -497,6 +567,14 @@ Write-Host ("Manifest written: {0}" -f $manifestPath)
 $manifestEndTime = Get-Date
 $manifestDuration = ($manifestEndTime - $manifestStartTime).TotalSeconds
 Write-Stamp -Level "INFO" -Message ("Manifest complete (files={0}, duration={1:N1}s)" -f $totalFiles, $manifestDuration)
+
+# Publish Icon API payload/manifest alongside the SD output for traceability.
+try {
+    Copy-Item -LiteralPath $iconManifest -Destination (Join-Path $distRoot 'icon-api-manifest.json') -Force
+    Copy-Item -LiteralPath $iconZip -Destination (Join-Path $distRoot 'icon-api.zip') -Force
+} catch {
+    Write-Warning ("[icon-api] Failed to copy payload artifacts into Source Distribution: {0}" -f $_.Exception.Message)
+}
 
 # Zip the distribution (including manifest)
 Set-Phase -Name "zip"
@@ -539,6 +617,16 @@ Compress-Archive -Path (Join-Path $distRoot '*') -DestinationPath $zipPath -Forc
     catch {
         Write-Warning ("[info] Failed to copy zip to builds-isolated: {0}" -f $_.Exception.Message)
     }
+    # Mirror Icon API payload artifacts into artifacts folder as well.
+    foreach ($pair in @(@{Src=$iconManifest; Dest='icon-api-manifest.json'}, @{Src=$iconZip; Dest='icon-api.zip'})) {
+        try {
+            Copy-Item -LiteralPath $pair.Src -Destination (Join-Path $artifactDir $pair.Dest) -Force
+            Copy-Item -LiteralPath $pair.Src -Destination (Join-Path $isoArtifacts $pair.Dest) -Force
+        }
+        catch {
+            Write-Warning ("[icon-api] Failed to publish {0}: {1}" -f $pair.Dest, $_.Exception.Message)
+        }
+    }
 
     $relJson = Get-RelativePathSafe -Base $repoRoot -Target $manifestPath
     $relCsv = Get-RelativePathSafe -Base $repoRoot -Target $manifestCsvPath
@@ -546,6 +634,8 @@ Compress-Archive -Path (Join-Path $distRoot '*') -DestinationPath $zipPath -Forc
     Write-Host ("[artifact][source-distribution] manifest.json: {0}" -f $relJson)
     Write-Host ("[artifact][source-distribution] manifest.csv: {0}" -f $relCsv)
 Write-Host ("[artifact][source-distribution] zip: {0}" -f $relZip)
+    Write-Host ("[artifact][icon-api] manifest: {0}" -f (Get-RelativePathSafe -Base $repoRoot -Target (Join-Path $artifactDir 'icon-api-manifest.json')))
+    Write-Host ("[artifact][icon-api] zip: {0}" -f (Get-RelativePathSafe -Base $repoRoot -Target (Join-Path $artifactDir 'icon-api.zip')))
 Write-Host ("[info] Built with LabVIEW {0} ({1}-bit) based on VIPB." -f $Package_LabVIEW_Version, $SupportedBitness)
 Write-Host ("[info] Next steps: run task 21 (Verify: Source Distribution) to validate the manifest; or task 22 (Build PPL from Source Distribution) to produce the PPL from this zip.")
 Write-Host ("[info] Extracted contents: {0}" -f (Get-RelativePathSafe -Base $repoRoot -Target $distRoot))
