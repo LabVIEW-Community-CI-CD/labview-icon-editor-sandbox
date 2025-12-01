@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Build the "Source Distribution" spec and emit a manifest/zip artifact.
+    Build the "LabVIEWIconAPI" Source Distribution spec and emit a manifest/zip artifact.
 
 .DESCRIPTION
-    Invokes the LabVIEW build spec "Source Distribution" via g-cli lvbuildspec,
+    Invokes the LabVIEW build spec "LabVIEWIconAPI" via g-cli lvbuildspec,
     then produces a manifest mapping each built file to the last git commit
     touching the corresponding source path, and zips the output folder.
 
@@ -215,12 +215,12 @@ function Resolve-VipbBitness {
 
 function Get-DistRoot {
     param([string]$Repo)
-    $default = Join-Path $Repo 'builds/Source Distribution'
+    $default = Join-Path $Repo 'builds/LabVIEWIconAPI'
     if (Test-Path -LiteralPath $default -PathType Container) { return $default }
-    $candidates = Get-ChildItem -Path (Join-Path $Repo 'builds') -Directory -Filter '*Source Distribution*' -ErrorAction SilentlyContinue |
+    $candidates = Get-ChildItem -Path (Join-Path $Repo 'builds') -Directory -Filter '*LabVIEWIconAPI*' -ErrorAction SilentlyContinue |
         Sort-Object LastWriteTime -Descending
     if ($candidates) { return $candidates[0].FullName }
-    throw "Could not locate Source Distribution output folder under $(Join-Path $Repo 'builds')"
+    throw "Could not locate LabVIEWIconAPI Source Distribution output folder under $(Join-Path $Repo 'builds')"
 }
 
 function Get-LastCommitForPath {
@@ -390,7 +390,7 @@ Start-Heartbeat
 try {
     Write-Stamp -Level "INFO" -Message "Expected durations: build ~60-120s depending on LabVIEW startup; manifest/zip ~10-30s."
 
-# Build the Source Distribution
+# Build the Icon API Source Distribution
 Set-Phase -Name "g-cli build"
 $buildStart = Get-Date
 $buildArgs = @(
@@ -399,9 +399,9 @@ $buildArgs = @(
     'lvbuildspec',
     '--',
     '-p', $projectPath,
-    '-b', 'Source Distribution'
+    '-b', 'LabVIEWIconAPI'
 )
-Write-Stamp -Level "STEP" -Message ("Building Source Distribution via g-cli: {0}" -f ($buildArgs -join ' '))
+Write-Stamp -Level "STEP" -Message ("Building LabVIEWIconAPI Source Distribution via g-cli: {0}" -f ($buildArgs -join ' '))
 $buildArgsEscaped = $buildArgs | ForEach-Object {
     if ($_ -match '\s') { '"' + $_.Replace('"','\"') + '"' } else { $_ }
 }
@@ -424,16 +424,6 @@ Write-Stamp -Level "INFO" -Message "Build spec succeeded (pre-manifest/zip); loc
 
 $distRoot = Get-DistRoot -Repo $repoRoot
 Write-Stamp -Level "INFO" -Message ("Using Source Distribution folder: {0}" -f $distRoot)
-
-# Ensure downstream consumers (e.g., ppl-from-sd) have the project file inside the SD.
-try {
-    $projDest = Join-Path $distRoot 'lv_icon_editor.lvproj'
-    Copy-Item -LiteralPath $projectPath -Destination $projDest -Force
-    Write-Stamp -Level "INFO" -Message ("Included lv_icon_editor.lvproj in Source Distribution at {0}" -f $projDest)
-}
-catch {
-    Write-Warning ("[lvsd] Failed to copy lv_icon_editor.lvproj into distribution: {0}" -f $_.Exception.Message)
-}
 
 # Create manifest
 $manifestPath = Join-Path $distRoot 'manifest.json'
@@ -527,12 +517,18 @@ foreach ($f in $files) {
             }
         }
     }
+    # Generated files (manifest/icon-api artifacts) are tagged as generated to avoid repo_head guard.
+    if ($sourceRel -in @('manifest.json','manifest.csv','icon-api-manifest.json','icon-api.zip')) {
+        $commitSource = 'generated'
+        $commitInfo = $null
+    }
+
     $manifest += [pscustomobject]@{
-        path        = $sourceRel
-        last_commit = if ($commitInfo) { $commitInfo.Commit } else { $null }
+        path          = $sourceRel
+        last_commit   = if ($commitInfo) { $commitInfo.Commit } else { $null }
         commit_author = if ($commitInfo) { $commitInfo.Author } else { $null }
         commit_date   = if ($commitInfo) { $commitInfo.Date } else { $null }
-        size_bytes  = $f.Length
+        size_bytes    = $f.Length
         commit_source = $commitSource
     }
 
@@ -543,18 +539,26 @@ foreach ($f in $files) {
     }
 }
 
-# Guard: commit_source must never fall back to repo_head and vi.lib content should stay within the Icon API scope.
+# Guard: commit_source must never fall back to repo_head and content must stay within the allowed scope.
 $badCommit = $manifest | Where-Object { $_.commit_source -eq 'repo_head' }
 if ($badCommit.Count -gt 0) {
     $sample = $badCommit[0].path
     throw "Manifest commit_source must not be repo_head (example path: $sample). Supply a commit index that covers all built files."
 }
-$nonIconViLib = $manifest | Where-Object {
-    $_.path -like 'vi.lib/*' -and (-not $_.path.StartsWith('vi.lib/LabVIEW Icon API/', [StringComparison]::OrdinalIgnoreCase))
+$allowedPrefixes = @(
+    'resource/',
+    'vi.lib/LabVIEW Icon API/',
+    'Test/Unit tests/'
+)
+$generatedFiles = @('manifest.json', 'manifest.csv', 'icon-api-manifest.json', 'icon-api.zip')
+$nonAllowed = $manifest | Where-Object {
+    $p = $_.path
+    if ($generatedFiles -contains $p) { return $false }
+    -not ($allowedPrefixes | Where-Object { $p.StartsWith($_, [StringComparison]::OrdinalIgnoreCase) })
 }
-if ($nonIconViLib.Count -gt 0) {
-    $sample = $nonIconViLib[0].path
-    throw "Manifest contains vi.lib content outside vi.lib/LabVIEW Icon API/ (example path: $sample)."
+if ($nonAllowed.Count -gt 0) {
+    $sample = $nonAllowed[0].path
+    throw "Manifest contains paths outside allowed scope (resource/, vi.lib/LabVIEW Icon API/, Test/Unit tests/): $sample"
 }
 
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding utf8
@@ -583,17 +587,17 @@ $artifactDir = Join-Path $repoRoot 'builds/artifacts'
 if (-not (Test-Path -LiteralPath $artifactDir)) {
     New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
 }
-$zipPath = Join-Path $artifactDir 'source-distribution.zip'
-Write-Stamp -Level "STEP" -Message "Zipping Source Distribution..."
+$zipPath = Join-Path $artifactDir 'labview-icon-api.zip'
+Write-Stamp -Level "STEP" -Message "Zipping LabVIEWIconAPI Source Distribution..."
 Compress-Archive -Path (Join-Path $distRoot '*') -DestinationPath $zipPath -Force
     $zipEndTime = Get-Date
     $zipDuration = ($zipEndTime - $zipStartTime).TotalSeconds
-    Write-Stamp -Level "INFO" -Message ("Zipped Source Distribution: {0}" -f $zipPath)
+    Write-Stamp -Level "INFO" -Message ("Zipped LabVIEWIconAPI Source Distribution: {0}" -f $zipPath)
 
     # Mirror artifacts into builds-isolated/ for CI publish steps.
     $isoRoot    = Join-Path $repoRoot 'builds-isolated'
     $isoBuilds  = Join-Path $isoRoot 'builds'
-    $isoDist    = Join-Path $isoBuilds 'Source Distribution'
+    $isoDist    = Join-Path $isoBuilds 'LabVIEWIconAPI'
     $isoArtifacts = Join-Path $isoBuilds 'artifacts'
     foreach ($dir in @($isoDist, $isoArtifacts)) {
         if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
@@ -612,7 +616,7 @@ Compress-Archive -Path (Join-Path $distRoot '*') -DestinationPath $zipPath -Forc
     }
     # Copy the zip
     try {
-        Copy-Item -LiteralPath $zipPath -Destination (Join-Path $isoArtifacts 'source-distribution.zip') -Force
+        Copy-Item -LiteralPath $zipPath -Destination (Join-Path $isoArtifacts 'labview-icon-api.zip') -Force
     }
     catch {
         Write-Warning ("[info] Failed to copy zip to builds-isolated: {0}" -f $_.Exception.Message)
@@ -631,11 +635,11 @@ Compress-Archive -Path (Join-Path $distRoot '*') -DestinationPath $zipPath -Forc
     $relJson = Get-RelativePathSafe -Base $repoRoot -Target $manifestPath
     $relCsv = Get-RelativePathSafe -Base $repoRoot -Target $manifestCsvPath
     $relZip = Get-RelativePathSafe -Base $repoRoot -Target $zipPath
-    Write-Host ("[artifact][source-distribution] manifest.json: {0}" -f $relJson)
-    Write-Host ("[artifact][source-distribution] manifest.csv: {0}" -f $relCsv)
-Write-Host ("[artifact][source-distribution] zip: {0}" -f $relZip)
-    Write-Host ("[artifact][icon-api] manifest: {0}" -f (Get-RelativePathSafe -Base $repoRoot -Target (Join-Path $artifactDir 'icon-api-manifest.json')))
-    Write-Host ("[artifact][icon-api] zip: {0}" -f (Get-RelativePathSafe -Base $repoRoot -Target (Join-Path $artifactDir 'icon-api.zip')))
+    Write-Host ("[artifact][labview-icon-api] manifest.json: {0}" -f $relJson)
+    Write-Host ("[artifact][labview-icon-api] manifest.csv: {0}" -f $relCsv)
+Write-Host ("[artifact][labview-icon-api] zip: {0}" -f $relZip)
+    Write-Host ("[artifact][labview-icon-api] icon-api manifest: {0}" -f (Get-RelativePathSafe -Base $repoRoot -Target (Join-Path $artifactDir 'icon-api-manifest.json')))
+    Write-Host ("[artifact][labview-icon-api] icon-api zip: {0}" -f (Get-RelativePathSafe -Base $repoRoot -Target (Join-Path $artifactDir 'icon-api.zip')))
 Write-Host ("[info] Built with LabVIEW {0} ({1}-bit) based on VIPB." -f $Package_LabVIEW_Version, $SupportedBitness)
 Write-Host ("[info] Next steps: run task 21 (Verify: Source Distribution) to validate the manifest; or task 22 (Build PPL from Source Distribution) to produce the PPL from this zip.")
 Write-Host ("[info] Extracted contents: {0}" -f (Get-RelativePathSafe -Base $repoRoot -Target $distRoot))
