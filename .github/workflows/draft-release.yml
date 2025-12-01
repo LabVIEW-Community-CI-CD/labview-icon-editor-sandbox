@@ -137,7 +137,7 @@ jobs:
           }
 
           require "requirements snapshot" "requirements.*"
-          require "version report" "*version*.json"
+          require "version report" "*version*.json" "*version*.txt"
           require "SD/Tooling manifests" "*manifest*.json"
           require "commit indexes" "*commit-index*.json"
           require "VSCode tasks manifest" "*tasks*.json"
