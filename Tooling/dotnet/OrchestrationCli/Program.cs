@@ -125,6 +125,21 @@ public static class Program
         var isPackage = opts.Subcommand.Equals("package-build", StringComparison.OrdinalIgnoreCase)
             || opts.Subcommand.Equals("package", StringComparison.OrdinalIgnoreCase);
 
+        if (opts.Subcommand.Equals("local-sd", StringComparison.OrdinalIgnoreCase))
+        {
+            results.Add(RunLocalSdOnce(Log, opts, repo));
+            var jsonLocal = JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true });
+            Console.WriteLine(jsonLocal);
+            foreach (var r in results)
+            {
+                if (!string.Equals(r.Status, "success", StringComparison.OrdinalIgnoreCase))
+                {
+                    overallExit = overallExit == 0 ? r.ExitCode : overallExit;
+                }
+            }
+            return overallExit;
+        }
+
         if (isPackage)
         {
             results.Add(RunPackageBuild(Log, opts, repo));
@@ -191,6 +206,42 @@ public static class Program
         }
 
         return overallExit;
+    }
+
+    private static CommandResult RunLocalSdOnce(Action<string> log, Options opts, string repo)
+    {
+        var sw = Stopwatch.StartNew();
+        var steps = new List<object>();
+        var stepDefs = new[]
+        {
+            new { Name = "prereq", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/setup-runner/Verify-RunnerPrereqs.ps1" } },
+            new { Name = "build-sd", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/Build_Source_Distribution.ps1" } },
+            new { Name = "commit-index-sd", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/New-CommitIndex.ps1", "-RepositoryPath", ".", "-OutputPath", "artifacts/commit-index-sd/commit-index.json", "-CsvOutputPath", "artifacts/commit-index-sd/commit-index.csv", "-AllowDirty" } },
+            new { Name = "commit-index-tooling", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/New-CommitIndex.ps1", "-RepositoryPath", ".", "-IncludePaths", ".vscode","configs","scenarios","runner_dependencies.vipc","scripts","Tooling","Tooling/x-cli/src/XCli","Tooling/x-cli/src/Telemetry", "-OutputPath", "artifacts/commit-index-tooling/tooling-commit-index.json", "-CsvOutputPath", "artifacts/commit-index-tooling/tooling-commit-index.csv", "-AllowDirty" } },
+            new { Name = "hash-artifacts", Args = new [] { "-NoProfile", "-Command", "$root='artifacts'; $files = Get-ChildItem -Path $root -Recurse -File; if ($files) { $files | ForEach-Object { $_.FullName } | & sha256sum | Set-Content artifacts/sha256.txt } else { throw 'No artifacts to hash' }" } },
+            new { Name = "stage-run", Args = new [] { "-NoProfile", "-Command", "$runKey='local-once'; $dst=Join-Path 'builds-isolated' $runKey; New-Item -ItemType Directory -Path $dst -Force | Out-Null; Copy-Item -Path 'artifacts' -Destination $dst -Recurse -Force; Write-Host \"Staged artifacts under $dst\"" } }
+        };
+
+        foreach (var step in stepDefs)
+        {
+            var result = RunPwsh(opts, step.Args, opts.TimeoutSeconds);
+            var status = result.ExitCode == 0 ? "success" : "fail";
+            steps.Add(new
+            {
+                step.Name,
+                status,
+                exit = result.ExitCode,
+                durationMs = result.DurationMs,
+                stdout = result.StdOut,
+                stderr = result.StdErr
+            });
+            if (result.ExitCode != 0)
+            {
+                return new CommandResult("local-sd", "fail", result.ExitCode, sw.ElapsedMilliseconds, new { steps });
+            }
+        }
+
+        return new CommandResult("local-sd", "success", 0, sw.ElapsedMilliseconds, new { steps });
     }
 
     internal static CommandResult RunBindUnbindForTest(Action<string> log, Options opts, string repo, string bitness, string mode)
