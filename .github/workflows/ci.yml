@@ -587,12 +587,10 @@ jobs:
           $outDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/version-report'
           New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
-          $versionFull = $env:VERSION
           $tag = "v$env:MAJOR.$env:MINOR.$env:PATCH.$env:BUILD"
           $obj = [pscustomobject]@{
             version          = $tag             # four-part version string aligned with tag
             version_string   = $tag
-            version_full     = $versionFull     # retains compute-version output (may include -build suffix)
             tag              = $tag
             major            = [int]$env:MAJOR
             minor            = [int]$env:MINOR
@@ -611,7 +609,6 @@ jobs:
           $obj | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $jsonPath -Encoding utf8
           @(
             "VERSION=$tag"
-            "VERSION_FULL=$versionFull"
             "TAG=$tag"
             "MAJOR=$($env:MAJOR)"
             "MINOR=$($env:MINOR)"
