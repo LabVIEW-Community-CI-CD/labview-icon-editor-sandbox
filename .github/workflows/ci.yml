@@ -575,7 +575,7 @@ jobs:
 
   version-report:
     name: Version Report
-    needs: [version]
+    needs: [verify-checklist-sync, version]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
