@@ -24,23 +24,22 @@ $suppressWarnings = $false
 # Immediate console heartbeat so callers see progress even before transcript/logs.
 Write-Host ("[devmode] Starting dev-mode helper: mode={0} bitness={1} repo={2}" -f $Mode, $Bitness, $RepositoryPath)
 
-# Warn on the common misuse "-Force True"/"-Force False" which PowerShell treats as an extra positional arg.
+# Fail fast on the common misuse "-Force True"/"-Force False" which PowerShell would treat as an extra positional arg.
 $invocationLine = $MyInvocation.Line
 if ($invocationLine -and $invocationLine -match '-Force\s+(?<boolVal>True|False)\b') {
     $val = $Matches.boolVal
-    $warnMsg = ("Detected '-Force {0}'. Treating as '-Force'." -f $val)
-    if ($suppressWarnings) { Write-Information $warnMsg -InformationAction Continue } else { Write-Warning $warnMsg }
-    $Force = $true
+    throw ("Do not pass a value to -Force (saw '{0}'). Use '-Force' or '-Force:`$true' without a trailing value." -f $val)
 }
 
 # Guard against mistakenly passing a boolean after -Force (e.g. "-Force True") which
 # PowerShell binds to JsonOutputPath when positional binding is allowed.
 if ($PSBoundParameters.ContainsKey('JsonOutputPath') -and $JsonOutputPath -match '^(?i:true|false)$') {
-    $warnMsg = ("Ignoring unexpected value '{0}' bound to JsonOutputPath. Use '-Force' or '-Force:`$true' without a trailing value." -f $JsonOutputPath)
-    if ($suppressWarnings) { Write-Information $warnMsg -InformationAction Continue } else { Write-Warning $warnMsg }
-    $JsonOutputPath = $null
-    $PSBoundParameters.Remove('JsonOutputPath') | Out-Null
-    $Force = $true
+    throw ("Unexpected value '{0}' bound to JsonOutputPath. Use '-Force' or '-Force:`$true' without a trailing value." -f $JsonOutputPath)
+}
+
+# Treat boolean-looking LabVIEWVersion values as misuse (often from a trailing value after -Force).
+if ($LabVIEWVersion -match '^(?i:true|false)$') {
+    throw ("Unexpected value '{0}' bound to LabVIEWVersion. Do not pass values after '-Force'; use '-Force' or '-Force:`$true' without trailing text." -f $LabVIEWVersion)
 }
 
 $script:DevBindStart = Get-Date
