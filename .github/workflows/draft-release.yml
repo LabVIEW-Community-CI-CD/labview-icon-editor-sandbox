@@ -166,52 +166,52 @@ jobs:
           inv_path="release-asset-inventory.txt"
           notes="release-notes.md"
           cat > "$notes" <<EOF
-# $tag (Draft)
+          # $tag (Draft)
 
-CI run: $run_id
+          CI run: $run_id
 
-<details>
-  <summary>Requirements Snapshot</summary>
+          <details>
+            <summary>Requirements Snapshot</summary>
 
-  - requirements.html / requirements.json
-  - ISO 29148 lint report
-</details>
+            - requirements.html / requirements.json
+            - ISO 29148 lint report
+          </details>
 
-<details>
-  <summary>Source & Tooling Manifests</summary>
+          <details>
+            <summary>Source & Tooling Manifests</summary>
 
-  - SD/Tooling manifest.json / manifest.csv
-  - commit-index.json / commit-index.csv
-  - VS Code tasks manifest
-</details>
+            - SD/Tooling manifest.json / manifest.csv
+            - commit-index.json / commit-index.csv
+            - VS Code tasks manifest
+          </details>
 
-<details>
-  <summary>Version & Integrity</summary>
+          <details>
+            <summary>Version & Integrity</summary>
 
-  - version.json / version.txt (VERSION_STRING, BUILD_NUMBER, tag)
-  - sha256 checksum files for all artifacts
-</details>
+            - version.json / version.txt (VERSION_STRING, BUILD_NUMBER, tag)
+            - sha256 checksum files for all artifacts
+          </details>
 
-<details>
-  <summary>CI Evidence</summary>
+          <details>
+            <summary>CI Evidence</summary>
 
-  - build/verify logs
-  - draft-release log
-  - log-stash summary/manifest (if produced)
-</details>
+            - build/verify logs
+            - draft-release log
+            - log-stash summary/manifest (if produced)
+          </details>
 
-<details>
-  <summary>Repro Recipe</summary>
+          <details>
+            <summary>Repro Recipe</summary>
 
-  - pinned container spec or one-shot rebuild script for SD/Tooling
-</details>
+            - pinned container spec or one-shot rebuild script for SD/Tooling
+          </details>
 
-<details>
-  <summary>Inventory</summary>
+          <details>
+            <summary>Inventory</summary>
 
-  - $inv_path
-</details>
-EOF
+            - $inv_path
+          </details>
+          EOF
 
       - name: Create draft release
         env:
