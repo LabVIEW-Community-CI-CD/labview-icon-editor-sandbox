@@ -28,7 +28,7 @@ param(
 
     [string[]]$IncludePaths,
     [string[]]$InputPaths,
-    [switch]$UseLvproj = $true,
+    [switch]$UseLvproj = $false,
 
     [switch]$AllowDirty
 )
