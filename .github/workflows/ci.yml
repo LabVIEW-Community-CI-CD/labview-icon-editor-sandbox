@@ -637,10 +637,10 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $runKey = "${{ steps.runkey.outputs.run_key }}"
           $paths = @(
-            Join-Path $env:GITHUB_WORKSPACE ("builds/$runKey"),
-            Join-Path $env:GITHUB_WORKSPACE ("builds-isolated/$runKey"),
-            Join-Path $env:GITHUB_WORKSPACE ("builds/log-stash/$runKey"),
-            Join-Path $env:GITHUB_WORKSPACE 'builds/cache'
+            "$env:GITHUB_WORKSPACE/builds/$runKey",
+            "$env:GITHUB_WORKSPACE/builds-isolated/$runKey",
+            "$env:GITHUB_WORKSPACE/builds/log-stash/$runKey",
+            "$env:GITHUB_WORKSPACE/builds/cache"
           )
           foreach ($p in $paths) {
             if (Test-Path -LiteralPath $p) {
@@ -750,9 +750,7 @@ jobs:
           if (Test-Path -LiteralPath $isoRoot) { Remove-Item -LiteralPath $isoRoot -Recurse -Force -ErrorAction SilentlyContinue }
           New-Item -ItemType Directory -Path $dstRoot, $isoRoot -Force | Out-Null
           if (Test-Path -LiteralPath $srcRoot -PathType Container) {
-            Get-ChildItem -LiteralPath $srcRoot | ForEach-Object {
-              Move-Item -LiteralPath $_.FullName -Destination $dstRoot -Force
-            }
+            Copy-Item -Path (Join-Path $srcRoot '*') -Destination $dstRoot -Recurse -Force
             Copy-Item -Path (Join-Path $dstRoot '*') -Destination $isoRoot -Recurse -Force
           }
       - name: Upload build reports
