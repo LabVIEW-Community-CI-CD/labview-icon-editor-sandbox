@@ -573,6 +573,61 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Write version report artifacts
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.compute.outputs.VERSION }}
+          MAJOR: ${{ steps.compute.outputs.MAJOR }}
+          MINOR: ${{ steps.compute.outputs.MINOR }}
+          PATCH: ${{ steps.compute.outputs.PATCH }}
+          BUILD: ${{ steps.compute.outputs.BUILD }}
+          IS_PRERELEASE: ${{ steps.compute.outputs.IS_PRERELEASE }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $outDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/version-report'
+          New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+
+          $tag = "v$env:MAJOR.$env:MINOR.$env:PATCH.$env:BUILD"
+          $obj = [pscustomobject]@{
+            version          = $env:VERSION
+            version_string   = $env:VERSION
+            tag              = $tag
+            major            = [int]$env:MAJOR
+            minor            = [int]$env:MINOR
+            patch            = [int]$env:PATCH
+            build            = [int]$env:BUILD
+            is_prerelease    = [bool]::Parse($env:IS_PRERELEASE)
+            commit           = "${{ github.sha }}"
+            ref              = "${{ github.ref }}"
+            run_id           = "${{ github.run_id }}"
+            run_attempt      = "${{ github.run_attempt }}"
+            generated_at_utc = (Get-Date).ToUniversalTime().ToString("o")
+          }
+
+          $jsonPath = Join-Path $outDir 'version.json'
+          $txtPath  = Join-Path $outDir 'version.txt'
+          $obj | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $jsonPath -Encoding utf8
+          @(
+            "VERSION=$($env:VERSION)"
+            "TAG=$tag"
+            "MAJOR=$($env:MAJOR)"
+            "MINOR=$($env:MINOR)"
+            "PATCH=$($env:PATCH)"
+            "BUILD_NUMBER=$($env:BUILD)"
+            "IS_PRERELEASE=$($env:IS_PRERELEASE)"
+            "REF=${{ github.ref }}"
+            "SHA=${{ github.sha }}"
+            "RUN_ID=${{ github.run_id }}"
+            "RUN_ATTEMPT=${{ github.run_attempt }}"
+          ) | Set-Content -LiteralPath $txtPath -Encoding utf8
+
+      - name: Upload version report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: version-report
+          path: artifacts/version-report/*
+          if-no-files-found: error
+
   list-collaborators:
     name: List Repo Collaborators
     needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes]
