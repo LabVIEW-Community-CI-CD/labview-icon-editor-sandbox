@@ -38,6 +38,10 @@ on:
         description: "Expected tag for this run (optional, for dispatched builds)"
         required: false
         type: string
+      previous_run_id:
+        description: "Optional prior run ID to reuse artifacts from (fallbacks to current run if omitted)"
+        required: false
+        type: string
 
 jobs:
   verify-checklist-sync:
@@ -1027,12 +1031,14 @@ jobs:
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-labview-icon-api
           path: artifacts/sd
+          run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Tooling Distribution artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-tooling-distribution
           path: artifacts/tooling
+          run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Source Distribution commit index artifact
         uses: actions/download-artifact@v4
@@ -1040,6 +1046,7 @@ jobs:
         with:
           name: commit-index-sd
           path: artifacts/commit-index-sd
+          run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Tooling commit index artifact
         uses: actions/download-artifact@v4
@@ -1047,6 +1054,7 @@ jobs:
         with:
           name: commit-index-tooling
           path: artifacts/commit-index-tooling
+          run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: List downloaded artifacts
         run: |
