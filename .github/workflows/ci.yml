@@ -1020,6 +1020,18 @@ jobs:
         if: ${{ runner.os != 'Linux' }}
         run: exit 1
 
+      - name: Guard upstream token when using previous_run_id
+        if: ${{ inputs.previous_run_id != '' }}
+        shell: bash
+        env:
+          HAS_TOKEN: ${{ secrets.UPSTREAM_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+          if [ "${HAS_TOKEN}" != "true" ]; then
+            echo "previous_run_id provided but secrets.UPSTREAM_TOKEN is missing; add a PAT with actions:read,contents:read scoped to upstream." >&2
+            exit 1
+          fi
+
       - name: Checkout (for scripts)
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
@@ -1031,6 +1043,8 @@ jobs:
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-labview-icon-api
           path: artifacts/sd
+          repository: ${{ inputs.previous_run_id && 'LabVIEW-Community-CI-CD/labview-icon-editor-sandbox' || github.repository }}
+          token: ${{ inputs.previous_run_id && secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Tooling Distribution artifact
@@ -1038,6 +1052,8 @@ jobs:
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-tooling-distribution
           path: artifacts/tooling
+          repository: ${{ inputs.previous_run_id && 'LabVIEW-Community-CI-CD/labview-icon-editor-sandbox' || github.repository }}
+          token: ${{ inputs.previous_run_id && secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Source Distribution commit index artifact
@@ -1046,6 +1062,8 @@ jobs:
         with:
           name: commit-index-sd
           path: artifacts/commit-index-sd
+          repository: ${{ inputs.previous_run_id && 'LabVIEW-Community-CI-CD/labview-icon-editor-sandbox' || github.repository }}
+          token: ${{ inputs.previous_run_id && secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Tooling commit index artifact
@@ -1054,6 +1072,8 @@ jobs:
         with:
           name: commit-index-tooling
           path: artifacts/commit-index-tooling
+          repository: ${{ inputs.previous_run_id && 'LabVIEW-Community-CI-CD/labview-icon-editor-sandbox' || github.repository }}
+          token: ${{ inputs.previous_run_id && secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: List downloaded artifacts
