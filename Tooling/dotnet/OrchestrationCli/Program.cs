@@ -616,6 +616,13 @@ public static class Program
                 continue;
             }
 
+            var commitSource = entry.CommitSource?.Trim() ?? string.Empty;
+            if (commitSource.Equals("repo_head", StringComparison.OrdinalIgnoreCase))
+            {
+                failures.Add(new { path = relPath, commit, commitSource, reason = "commit_source=repo_head not allowed; supply a commit index" });
+                continue;
+            }
+
             var result = RunProcess("git", repo, new[] { "-C", repo, "cat-file", "-e", $"{commit}^{{commit}}" }, opts.TimeoutSeconds);
             if (result.ExitCode != 0)
             {

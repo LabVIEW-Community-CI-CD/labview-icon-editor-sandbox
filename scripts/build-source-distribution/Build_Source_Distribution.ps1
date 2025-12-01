@@ -276,8 +276,7 @@ function Load-CommitIndex {
     param([string]$Path, [datetime]$StartTime)
     if (-not $Path) { return $null }
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        Write-Stamp -Level "WARN" -Message ("Commit index not found at {0}; will fall back to repo head for missing entries." -f $Path) -Start $StartTime
-        return $null
+        throw "Commit index not found at $Path; supply --CommitIndexPath or generate the index before building."
     }
     try {
         $raw = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
@@ -299,8 +298,7 @@ function Load-CommitIndex {
         return @{ map = $map; llb = $llbMap; metadata = $raw.metadata }
     }
     catch {
-        Write-Stamp -Level "WARN" -Message ("Failed to load commit index at {0}: {1}. Falling back to repo head." -f $Path, $_.Exception.Message) -Start $StartTime
-        return $null
+        throw "Failed to load commit index at $Path: $($_.Exception.Message)"
     }
 }
 
@@ -311,13 +309,16 @@ if (-not $Package_LabVIEW_Version) {
 if (-not $SupportedBitness) {
     $SupportedBitness = Resolve-VipbBitness -Repo $repoRoot
 }
-if (-not $CommitIndexPath) {
-    $defaultCommitIndex = Join-Path $repoRoot 'builds/cache/commit-index.json'
-    if (Test-Path -LiteralPath $defaultCommitIndex -PathType Leaf) {
-        $CommitIndexPath = $defaultCommitIndex
-        Write-Stamp -Level "INFO" -Message ("Using default commit index: {0}" -f $CommitIndexPath)
-    }
-}
+  if (-not $CommitIndexPath) {
+      $defaultCommitIndex = Join-Path $repoRoot 'builds/cache/commit-index.json'
+      if (Test-Path -LiteralPath $defaultCommitIndex -PathType Leaf) {
+          $CommitIndexPath = $defaultCommitIndex
+          Write-Stamp -Level "INFO" -Message ("Using default commit index: {0}" -f $CommitIndexPath)
+      }
+      else {
+          throw "Commit index path not supplied and default not found; provide --CommitIndexPath or create builds/cache/commit-index.json via scripts/build-source-distribution/New-CommitIndex.ps1."
+      }
+  }
 
 $projectPath = Join-Path $repoRoot 'lv_icon_editor.lvproj'
 if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) {
@@ -392,10 +393,10 @@ $pathsForIndex = New-Object System.Collections.Generic.List[string]
 $headCommitInfo = Get-HeadCommitInfo -Repo $repoRootResolved
 
 # Build a commit index based on the actual built files (post-build).
-$commitIndexMap = @{}
-$commitIndexLlbMap = @{}
-$commitIndexScript = Join-Path $repoRoot 'scripts/build-source-distribution/New-CommitIndex.ps1'
-if ($CommitIndexPath -and (Test-Path -LiteralPath $commitIndexScript -PathType Leaf)) {
+  $commitIndexMap = @{}
+  $commitIndexLlbMap = @{}
+  $commitIndexScript = Join-Path $repoRoot 'scripts/build-source-distribution/New-CommitIndex.ps1'
+  if ($CommitIndexPath -and (Test-Path -LiteralPath $commitIndexScript -PathType Leaf)) {
     $script:CurrentPhase = "commit-index"
     foreach ($f in $files) {
         $relDist = [IO.Path]::GetRelativePath($distRoot, $f.FullName)
@@ -405,18 +406,10 @@ if ($CommitIndexPath -and (Test-Path -LiteralPath $commitIndexScript -PathType L
     $uniquePaths = $pathsForIndex | Where-Object { $_ } | Sort-Object -Unique
     if ($uniquePaths.Count -gt 0) {
         Write-Stamp -Level "STEP" -Message ("Generating commit index from built files ({0} paths)..." -f $uniquePaths.Count)
-        try {
-            & pwsh -NoProfile -File $commitIndexScript -RepositoryPath $repoRoot -OutputPath $CommitIndexPath -InputPaths $uniquePaths -AllowDirty | Out-Null
-            Write-Stamp -Level "INFO" -Message ("Commit index generated at {0}" -f $CommitIndexPath)
-        }
-        catch {
-            Write-Stamp -Level "WARN" -Message ("Commit index generation failed: {0}. Falling back to repo head for missing entries." -f $_.Exception.Message)
-        }
-    }
-}
-elseif (-not $CommitIndexPath) {
-    Write-Stamp -Level "WARN" -Message "Commit index path not supplied; using repo head for unmatched files." -Start $script:StartTime
-}
+          & pwsh -NoProfile -File $commitIndexScript -RepositoryPath $repoRoot -OutputPath $CommitIndexPath -InputPaths $uniquePaths -AllowDirty | Out-Null
+          Write-Stamp -Level "INFO" -Message ("Commit index generated at {0}" -f $CommitIndexPath)
+      }
+  }
 
 # Load commit index if available
 $commitIndex = $null
