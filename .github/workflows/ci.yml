@@ -1036,12 +1036,14 @@ jobs:
 
       - name: Download Source Distribution commit index artifact
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: commit-index-sd
           path: artifacts/commit-index-sd
 
       - name: Download Tooling commit index artifact
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: commit-index-tooling
           path: artifacts/commit-index-tooling
@@ -1052,6 +1054,22 @@ jobs:
           ls -R artifacts/sd
           echo "Downloaded Tooling Distribution contents:"
           ls -R artifacts/tooling
+
+      - name: Verify commit index artifacts present
+        shell: bash
+        run: |
+          set -euo pipefail
+          sd_json=$(find artifacts/commit-index-sd -name "commit-index.json" -type f | head -n1 || true)
+          sd_csv=$(find artifacts/commit-index-sd -name "commit-index.csv" -type f | head -n1 || true)
+          tool_json=$(find artifacts/commit-index-tooling -name "tooling-commit-index.json" -type f | head -n1 || true)
+          tool_csv=$(find artifacts/commit-index-tooling -name "tooling-commit-index.csv" -type f | head -n1 || true)
+          missing=()
+          if [ -z "$sd_json" ] || [ -z "$sd_csv" ]; then missing+=("commit-index-sd"); fi
+          if [ -z "$tool_json" ] || [ -z "$tool_csv" ]; then missing+=("commit-index-tooling"); fi
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "Required commit index artifact(s) missing: ${missing[*]}. Ensure upstream CI produced commit-index-sd and commit-index-tooling artifacts for this run." >&2
+            exit 1
+          fi
 
       - name: Locate LabVIEW Icon API payload
         id: sd
