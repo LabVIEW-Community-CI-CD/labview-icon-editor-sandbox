@@ -171,14 +171,14 @@ jobs:
 CI run: $run_id
 
 <details>
-  <summary>✅ Requirements Snapshot</summary>
+  <summary>Requirements Snapshot</summary>
 
   - requirements.html / requirements.json
   - ISO 29148 lint report
 </details>
 
 <details>
-  <summary>📦 Source & Tooling Manifests</summary>
+  <summary>Source & Tooling Manifests</summary>
 
   - SD/Tooling manifest.json / manifest.csv
   - commit-index.json / commit-index.csv
@@ -186,14 +186,14 @@ CI run: $run_id
 </details>
 
 <details>
-  <summary>🧾 Version & Integrity</summary>
+  <summary>Version & Integrity</summary>
 
   - version.json / version.txt (VERSION_STRING, BUILD_NUMBER, tag)
   - sha256 checksum files for all artifacts
 </details>
 
 <details>
-  <summary>🛠 CI Evidence</summary>
+  <summary>CI Evidence</summary>
 
   - build/verify logs
   - draft-release log
@@ -201,13 +201,13 @@ CI run: $run_id
 </details>
 
 <details>
-  <summary>🔁 Repro Recipe</summary>
+  <summary>Repro Recipe</summary>
 
   - pinned container spec or one-shot rebuild script for SD/Tooling
 </details>
 
 <details>
-  <summary>📑 Inventory</summary>
+  <summary>Inventory</summary>
 
   - $inv_path
 </details>
