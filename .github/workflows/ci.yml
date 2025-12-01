@@ -1057,6 +1057,8 @@ jobs:
 
       - name: Verify commit index artifacts present
         shell: bash
+        env:
+          PUBLISH_SKIP_COMMIT_INDEX: ${{ env.PUBLISH_SKIP_COMMIT_INDEX || '' }}
         run: |
           set -euo pipefail
           sd_json=$(find artifacts/commit-index-sd -name "commit-index.json" -type f | head -n1 || true)
@@ -1067,7 +1069,11 @@ jobs:
           if [ -z "$sd_json" ] || [ -z "$sd_csv" ]; then missing+=("commit-index-sd"); fi
           if [ -z "$tool_json" ] || [ -z "$tool_csv" ]; then missing+=("commit-index-tooling"); fi
           if [ ${#missing[@]} -ne 0 ]; then
-            echo "Required commit index artifact(s) missing: ${missing[*]}. Ensure upstream CI produced commit-index-sd and commit-index-tooling artifacts for this run." >&2
+            if [ "${PUBLISH_SKIP_COMMIT_INDEX,,}" = "true" ]; then
+              echo "Commit index artifact(s) missing (${missing[*]}), but PUBLISH_SKIP_COMMIT_INDEX=true -> continuing without them."
+              exit 0
+            fi
+            echo "Required commit index artifact(s) missing: ${missing[*]}. Ensure upstream CI produced commit-index-sd and commit-index-tooling artifacts for this run, or set PUBLISH_SKIP_COMMIT_INDEX=true to bypass." >&2
             exit 1
           fi
 
