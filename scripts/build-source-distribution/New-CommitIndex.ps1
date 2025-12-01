@@ -183,10 +183,10 @@ if ($InputPaths -and @($InputPaths).Count -gt 0) {
 else {
     if (-not $IncludePaths -or $IncludePaths.Count -eq 0) {
         $IncludePaths = @(
-            'lv_icon_editor.lvproj',
-            'Tooling',
-            'scripts',
-            'resource'
+            'vi.lib\LabVIEW Icon API',
+            'resource\plugins',
+            'Test\Unit tests',
+            'Tooling'
         )
     }
 
