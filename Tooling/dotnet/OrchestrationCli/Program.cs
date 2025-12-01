@@ -212,6 +212,28 @@ public static class Program
     {
         var sw = Stopwatch.StartNew();
         var steps = new List<object>();
+        var runKey = Environment.GetEnvironmentVariable("ORCH_RUN_KEY");
+        if (string.IsNullOrWhiteSpace(runKey))
+        {
+            runKey = $"local-sd-{DateTime.UtcNow:yyyyMMdd-HHmmss}";
+        }
+        var lockPathEnv = Environment.GetEnvironmentVariable("ORCH_LOCK_PATH");
+        var lockPath = string.IsNullOrWhiteSpace(lockPathEnv) ? Path.Combine(repo, ".locks", "orchestration.lock") : lockPathEnv!;
+        var ttlEnv = Environment.GetEnvironmentVariable("ORCH_LOCK_TTL_SEC");
+        var lockTtlSec = 0;
+        lockTtlSec = int.TryParse(ttlEnv, out var parsedTtl) && parsedTtl > 0 ? parsedTtl : 900;
+        var force = string.Equals(Environment.GetEnvironmentVariable("ORCH_FORCE"), "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Environment.GetEnvironmentVariable("ORCH_FORCE"), "true", StringComparison.OrdinalIgnoreCase);
+
+        log($"[local-sd] runKey={runKey} lock={lockPath} ttl={lockTtlSec}s force={force}");
+
+        if (!TryAcquireLock(repo, lockPath, runKey, lockTtlSec, force, out var lockError))
+        {
+            return new CommandResult("local-sd", "fail", 1, sw.ElapsedMilliseconds, new { error = lockError });
+        }
+
+        try
+        {
         var stepDefs = new[]
         {
             new { Name = "prereq", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/setup-runner/Verify-RunnerPrereqs.ps1" } },
@@ -219,7 +241,7 @@ public static class Program
             new { Name = "commit-index-tooling", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/New-CommitIndex.ps1", "-RepositoryPath", repo, "-IncludePaths", ".vscode,configs,scenarios,runner_dependencies.vipc,scripts,Tooling,Tooling/x-cli/src/XCli,Tooling/x-cli/src/Telemetry", "-OutputPath", "artifacts/commit-index-tooling/tooling-commit-index.json", "-CsvOutputPath", "artifacts/commit-index-tooling/tooling-commit-index.csv", "-AllowDirty" } },
             new { Name = "build-sd", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/Build_Source_Distribution.ps1", "-RepositoryPath", repo, "-CommitIndexPath", "artifacts/commit-index-sd/commit-index.json" } },
             new { Name = "hash-artifacts", Args = new [] { "-NoProfile", "-Command", "$root='artifacts'; $files = Get-ChildItem -Path $root -Recurse -File; if (-not $files) { throw 'No artifacts to hash' } $out=@(); foreach ($f in $files) { $h = Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256; $out += ('{0}  {1}' -f $h.Hash, $h.Path) }; $out | Set-Content artifacts/sha256.txt" } },
-            new { Name = "stage-run", Args = new [] { "-NoProfile", "-Command", "$runKey='local-once'; $dst=Join-Path 'builds-isolated' $runKey; New-Item -ItemType Directory -Path $dst -Force | Out-Null; Copy-Item -Path 'artifacts' -Destination $dst -Recurse -Force; Write-Host \"Staged artifacts under $dst\"" } }
+            new { Name = "stage-run", Args = new [] { "-NoProfile", "-Command", $"$runKey='{runKey}'; $dst=Join-Path 'builds-isolated' $runKey; New-Item -ItemType Directory -Path $dst -Force | Out-Null; Copy-Item -Path 'artifacts' -Destination $dst -Recurse -Force; Write-Host \"Staged artifacts under $dst\"" } }
         };
 
         foreach (var step in stepDefs)
@@ -242,6 +264,76 @@ public static class Program
         }
 
         return new CommandResult("local-sd", "success", 0, sw.ElapsedMilliseconds, new { steps });
+        }
+        finally
+        {
+            ReleaseLock(lockPath);
+        }
+    }
+
+    private sealed record OrchestrationLock(string RunKey, int Pid, string User, DateTime TimestampUtc);
+
+    private static bool TryAcquireLock(string repo, string lockPath, string runKey, int ttlSec, bool force, out string error)
+    {
+        error = string.Empty;
+        try
+        {
+            var lockDir = Path.GetDirectoryName(lockPath);
+            if (!string.IsNullOrWhiteSpace(lockDir))
+            {
+                Directory.CreateDirectory(lockDir);
+            }
+
+            if (File.Exists(lockPath))
+            {
+                try
+                {
+                    var existingText = File.ReadAllText(lockPath);
+                    var existing = JsonSerializer.Deserialize<OrchestrationLock>(existingText);
+                    if (existing != null)
+                    {
+                        var age = DateTime.UtcNow - existing.TimestampUtc;
+                        if (age.TotalSeconds < ttlSec && !force)
+                        {
+                            error = $"Runner busy: runKey={existing.RunKey}, pid={existing.Pid}, user={existing.User}, age={age.TotalSeconds:F0}s (lock: {lockPath}). Use --force (or ORCH_FORCE=1) or wait for TTL.";
+                            return false;
+                        }
+                    }
+                }
+                catch
+                {
+                    // ignore parse errors; will overwrite if allowed
+                }
+            }
+
+            var meta = new OrchestrationLock(
+                RunKey: runKey,
+                Pid: Environment.ProcessId,
+                User: Environment.UserName,
+                TimestampUtc: DateTime.UtcNow);
+            File.WriteAllText(lockPath, JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true }));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = $"Failed to acquire lock at {lockPath}: {ex.Message}";
+            return false;
+        }
+    }
+
+    private static void ReleaseLock(string lockPath)
+    {
+        try
+        {
+            if (File.Exists(lockPath))
+            {
+                File.Delete(lockPath);
+            }
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     internal static CommandResult RunBindUnbindForTest(Action<string> log, Options opts, string repo, string bitness, string mode)
