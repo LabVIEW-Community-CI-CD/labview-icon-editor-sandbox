@@ -561,6 +561,11 @@ foreach ($f in $files) {
         $commitSource = 'generated'
         $commitInfo = $null
     }
+    elseif ($commitSource -eq 'repo_head') {
+        # Anything we cannot map to an indexed source is treated as generated (external dependency).
+        $commitSource = 'generated'
+        $commitInfo = $null
+    }
 
     $manifest += [pscustomobject]@{
         path          = $sourceRel
