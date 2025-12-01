@@ -1123,7 +1123,8 @@ jobs:
           set -euo pipefail
           tag="${{ needs.version.outputs.VERSION }}" || true
           tag="${tag:-sd-${GITHUB_RUN_ID}}"
-          tag="${tag/-build/}"
+          # Convert vMAJOR.MINOR.PATCH-buildN -> vMAJOR.MINOR.PATCH.N
+          tag="${tag/-build/.}"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "Using tag: $tag"
 
