@@ -549,7 +549,7 @@ jobs:
   version:
     name: Compute Version
     needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes]
-    runs-on: self-hosted-windows-lv
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: pwsh
@@ -565,23 +565,32 @@ jobs:
         with:
           set-safe-directory: true
           fetch-depth: 0
-      - name: "Guard: Windows runner"
-        if: ${{ runner.os != 'Windows' }}
+      - name: "Guard: Linux runner"
+        if: ${{ runner.os != 'Linux' }}
         run: exit 1
       - id: compute
         uses: ./.github/actions/compute-version
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+  version-report:
+    name: Version Report
+    needs: [version]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+          fetch-depth: 1
       - name: Write version report artifacts
         shell: pwsh
         env:
-          VERSION: ${{ steps.compute.outputs.VERSION }}
-          MAJOR: ${{ steps.compute.outputs.MAJOR }}
-          MINOR: ${{ steps.compute.outputs.MINOR }}
-          PATCH: ${{ steps.compute.outputs.PATCH }}
-          BUILD: ${{ steps.compute.outputs.BUILD }}
-          IS_PRERELEASE: ${{ steps.compute.outputs.IS_PRERELEASE }}
+          VERSION:       ${{ needs.version.outputs.VERSION }}
+          MAJOR:         ${{ needs.version.outputs.MAJOR }}
+          MINOR:         ${{ needs.version.outputs.MINOR }}
+          PATCH:         ${{ needs.version.outputs.PATCH }}
+          BUILD:         ${{ needs.version.outputs.BUILD }}
+          IS_PRERELEASE: ${{ needs.version.outputs.IS_PRERELEASE }}
         run: |
           $ErrorActionPreference = 'Stop'
           $outDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/version-report'
@@ -589,7 +598,7 @@ jobs:
 
           $tag = "v$env:MAJOR.$env:MINOR.$env:PATCH.$env:BUILD"
           $obj = [pscustomobject]@{
-            version          = $tag             # four-part version string aligned with tag
+            version          = $tag
             version_string   = $tag
             tag              = $tag
             major            = [int]$env:MAJOR
@@ -998,6 +1007,7 @@ jobs:
       - rtm-gates
       - docs-quality
       - version
+      - version-report
     runs-on: ubuntu-latest
     permissions:
       contents: write
