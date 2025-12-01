@@ -409,9 +409,6 @@ $iconZip         = Join-Path $iconCacheRoot 'icon-api.zip'
 $iconPayloadInfo = New-IconApiPayload -SourcePath $iconApiSource -ManifestPath $iconManifest -ZipPath $iconZip
 Write-Stamp -Level "INFO" -Message ("Icon API payload: {0} files, zip SHA256={1}" -f $iconPayloadInfo.entries_count, $iconPayloadInfo.zip_hash)
 
-# Ensure LabVIEW has the Icon Editor assets that the build depends on (copied from the repo payload).
-Sync-IconEditorAssets -RepoRoot $repoRoot -LabVIEWVersion $Package_LabVIEW_Version
-
 Start-Heartbeat
 try {
     Write-Stamp -Level "INFO" -Message "Expected durations: build ~60-120s depending on LabVIEW startup; manifest/zip ~10-30s."
@@ -524,6 +521,7 @@ foreach ($f in $files) {
     $relDist = [IO.Path]::GetRelativePath($distRoot, $f.FullName)
     $sourceRel = $relDist.Replace('\','/')
     $mappedRel = Map-RelativePath -RelativePath $relDist -RepoName $repoName
+    $pathForManifest = if ($mappedRel) { $mappedRel } else { $sourceRel }
     $sourceCandidate = if ($mappedRel) { Join-Path $repoRootResolved $mappedRel } else { $null }
     $commitInfo = $headCommitInfo
     $commitSource = 'repo_head'
@@ -557,7 +555,7 @@ foreach ($f in $files) {
         }
     }
     # Generated files (manifest/icon-api artifacts) are tagged as generated to avoid repo_head guard.
-    if ($sourceRel -in @('manifest.json','manifest.csv','icon-api-manifest.json','icon-api.zip')) {
+    if ($pathForManifest -in @('manifest.json','manifest.csv','icon-api-manifest.json','icon-api.zip')) {
         $commitSource = 'generated'
         $commitInfo = $null
     }
@@ -568,7 +566,7 @@ foreach ($f in $files) {
     }
 
     $manifest += [pscustomobject]@{
-        path          = $sourceRel
+        path          = $pathForManifest
         last_commit   = if ($commitInfo) { $commitInfo.Commit } else { $null }
         commit_author = if ($commitInfo) { $commitInfo.Author } else { $null }
         commit_date   = if ($commitInfo) { $commitInfo.Date } else { $null }
@@ -584,7 +582,7 @@ foreach ($f in $files) {
 }
 
 # Guard: commit_source must never fall back to repo_head and content must stay within the allowed scope.
-$badCommit = $manifest | Where-Object { $_.commit_source -eq 'repo_head' }
+$badCommit = @($manifest | Where-Object { $_.commit_source -eq 'repo_head' })
 if ($badCommit.Count -gt 0) {
     $sample = $badCommit[0].path
     throw "Manifest commit_source must not be repo_head (example path: $sample). Supply a commit index that covers all built files."
@@ -592,14 +590,15 @@ if ($badCommit.Count -gt 0) {
 $allowedPrefixes = @(
     'resource/',
     'vi.lib/LabVIEW Icon API/',
-    'Test/Unit tests/'
+    'Test/Unit tests/',
+    'Program Files/National Instruments/'
 )
 $generatedFiles = @('manifest.json', 'manifest.csv', 'icon-api-manifest.json', 'icon-api.zip')
-$nonAllowed = $manifest | Where-Object {
+$nonAllowed = @($manifest | Where-Object {
     $p = $_.path
     if ($generatedFiles -contains $p) { return $false }
     -not ($allowedPrefixes | Where-Object { $p.StartsWith($_, [StringComparison]::OrdinalIgnoreCase) })
-}
+})
 if ($nonAllowed.Count -gt 0) {
     $sample = $nonAllowed[0].path
     throw "Manifest contains paths outside allowed scope (resource/, vi.lib/LabVIEW Icon API/, Test/Unit tests/): $sample"
