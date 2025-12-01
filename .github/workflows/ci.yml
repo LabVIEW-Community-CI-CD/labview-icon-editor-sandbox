@@ -1026,14 +1026,12 @@ jobs:
 
       - name: Download Source Distribution commit index artifact
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
           name: commit-index-sd
           path: artifacts/commit-index-sd
 
       - name: Download Tooling commit index artifact
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
           name: commit-index-tooling
           path: artifacts/commit-index-tooling
@@ -1093,28 +1091,18 @@ jobs:
           tool_json=$(find artifacts/commit-index-tooling -name "tooling-commit-index.json" -type f | head -n1 || true)
           tool_csv=$(find artifacts/commit-index-tooling -name "tooling-commit-index.csv" -type f | head -n1 || true)
 
-          have_sd=""
-          have_tool=""
-          if [ -n "$sd_json" ] && [ -n "$sd_csv" ]; then
-            have_sd="yes"
-            echo "sd_json=$sd_json" >> "$GITHUB_OUTPUT"
-            echo "sd_csv=$sd_csv" >> "$GITHUB_OUTPUT"
-            ls -lh "$sd_json" "$sd_csv"
-          else
-            echo "Commit index (SD) artifact not found; skipping its upload."
-          fi
+          for f in "$sd_json" "$sd_csv" "$tool_json" "$tool_csv"; do
+            if [ -z "$f" ]; then
+              echo "Missing commit index artifact component; rerun CI with current workflow to produce commit-index-sd and commit-index-tooling." >&2
+              exit 1
+            fi
+          done
 
-          if [ -n "$tool_json" ] && [ -n "$tool_csv" ]; then
-            have_tool="yes"
-            echo "tool_json=$tool_json" >> "$GITHUB_OUTPUT"
-            echo "tool_csv=$tool_csv" >> "$GITHUB_OUTPUT"
-            ls -lh "$tool_json" "$tool_csv"
-          else
-            echo "Commit index (tooling) artifact not found; skipping its upload."
-          fi
-
-          echo "have_sd=$have_sd" >> "$GITHUB_OUTPUT"
-          echo "have_tool=$have_tool" >> "$GITHUB_OUTPUT"
+          echo "sd_json=$sd_json"   >> "$GITHUB_OUTPUT"
+          echo "sd_csv=$sd_csv"     >> "$GITHUB_OUTPUT"
+          echo "tool_json=$tool_json" >> "$GITHUB_OUTPUT"
+          echo "tool_csv=$tool_csv"   >> "$GITHUB_OUTPUT"
+          ls -lh "$sd_json" "$sd_csv" "$tool_json" "$tool_csv"
 
       - name: Compute tag/name
         id: tag
@@ -1190,12 +1178,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.tag.outputs.tag }}
         shell: bash
-        if: steps.commit-index.outputs.have_sd == 'yes' || steps.commit-index.outputs.have_tool == 'yes'
         run: |
           set -euo pipefail
-          if [ "${{ steps.commit-index.outputs.have_sd }}" = "yes" ]; then
-            gh release upload "$TAG" "${{ steps.commit-index.outputs.sd_json }}" "${{ steps.commit-index.outputs.sd_csv }}" --clobber --repo "$GITHUB_REPOSITORY"
-          fi
-          if [ "${{ steps.commit-index.outputs.have_tool }}" = "yes" ]; then
-            gh release upload "$TAG" "${{ steps.commit-index.outputs.tool_json }}" "${{ steps.commit-index.outputs.tool_csv }}" --clobber --repo "$GITHUB_REPOSITORY"
-          fi
+          gh release upload "$TAG" "${{ steps.commit-index.outputs.sd_json }}" "${{ steps.commit-index.outputs.sd_csv }}" --clobber --repo "$GITHUB_REPOSITORY"
+          gh release upload "$TAG" "${{ steps.commit-index.outputs.tool_json }}" "${{ steps.commit-index.outputs.tool_csv }}" --clobber --repo "$GITHUB_REPOSITORY"
