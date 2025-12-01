@@ -184,9 +184,8 @@ else {
     if (-not $IncludePaths -or $IncludePaths.Count -eq 0) {
         $IncludePaths = @(
             'vi.lib\LabVIEW Icon API',
-            'resource\plugins',
-            'Test\Unit tests',
-            'Tooling'
+            'resource\plugins\NIIconEditor',
+            'Test\Unit tests'
         )
     }
 
