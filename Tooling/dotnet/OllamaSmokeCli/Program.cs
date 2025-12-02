@@ -14,6 +14,7 @@ internal static class Program
     private const int ExitHttpError = 2;
     private const int ExitTimeout = 3;
     private const int ExitModelMissing = 4;
+    private const int ExitSizeExceeded = 5;
 
     private sealed record ChatMessage(string Role, string Content);
 
@@ -30,7 +31,9 @@ internal static class Program
         int RetryDelayMs,
         bool Verbose,
         string? SaveBodyPath,
-        IReadOnlyList<ChatMessage>? Messages);
+        IReadOnlyList<ChatMessage>? Messages,
+        int MaxBytes,
+        string? StopToken);
 
     private static int Main(string[] args)
     {
@@ -65,21 +68,36 @@ internal static class Program
         }
 
         var isChat = opts.Mode.Equals("chat", StringComparison.OrdinalIgnoreCase);
-        var chatMessages = isChat
-            ? (opts.Messages != null ? opts.Messages.Select(m => new { role = m.Role, content = m.Content }).ToArray()
-                : new[] { new { role = "user", content = opts.Prompt } })
-            : Array.Empty<object>();
+        var chatList = isChat
+            ? (opts.Messages != null ? opts.Messages.ToList() : new List<ChatMessage> { new("user", opts.Prompt) })
+            : new List<ChatMessage>();
+        var chatMessages = chatList.Select(m => new { role = m.Role, content = m.Content }).ToArray();
+
+        if (opts.MaxBytes > 0)
+        {
+            var totalBytes = isChat
+                ? Utf8ByteCount(chatList.Select(m => m.Content))
+                : Utf8ByteCount(new[] { opts.Prompt });
+            if (totalBytes > opts.MaxBytes)
+            {
+                Console.Error.WriteLine($"fail: payload size {totalBytes} bytes exceeds max {opts.MaxBytes}");
+                return ExitSizeExceeded;
+            }
+        }
+
+        var stopArr = string.IsNullOrWhiteSpace(opts.StopToken) ? null : new[] { opts.StopToken };
 
         var payload = isChat
             ? JsonSerializer.Serialize(new
             {
                 model = opts.Model,
                 messages = chatMessages,
-                stream = opts.Stream
+                stream = opts.Stream,
+                stop = stopArr
             })
             : opts.Mode.Equals("embed", StringComparison.OrdinalIgnoreCase)
                 ? JsonSerializer.Serialize(new { model = opts.Model, input = opts.Prompt })
-                : JsonSerializer.Serialize(new { model = opts.Model, prompt = opts.Prompt, stream = opts.Stream });
+                : JsonSerializer.Serialize(new { model = opts.Model, prompt = opts.Prompt, stream = opts.Stream, stop = stopArr });
         var payloadString = payload;
 
         if (opts.Verbose)
@@ -475,6 +493,18 @@ internal static class Program
         return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
     }
 
+    private static int Utf8ByteCount(IEnumerable<string> values)
+    {
+        var encoder = Encoding.UTF8;
+        var total = 0;
+        foreach (var v in values)
+        {
+            if (v == null) continue;
+            total += encoder.GetByteCount(v);
+        }
+        return total;
+    }
+
     private static Options Parse(string[] args)
     {
         var endpoint = "http://localhost:11435";
@@ -492,6 +522,8 @@ internal static class Program
         string? promptFile = null;
         string? messagesFile = null;
         List<ChatMessage>? messages = null;
+        var maxBytes = 0;
+        string? stopToken = null;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -564,6 +596,16 @@ internal static class Program
                     messagesFile = Next(args, ref i, arg);
                     mode = "chat";
                     break;
+                case "--max-bytes":
+                    var rawMax = Next(args, ref i, arg);
+                    if (!int.TryParse(rawMax, out maxBytes) || maxBytes <= 0)
+                    {
+                        throw new ArgumentException($"Invalid max-bytes: {rawMax}");
+                    }
+                    break;
+                case "--stop":
+                    stopToken = Next(args, ref i, arg);
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -583,7 +625,7 @@ internal static class Program
             messages = LoadMessagesFromFile(messagesFile);
         }
 
-        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages);
+        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages, maxBytes, stopToken);
     }
 
     private static string Next(string[] args, ref int index, string name)
@@ -600,7 +642,7 @@ internal static class Program
     {
         Console.WriteLine("OllamaSmokeCli");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000] [--verbose] [--save-body <path>] [--prompt-file <path>] [--messages-file <path>]");
-        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json, retries 0, retry delay 1000ms, verbose off.");
+        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000] [--verbose] [--save-body <path>] [--prompt-file <path>] [--messages-file <path>] [--max-bytes N] [--stop <token>]");
+        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json, retries 0, retry delay 1000ms, verbose off, no max-bytes, no stop token.");
     }
 }
