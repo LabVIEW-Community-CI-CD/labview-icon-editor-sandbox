@@ -1735,6 +1735,31 @@ try {
     catch {
         Write-Warning ("Failed to remove temporary PPL copies: {0}" -f $_.Exception.Message)
     }
+    # If we are running a single-bitness lane, clear any stale opposite-bitness staging artifact
+    if (-not $do32) {
+        $staleX86 = Join-Path $RepositoryPath 'resource\plugins\lv_icon.lvlibp.windows_x86'
+        if (Test-Path -LiteralPath $staleX86) {
+            try {
+                Remove-Item -LiteralPath $staleX86 -Force -ErrorAction Stop
+                Write-Information ("Removed stale x86-staged PPL at {0} (LvlibpBitness={1})." -f $staleX86, $LvlibpBitness) -InformationAction Continue
+            }
+            catch {
+                Write-Warning ("Failed to remove stale x86 PPL at {0}: {1}" -f $staleX86, $_.Exception.Message)
+            }
+        }
+    }
+    if (-not $do64) {
+        $staleX64 = Join-Path $RepositoryPath 'resource\plugins\lv_icon.lvlibp.windows_x64'
+        if (Test-Path -LiteralPath $staleX64) {
+            try {
+                Remove-Item -LiteralPath $staleX64 -Force -ErrorAction Stop
+                Write-Information ("Removed stale x64-staged PPL at {0} (LvlibpBitness={1})." -f $staleX64, $LvlibpBitness) -InformationAction Continue
+            }
+            catch {
+                Write-Warning ("Failed to remove stale x64 PPL at {0}: {1}" -f $staleX64, $_.Exception.Message)
+            }
+        }
+    }
     # Idempotency guard: validate expected PPL set and log hashes
     $expectedPpls = @('lv_icon.lvlibp')
     if ($do64) { $expectedPpls += 'lv_icon.lvlibp.windows_x64' }

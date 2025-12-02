@@ -389,7 +389,17 @@ if (-not $SupportedBitness) {
           Write-Stamp -Level "INFO" -Message ("Using default commit index: {0}" -f $CommitIndexPath)
       }
       else {
-          throw "Commit index path not supplied and default not found; provide --CommitIndexPath or create builds/cache/commit-index.json via scripts/build-source-distribution/New-CommitIndex.ps1."
+          $generator = Join-Path $PSScriptRoot 'New-CommitIndex.ps1'
+          if (-not (Test-Path -LiteralPath $generator -PathType Leaf)) {
+              throw "Commit index path not supplied and default not found; provide --CommitIndexPath or create builds/cache/commit-index.json via scripts/build-source-distribution/New-CommitIndex.ps1."
+          }
+          Write-Stamp -Level "INFO" -Message ("Generating commit index at {0}..." -f $defaultCommitIndex)
+          & $generator -RepositoryPath $repoRoot -OutputPath $defaultCommitIndex -AllowDirty
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $defaultCommitIndex -PathType Leaf)) {
+              throw "Commit index generation failed (exit $LASTEXITCODE). Provide --CommitIndexPath or rerun after creating builds/cache/commit-index.json."
+          }
+          $CommitIndexPath = $defaultCommitIndex
+          Write-Stamp -Level "INFO" -Message ("Commit index generated at {0}" -f $CommitIndexPath)
       }
   }
 
