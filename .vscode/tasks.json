@@ -669,7 +669,7 @@
         "-Model",
         "llama3-8b-local",
         "-CommandTimeoutSec",
-        "60"
+        "${input:ollamaPackageTimeoutSec}"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -713,7 +713,7 @@
         "-Model",
         "llama3-8b-local",
         "-CommandTimeoutSec",
-        "60"
+        "${input:ollamaLocalSdPplTimeoutSec}"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -947,6 +947,18 @@
       "type": "promptString",
       "description": "Command timeout (seconds) for task 31 Ollama locked source-distribution",
       "default": "240"
+    },
+    {
+      "id": "ollamaPackageTimeoutSec",
+      "type": "promptString",
+      "description": "Command timeout (seconds) for task 30 Ollama locked package-build",
+      "default": "120"
+    },
+    {
+      "id": "ollamaLocalSdPplTimeoutSec",
+      "type": "promptString",
+      "description": "Command timeout (seconds) for task 32 Ollama locked local-sd-ppl",
+      "default": "120"
     },
     {
       "label": "18 Tooling: Clear CLI cache entry",
