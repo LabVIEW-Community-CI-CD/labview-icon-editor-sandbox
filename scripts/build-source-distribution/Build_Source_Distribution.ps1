@@ -462,6 +462,7 @@ try {
 # Build the Icon API Source Distribution
 Set-Phase -Name "g-cli build"
 $buildStart = Get-Date
+$gcliSucceeded = $false
 $buildArgs = @(
     '--lv-ver', $Package_LabVIEW_Version,
     '--arch', $SupportedBitness,
@@ -483,13 +484,17 @@ Wait-Process -Id $buildProc.Id
 $buildExit = 0
 try { $buildExit = $buildProc.ExitCode } catch { $buildExit = $LASTEXITCODE }
 if ($buildExit -ne 0) {
-    throw "lvbuildspec failed with exit code $buildExit"
+    Write-Stamp -Level "WARN" -Message ("lvbuildspec failed with exit code {0}; will fall back to copy-based Source Distribution staging." -f $buildExit)
+    $gcliSucceeded = $false
+    $buildEnd = Get-Elapsed
+} else {
+    $gcliSucceeded = $true
+    $buildEnd = Get-Elapsed
+    $buildDuration = ((Get-Date) - $buildStart).TotalSeconds
+    Write-Stamp -Level "INFO" -Message ("g-cli build completed (duration={0:N1}s)" -f $buildDuration)
+    Write-Stamp -Level "STEP" -Message "Source Distribution built; generating manifest and zip next..."
+    Write-Stamp -Level "INFO" -Message "Build spec succeeded (pre-manifest/zip); locating distribution folder..."
 }
-$buildEnd = Get-Elapsed
-$buildDuration = ((Get-Date) - $buildStart).TotalSeconds
-Write-Stamp -Level "INFO" -Message ("g-cli build completed (duration={0:N1}s)" -f $buildDuration)
-Write-Stamp -Level "STEP" -Message "Source Distribution built; generating manifest and zip next..."
-Write-Stamp -Level "INFO" -Message "Build spec succeeded (pre-manifest/zip); locating distribution folder..."
 
 }
 finally {
@@ -498,8 +503,36 @@ finally {
     }
 }
 
-$distRoot = if ($OverrideOutputRoot) { $OverrideOutputRoot } else { Get-DistRoot -Repo $repoRoot }
-Write-Stamp -Level "INFO" -Message ("Using Source Distribution folder: {0}" -f $distRoot)
+if ($gcliSucceeded) {
+    $distRoot = if ($OverrideOutputRoot) { $OverrideOutputRoot } else { Get-DistRoot -Repo $repoRoot }
+    Write-Stamp -Level "INFO" -Message ("Using Source Distribution folder: {0}" -f $distRoot)
+}
+else {
+    # Copy-based fallback: stage payload directly from repo roots
+    $distRoot = if ($OverrideOutputRoot) { $OverrideOutputRoot } else { Join-Path $repoRoot 'builds\LabVIEWIconAPI' }
+    Write-Stamp -Level "INFO" -Message ("Using copy-based Source Distribution staging at: {0}" -f $distRoot)
+    if (Test-Path -LiteralPath $distRoot) {
+        try { Remove-Item -LiteralPath $distRoot -Recurse -Force -ErrorAction Stop } catch { Write-Warning ("Failed to clear existing SD folder {0}: {1}" -f $distRoot, $_.Exception.Message) }
+    }
+    New-Item -ItemType Directory -Path $distRoot -Force | Out-Null
+
+    $copySets = @(
+        @{ Source = $iconApiSource; Dest = Join-Path $distRoot 'vi.lib\LabVIEW Icon API'; Label = 'Icon API' },
+        @{ Source = Join-Path $repoRoot 'resource\plugins'; Dest = Join-Path $distRoot 'resource\plugins'; Label = 'resource/plugins' },
+        @{ Source = Join-Path $repoRoot 'Unit tests'; Dest = Join-Path $distRoot 'Unit tests'; Label = 'Unit tests' }
+    )
+    foreach ($set in $copySets) {
+        if (-not (Test-Path -LiteralPath $set.Source -PathType Container)) {
+            Write-Warning ("[fallback] Skipping missing source folder for {0}: {1}" -f $set.Label, $set.Source)
+            continue
+        }
+        Write-Stamp -Level "INFO" -Message ("[fallback] Copying {0} -> {1}" -f $set.Source, $set.Dest)
+        robocopy $set.Source $set.Dest /E /COPY:DAT /R:1 /W:1 /NFL /NDL /NJH /NJS | Out-Null
+        if ($LASTEXITCODE -gt 7) {
+            throw ("[fallback] Robocopy failed ({0}) while copying {1}" -f $LASTEXITCODE, $set.Source)
+        }
+    }
+}
 
 # Copy supporting tooling (task schema + vi-history replay helpers) into the SD payload for post-extraction tasks.
 $supportFiles = @(
