@@ -691,8 +691,6 @@
         "-Model",
         "llama3-8b-local",
         "-CommandTimeoutSec",
-        "60",
-        "-PwshTimeoutSec",
         "60"
       ],
       "options": {

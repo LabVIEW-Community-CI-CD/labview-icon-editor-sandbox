@@ -6,11 +6,10 @@
 param(
     [string]$RepoPath = ".",
     [string]$Model = "llama3-8b-local",
-    [int]$CommandTimeoutSec = 60,
-    [int]$PwshTimeoutSec = 60
+    [int]$CommandTimeoutSec = 60
 )
 
-$sdCmd = "pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64 -PwshTimeoutSec $PwshTimeoutSec"
+$sdCmd = "pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64"
 $allowedRuns = @($sdCmd)
 $goal = 'Respond ONLY with JSON: send exactly {"run":"' + $sdCmd + '"} and then {"done":true}.'
 
