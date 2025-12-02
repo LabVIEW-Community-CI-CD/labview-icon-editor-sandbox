@@ -552,6 +552,30 @@
       "detail": "Dispatch the Publish Ollama CPU image workflow with a bundle URL/SHA256 to bake a preloaded tag."
     },
     {
+      "label": "36 Ollama: verify bundle import (devcontainer)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/verify-bundle-import.ps1",
+        "-BundlePath",
+        "${input:ollamaModelBundlePath}",
+        "-Host",
+        "${input:ollamaHost}",
+        "-ModelTag",
+        "${input:ollamaModelTag}",
+        "-Port",
+        "11435"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Start ollama-local with a local .ollama bundle, verify the model tag, health check, then stop the container."
+    },
+    {
       "label": "21 VIPB: Bump LabVIEW version",
       "type": "shell",
       "command": "pwsh",
