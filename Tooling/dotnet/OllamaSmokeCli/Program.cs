@@ -14,7 +14,19 @@ internal static class Program
     private const int ExitTimeout = 3;
     private const int ExitModelMissing = 4;
 
-    private sealed record Options(string Endpoint, string Model, string Prompt, int TimeoutSec, bool Stream, string Mode, string Format, bool CheckModel, int Retries, int RetryDelayMs);
+    private sealed record Options(
+        string Endpoint,
+        string Model,
+        string Prompt,
+        int TimeoutSec,
+        bool Stream,
+        string Mode,
+        string Format,
+        bool CheckModel,
+        int Retries,
+        int RetryDelayMs,
+        bool Verbose,
+        string? SaveBodyPath);
 
     private static int Main(string[] args)
     {
@@ -60,6 +72,12 @@ internal static class Program
                 : JsonSerializer.Serialize(new { model = opts.Model, prompt = opts.Prompt, stream = opts.Stream });
         var payloadString = payload;
 
+        if (opts.Verbose)
+        {
+            Console.WriteLine($"[verbose] POST {uri} mode={opts.Mode} stream={opts.Stream} retries={opts.Retries} retryDelayMs={opts.RetryDelayMs}");
+            Console.WriteLine($"[verbose] payload: {payloadString}");
+        }
+
         if (opts.Mode.Equals("embed", StringComparison.OrdinalIgnoreCase))
         {
             return await RunEmbedAsync(client, uri, payloadString, opts, sw);
@@ -83,12 +101,19 @@ internal static class Program
         }
 
         var body = await response.Content.ReadAsStringAsync();
+        if (!string.IsNullOrWhiteSpace(opts.SaveBodyPath))
+        {
+            File.WriteAllText(opts.SaveBodyPath, body);
+        }
         var elapsed = sw.ElapsedMilliseconds;
 
         if (!response.IsSuccessStatusCode)
         {
             Console.Error.WriteLine($"fail: status={(int)response.StatusCode} reason={response.ReasonPhrase}");
-            Console.Error.WriteLine(body);
+            if (!opts.Verbose)
+            {
+                Console.Error.WriteLine(body);
+            }
             return ExitHttpError;
         }
 
@@ -129,12 +154,19 @@ internal static class Program
         }
 
         var body = await response.Content.ReadAsStringAsync();
+        if (!string.IsNullOrWhiteSpace(opts.SaveBodyPath))
+        {
+            File.WriteAllText(opts.SaveBodyPath, body);
+        }
         var elapsed = sw.ElapsedMilliseconds;
 
         if (!response.IsSuccessStatusCode)
         {
             Console.Error.WriteLine($"fail: status={(int)response.StatusCode} reason={response.ReasonPhrase}");
-            Console.Error.WriteLine(body);
+            if (!opts.Verbose)
+            {
+                Console.Error.WriteLine(body);
+            }
             return ExitHttpError;
         }
 
@@ -194,8 +226,15 @@ internal static class Program
         if (!response.IsSuccessStatusCode)
         {
             var errBody = await response.Content.ReadAsStringAsync();
+            if (!string.IsNullOrWhiteSpace(opts.SaveBodyPath))
+            {
+                File.WriteAllText(opts.SaveBodyPath, errBody);
+            }
             Console.Error.WriteLine($"fail: status={(int)response.StatusCode} reason={response.ReasonPhrase}");
-            Console.Error.WriteLine(errBody);
+            if (!opts.Verbose)
+            {
+                Console.Error.WriteLine(errBody);
+            }
             return ExitHttpError;
         }
 
@@ -407,6 +446,8 @@ internal static class Program
         var checkModel = false;
         var retries = 0;
         var retryDelayMs = 1000;
+        var verbose = false;
+        string? saveBodyPath = null;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -466,6 +507,12 @@ internal static class Program
                         throw new ArgumentException($"Invalid retry delay: {rawDelay}");
                     }
                     break;
+                case "--verbose":
+                    verbose = true;
+                    break;
+                case "--save-body":
+                    saveBodyPath = Next(args, ref i, arg);
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -476,7 +523,7 @@ internal static class Program
             }
         }
 
-        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs);
+        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath);
     }
 
     private static string Next(string[] args, ref int index, string name)
@@ -493,7 +540,7 @@ internal static class Program
     {
         Console.WriteLine("OllamaSmokeCli");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000]");
-        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json, retries 0, retry delay 1000ms.");
+        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000] [--verbose] [--save-body <path>]");
+        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json, retries 0, retry delay 1000ms, verbose off.");
     }
 }
