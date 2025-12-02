@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Security.Cryptography;
+using System.Collections.Generic;
 
 internal static class Program
 {
@@ -13,6 +14,8 @@ internal static class Program
     private const int ExitHttpError = 2;
     private const int ExitTimeout = 3;
     private const int ExitModelMissing = 4;
+
+    private sealed record ChatMessage(string Role, string Content);
 
     private sealed record Options(
         string Endpoint,
@@ -26,7 +29,8 @@ internal static class Program
         int Retries,
         int RetryDelayMs,
         bool Verbose,
-        string? SaveBodyPath);
+        string? SaveBodyPath,
+        IReadOnlyList<ChatMessage>? Messages);
 
     private static int Main(string[] args)
     {
@@ -60,11 +64,17 @@ internal static class Program
             return ExitModelMissing;
         }
 
-        var payload = opts.Mode.Equals("chat", StringComparison.OrdinalIgnoreCase)
+        var isChat = opts.Mode.Equals("chat", StringComparison.OrdinalIgnoreCase);
+        var chatMessages = isChat
+            ? (opts.Messages != null ? opts.Messages.Select(m => new { role = m.Role, content = m.Content }).ToArray()
+                : new[] { new { role = "user", content = opts.Prompt } })
+            : Array.Empty<object>();
+
+        var payload = isChat
             ? JsonSerializer.Serialize(new
             {
                 model = opts.Model,
-                messages = new[] { new { role = "user", content = opts.Prompt } },
+                messages = chatMessages,
                 stream = opts.Stream
             })
             : opts.Mode.Equals("embed", StringComparison.OrdinalIgnoreCase)
@@ -409,6 +419,37 @@ internal static class Program
         }
     }
 
+    private static List<ChatMessage> LoadMessagesFromFile(string path)
+    {
+        var text = File.ReadAllText(path);
+        try
+        {
+            using var doc = JsonDocument.Parse(text);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                throw new ArgumentException("messages file must be a JSON array");
+            }
+            var list = new List<ChatMessage>();
+            foreach (var item in doc.RootElement.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object) continue;
+                var role = item.TryGetProperty("role", out var r) ? r.GetString() : null;
+                var content = item.TryGetProperty("content", out var c) ? c.GetString() : null;
+                if (string.IsNullOrWhiteSpace(role) || string.IsNullOrWhiteSpace(content)) continue;
+                list.Add(new ChatMessage(role!, content!));
+            }
+            if (list.Count == 0)
+            {
+                throw new ArgumentException("messages file contained no valid role/content pairs");
+            }
+            return list;
+        }
+        catch (JsonException ex)
+        {
+            throw new ArgumentException($"messages file parse error: {ex.Message}");
+        }
+    }
+
     private static double[]? ExtractEmbedding(JsonElement root)
     {
         if (root.ValueKind != JsonValueKind.Object) return null;
@@ -448,6 +489,9 @@ internal static class Program
         var retryDelayMs = 1000;
         var verbose = false;
         string? saveBodyPath = null;
+        string? promptFile = null;
+        string? messagesFile = null;
+        List<ChatMessage>? messages = null;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -513,6 +557,13 @@ internal static class Program
                 case "--save-body":
                     saveBodyPath = Next(args, ref i, arg);
                     break;
+                case "--prompt-file":
+                    promptFile = Next(args, ref i, arg);
+                    break;
+                case "--messages-file":
+                    messagesFile = Next(args, ref i, arg);
+                    mode = "chat";
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -523,7 +574,16 @@ internal static class Program
             }
         }
 
-        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath);
+        if (!string.IsNullOrWhiteSpace(promptFile))
+        {
+            prompt = File.ReadAllText(promptFile);
+        }
+        if (!string.IsNullOrWhiteSpace(messagesFile))
+        {
+            messages = LoadMessagesFromFile(messagesFile);
+        }
+
+        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages);
     }
 
     private static string Next(string[] args, ref int index, string name)
@@ -540,7 +600,7 @@ internal static class Program
     {
         Console.WriteLine("OllamaSmokeCli");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000] [--verbose] [--save-body <path>]");
+        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000] [--verbose] [--save-body <path>] [--prompt-file <path>] [--messages-file <path>]");
         Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json, retries 0, retry delay 1000ms, verbose off.");
     }
 }
