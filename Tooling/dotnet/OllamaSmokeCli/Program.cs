@@ -33,7 +33,8 @@ internal static class Program
         string? SaveBodyPath,
         IReadOnlyList<ChatMessage>? Messages,
         int MaxBytes,
-        string? StopToken);
+        string? StopToken,
+        string? OutputPath);
 
     private static int Main(string[] args)
     {
@@ -149,6 +150,7 @@ internal static class Program
         if (opts.Format.Equals("text", StringComparison.OrdinalIgnoreCase))
         {
             Console.WriteLine(text);
+            WriteOutput(opts.OutputPath, text);
             return ExitSuccess;
         }
 
@@ -163,7 +165,9 @@ internal static class Program
             response = text
         };
 
-        Console.WriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
+        var jsonOut = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
+        Console.WriteLine(jsonOut);
+        WriteOutput(opts.OutputPath, jsonOut);
         return ExitSuccess;
     }
 
@@ -214,6 +218,7 @@ internal static class Program
             if (opts.Format.Equals("text", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine($"len={vec.Length} sha256={hash}");
+                WriteOutput(opts.OutputPath, $"len={vec.Length} sha256={hash}");
                 return ExitSuccess;
             }
 
@@ -227,7 +232,9 @@ internal static class Program
                 length = vec.Length,
                 sha256 = hash
             };
-            Console.WriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
+            var jsonOut = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
+            Console.WriteLine(jsonOut);
+            WriteOutput(opts.OutputPath, jsonOut);
             return ExitSuccess;
         }
         catch (Exception ex)
@@ -300,6 +307,7 @@ internal static class Program
         Console.WriteLine(); // end streamed tokens
         if (opts.Format.Equals("text", StringComparison.OrdinalIgnoreCase))
         {
+            WriteOutput(opts.OutputPath, sb.ToString());
             return 0;
         }
 
@@ -313,7 +321,9 @@ internal static class Program
             elapsedMs = elapsed,
             response = sb.ToString()
         };
-        Console.WriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
+        var jsonOut = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
+        Console.WriteLine(jsonOut);
+        WriteOutput(opts.OutputPath, jsonOut);
         return 0;
     }
 
@@ -505,6 +515,17 @@ internal static class Program
         return total;
     }
 
+    private static void WriteOutput(string? path, string content)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+        File.WriteAllText(path, content);
+    }
+
     private static Options Parse(string[] args)
     {
         var endpoint = "http://localhost:11435";
@@ -524,6 +545,7 @@ internal static class Program
         List<ChatMessage>? messages = null;
         var maxBytes = 0;
         string? stopToken = null;
+        string? outputPath = null;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -606,6 +628,9 @@ internal static class Program
                 case "--stop":
                     stopToken = Next(args, ref i, arg);
                     break;
+                case "--output":
+                    outputPath = Next(args, ref i, arg);
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -625,7 +650,7 @@ internal static class Program
             messages = LoadMessagesFromFile(messagesFile);
         }
 
-        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages, maxBytes, stopToken);
+        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages, maxBytes, stopToken, outputPath);
     }
 
     private static string Next(string[] args, ref int index, string name)
