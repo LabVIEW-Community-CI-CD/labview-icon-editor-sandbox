@@ -25,13 +25,19 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     env:
-      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/ollama-local
       OLLAMA_REF: ${{ github.event.inputs.ref || 'main' }}
       TAG_SUFFIX: ${{ github.event.inputs.tag || 'cpu-latest' }}
       SOURCE_DIR: /tmp/ollama-source
     steps:
       - name: Checkout repo (for Dockerfile)
         uses: actions/checkout@v4
+
+      - name: Compute image name (lowercase owner)
+        id: names
+        run: |
+          owner="${{ github.repository_owner }}"
+          owner_lc="$(echo "$owner" | tr '[:upper:]' '[:lower:]')"
+          echo "image_name=ghcr.io/${owner_lc}/ollama-local" >> "$GITHUB_OUTPUT"
 
       - name: Clone upstream ollama
         run: |
@@ -55,8 +61,8 @@ jobs:
           file: ${{ env.SOURCE_DIR }}/Dockerfile.cpu
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.TAG_SUFFIX }}
-            ${{ env.IMAGE_NAME }}:cpu-${{ github.sha }}
+            ${{ steps.names.outputs.image_name }}:${{ env.TAG_SUFFIX }}
+            ${{ steps.names.outputs.image_name }}:cpu-${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}

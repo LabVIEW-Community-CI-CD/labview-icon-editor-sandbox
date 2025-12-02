@@ -5,8 +5,7 @@ Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driv
 ## Ollama locked tasks (30–32)
 - What they are: VS Code tasks **30/31/32** run a locked PowerShell executor that only permits specific build commands (package-build, source-distribution, local-sd-ppl). Each task prompts for a timeout; defaults are 120s for package/local-sd-ppl and 240s for source-distribution.
 - Quick-start with a published container (CPU-only):
-  1) Determine your GHCR namespace (same as your GitHub username/org): `OWNER=$(gh api user -q .login)`.
-  2) Start the service: `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/$OWNER/ollama-local:cpu-latest serve` (built from `docker/ollama/Dockerfile`).
+  1) Use the published image: `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/svelderrainruiz/ollama-local:cpu-latest serve` (built from `docker/ollama/Dockerfile`).
   2) Pull the base model: `docker exec -it ollama-local ollama pull llama3:8b`
   3) Tag it to match VS Code tasks: `docker exec -it ollama-local ollama cp llama3:8b llama3-8b-local`
   4) Run tasks 30/31/32 from VS Code; all traffic stays on `http://localhost:11435`.
