@@ -26,4 +26,4 @@ A Dev Container is provided in `.devcontainer/` (Dockerfile + devcontainer.json)
   `pwsh scripts/common/invoke-repo-cli.ps1 -Cli TestsCli -- --repo . --bitness both`
 - Ollama smoke (direct POST to /api/generate or /api/chat):  
   `pwsh scripts/common/invoke-repo-cli.ps1 -Cli OllamaSmokeCli -- --endpoint http://localhost:11435 --model llama3-8b-local --prompt "Hello smoke"`  
-  Add `--chat` to call `/api/chat`, `--embed` to call `/api/embed` (hash + length), `--stream` to print tokens live, `--format text` to output plain text, `--check-model` to preflight the model list.
+  Add `--chat` to call `/api/chat`, `--embed` to call `/api/embed` (hash + length), `--stream` to print tokens live, `--format text` to output plain text, `--check-model` to preflight the model list, `--retries N --retry-delay-ms M` for transient errors.

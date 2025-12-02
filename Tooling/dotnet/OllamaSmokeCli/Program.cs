@@ -8,7 +8,13 @@ using System.Security.Cryptography;
 
 internal static class Program
 {
-    private sealed record Options(string Endpoint, string Model, string Prompt, int TimeoutSec, bool Stream, string Mode, string Format, bool CheckModel);
+    private const int ExitSuccess = 0;
+    private const int ExitUnexpected = 1;
+    private const int ExitHttpError = 2;
+    private const int ExitTimeout = 3;
+    private const int ExitModelMissing = 4;
+
+    private sealed record Options(string Endpoint, string Model, string Prompt, int TimeoutSec, bool Stream, string Mode, string Format, bool CheckModel, int Retries, int RetryDelayMs);
 
     private static int Main(string[] args)
     {
@@ -20,7 +26,7 @@ internal static class Program
         catch (Exception ex)
         {
             Console.Error.WriteLine($"error: {ex.Message}");
-            return 1;
+            return ExitUnexpected;
         }
     }
 
@@ -39,7 +45,7 @@ internal static class Program
 
         if (opts.CheckModel && !await EnsureModelAsync(client, baseUri, opts.Model))
         {
-            return 1;
+            return ExitModelMissing;
         }
 
         var payload = opts.Mode.Equals("chat", StringComparison.OrdinalIgnoreCase)
@@ -52,19 +58,30 @@ internal static class Program
             : opts.Mode.Equals("embed", StringComparison.OrdinalIgnoreCase)
                 ? JsonSerializer.Serialize(new { model = opts.Model, input = opts.Prompt })
                 : JsonSerializer.Serialize(new { model = opts.Model, prompt = opts.Prompt, stream = opts.Stream });
-        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        var payloadString = payload;
 
         if (opts.Mode.Equals("embed", StringComparison.OrdinalIgnoreCase))
         {
-            return await RunEmbedAsync(client, uri, content, opts, sw);
+            return await RunEmbedAsync(client, uri, payloadString, opts, sw);
         }
 
         if (opts.Stream)
         {
-            return await RunStreamAsync(client, uri, content, opts, sw);
+            return await RunStreamAsync(client, uri, payloadString, opts, sw);
         }
 
-        var response = await client.PostAsync(uri, content);
+        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payloadString), stream: false, opts.Retries, opts.RetryDelayMs);
+        if (timedOut)
+        {
+            Console.Error.WriteLine("fail: request timed out");
+            return ExitTimeout;
+        }
+        if (response == null)
+        {
+            Console.Error.WriteLine("fail: no response received");
+            return ExitUnexpected;
+        }
+
         var body = await response.Content.ReadAsStringAsync();
         var elapsed = sw.ElapsedMilliseconds;
 
@@ -72,14 +89,14 @@ internal static class Program
         {
             Console.Error.WriteLine($"fail: status={(int)response.StatusCode} reason={response.ReasonPhrase}");
             Console.Error.WriteLine(body);
-            return 1;
+            return ExitHttpError;
         }
 
         var text = ExtractResponseText(body);
         if (opts.Format.Equals("text", StringComparison.OrdinalIgnoreCase))
         {
             Console.WriteLine(text);
-            return 0;
+            return ExitSuccess;
         }
 
         var output = new
@@ -94,12 +111,23 @@ internal static class Program
         };
 
         Console.WriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
-        return 0;
+        return ExitSuccess;
     }
 
-    private static async Task<int> RunEmbedAsync(HttpClient client, Uri uri, HttpContent content, Options opts, Stopwatch sw)
+    private static async Task<int> RunEmbedAsync(HttpClient client, Uri uri, string payload, Options opts, Stopwatch sw)
     {
-        var response = await client.PostAsync(uri, content);
+        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payload), stream: false, opts.Retries, opts.RetryDelayMs);
+        if (timedOut)
+        {
+            Console.Error.WriteLine("fail: request timed out");
+            return ExitTimeout;
+        }
+        if (response == null)
+        {
+            Console.Error.WriteLine("fail: no response received");
+            return ExitUnexpected;
+        }
+
         var body = await response.Content.ReadAsStringAsync();
         var elapsed = sw.ElapsedMilliseconds;
 
@@ -107,7 +135,7 @@ internal static class Program
         {
             Console.Error.WriteLine($"fail: status={(int)response.StatusCode} reason={response.ReasonPhrase}");
             Console.Error.WriteLine(body);
-            return 1;
+            return ExitHttpError;
         }
 
         try
@@ -119,14 +147,14 @@ internal static class Program
             {
                 Console.Error.WriteLine("fail: embed response missing embedding data");
                 Console.Error.WriteLine(body);
-                return 1;
+                return ExitUnexpected;
             }
 
             var hash = Sha256String(string.Join(",", vec.Select(v => v.ToString("G17"))));
             if (opts.Format.Equals("text", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine($"len={vec.Length} sha256={hash}");
-                return 0;
+                return ExitSuccess;
             }
 
             var output = new
@@ -140,26 +168,35 @@ internal static class Program
                 sha256 = hash
             };
             Console.WriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
-            return 0;
+            return ExitSuccess;
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"fail: embed parse error: {ex.Message}");
             Console.Error.WriteLine(body);
-            return 1;
+            return ExitUnexpected;
         }
     }
 
-    private static async Task<int> RunStreamAsync(HttpClient client, Uri uri, HttpContent content, Options opts, Stopwatch sw)
+    private static async Task<int> RunStreamAsync(HttpClient client, Uri uri, string payload, Options opts, Stopwatch sw)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, uri) { Content = content };
-        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payload), stream: true, opts.Retries, opts.RetryDelayMs);
+        if (timedOut)
+        {
+            Console.Error.WriteLine("fail: request timed out");
+            return ExitTimeout;
+        }
+        if (response == null)
+        {
+            Console.Error.WriteLine("fail: no response received");
+            return ExitUnexpected;
+        }
         if (!response.IsSuccessStatusCode)
         {
             var errBody = await response.Content.ReadAsStringAsync();
             Console.Error.WriteLine($"fail: status={(int)response.StatusCode} reason={response.ReasonPhrase}");
             Console.Error.WriteLine(errBody);
-            return 1;
+            return ExitHttpError;
         }
 
         var sb = new StringBuilder();
@@ -211,6 +248,58 @@ internal static class Program
         };
         Console.WriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
+    }
+
+    private static HttpRequestMessage BuildPost(Uri uri, string payload)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, uri);
+        request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+        return request;
+    }
+
+    private static async Task<(HttpResponseMessage? Response, bool Timeout)> SendWithRetry(
+        HttpClient client,
+        Func<HttpRequestMessage> requestFactory,
+        bool stream,
+        int retries,
+        int retryDelayMs)
+    {
+        HttpResponseMessage? resp = null;
+        for (var attempt = 0; attempt <= retries; attempt++)
+        {
+            resp?.Dispose();
+            var req = requestFactory();
+            try
+            {
+                resp = await client.SendAsync(req, stream ? HttpCompletionOption.ResponseHeadersRead : HttpCompletionOption.ResponseContentRead);
+                if ((int)resp.StatusCode >= 500 && attempt < retries)
+                {
+                    await Task.Delay(Math.Max(0, retryDelayMs));
+                    continue;
+                }
+                return (resp, false);
+            }
+            catch (TaskCanceledException)
+            {
+                if (attempt < retries)
+                {
+                    await Task.Delay(Math.Max(0, retryDelayMs));
+                    continue;
+                }
+                return (null, true);
+            }
+            catch
+            {
+                if (attempt < retries)
+                {
+                    await Task.Delay(Math.Max(0, retryDelayMs));
+                    continue;
+                }
+                throw;
+            }
+        }
+
+        return (resp, false);
     }
 
     private static string ExtractResponseText(string body)
@@ -316,6 +405,8 @@ internal static class Program
         var mode = "generate";
         var format = "json";
         var checkModel = false;
+        var retries = 0;
+        var retryDelayMs = 1000;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -361,6 +452,20 @@ internal static class Program
                 case "--check-model":
                     checkModel = true;
                     break;
+                case "--retries":
+                    var rawRetries = Next(args, ref i, arg);
+                    if (!int.TryParse(rawRetries, out retries) || retries < 0)
+                    {
+                        throw new ArgumentException($"Invalid retries: {rawRetries}");
+                    }
+                    break;
+                case "--retry-delay-ms":
+                    var rawDelay = Next(args, ref i, arg);
+                    if (!int.TryParse(rawDelay, out retryDelayMs) || retryDelayMs < 0)
+                    {
+                        throw new ArgumentException($"Invalid retry delay: {rawDelay}");
+                    }
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -371,7 +476,7 @@ internal static class Program
             }
         }
 
-        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel);
+        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs);
     }
 
     private static string Next(string[] args, ref int index, string name)
@@ -388,7 +493,7 @@ internal static class Program
     {
         Console.WriteLine("OllamaSmokeCli");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model]");
-        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json.");
+        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000]");
+        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json, retries 0, retry delay 1000ms.");
     }
 }
