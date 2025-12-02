@@ -57,6 +57,7 @@ function Get-CliProjectPath {
         'DevModeAgentCli'   = 'Tooling/dotnet/DevModeAgentCli/DevModeAgentCli.csproj'
         'OrchestrationCli'  = 'Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj'
         'IntegrationEngineCli' = 'Tooling/dotnet/IntegrationEngineCli/IntegrationEngineCli.csproj'
+        'OllamaSmokeCli'    = 'Tooling/dotnet/OllamaSmokeCli/OllamaSmokeCli.csproj'
         'XCli'              = 'Tooling/x-cli/src/XCli/XCli.csproj'
         'RequirementsSummarizer' = 'Tooling/dotnet/RequirementsSummarizer/RequirementsSummarizer.csproj'
     }
