@@ -6,11 +6,10 @@
 param(
     [string]$RepoPath = ".",
     [string]$Model = "llama3-8b-local",
-    [int]$CommandTimeoutSec = 60,
-    [int]$PwshTimeoutSec = 7200
+    [int]$CommandTimeoutSec = 60
 )
 
-$pplCmd = "pwsh -NoProfile -File scripts/orchestration/Run-LocalSd-Ppl.ps1 -Repo . -RunKey local-sd-ppl -PwshTimeoutSec $PwshTimeoutSec"
+$pplCmd = "pwsh -NoProfile -File scripts/orchestration/Run-LocalSd-Ppl.ps1 -Repo . -RunKey local-sd-ppl"
 $allowedRuns = @($pplCmd)
 $goal = 'Respond ONLY with JSON: send exactly {"run":"' + $pplCmd + '"} and then {"done":true}.'
 
