@@ -8,7 +8,8 @@ internal static class Program
         "devmode-bind", "devmode-unbind", "labview-close", "apply-deps", "restore-sources",
         "vi-analyzer", "vi-compare", "vi-compare-preflight", "missing-check", "unit-tests",
         "vipm-verify", "vipm-install", "package-build", "local-sd", "sd-ppl-lvcli",
-        "source-dist-verify", "ollama"
+        "source-dist-verify", "ollama",
+        "devmode-agent"
     };
 
     private static int Main(string[] args)
@@ -20,17 +21,13 @@ internal static class Program
         }
 
         var repoPath = FindRepoPath(args) ?? Directory.GetCurrentDirectory();
-        var projPath = Path.Combine(repoPath, "Tooling", "dotnet", "OrchestrationCli", "OrchestrationCli.csproj");
-        if (!File.Exists(projPath))
-        {
-            Console.Error.WriteLine($"OrchestrationCli project not found at {projPath}");
-            return 1;
-        }
+        var dispatch = ResolveTarget(repoPath, args);
+        if (dispatch == null) return 1;
 
         var psi = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = BuildArguments(projPath, args),
+            Arguments = BuildArguments(dispatch.Value.ProjectPath, dispatch.Value.ForwardArgs),
             WorkingDirectory = repoPath,
             UseShellExecute = false,
             RedirectStandardOutput = true,
@@ -50,6 +47,29 @@ internal static class Program
         proc.BeginErrorReadLine();
         proc.WaitForExit();
         return proc.ExitCode;
+    }
+
+    private static (string ProjectPath, string[] ForwardArgs)? ResolveTarget(string repoPath, string[] args)
+    {
+        var first = args[0];
+        if (string.Equals(first, "devmode-agent", StringComparison.OrdinalIgnoreCase))
+        {
+            var proj = Path.Combine(repoPath, "Tooling", "dotnet", "DevModeAgentCli", "DevModeAgentCli.csproj");
+            if (!File.Exists(proj))
+            {
+                Console.Error.WriteLine($"DevModeAgentCli project not found at {proj}");
+                return null;
+            }
+            return (proj, args.Skip(1).ToArray());
+        }
+
+        var orchProj = Path.Combine(repoPath, "Tooling", "dotnet", "OrchestrationCli", "OrchestrationCli.csproj");
+        if (!File.Exists(orchProj))
+        {
+            Console.Error.WriteLine($"OrchestrationCli project not found at {orchProj}");
+            return null;
+        }
+        return (orchProj, args);
     }
 
     private static string BuildArguments(string projPath, string[] args)
@@ -100,7 +120,7 @@ internal static class Program
         Console.WriteLine("Subcommands:");
         Console.WriteLine("  " + string.Join(", ", Subcommands));
         Console.WriteLine("Notes:");
-        Console.WriteLine("  - All arguments are forwarded to OrchestrationCli.");
+        Console.WriteLine("  - All arguments are forwarded to OrchestrationCli unless subcommand is devmode-agent (for DevModeAgentCli).");
         Console.WriteLine("  - Use --repo <path> to set the repository root (defaults to current directory).");
     }
 }
