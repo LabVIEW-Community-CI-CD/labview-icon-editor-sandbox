@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $true, HelpMessage = "Full path to the .ollama model bundle (e.g., C:\\path\\llama3-8b-local.ollama)")]
     [string]$BundlePath,
     [string]$Host = "http://localhost:11435",
     [string]$ModelTag = "llama3-8b-local",
@@ -18,7 +18,7 @@ Set-StrictMode -Version Latest
 Assert-DockerReady -Purpose "verify bundle import"
 
 if (-not (Test-Path -LiteralPath $BundlePath)) {
-    throw "BundlePath not found: $BundlePath"
+    throw "BundlePath not found: $BundlePath. Provide the full path to your .ollama bundle (e.g., C:\path\llama3-8b-local.ollama)."
 }
 $bundleResolved = (Resolve-Path -LiteralPath $BundlePath).Path
 
