@@ -12,10 +12,11 @@ Accepted
 - Provide a repository script to generate a deterministic self-signed certificate (PFX + CER) for a given backend DNS name, and emit operator instructions for backend binding and App Gateway trust import.
 - Scope: dev/test environments; the CER is intended to be uploaded to App Gateway’s HTTP setting as a trusted root, and the PFX bound on the backend server.
 - No external CA dependency; everything is created locally via PowerShell.
+- Code signing: the helper script **shall be Authenticode-signed** with an internal code-signing cert, and operators should verify the signature before execution. Optional: publish detached signatures for generated PFX/CER artifacts when distributing them.
 
 ## Consequences
 - Pros: repeatable cert generation; clear operator guidance; no dependency on external CA or registry; supports offline/air-gapped setups.
-- Cons: self-signed certs are not suitable for production; requires elevated PowerShell to write to LocalMachine store; backend binding still needs to be performed by the operator.
+- Cons: self-signed certs are not suitable for production; requires elevated PowerShell to write to LocalMachine store; backend binding still needs to be performed by the operator; requires maintaining and trusting an internal code-signing cert.
 
 ## Implementation
 - Script added: `scripts/certs/create-appgw-selfsigned.ps1`
