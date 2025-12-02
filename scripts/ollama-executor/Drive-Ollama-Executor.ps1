@@ -19,7 +19,8 @@ param(
     [string]$Model = "llama3-8b-local",
     [string]$RepoPath = ".",
     [string]$Goal = "Build Source Distribution LV2025 64-bit",
-    [int]$MaxTurns = 10
+    [int]$MaxTurns = 10,
+    [switch]$StopAfterFirstCommand
 )
 
 $ErrorActionPreference = "Stop"
@@ -143,6 +144,11 @@ for ($turn = 1; $turn -le $MaxTurns; $turn++) {
     if ($stderr) { Write-Host "[stderr]" ; Write-Host $stderr }
 
     $messages += @{ role = "user"; content = $result }
+
+    if ($StopAfterFirstCommand) {
+        Write-Host "[executor] StopAfterFirstCommand set; exiting loop." -ForegroundColor Yellow
+        break
+    }
 }
 
 if ($turn -gt $MaxTurns) {
