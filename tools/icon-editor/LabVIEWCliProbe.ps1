@@ -206,6 +206,17 @@ function Invoke-LabVIEWCliProbe {
     if (-not $resolvedCli) {
         $resolvedCli = 'LabVIEWCLI.exe'
     }
+    # Fallback: accept LabVIEWCLI.exe if it is discoverable on PATH even when not adjacent to LabVIEW.exe
+    if (-not $cliExists) {
+        $cliCmd = Get-Command -Name 'LabVIEWCLI.exe' -ErrorAction SilentlyContinue
+        if (-not $cliCmd) {
+            $cliCmd = Get-Command -Name 'LabVIEWCLI' -ErrorAction SilentlyContinue
+        }
+        if ($cliCmd) {
+            $cliExists = $true
+            $resolvedCli = $cliCmd.Source
+        }
+    }
     $result.LabVIEWCliPath = $resolvedCli
 
     # Derive LabVIEW version from LabVIEW.ini or folder name
@@ -245,10 +256,10 @@ function Invoke-LabVIEWCliProbe {
 
     if (-not $cliExists) {
         $result.Status = 'cli-missing'
-        $result.Message = "LabVIEWCLI.exe not found next to '$resolvedExe'. Install LabVIEW CLI to enable headless operations."
+        $result.Message = "LabVIEWCLI.exe not found next to '$resolvedExe' or on PATH. Install LabVIEW CLI to enable headless operations."
     } else {
         $result.Status = 'ok'
-        $result.Message = 'LabVIEW executable and LabVIEWCLI.exe discovered.'
+        $result.Message = "LabVIEW executable and LabVIEWCLI.exe discovered (cli: $resolvedCli)."
     }
 
     if ($MinimumVersionYear -gt 0) {

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -57,7 +58,10 @@ public static class Program
         string? LockPath,
         int LockTtlSec,
         bool ForceLock,
-        bool SkipLocalSdBuild);
+        bool SkipLocalSdBuild,
+        string? OllamaEndpoint,
+        string? OllamaModel,
+        string? OllamaPrompt);
 
     public sealed record CommandResult(
         string Command,
@@ -125,6 +129,13 @@ public static class Program
             var run = RunSdPplLvcli(Log, opts, repo);
             Console.WriteLine(JsonSerializer.Serialize(new[] { run }, new JsonSerializerOptions { WriteIndented = true }));
             return run.Status.Equals("success", StringComparison.OrdinalIgnoreCase) ? 0 : run.ExitCode;
+        }
+
+        if (opts.Subcommand.Equals("ollama", StringComparison.OrdinalIgnoreCase) || opts.Subcommand.Equals("ollama-call", StringComparison.OrdinalIgnoreCase))
+        {
+            var call = RunOllamaCall(Log, opts);
+            Console.WriteLine(JsonSerializer.Serialize(new[] { call }, new JsonSerializerOptions { WriteIndented = true }));
+            return call.Status.Equals("success", StringComparison.OrdinalIgnoreCase) ? 0 : call.ExitCode;
         }
 
         var isPackage = opts.Subcommand.Equals("package-build", StringComparison.OrdinalIgnoreCase)
@@ -419,7 +430,8 @@ public static class Program
         var sw = Stopwatch.StartNew();
         var lvVersion = string.IsNullOrWhiteSpace(opts.LvVersion) ? "2021" : opts.LvVersion!;
         var tokenPresent = tokenPresentOverride ?? TokenPresent(repo, lvVersion, bitness);
-        var viPath = Path.Combine(repo, "Tooling", "RestoreSetupLVSourceCore.vi");
+        // Use the non-Core VI because it succeeds on hosts where the Core variant fails to attach via g-cli.
+        var viPath = Path.Combine(repo, "Tooling", "RestoreSetupLVSource.vi");
         var projectPath = Path.Combine(repo, "lv_icon_editor.lvproj");
         var labviewPath = ResolveLabviewExePath(lvVersion, bitness, opts.LabviewPath, log);
 
@@ -460,7 +472,8 @@ public static class Program
             return new CommandResult("restore-sources", "skip", 0, sw.ElapsedMilliseconds, detailsSkip);
         }
 
-        var connectMs = opts.TimeoutSeconds > 0 ? Math.Max(5000, Math.Min(opts.TimeoutSeconds * 500, 20000)) : 10000;
+        // Prefer a longer connect window for g-cli attach; default to 120s if not provided (manual runs proved stable at this window).
+        var connectMs = opts.TimeoutSeconds > 0 ? Math.Max(20000, Math.Min(opts.TimeoutSeconds * 1000, 120000)) : 120000;
         var killMs = 5000;
         var gcliArgs = new List<string>
         {
@@ -2650,6 +2663,75 @@ public static class Program
 
     internal static (Options? value, string? error, bool help) ParseArgsForTest(string[] args) => ParseArgs(args);
 
+    private static CommandResult RunOllamaCall(Action<string> log, Options opts)
+    {
+        var sw = Stopwatch.StartNew();
+        var baseEndpoint = string.IsNullOrWhiteSpace(opts.OllamaEndpoint) ? "http://localhost:11435" : opts.OllamaEndpoint!;
+        var model = string.IsNullOrWhiteSpace(opts.OllamaModel) ? "llama3-8b-local" : opts.OllamaModel!;
+        var prompt = string.IsNullOrWhiteSpace(opts.OllamaPrompt) ? "Hello" : opts.OllamaPrompt!;
+        try
+        {
+            var baseUri = baseEndpoint.EndsWith("/") ? baseEndpoint : baseEndpoint + "/";
+            var uri = new Uri(new Uri(baseUri), "api/generate");
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(opts.TimeoutSeconds > 0 ? opts.TimeoutSeconds : 30) };
+            var payload = JsonSerializer.Serialize(new { model, prompt, stream = false });
+            log($"[ollama] POST {uri} model={model}");
+            var response = client.PostAsync(uri, new StringContent(payload, Encoding.UTF8, "application/json")).GetAwaiter().GetResult();
+            var body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            var duration = sw.ElapsedMilliseconds;
+            if (!response.IsSuccessStatusCode)
+            {
+                var detailsFail = new
+                {
+                    detection_point = "ollama",
+                    endpoint = uri.ToString(),
+                    model,
+                    status = (int)response.StatusCode,
+                    reason = response.ReasonPhrase,
+                    body
+                };
+                return new CommandResult("ollama", "fail", response.IsSuccessStatusCode ? 0 : 1, duration, detailsFail);
+            }
+
+            string? responseText = null;
+            try
+            {
+                using var doc = JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("response", out var respNode))
+                {
+                    responseText = respNode.GetString();
+                }
+                else
+                {
+                    responseText = body;
+                }
+            }
+            catch
+            {
+                responseText = body;
+            }
+
+            var details = new
+            {
+                endpoint = uri.ToString(),
+                model,
+                response = responseText
+            };
+            return new CommandResult("ollama", "success", 0, duration, details);
+        }
+        catch (Exception ex)
+        {
+            var details = new
+            {
+                detection_point = "ollama",
+                endpoint = baseEndpoint,
+                model,
+                error = ex.Message
+            };
+            return new CommandResult("ollama", "fail", 1, sw.ElapsedMilliseconds, details);
+        }
+    }
+
     private static (Options? value, string? error, bool help) ParseArgs(string[] args)
     {
         if (args.Length == 0) return (null, null, true);
@@ -2708,6 +2790,9 @@ public static class Program
             || string.Equals(Environment.GetEnvironmentVariable("ORCH_FORCE"), "true", StringComparison.OrdinalIgnoreCase);
         var skipLocalSdBuild = string.Equals(Environment.GetEnvironmentVariable("ORCH_SKIP_LOCAL_SD_BUILD"), "1", StringComparison.OrdinalIgnoreCase)
             || string.Equals(Environment.GetEnvironmentVariable("ORCH_SKIP_LOCAL_SD_BUILD"), "true", StringComparison.OrdinalIgnoreCase);
+        var ollamaEndpoint = Environment.GetEnvironmentVariable("ORCH_OLLAMA_ENDPOINT") ?? "http://localhost:11435";
+        var ollamaModel = Environment.GetEnvironmentVariable("ORCH_OLLAMA_MODEL");
+        var ollamaPrompt = Environment.GetEnvironmentVariable("ORCH_OLLAMA_PROMPT") ?? "Hello";
 
         try
         {
@@ -2888,6 +2973,15 @@ public static class Program
                     case "--skip-local-sd-build":
                         skipLocalSdBuild = true;
                         break;
+                    case "--ollama-endpoint":
+                        ollamaEndpoint = RequireNext(args, ref i, "--ollama-endpoint");
+                        break;
+                    case "--ollama-model":
+                        ollamaModel = RequireNext(args, ref i, "--ollama-model");
+                        break;
+                    case "--ollama-prompt":
+                        ollamaPrompt = RequireNext(args, ref i, "--ollama-prompt");
+                        break;
                     case "--verbose":
                         verbose = true;
                         break;
@@ -2925,7 +3019,7 @@ public static class Program
         var runKeyResolved = string.IsNullOrWhiteSpace(runKeyArg) ? $"local-sd-{DateTime.UtcNow:yyyyMMdd-HHmmss}" : runKeyArg!;
         var lockPathResolved = string.IsNullOrWhiteSpace(lockPathArg) ? Path.Combine(repoFull, ".locks", "orchestration.lock") : lockPathArg!;
 
-        return (new Options(sub, repoFull, bitness, pwsh, refName, lvlibpBitness, major, minor, patch, build, company, author, labviewMinor, runBothBitnessSeparately, managed, lv, vipc, requestPath, projectPath, scenarioPath, vipmManifestPath, worktreeRoot, skipWorktree, skipPreflight, requireDevmode, autoBindDevmode, timeoutSec, plain, verbose, sourceDistZip, sourceDistOutput, sourceDistStrict, sourceDistLogStash, labviewCliPath, labviewPath, labviewPort, tempRoot, logRoot, labviewCliTimeoutSec, forceWorktree, copyOnFail, retryBuilds, expectSha, runKeyResolved, lockPathResolved, lockTtlSec, forceLock, skipLocalSdBuild), null, false);
+        return (new Options(sub, repoFull, bitness, pwsh, refName, lvlibpBitness, major, minor, patch, build, company, author, labviewMinor, runBothBitnessSeparately, managed, lv, vipc, requestPath, projectPath, scenarioPath, vipmManifestPath, worktreeRoot, skipWorktree, skipPreflight, requireDevmode, autoBindDevmode, timeoutSec, plain, verbose, sourceDistZip, sourceDistOutput, sourceDistStrict, sourceDistLogStash, labviewCliPath, labviewPath, labviewPort, tempRoot, logRoot, labviewCliTimeoutSec, forceWorktree, copyOnFail, retryBuilds, expectSha, runKeyResolved, lockPathResolved, lockTtlSec, forceLock, skipLocalSdBuild, ollamaEndpoint, ollamaModel, ollamaPrompt), null, false);
     }
 
     private static List<string> ResolveBitness(string value)
@@ -3388,6 +3482,7 @@ public static class Program
         Console.WriteLine("  source-dist-verify Verify source-distribution.zip manifest commits against git history.");
         Console.WriteLine("  sd-ppl-lvcli      Build Source Distribution then Icon Editor PPL via LabVIEWCLI with g-cli bind/unbind.");
         Console.WriteLine("                    (Derives LabVIEW version/bitness from VIPB; omit --bitness/--lv-version for this subcommand.)");
+        Console.WriteLine("  ollama            Call a local Ollama endpoint with a model/prompt (offline hook).");
         Console.WriteLine("Options:");
         Console.WriteLine("  --repo <path>             Repository path (default: current directory)");
         Console.WriteLine("  --ref <git-ref>           Git ref to pass to IntegrationEngineCli (default: HEAD)");
@@ -3425,6 +3520,9 @@ public static class Program
         Console.WriteLine("  --copy-on-fail            Copy artifacts back even if the flow fails (sd-ppl-lvcli)");
         Console.WriteLine("  --retry-build <n>         Retry LabVIEWCLI builds up to n times on failure (sd-ppl-lvcli)");
         Console.WriteLine("  --expect-sha <hash>       Require CLI git SHA to match (sd-ppl-lvcli)");
+        Console.WriteLine("  --ollama-endpoint <url>   Ollama endpoint (default: http://localhost:11435)");
+        Console.WriteLine("  --ollama-model <name>     Ollama model name (default: llama3-8b-local)");
+        Console.WriteLine("  --ollama-prompt <text>    Prompt to send to Ollama (default: Hello)");
         Console.WriteLine("  --plain                   Plain output (reserved for future)");
         Console.WriteLine("  --verbose                 Verbose output (pass-through)");
     }
