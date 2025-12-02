@@ -32,9 +32,10 @@ if ($invocationLine -and $invocationLine -match '-Force\s+(?<boolVal>True|False)
 }
 
 # Guard against mistakenly passing a boolean after -Force (e.g. "-Force True") which
-# PowerShell binds to JsonOutputPath when positional binding is allowed.
+# PowerShell binds to JsonOutputPath when positional binding is allowed. Treat it as "no output path" and warn.
 if ($PSBoundParameters.ContainsKey('JsonOutputPath') -and $JsonOutputPath -match '^(?i:true|false)$') {
-    throw ("Unexpected value '{0}' bound to JsonOutputPath. Use '-Force' or '-Force:`$true' without a trailing value." -f $JsonOutputPath)
+    Write-Warning ("Ignoring boolean-like JsonOutputPath value '{0}'. Use '-Force' without a trailing value if that was intended." -f $JsonOutputPath)
+    $JsonOutputPath = $null
 }
 
 # Treat boolean-looking LabVIEWVersion values as misuse (often from a trailing value after -Force).

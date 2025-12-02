@@ -86,6 +86,20 @@ if (-not $versionScript) {
     throw "Unable to locate get-package-lv-version.ps1 relative to $PSScriptRoot"
 }
 
+# Normalize/guard the repository path (worktree/x-cli occasionally passes empty)
+if (-not $RepositoryPath) {
+    $repoGuess = Join-Path $PSScriptRoot '..\\..'
+    try {
+        $RepositoryPath = (Resolve-Path -LiteralPath $repoGuess -ErrorAction Stop).ProviderPath
+    }
+    catch {
+        throw ("RepositoryPath was empty and default resolution failed (tried {0}): {1}" -f $repoGuess, $_.Exception.Message)
+    }
+}
+else {
+    $RepositoryPath = (Resolve-Path -LiteralPath $RepositoryPath).ProviderPath
+}
+
 $Package_LabVIEW_Version = & $versionScript -RepositoryPath $RepositoryPath
 
 $hasGit = Test-Path (Join-Path $RepositoryPath '.git')

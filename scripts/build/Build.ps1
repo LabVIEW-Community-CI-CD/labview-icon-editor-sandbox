@@ -741,14 +741,17 @@ function Invoke-ScriptSafe {
 
     $label = Split-Path -Leaf $ScriptPath
     if (-not [string]::IsNullOrWhiteSpace($DisplayName)) { $label = $DisplayName }
-    $render = $null
-    if ($ArgumentMap) {
+    $render = if ($ArgumentMap) {
         ($ArgumentMap.GetEnumerator() | ForEach-Object { "-$($_.Key) $($_.Value)" }) -join ' '
-    } else {
+    }
+    elseif ($ArgumentList) {
         ($ArgumentList -join ' ')
     }
+    else { '' }
     Write-Information ("[cmd] {0} {1}" -f $ScriptPath, $render) -InformationAction Continue
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
+    $global:LASTEXITCODE = 0
+    $exitCode = 0
     try {
         if ($TimeoutSec -gt 0) {
             $job = Start-Job -ScriptBlock {
@@ -766,11 +769,7 @@ function Invoke-ScriptSafe {
             $output = Receive-Job $job -Wait -AutoRemoveJob
             $exitObj = $output | Where-Object { $_ -is [pscustomobject] -and $_.PSObject.Properties['ExitCode'] }
             ($output | Where-Object { -not ($_ -is [pscustomobject]) }) | ForEach-Object { Write-Host $_ }
-            $exitCode = 0
             if ($exitObj) { $exitCode = $exitObj.ExitCode }
-            if ($exitCode -ne 0) {
-                throw ("{0} failed with exit code {1}" -f $label, $exitCode)
-            }
         }
         else {
             if ($ArgumentMap) {
@@ -780,10 +779,12 @@ function Invoke-ScriptSafe {
             } else {
                 & $ScriptPath
             }
-            if ($LASTEXITCODE -ne 0) {
-                Write-Error "Error occurred while executing `"$ScriptPath`" with arguments: $render. Exit code: $LASTEXITCODE"
-                exit $LASTEXITCODE
-            }
+            $exitCode = $LASTEXITCODE
+        }
+
+        $global:LASTEXITCODE = $exitCode
+        if ($exitCode -ne 0) {
+            throw ("{0} failed with exit code {1}" -f $label, $exitCode)
         }
     }
     catch {
