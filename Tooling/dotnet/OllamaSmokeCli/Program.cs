@@ -6,7 +6,7 @@ using System.Text.Json;
 
 internal static class Program
 {
-    private sealed record Options(string Endpoint, string Model, string Prompt, int TimeoutSec, bool Stream);
+    private sealed record Options(string Endpoint, string Model, string Prompt, int TimeoutSec, bool Stream, string Mode, string Format);
 
     private static int Main(string[] args)
     {
@@ -26,10 +26,18 @@ internal static class Program
     {
         var sw = Stopwatch.StartNew();
         var baseUri = opts.Endpoint.EndsWith("/") ? opts.Endpoint : $"{opts.Endpoint}/";
-        var uri = new Uri(new Uri(baseUri), "api/generate");
+        var path = opts.Mode.Equals("chat", StringComparison.OrdinalIgnoreCase) ? "api/chat" : "api/generate";
+        var uri = new Uri(new Uri(baseUri), path);
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(opts.TimeoutSec > 0 ? opts.TimeoutSec : 30) };
-        var payload = JsonSerializer.Serialize(new { model = opts.Model, prompt = opts.Prompt, stream = opts.Stream });
+        var payload = opts.Mode.Equals("chat", StringComparison.OrdinalIgnoreCase)
+            ? JsonSerializer.Serialize(new
+            {
+                model = opts.Model,
+                messages = new[] { new { role = "user", content = opts.Prompt } },
+                stream = opts.Stream
+            })
+            : JsonSerializer.Serialize(new { model = opts.Model, prompt = opts.Prompt, stream = opts.Stream });
         using var content = new StringContent(payload, Encoding.UTF8, "application/json");
 
         if (opts.Stream)
@@ -49,11 +57,18 @@ internal static class Program
         }
 
         var text = ExtractResponseText(body);
+        if (opts.Format.Equals("text", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine(text);
+            return 0;
+        }
+
         var output = new
         {
             endpoint = uri.ToString(),
             model = opts.Model,
             prompt = opts.Prompt,
+            mode = opts.Mode,
             stream = opts.Stream,
             elapsedMs = elapsed,
             response = text
@@ -86,9 +101,9 @@ internal static class Program
             try
             {
                 using var doc = JsonDocument.Parse(line);
-                if (doc.RootElement.TryGetProperty("response", out var node) && node.ValueKind == JsonValueKind.String)
+                var chunk = ExtractResponseText(doc.RootElement);
+                if (!string.IsNullOrEmpty(chunk))
                 {
-                    var chunk = node.GetString() ?? string.Empty;
                     sb.Append(chunk);
                     Console.Write(chunk);
                 }
@@ -107,11 +122,17 @@ internal static class Program
 
         var elapsed = sw.ElapsedMilliseconds;
         Console.WriteLine(); // end streamed tokens
+        if (opts.Format.Equals("text", StringComparison.OrdinalIgnoreCase))
+        {
+            return 0;
+        }
+
         var output = new
         {
             endpoint = uri.ToString(),
             model = opts.Model,
             prompt = opts.Prompt,
+            mode = opts.Mode,
             stream = true,
             elapsedMs = elapsed,
             response = sb.ToString()
@@ -125,16 +146,29 @@ internal static class Program
         try
         {
             using var doc = JsonDocument.Parse(body);
-            if (doc.RootElement.TryGetProperty("response", out var node) && node.ValueKind == JsonValueKind.String)
-            {
-                return node.GetString() ?? string.Empty;
-            }
+            return ExtractResponseText(doc.RootElement);
         }
         catch
         {
-            // fall through to raw body
+            return body;
         }
-        return body;
+    }
+
+    private static string ExtractResponseText(JsonElement root)
+    {
+        if (root.ValueKind == JsonValueKind.Object)
+        {
+            if (root.TryGetProperty("response", out var resp) && resp.ValueKind == JsonValueKind.String)
+            {
+                return resp.GetString() ?? string.Empty;
+            }
+            if (root.TryGetProperty("message", out var msg) && msg.ValueKind == JsonValueKind.Object &&
+                msg.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.String)
+            {
+                return content.GetString() ?? string.Empty;
+            }
+        }
+        return string.Empty;
     }
 
     private static Options Parse(string[] args)
@@ -144,6 +178,8 @@ internal static class Program
         var prompt = "Hello smoke";
         var timeoutSec = 30;
         var stream = false;
+        var mode = "generate";
+        var format = "json";
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -173,6 +209,16 @@ internal static class Program
                 case "--stream":
                     stream = true;
                     break;
+                case "--chat":
+                    mode = "chat";
+                    break;
+                case "--format":
+                    format = Next(args, ref i, arg);
+                    if (!format.Equals("json", StringComparison.OrdinalIgnoreCase) && !format.Equals("text", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new ArgumentException($"Invalid format: {format} (expected json|text)");
+                    }
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -183,7 +229,7 @@ internal static class Program
             }
         }
 
-        return new Options(endpoint, model, prompt, timeoutSec, stream);
+        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format);
     }
 
     private static string Next(string[] args, ref int index, string name)
@@ -200,7 +246,7 @@ internal static class Program
     {
         Console.WriteLine("OllamaSmokeCli");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--timeout-sec 30] [--stream]");
-        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, stream false.");
+        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat] [--timeout-sec 30] [--stream] [--format json|text]");
+        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, generate mode, stream false, format json.");
     }
 }
