@@ -1,5 +1,5 @@
 {
-  "name": "labview-icon-editor-final-fork (dotnet tooling)",
+  "name": "labview-icon-editor-final-fork (dotnet + ollama bench)",
   "build": {
     "dockerfile": "Dockerfile",
     "context": ".."
@@ -8,7 +8,8 @@
   "workspaceFolder": "/workspaces/labview-icon-editor-final-fork",
   "postCreateCommand": "dotnet restore && dotnet build Tooling/dotnet/RequirementsSummarizer/RequirementsSummarizer.csproj",
   "mounts": [
-    "source=nuget-cache,target=/root/.nuget/packages,type=volume"
+    "source=nuget-cache,target=/root/.nuget/packages,type=volume",
+    "source=ollama-cache,target=/root/.ollama,type=volume"
   ],
   "customizations": {
     "vscode": {
@@ -17,5 +18,13 @@
         "ms-vscode.powershell"
       ]
     }
-  }
+  },
+  "containerEnv": {
+    "OLLAMA_IMAGE": "ghcr.io/svelderrainruiz/ollama-local:cpu-latest",
+    "OLLAMA_MODEL_TAG": "llama3-8b-local",
+    "OLLAMA_HOST": "http://localhost:11435"
+  },
+  "runArgs": [
+    "--add-host=host.docker.internal:host-gateway"
+  ]
 }

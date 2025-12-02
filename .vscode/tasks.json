@@ -657,6 +657,30 @@
       "detail": "Run vi-history/vi-compare replay from extracted SD with execution enabled (after building bundled x-cli)."
     },
     {
+      "label": "27 Ollama: health check",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/check-ollama-endpoint.ps1",
+        "-Host",
+        "${input:ollamaHost}",
+        "-ModelTag",
+        "${input:ollamaModelTag}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "detail": "Ping OLLAMA_HOST and verify the expected model tag exists."
+    },
+    {
       "label": "30 Ollama: package-build (locked)",
       "type": "shell",
       "command": "pwsh",
@@ -769,6 +793,26 @@
       "group": "build",
       "problemMatcher": [],
       "detail": "Locked executor: only local-sd-ppl orchestration is allowed; two turns (run + done)."
+    },
+    {
+      "label": "33 Ollama: stop container",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/stop-ollama-container.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "detail": "Stop and remove the ollama-local container if running."
     },
     {
       "label": "10 Tests: run (TestsCli)",
@@ -1001,6 +1045,24 @@
       "type": "promptString",
       "description": "GHCR owner/namespace for ollama-local image (lowercase)",
       "default": "svelderrainruiz"
+    },
+    {
+      "id": "ollamaGhcrTag",
+      "type": "promptString",
+      "description": "Tag for ollama-local image",
+      "default": "cpu-latest"
+    },
+    {
+      "id": "ollamaHost",
+      "type": "promptString",
+      "description": "OLLAMA_HOST endpoint (health check + executor)",
+      "default": "http://localhost:11435"
+    },
+    {
+      "id": "ollamaModelTag",
+      "type": "promptString",
+      "description": "Model tag expected for Ollama tasks",
+      "default": "llama3-8b-local"
     },
     {
       "id": "ollamaGhcrTag",

@@ -15,8 +15,9 @@ Open-source LabVIEW Icon Editor packaged as a `.vip`, orchestrated by the Integr
 
 ## Ollama locked tasks (30/31/32)
 Two-turn, allowlisted PowerShell executor; timeout is prompted per task.
-- Start the published CPU image:  
-  `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/<ghcr-owner>/ollama-local:<tag>` (tasks prompt for `ollamaGhcrOwner`/`ollamaGhcrTag`, defaults `svelderrainruiz` / `cpu-latest`)
+- Prep helpers: `28` pull image, `29` health check (endpoint + model), `30` start container, `33` stop container. Prompts cover GHCR owner/tag and OLLAMA_HOST/model tag.
+- Start the published CPU image manually if preferred:  
+  `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/<ghcr-owner>/ollama-local:<tag>` (defaults `svelderrainruiz` / `cpu-latest`)
 - Pull/tag the model the tasks expect:  
   `docker exec -it ollama-local ollama pull llama3:8b`  
   `docker exec -it ollama-local ollama cp llama3:8b llama3-8b-local`
@@ -46,4 +47,4 @@ Two-turn, allowlisted PowerShell executor; timeout is prompted per task.
 ## Notes
 - VIPM missing? Dependency task will fail and LVAddon build writes `vipm-skipped-placeholder.vip`; install VIPM, remove the placeholder, rerun task 02.
 - Tooling cache is tiered (worktree → source → cache → publish). Use task 18 to clear a specific `<CLI>/<version>/<rid>`; task 19 exercises probe behavior.
-- Dev container support: `.devcontainer/` (VS Code “Reopen in Container”) with .NET 8 + PowerShell preinstalled.
+- Devcontainer (Ollama bench): `.devcontainer/` adds Docker CLI + model cache volume; good for dotnet tooling and Ollama/executor iteration. LabVIEW/VIPM builds remain Windows-only. Defaults: `OLLAMA_HOST=http://localhost:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-latest`, `OLLAMA_MODEL_TAG=llama3-8b-local`.
