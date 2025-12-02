@@ -1,67 +1,49 @@
-# LabVIEW Icon Editor (built with the Integration Engine)
+# LabVIEW Icon Editor (Integration Engine)
 
-Open-source LabVIEW Icon Editor, packaged as a `.vip`. This repo ships an "Integration Engine" (the build/dependency orchestration) that applies prerequisites and packages the Icon Editor with minimal inputs.
+Open-source LabVIEW Icon Editor packaged as a `.vip`, orchestrated by the Integration Engine CLIs. Runs on Windows with LabVIEW 2021 SP1 (32- or 64-bit) and VIPM.
 
-Repo layout is documented in ADR-2025-011 (root scripts/tooling, shared modules under `src/tools/`; see `docs/adr/ADR-2025-011-repo-structure.md`).
+## Quick start (VS Code tasks)
+- Prereqs: LabVIEW 2021 SP1 (bitness you need), VIPM CLI on PATH, PowerShell 7+, git with full history.
+- In VS Code (**Terminal → Run Task…**):
+  - `01 Verify / Apply dependencies` — apply `runner_dependencies.vipc` (both bitness).
+  - `02 Build LVAddon (VI Package)` — build the `.vip` and lvlibp (defaults: 0.1.0+build 1).
+  - `20 Build: Source Distribution` → `21 Verify: Source Distribution` — emit and verify the SD zip/manifest.
+  - Dev mode: `06/06b/06c` bind, unbind, or clear LocalHost.LibraryPaths.
+  - Tooling cache/probe: `18` clear a cache entry, `19` probe helper smoke.
+  - Requirements summary: renders `reports/requirements-summary.md`.
+- Details: `.vscode/tasks.json`, `docs/vscode-tasks.md`.
 
-## Build with VS Code Tasks
+## Ollama locked tasks (30/31/32)
+Two-turn, allowlisted PowerShell executor; timeout is prompted per task.
+- Start the published CPU image:  
+  `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/svelderrainruiz/ollama-local:cpu-latest serve`
+- Pull/tag the model the tasks expect:  
+  `docker exec -it ollama-local ollama pull llama3:8b`  
+  `docker exec -it ollama-local ollama cp llama3:8b llama3-8b-local`
+- Tasks:
+  - `30 Ollama: package-build (locked)` — build the VIP.
+  - `31 Ollama: source-distribution (locked)` — build the source-distribution zip.
+  - `32 Ollama: local-sd-ppl (locked)` — build PPL from the source distribution.
+- Traffic stays on `http://localhost:11435`; only the allowlisted command runs.
 
-Prerequisites
-- Windows with LabVIEW 2021 SP1 (32-bit and/or 64-bit for the bitness you need)
-- VIPM CLI (`vipm`) on PATH
-- PowerShell 7+, Git with full history (for versioning)
- - Tooling cache/provenance: repo CLIs resolve via a shared helper (worktree → source → cache → publish) keyed by `<CLI>/<version>/<rid>`. Run any CLI with `--print-provenance` to see `path`, `tier`, `cacheKey`, and `rid`. Use VS Code task “Tooling: Clear CLI cache entry” (Task 18) to remove a specific cache key; the next helper run publishes on miss and repopulates `<CLI>/<version>/<rid>/publish/`.
+## CLIs and scripts
+- IntegrationEngineCli, OrchestrationCli, DevModeAgentCli, XCli: run via `scripts/common/invoke-repo-cli.ps1` or tasks.
+- Source distribution: `scripts/build-source-distribution/Build_Source_Distribution.ps1`.
+- PPL from SD: `scripts/ppl-from-sd/Build_Ppl_From_SourceDistribution.ps1`.
+- Dev mode bind/unbind: `scripts/task-devmode-bind.ps1`, `scripts/clear-labview-librarypaths-all.ps1`.
+- Analyze VI packages:  
+  `pwsh -NoProfile -File scripts/analyze-vi-package/run-workflow-local.ps1 -VipArtifactPath "<vip or dir>" -MinLabVIEW "21.0"`
 
-### 01 Verify / Apply dependencies
-Run **Terminal → Run Task → 01 Verify / Apply dependencies** to confirm `vipm` is available and apply `runner_dependencies.vipc` for both 32-bit and 64-bit LabVIEW. Run this before the build if dependencies have changed or you are setting up a new machine.
-
-### 02 Build LVAddon (VI Package)
-
-Use **Terminal → Run Task → 02 Build LVAddon (VI Package)** in VS Code to run the IntegrationEngineCli (`pwsh scripts/common/invoke-repo-cli.ps1 -Cli IntegrationEngineCli -- --repo . --ref HEAD ...`). By default it shells into the PowerShell wrapper to mirror CI; on Windows the task adds `--managed` to drive the managed orchestration directly. Outputs land in `builds/vip-stash/` (VIP artifact) and `resource/plugins/lv_icon.lvlibp` (overwritten for each bitness built). This task assumes dependencies have already been applied.
-Default version inputs are `Major=0`, `Minor=1`, `Patch=0`, and `Build=1` (override in `.vscode/tasks.json` or when invoking the task).
-
-VIPM not available?
-- If `vipm` is not on PATH, the dependency task will fail and the build skips VIPC/VIPM steps, still builds the lvlibp, and writes a placeholder `builds/vip-stash/vipm-skipped-placeholder.vip` so you know packaging was skipped.
-- After installing or exposing VIPM to PATH, delete the placeholder `.vip` and rerun the **02 Build LVAddon (VI Package)** task to create the real package.
-
-### 20 Build: Source Distribution
-
-Runs **Terminal -> Run Task -> 20 Build: Source Distribution** to invoke `scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath .` (the same step wired into the IntegrationEngine `build-source-distribution` command/managed flow). Outputs land in `builds/Source Distribution/manifest.json` + `manifest.csv` (fields: `path`, `last_commit`, `commit_author`, `commit_date`, `commit_source`, `size_bytes`) and `builds/artifacts/source-distribution.zip` (contains the distribution plus both manifests). Logs emit `[artifact]` and log-stash entries so CI/local runs surface the bundle consistently.
-
-### 21 Verify: Source Distribution
-
-Runs **Terminal -> Run Task -> 21 Verify: Source Distribution** to validate `builds/artifacts/source-distribution.zip` via `OrchestrationCli source-dist-verify --source-dist-log-stash --source-dist-strict`. Produces a verification report under `builds/reports/source-distribution-verify/<timestamp>/report.json`, emits `[artifact]` lines for the report/extracted folder, and fails on missing/invalid commit hashes (drop `--source-dist-strict` to allow null commits).
-
-More details: see `docs/vscode-tasks.md`.
-
-## Dev container & dotnet tooling
-- Dev container: `.devcontainer/` (VS Code "Reopen in Container" with .NET 8 + PowerShell). On create, it restores and builds `Tooling/dotnet/RequirementsSummarizer` as a health check.
-- Dotnet CLIs: see `Tooling/dotnet/README.md` for IntegrationEngineCli, VipbJsonTool, LvprojJsonTool, and RequirementsSummarizer usage.
-- Requirements summary task: **Terminal → Run Task → Requirements summary (dotnet)** renders `reports/requirements-summary.md` from `docs/requirements/requirements.csv`.
-- x-cli: vendored at `Tooling/x-cli/` (vi-analyzer and vi-compare helpers). Invoke via the repo helper: `pwsh scripts/common/invoke-repo-cli.ps1 -Cli XCli -- --help`. VS Code tasks exist for `vi-analyzer-run` and `vi-compare-run` (see `.vscode/tasks.json`).
-
-## Requirements & ISO/IEC/IEEE 29148 artifacts
-- Source of truth: `docs/requirements/requirements.csv` (gated in CI by language and attribute checks).
-- Supporting docs: `docs/requirements/glossary.md` and `docs/requirements/set-quality-checklist.md`; index in `docs/requirements/README.md`.
-- Reports: `reports/requirements-summary.md` (rendered by the VS Code task/CI).
-- Probe/provenance/cache: see `docs/provenance-and-cache.md` for probe order, `--print-provenance`, cache clear task (Task 18), and probe smoke validation (Task 19).
-
-
-## Analyze VI Packages (CLI-only)
-
-Run the analyzer directly-there is no VS Code task for this:
-
-```pwsh
-pwsh -NoProfile -File scripts/analyze-vi-package/run-workflow-local.ps1 -VipArtifactPath "<vip or dir>" -MinLabVIEW "21.0"
-```
-
-Provide a real `.vip` artifact (placeholders such as `vipm-skipped-placeholder.vip` are skipped) and the workflow auto-loads `scripts/analyze-vi-package/VIPReader.psm1`.
-
-
-## Docs quicklinks
-- Build & tasks: `docs/vscode-tasks.md`
+## Docs & references
+- VS Code tasks: `docs/vscode-tasks.md`
 - CI overview: `docs/ci-workflows.md`
-- VIPM Docker helper: `Tooling/docker/vipm/README.md`
-- Dev mode toggle: `scripts/set-development-mode/run-dev-mode.ps1` and `scripts/revert-development-mode/run-dev-mode.ps1`
-- Tests: `docs/testing/policy.md` (and `Test/` for Pester)
+- Repo structure: `docs/adr/ADR-2025-011-repo-structure.md`
+- Ollama decision: `docs/adr/ADR-2025-017-ollama-locked-executor.md`
+- Requirements (ISO/IEC/IEEE 29148): `docs/requirements/requirements.csv` and summary under `reports/requirements-summary.md`
+- Provenance/cache: `docs/provenance-and-cache.md`
+- Additional ADRs: `docs/adr/adr-index.md`
 
+## Notes
+- VIPM missing? Dependency task will fail and LVAddon build writes `vipm-skipped-placeholder.vip`; install VIPM, remove the placeholder, rerun task 02.
+- Tooling cache is tiered (worktree → source → cache → publish). Use task 18 to clear a specific `<CLI>/<version>/<rid>`; task 19 exercises probe behavior.
+- Dev container support: `.devcontainer/` (VS Code “Reopen in Container”) with .NET 8 + PowerShell preinstalled.
