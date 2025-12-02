@@ -76,10 +76,10 @@ if (-not $sdRoot) {
 
 Write-Host ("[ppl-sd] Using extracted root: {0}" -f $sdRoot)
 
-# Copy required tooling/scripts into extracted tree
+# Copy required tooling/scripts into extracted tree (flatten scripts to avoid scripts\scripts nesting)
 $pathsToCopy = @(
-    @{ src = Join-Path $repo 'scripts'; dest = Join-Path $sdRoot 'scripts' },
-    @{ src = Join-Path $repo 'Tooling'; dest = Join-Path $sdRoot 'Tooling' }
+    @{ src = Join-Path $repo 'scripts'; dest = Join-Path $sdRoot 'scripts'; copyChildren = $true },
+    @{ src = Join-Path $repo 'Tooling'; dest = Join-Path $sdRoot 'Tooling'; copyChildren = $false }
 )
 foreach ($p in $pathsToCopy) {
     if (-not (Test-Path -LiteralPath $p.src)) {
@@ -87,13 +87,26 @@ foreach ($p in $pathsToCopy) {
         continue
     }
     Write-Host ("[ppl-sd] Copying {0} -> {1}" -f $p.src, $p.dest)
-    Copy-Item -LiteralPath $p.src -Destination $p.dest -Recurse -Force
+    if (-not (Test-Path -LiteralPath $p.dest)) { New-Item -ItemType Directory -Path $p.dest -Force | Out-Null }
+    if ($p.copyChildren) {
+        Get-ChildItem -LiteralPath $p.src -Force | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination $p.dest -Recurse -Force
+        }
+    }
+    else {
+        Copy-Item -LiteralPath $p.src -Destination $p.dest -Recurse -Force
+    }
 }
 
 # Bind dev mode to extracted path (bitness-specific)
 $bindScript = Join-Path $sdRoot 'scripts\task-devmode-bind.ps1'
 if (-not (Test-Path -LiteralPath $bindScript -PathType Leaf)) {
-    throw "Dev-mode bind script not found at $bindScript"
+    # Some packaging workflows nest scripts/scripts; search for the first match
+    $candidate = Get-ChildItem -Path (Join-Path $sdRoot 'scripts') -Filter task-devmode-bind.ps1 -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($candidate) { $bindScript = $candidate.FullName }
+}
+if (-not (Test-Path -LiteralPath $bindScript -PathType Leaf)) {
+    throw "Dev-mode bind script not found in extracted tree (looked under $sdRoot\\scripts)"
 }
 Write-Host ("[ppl-sd] Binding dev mode {0}-bit to extracted root" -f $SupportedBitness)
 & pwsh -NoProfile -File $bindScript -RepositoryPath $sdRoot -Mode bind -Bitness $SupportedBitness -UseWorktree:$false | Write-Output

@@ -487,7 +487,8 @@ if ($buildExit -ne 0) {
     Write-Stamp -Level "WARN" -Message ("lvbuildspec failed with exit code {0}; will fall back to copy-based Source Distribution staging." -f $buildExit)
     $gcliSucceeded = $false
     $buildEnd = Get-Elapsed
-} else {
+}
+else {
     $gcliSucceeded = $true
     $buildEnd = Get-Elapsed
     $buildDuration = ((Get-Date) - $buildStart).TotalSeconds
@@ -554,6 +555,17 @@ foreach ($item in $supportFiles) {
     }
     Copy-Item -LiteralPath $item.Source -Destination $item.Dest -Force
     Write-Stamp -Level "INFO" -Message ("[support] Copied {0} -> {1}" -f (Get-RelativePathSafe -Base $repoRoot -Target $item.Source), (Get-RelativePathSafe -Base $repoRoot -Target $item.Dest))
+}
+
+# Ensure Tooling (vipb/custom actions/devmode helpers) is present for PPL-from-SD scenarios.
+$toolingSource = Join-Path $repoRoot 'Tooling'
+$toolingDest = Join-Path $distRoot 'Tooling'
+if (Test-Path -LiteralPath $toolingSource -PathType Container) {
+    Write-Stamp -Level "INFO" -Message ("[support] Copying Tooling -> {0}" -f (Get-RelativePathSafe -Base $repoRoot -Target $toolingDest))
+    Copy-Item -LiteralPath $toolingSource -Destination $toolingDest -Recurse -Force
+}
+else {
+    Write-Warning ("[support] Tooling folder not found at {0}; VIPB/custom-actions will be missing from the SD payload." -f $toolingSource)
 }
 
 # Ensure the project file is present for downstream PPL-from-SD builds.
@@ -678,7 +690,8 @@ $allowedPrefixes = @(
     'resource/',
     'vi.lib/LabVIEW Icon API/',
     'Test/Unit tests/',
-    'Program Files/National Instruments/'
+    'Program Files/National Instruments/',
+    'Tooling/'
 )
 $generatedFiles = @(
     'manifest.json',
