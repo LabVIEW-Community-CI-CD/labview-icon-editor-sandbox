@@ -1,0 +1,121 @@
+<#
+.SYNOPSIS
+  Drives a lightweight Ollama executor loop: Ollama proposes PowerShell commands as JSON, this script runs them and feeds results back.
+
+.USAGE
+  pwsh -NoProfile -File scripts/ollama-executor/Drive-Ollama-Executor.ps1 `
+    -Model llama3-8b-local `
+    -RepoPath . `
+    -Goal "Build Source Distribution LV2025 64-bit" `
+    -MaxTurns 10
+
+.NOTES
+  - Ollama must be running at http://localhost:11435
+  - Commands are executed with PowerShell from RepoPath
+  - Ollama responses must be JSON: {"run":"<cmd>"} or {"done":true,"summary":"..."}
+#>
+[CmdletBinding()]
+param(
+    [string]$Model = "llama3-8b-local",
+    [string]$RepoPath = ".",
+    [string]$Goal = "Build Source Distribution LV2025 64-bit",
+    [int]$MaxTurns = 10
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+$repoFull = (Resolve-Path -LiteralPath $RepoPath).Path
+
+$systemPrompt = @"
+You are an executor agent. Always respond with JSON only.
+Schema:
+- To run a PowerShell command: {"run": "<command>"}
+- To finish: {"done": true, "summary": "<short status>"}
+Use PowerShell syntax. Keep commands short and safe. No prose.
+After each run you will receive: {"result":{"exit":<int>,"stdout":"...","stderr":"..."}}
+Respond again with either {"run":"..."} or {"done":true,"summary":"..."}.
+"@
+
+$messages = @(
+    @{ role = "system"; content = $systemPrompt },
+    @{ role = "user"; content = "Goal: $Goal" }
+)
+
+function Invoke-Ollama {
+    param([array]$Msgs)
+    $body = @{
+        model    = $Model
+        messages = $Msgs
+        stream   = $false
+    } | ConvertTo-Json -Depth 6
+    return Invoke-RestMethod -Uri "http://localhost:11435/api/chat" -Method Post -ContentType "application/json" -Body $body
+}
+
+for ($turn = 1; $turn -le $MaxTurns; $turn++) {
+    $resp = Invoke-Ollama -Msgs $messages
+    $content = $resp.message.content
+    $messages += @{ role = "assistant"; content = $content }
+
+    $action = $null
+    try {
+        $action = $content | ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        $messages += @{ role = "user"; content = "Invalid JSON; respond with {\"run\":\"cmd\"} or {\"done\":true}" }
+        continue
+    }
+
+    if ($action.done) {
+        Write-Host ("[executor] Done: {0}" -f ($action.summary ?? "")) -ForegroundColor Green
+        break
+    }
+
+    if (-not $action.run) {
+        $messages += @{ role = "user"; content = "Missing run field; respond with {\"run\":\"cmd\"}." }
+        continue
+    }
+
+    $cmd = $action.run
+    Write-Host ("[executor] Turn {0}: {1}" -f $turn, $cmd)
+
+    $stdoutPath = Join-Path $env:TEMP "ollama-exec-out.txt"
+    $stderrPath = Join-Path $env:TEMP "ollama-exec-err.txt"
+    Remove-Item $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
+
+    try {
+        $proc = Start-Process -FilePath "pwsh" `
+            -ArgumentList @("-NoProfile", "-Command", $cmd) `
+            -WorkingDirectory $repoFull `
+            -RedirectStandardOutput $stdoutPath `
+            -RedirectStandardError $stderrPath `
+            -NoNewWindow -PassThru -Wait
+        $exitCode = $proc.ExitCode
+    }
+    catch {
+        $exitCode = -1
+        Set-Content -LiteralPath $stderrPath -Value $_.Exception.Message
+    }
+
+    $stdout = if (Test-Path $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Raw } else { "" }
+    $stderr = if (Test-Path $stderrPath) { Get-Content -LiteralPath $stderrPath -Raw } else { "" }
+    Remove-Item $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
+
+    $result = @{
+        result = @{
+            exit   = $exitCode
+            stdout = $stdout
+            stderr = $stderr
+        }
+    } | ConvertTo-Json -Depth 5
+
+    Write-Host ("[executor] Exit={0}" -f $exitCode)
+    if ($stdout) { Write-Host "[stdout]" ; Write-Host $stdout }
+    if ($stderr) { Write-Host "[stderr]" ; Write-Host $stderr }
+
+    $messages += @{ role = "user"; content = $result }
+}
+
+if ($turn -gt $MaxTurns) {
+    Write-Host "[executor] Max turns reached without completion." -ForegroundColor Yellow
+}
