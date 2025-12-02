@@ -1,0 +1,63 @@
+name: Publish Ollama CPU image
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "ollama git ref (tag/branch/sha) to build"
+        required: false
+        default: "main"
+      tag:
+        description: "image tag suffix (e.g., cpu-20250216; default cpu-latest)"
+        required: false
+        default: "cpu-latest"
+  push:
+    branches: [ main ]
+    paths:
+      - "docker/ollama/**"
+      - ".github/workflows/ollama-image.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/ollama-local
+      OLLAMA_REF: ${{ github.event.inputs.ref || 'main' }}
+      TAG_SUFFIX: ${{ github.event.inputs.tag || 'cpu-latest' }}
+      SOURCE_DIR: /tmp/ollama-source
+    steps:
+      - name: Checkout repo (for Dockerfile)
+        uses: actions/checkout@v4
+
+      - name: Clone upstream ollama
+        run: |
+          git clone --depth 1 --branch "${OLLAMA_REF}" https://github.com/ollama/ollama.git "${SOURCE_DIR}"
+
+      - name: Copy CPU Dockerfile into source
+        run: |
+          cp docker/ollama/Dockerfile "${SOURCE_DIR}/Dockerfile.cpu"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.SOURCE_DIR }}
+          file: ${{ env.SOURCE_DIR }}/Dockerfile.cpu
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.TAG_SUFFIX }}
+            ${{ env.IMAGE_NAME }}:cpu-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.description=CPU-only Ollama build (ggml)
