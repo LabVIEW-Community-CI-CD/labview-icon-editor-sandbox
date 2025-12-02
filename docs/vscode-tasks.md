@@ -2,14 +2,22 @@
 
 Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driven by the Integration Engine build tooling. Run them from **Terminal → Run Task…** (or `Ctrl/Cmd+Shift+B`).
 
-## Ollama locked tasks (30–32)
-- What they are: VS Code tasks **30/31/32** run a locked PowerShell executor that only permits specific build commands (package-build, source-distribution, local-sd-ppl). Each task prompts for a timeout; defaults are 120s for package/local-sd-ppl and 240s for source-distribution.
-- Quick-start with a published container (CPU-only):
-  1) Use the published image: `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/svelderrainruiz/ollama-local:cpu-latest serve` (built from `docker/ollama/Dockerfile`).
-  2) Pull the base model: `docker exec -it ollama-local ollama pull llama3:8b`
-  3) Tag it to match VS Code tasks: `docker exec -it ollama-local ollama cp llama3:8b llama3-8b-local`
-  4) Run tasks 30/31/32 from VS Code; all traffic stays on `http://localhost:11435`.
-- Custom models: pull/`cp` your preferred model and update the `-Model` argument in `.vscode/tasks.json` if you want a different tag.
+## Using the devcontainer Ollama bench
+- Purpose: Linux devcontainer for dotnet tooling + the Ollama/executor loop; LabVIEW/VIPM builds remain Windows-only on the host.
+- Defaults (devcontainer env): `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-latest`, `OLLAMA_MODEL_TAG=llama3-8b-local`; the host Docker socket is mounted and the scripts fail fast if the socket is missing or Docker Desktop is stopped.
+- Workflow:
+  1) Start Docker Desktop and open the devcontainer.
+  2) Task **28** `Ollama: pull image` (GHCR owner/tag prompts).
+  3) Task **29** `Ollama: start container` on 11435 with the persistent `ollama` volume (set `OLLAMA_CPUS`/`OLLAMA_MEM` to cap resources). Optional: provide a `.ollama` bundle path to import a model offline; it will retag to `OLLAMA_MODEL_TAG` if set.
+  4) Task **27** `Ollama: health check` to confirm `OLLAMA_HOST` + `OLLAMA_MODEL_TAG`; keep `http://host.docker.internal:11435` inside the devcontainer or switch to `http://localhost:11435` on the host.
+  5) Tasks **30/31/32** drive the allowlisted executor; they fail fast if the host is unreachable or the model tag is empty.
+  6) Task **33** stops the container; task **34** stops and drops the model cache volume for a clean slate.
+
+## Ollama locked tasks (30-32)
+- Two-turn, allowlisted PowerShell executor (package-build, source-distribution, local-sd-ppl) against `OLLAMA_HOST`; timeout prompted per task.
+- Prep via the steps above; traffic stays on the host you pass (devcontainer default `http://host.docker.internal:11435`). Manual start alternative: `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/<ghcr-owner>/ollama-local:<tag>`.
+- Pull/tag the model the tasks expect: `docker exec -it ollama-local ollama pull llama3:8b` then `docker exec -it ollama-local ollama cp llama3:8b llama3-8b-local`, or set `OLLAMA_MODEL_TAG` to your preferred tag and rerun the health check. Offline alternative: supply a `.ollama` bundle path in task **29** to import without hitting `registry.ollama.ai`.
+- Custom models: update the input/model tag and re-run task 27 to confirm availability before triggering the locked tasks.
 
 ## 01 Verify / Apply dependencies
 - Runs Orchestration CLI `apply-deps` to confirm `vipm` is available and apply `runner_dependencies.vipc` for both 32-bit and 64-bit LabVIEW.

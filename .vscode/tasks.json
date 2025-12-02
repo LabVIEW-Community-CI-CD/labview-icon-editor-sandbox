@@ -690,8 +690,10 @@
         "${workspaceFolder}/scripts/ollama-executor/Run-Locked-PackageBuild.ps1",
         "-RepoPath",
         "${workspaceFolder}",
+        "-Host",
+        "${input:ollamaHost}",
         "-Model",
-        "llama3-8b-local",
+        "${input:ollamaModelTag}",
         "-CommandTimeoutSec",
         "${input:ollamaPackageTimeoutSec}"
       ],
@@ -737,7 +739,11 @@
         "-Owner",
         "${input:ollamaGhcrOwner}",
         "-Tag",
-        "${input:ollamaGhcrTag}"
+        "${input:ollamaGhcrTag}",
+        "-ModelBundlePath",
+        "${input:ollamaModelBundlePath}",
+        "-BundleTargetTag",
+        "${input:ollamaModelTag}"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -760,8 +766,10 @@
         "${workspaceFolder}/scripts/ollama-executor/Run-Locked-SourceDistribution.ps1",
         "-RepoPath",
         "${workspaceFolder}",
+        "-Host",
+        "${input:ollamaHost}",
         "-Model",
-        "llama3-8b-local",
+        "${input:ollamaModelTag}",
         "-CommandTimeoutSec",
         "${input:ollamaSdTimeoutSec}"
       ],
@@ -782,8 +790,10 @@
         "${workspaceFolder}/scripts/ollama-executor/Run-Locked-LocalSdPpl.ps1",
         "-RepoPath",
         "${workspaceFolder}",
+        "-Host",
+        "${input:ollamaHost}",
         "-Model",
-        "llama3-8b-local",
+        "${input:ollamaModelTag}",
         "-CommandTimeoutSec",
         "${input:ollamaLocalSdPplTimeoutSec}"
       ],
@@ -813,6 +823,27 @@
       },
       "problemMatcher": [],
       "detail": "Stop and remove the ollama-local container if running."
+    },
+    {
+      "label": "34 Ollama: reset container + cache",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/stop-ollama-container.ps1",
+        "-RemoveVolume"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "detail": "Stop and remove the ollama-local container and clear the ollama volume (model cache reset)."
     },
     {
       "label": "10 Tests: run (TestsCli)",
@@ -1056,7 +1087,13 @@
       "id": "ollamaHost",
       "type": "promptString",
       "description": "OLLAMA_HOST endpoint (health check + executor)",
-      "default": "http://localhost:11435"
+      "default": "http://host.docker.internal:11435"
+    },
+    {
+      "id": "ollamaModelBundlePath",
+      "type": "promptString",
+      "description": "Optional path to a .ollama model bundle to import (leave blank to skip)",
+      "default": ""
     },
     {
       "id": "ollamaModelTag",

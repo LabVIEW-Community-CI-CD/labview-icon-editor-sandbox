@@ -15,17 +15,17 @@ Open-source LabVIEW Icon Editor packaged as a `.vip`, orchestrated by the Integr
 
 ## Ollama locked tasks (30/31/32)
 Two-turn, allowlisted PowerShell executor; timeout is prompted per task.
-- Prep helpers: `28` pull image, `29` health check (endpoint + model), `30` start container, `33` stop container. Prompts cover GHCR owner/tag and OLLAMA_HOST/model tag.
+- Prep helpers (devcontainer defaults: `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_MODEL_TAG=llama3-8b-local`): `28` pull image, `29` start container on 11435 with the persistent `ollama` volume (honors `OLLAMA_CPUS`/`OLLAMA_MEM`), `27` health check (endpoint + model), `33` stop, `34` stop + clear cache. Prompts cover GHCR owner/tag and OLLAMA_HOST/model tag.
 - Start the published CPU image manually if preferred:  
   `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/<ghcr-owner>/ollama-local:<tag>` (defaults `svelderrainruiz` / `cpu-latest`)
-- Pull/tag the model the tasks expect:  
+- Pull/tag the model the tasks expect or set your own `OLLAMA_MODEL_TAG` and rerun the health check (offline alternative: provide a `.ollama` bundle path to task 29 to import without pulling from registry):  
   `docker exec -it ollama-local ollama pull llama3:8b`  
   `docker exec -it ollama-local ollama cp llama3:8b llama3-8b-local`
 - Tasks:
-  - `30 Ollama: package-build (locked)` — build the VIP.
-  - `31 Ollama: source-distribution (locked)` — build the source-distribution zip.
-  - `32 Ollama: local-sd-ppl (locked)` — build PPL from the source distribution.
-- Traffic stays on `http://localhost:11435`; only the allowlisted command runs.
+  - `30 Ollama: package-build (locked)` - build the VIP.
+  - `31 Ollama: source-distribution (locked)` - build the source-distribution zip.
+  - `32 Ollama: local-sd-ppl (locked)` - build PPL from the source distribution.
+- Traffic stays on `OLLAMA_HOST` (`http://host.docker.internal:11435` in the devcontainer; use `http://localhost:11435` on the host); the executor fails fast if the host is unreachable or the model tag is empty and only the allowlisted command runs.
 
 ## CLIs and scripts
 - IntegrationEngineCli, OrchestrationCli, DevModeAgentCli, XCli: run via `scripts/common/invoke-repo-cli.ps1` or tasks.
@@ -46,5 +46,5 @@ Two-turn, allowlisted PowerShell executor; timeout is prompted per task.
 
 ## Notes
 - VIPM missing? Dependency task will fail and LVAddon build writes `vipm-skipped-placeholder.vip`; install VIPM, remove the placeholder, rerun task 02.
-- Tooling cache is tiered (worktree → source → cache → publish). Use task 18 to clear a specific `<CLI>/<version>/<rid>`; task 19 exercises probe behavior.
-- Devcontainer (Ollama bench): `.devcontainer/` adds Docker CLI, host Docker socket mount, and an Ollama model cache volume; good for dotnet tooling and Ollama/executor iteration. LabVIEW/VIPM builds remain Windows-only. Defaults: `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-latest`, `OLLAMA_MODEL_TAG=llama3-8b-local`.
+- Tooling cache is tiered (worktree -> source -> cache -> publish). Use task 18 to clear a specific `<CLI>/<version>/<rid>`; task 19 exercises probe behavior.
+- Devcontainer (Ollama bench): `.devcontainer/` adds Docker CLI, host Docker socket mount, and an Ollama model cache volume; helper scripts fail fast if the socket is missing or Docker Desktop is stopped. LabVIEW/VIPM builds remain Windows-only. Defaults: `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-latest`, `OLLAMA_MODEL_TAG=llama3-8b-local`. Set `OLLAMA_CPUS`/`OLLAMA_MEM` to cap the Ollama container when using task 29.

@@ -1,16 +1,25 @@
 [CmdletBinding()]
 param(
-    [string]$Host = $env:OLLAMA_HOST,
-    [string]$ModelTag = $env:OLLAMA_MODEL_TAG
+    [Alias('Host')]
+    [string]$Endpoint = $env:OLLAMA_HOST,
+    [string]$ModelTag = $env:OLLAMA_MODEL_TAG,
+    [switch]$RequireModelTag
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-if ([string]::IsNullOrWhiteSpace($Host)) { $Host = "http://localhost:11435" }
-if ([string]::IsNullOrWhiteSpace($ModelTag)) { $ModelTag = "llama3-8b-local" }
+if ([string]::IsNullOrWhiteSpace($Endpoint)) {
+    $Endpoint = "http://localhost:11435"
+}
+if ($RequireModelTag -and [string]::IsNullOrWhiteSpace($ModelTag)) {
+    throw "OLLAMA_MODEL_TAG is missing. Set the env var or pass -ModelTag."
+}
+if ([string]::IsNullOrWhiteSpace($ModelTag)) {
+    $ModelTag = "llama3-8b-local"
+}
 
-$uri = "$($Host.TrimEnd('/'))/api/tags"
+$uri = "$($Endpoint.TrimEnd('/'))/api/tags"
 Write-Host "Checking Ollama endpoint at $uri for model '$ModelTag'"
 
 try {
@@ -30,4 +39,4 @@ if (-not $found) {
     throw "Model '$ModelTag' not found. Available: $available"
 }
 
-Write-Host "OK: Model '$ModelTag' is available at $Host"
+Write-Host "OK: Model '$ModelTag' is available at $Endpoint"

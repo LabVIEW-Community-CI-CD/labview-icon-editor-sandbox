@@ -10,13 +10,15 @@
     -MaxTurns 10
 
 .NOTES
-  - Ollama must be running at http://localhost:11435
+  - Ollama must be reachable at OLLAMA_HOST (defaults to http://localhost:11435)
   - Commands are executed with PowerShell from RepoPath
   - Ollama responses must be JSON: {"run":"<cmd>"} or {"done":true,"summary":"..."}
 #>
 [CmdletBinding()]
 param(
-    [string]$Model = "llama3-8b-local",
+    [Alias('Host')]
+    [string]$Endpoint = $env:OLLAMA_HOST,
+    [string]$Model = $env:OLLAMA_MODEL_TAG,
     [string]$RepoPath = ".",
     [string]$Goal = "Build Source Distribution LV2025 64-bit",
     [int]$MaxTurns = 10,
@@ -29,6 +31,16 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $repoFull = (Resolve-Path -LiteralPath $RepoPath).Path
+$ollamaHost = if ([string]::IsNullOrWhiteSpace($Endpoint)) { "http://localhost:11435" } else { $Endpoint }
+if ([string]::IsNullOrWhiteSpace($Model)) { throw "Model tag is required. Set OLLAMA_MODEL_TAG or pass -Model." }
+
+$healthParams = @{
+    Host            = $ollamaHost
+    ModelTag        = $Model
+    RequireModelTag = $true
+}
+& "$PSScriptRoot/check-ollama-endpoint.ps1" @healthParams
+Write-Host ("Executor targeting {0} with model {1}" -f $ollamaHost, $Model)
 
 $systemPrompt = @"
 You are an executor agent. Always respond with JSON only.
@@ -77,7 +89,7 @@ function Invoke-Ollama {
         messages = $Msgs
         stream   = $false
     } | ConvertTo-Json -Depth 6
-    return Invoke-RestMethod -Uri "http://localhost:11435/api/chat" -Method Post -ContentType "application/json" -Body $body
+    return Invoke-RestMethod -Uri "$($ollamaHost.TrimEnd('/'))/api/chat" -Method Post -ContentType "application/json" -Body $body
 }
 
 for ($turn = 1; $turn -le $MaxTurns; $turn++) {
