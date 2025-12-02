@@ -15,6 +15,7 @@ internal static class Program
     private const int ExitTimeout = 3;
     private const int ExitModelMissing = 4;
     private const int ExitSizeExceeded = 5;
+    private const int ExitEmptyResponse = 6;
 
     private sealed record ChatMessage(string Role, string Content);
 
@@ -34,7 +35,10 @@ internal static class Program
         IReadOnlyList<ChatMessage>? Messages,
         int MaxBytes,
         string? StopToken,
-        string? OutputPath);
+        string? OutputPath,
+        int ExpectStatus,
+        bool ExitOnEmpty,
+        bool Trace);
 
     private static int Main(string[] args)
     {
@@ -117,7 +121,7 @@ internal static class Program
             return await RunStreamAsync(client, uri, payloadString, opts, sw);
         }
 
-        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payloadString), stream: false, opts.Retries, opts.RetryDelayMs);
+        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payloadString), stream: false, opts.Retries, opts.RetryDelayMs, opts.Trace);
         if (timedOut)
         {
             Console.Error.WriteLine("fail: request timed out");
@@ -145,8 +149,18 @@ internal static class Program
             }
             return ExitHttpError;
         }
+        if (opts.ExpectStatus > 0 && (int)response.StatusCode != opts.ExpectStatus)
+        {
+            Console.Error.WriteLine($"fail: expected status {opts.ExpectStatus}, got {(int)response.StatusCode}");
+            return ExitHttpError;
+        }
 
         var text = ExtractResponseText(body);
+        if (opts.ExitOnEmpty && string.IsNullOrWhiteSpace(text))
+        {
+            Console.Error.WriteLine("fail: empty response");
+            return ExitEmptyResponse;
+        }
         if (opts.Format.Equals("text", StringComparison.OrdinalIgnoreCase))
         {
             Console.WriteLine(text);
@@ -173,7 +187,7 @@ internal static class Program
 
     private static async Task<int> RunEmbedAsync(HttpClient client, Uri uri, string payload, Options opts, Stopwatch sw)
     {
-        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payload), stream: false, opts.Retries, opts.RetryDelayMs);
+        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payload), stream: false, opts.Retries, opts.RetryDelayMs, opts.Trace);
         if (timedOut)
         {
             Console.Error.WriteLine("fail: request timed out");
@@ -199,6 +213,11 @@ internal static class Program
             {
                 Console.Error.WriteLine(body);
             }
+            return ExitHttpError;
+        }
+        if (opts.ExpectStatus > 0 && (int)response.StatusCode != opts.ExpectStatus)
+        {
+            Console.Error.WriteLine($"fail: expected status {opts.ExpectStatus}, got {(int)response.StatusCode}");
             return ExitHttpError;
         }
 
@@ -247,7 +266,7 @@ internal static class Program
 
     private static async Task<int> RunStreamAsync(HttpClient client, Uri uri, string payload, Options opts, Stopwatch sw)
     {
-        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payload), stream: true, opts.Retries, opts.RetryDelayMs);
+        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payload), stream: true, opts.Retries, opts.RetryDelayMs, opts.Trace);
         if (timedOut)
         {
             Console.Error.WriteLine("fail: request timed out");
@@ -270,6 +289,11 @@ internal static class Program
             {
                 Console.Error.WriteLine(errBody);
             }
+            return ExitHttpError;
+        }
+        if (opts.ExpectStatus > 0 && (int)response.StatusCode != opts.ExpectStatus)
+        {
+            Console.Error.WriteLine($"fail: expected status {opts.ExpectStatus}, got {(int)response.StatusCode}");
             return ExitHttpError;
         }
 
@@ -305,9 +329,15 @@ internal static class Program
 
         var elapsed = sw.ElapsedMilliseconds;
         Console.WriteLine(); // end streamed tokens
+        var streamedText = sb.ToString();
+        if (opts.ExitOnEmpty && string.IsNullOrWhiteSpace(streamedText))
+        {
+            Console.Error.WriteLine("fail: empty response");
+            return ExitEmptyResponse;
+        }
         if (opts.Format.Equals("text", StringComparison.OrdinalIgnoreCase))
         {
-            WriteOutput(opts.OutputPath, sb.ToString());
+            WriteOutput(opts.OutputPath, streamedText);
             return 0;
         }
 
@@ -319,7 +349,7 @@ internal static class Program
             mode = opts.Mode,
             stream = true,
             elapsedMs = elapsed,
-            response = sb.ToString()
+            response = streamedText
         };
         var jsonOut = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
         Console.WriteLine(jsonOut);
@@ -339,7 +369,8 @@ internal static class Program
         Func<HttpRequestMessage> requestFactory,
         bool stream,
         int retries,
-        int retryDelayMs)
+        int retryDelayMs,
+        bool trace)
     {
         HttpResponseMessage? resp = null;
         for (var attempt = 0; attempt <= retries; attempt++)
@@ -348,7 +379,13 @@ internal static class Program
             var req = requestFactory();
             try
             {
+                var attemptSw = Stopwatch.StartNew();
                 resp = await client.SendAsync(req, stream ? HttpCompletionOption.ResponseHeadersRead : HttpCompletionOption.ResponseContentRead);
+                attemptSw.Stop();
+                if (trace)
+                {
+                    Console.WriteLine($"[trace] attempt {attempt} status={(int)resp.StatusCode} elapsedMs={attemptSw.ElapsedMilliseconds}");
+                }
                 if ((int)resp.StatusCode >= 500 && attempt < retries)
                 {
                     await Task.Delay(Math.Max(0, retryDelayMs));
@@ -478,6 +515,27 @@ internal static class Program
         }
     }
 
+    private static List<ChatMessage> LoadMessagesFromBase64(string base64)
+    {
+        var text = DecodeBase64(base64);
+        var tmp = Path.GetTempFileName();
+        File.WriteAllText(tmp, text);
+        try
+        {
+            return LoadMessagesFromFile(tmp);
+        }
+        finally
+        {
+            try { File.Delete(tmp); } catch { }
+        }
+    }
+
+    private static string DecodeBase64(string data)
+    {
+        var bytes = Convert.FromBase64String(data);
+        return Encoding.UTF8.GetString(bytes);
+    }
+
     private static double[]? ExtractEmbedding(JsonElement root)
     {
         if (root.ValueKind != JsonValueKind.Object) return null;
@@ -546,6 +604,11 @@ internal static class Program
         var maxBytes = 0;
         string? stopToken = null;
         string? outputPath = null;
+        int expectStatus = 0;
+        var exitOnEmpty = false;
+        var trace = false;
+        string? promptBase64 = null;
+        string? messagesBase64 = null;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -614,8 +677,15 @@ internal static class Program
                 case "--prompt-file":
                     promptFile = Next(args, ref i, arg);
                     break;
+                case "--prompt-base64":
+                    promptBase64 = Next(args, ref i, arg);
+                    break;
                 case "--messages-file":
                     messagesFile = Next(args, ref i, arg);
+                    mode = "chat";
+                    break;
+                case "--messages-base64":
+                    messagesBase64 = Next(args, ref i, arg);
                     mode = "chat";
                     break;
                 case "--max-bytes":
@@ -631,6 +701,19 @@ internal static class Program
                 case "--output":
                     outputPath = Next(args, ref i, arg);
                     break;
+                case "--expect-status":
+                    var rawExpect = Next(args, ref i, arg);
+                    if (!int.TryParse(rawExpect, out expectStatus) || expectStatus <= 0)
+                    {
+                        throw new ArgumentException($"Invalid expect-status: {rawExpect}");
+                    }
+                    break;
+                case "--exit-on-empty":
+                    exitOnEmpty = true;
+                    break;
+                case "--trace":
+                    trace = true;
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -645,12 +728,20 @@ internal static class Program
         {
             prompt = File.ReadAllText(promptFile);
         }
+        if (!string.IsNullOrWhiteSpace(promptBase64))
+        {
+            prompt = DecodeBase64(promptBase64);
+        }
         if (!string.IsNullOrWhiteSpace(messagesFile))
         {
             messages = LoadMessagesFromFile(messagesFile);
         }
+        if (!string.IsNullOrWhiteSpace(messagesBase64))
+        {
+            messages = LoadMessagesFromBase64(messagesBase64);
+        }
 
-        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages, maxBytes, stopToken, outputPath);
+        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages, maxBytes, stopToken, outputPath, expectStatus, exitOnEmpty, trace);
     }
 
     private static string Next(string[] args, ref int index, string name)
