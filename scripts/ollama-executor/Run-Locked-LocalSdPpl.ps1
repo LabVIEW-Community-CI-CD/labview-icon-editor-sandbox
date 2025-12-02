@@ -12,7 +12,7 @@ param(
 
 $pplCmd = "pwsh -NoProfile -File scripts/orchestration/Run-LocalSd-Ppl.ps1 -Repo . -RunKey local-sd-ppl -PwshTimeoutSec $PwshTimeoutSec"
 $allowedRuns = @($pplCmd)
-$goal = "Respond ONLY with JSON: send exactly {\"run\":\"$pplCmd\"} and then {\"done\":true}."
+$goal = 'Respond ONLY with JSON: send exactly {"run":"' + $pplCmd + '"} and then {"done":true}.'
 
 $params = @{
     Model                 = $Model

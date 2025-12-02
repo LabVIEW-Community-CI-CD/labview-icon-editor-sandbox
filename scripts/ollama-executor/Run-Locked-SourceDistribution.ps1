@@ -12,7 +12,7 @@ param(
 
 $sdCmd = "pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64 -PwshTimeoutSec $PwshTimeoutSec"
 $allowedRuns = @($sdCmd)
-$goal = "Respond ONLY with JSON: send exactly {\"run\":\"$sdCmd\"} and then {\"done\":true}."
+$goal = 'Respond ONLY with JSON: send exactly {"run":"' + $sdCmd + '"} and then {"done":true}.'
 
 $params = @{
     Model                 = $Model
