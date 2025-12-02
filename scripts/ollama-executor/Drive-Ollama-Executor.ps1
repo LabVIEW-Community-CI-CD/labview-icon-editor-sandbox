@@ -42,6 +42,26 @@ $messages = @(
     @{ role = "user"; content = "Goal: $Goal" }
 )
 
+function Test-CommandAllowed {
+    param([string]$Command)
+    # Allow only repo scripts invoked via pwsh -NoProfile -File scripts/...
+    $allowedPattern = '^pwsh\s+-NoProfile\s+-File\s+scripts[\\/][\w\-.\\/]+\.ps1\b'
+    if (-not ($Command -match $allowedPattern)) {
+        return "Rejected: command must start with 'pwsh -NoProfile -File scripts/...ps1'"
+    }
+
+    # Forbid dangerous tokens
+    $forbidden = @('rm ', 'del ', 'Remove-Item', 'Format-',
+                   'Invoke-WebRequest', 'curl ', 'Start-Process', 'shutdown', 'reg ', 'sc ',
+                   '..\')
+    foreach ($tok in $forbidden) {
+        if ($Command -like "*$tok*") {
+            return "Rejected: contains forbidden token '$tok'"
+        }
+    }
+    return $null
+}
+
 function Invoke-Ollama {
     param([array]$Msgs)
     $body = @{
@@ -78,6 +98,13 @@ for ($turn = 1; $turn -le $MaxTurns; $turn++) {
 
     $cmd = $action.run
     Write-Host ("[executor] Turn {0}: {1}" -f $turn, $cmd)
+
+    $vet = Test-CommandAllowed -Command $cmd
+    if ($vet) {
+        Write-Host ("[executor] {0}" -f $vet) -ForegroundColor Yellow
+        $messages += @{ role = "user"; content = ("Command vetoed: {0}" -f $vet) }
+        continue
+    }
 
     $stdoutPath = Join-Path $env:TEMP "ollama-exec-out.txt"
     $stderrPath = Join-Path $env:TEMP "ollama-exec-err.txt"
