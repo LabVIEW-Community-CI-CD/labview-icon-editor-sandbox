@@ -20,7 +20,8 @@ param(
     [string]$RepoPath = ".",
     [string]$Goal = "Build Source Distribution LV2025 64-bit",
     [int]$MaxTurns = 10,
-    [switch]$StopAfterFirstCommand
+    [switch]$StopAfterFirstCommand,
+    [string[]]$AllowedRuns = @("pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64")
 )
 
 $ErrorActionPreference = "Stop"
@@ -45,6 +46,11 @@ $messages = @(
 
 function Test-CommandAllowed {
     param([string]$Command)
+    # Hard allowlist: exact matches only (case-insensitive)
+    if ($AllowedRuns -and -not ($AllowedRuns | Where-Object { $_.ToLower() -eq $Command.ToLower() })) {
+        return "Rejected: command not in allowlist."
+    }
+
     # Allow only repo scripts invoked via pwsh -NoProfile -File scripts/...
     $allowedPattern = '^pwsh\s+-NoProfile\s+-File\s+scripts[\\/][\w\-.\\/]+\.ps1\b'
     if (-not ($Command -match $allowedPattern)) {
