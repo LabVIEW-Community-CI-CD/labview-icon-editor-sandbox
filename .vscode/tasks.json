@@ -662,8 +662,14 @@
       "command": "pwsh",
       "args": [
         "-NoProfile",
-        "-Command",
-        "& { $allowedRuns = @('pwsh -NoProfile -File scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- package-build --repo . --bitness 64 --lvlibp-bitness both --major 0 --minor 1 --patch 0 --build 1 --company LabVIEW-Community-CI-CD --author \"Local Developer\"'); $params = @{ Model = 'llama3-8b-local'; RepoPath = '${workspaceFolder}'; Goal = 'Respond ONLY with JSON: send exactly {\"run\":\"pwsh -NoProfile -File scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- package-build --repo . --bitness 64 --lvlibp-bitness both --major 0 --minor 1 --patch 0 --build 1 --company LabVIEW-Community-CI-CD --author \"Local Developer\"\"} and then {\"done\":true}.'; MaxTurns = 2; StopAfterFirstCommand = $true; AllowedRuns = $allowedRuns; CommandTimeoutSec = 60 }; & '${workspaceFolder}/scripts/ollama-executor/Drive-Ollama-Executor.ps1' @params -Verbose }"
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/Run-Locked-PackageBuild.ps1",
+        "-RepoPath",
+        "${workspaceFolder}",
+        "-Model",
+        "llama3-8b-local",
+        "-CommandTimeoutSec",
+        "60"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -678,8 +684,16 @@
       "command": "pwsh",
       "args": [
         "-NoProfile",
-        "-Command",
-        "& { $allowedRuns = @('pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64 -PwshTimeoutSec 60'); $params = @{ Model = 'llama3-8b-local'; RepoPath = '${workspaceFolder}'; Goal = 'Respond ONLY with JSON: send exactly {\"run\":\"pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64 -PwshTimeoutSec 60\"} and then {\"done\":true}.'; MaxTurns = 2; StopAfterFirstCommand = $true; AllowedRuns = $allowedRuns; CommandTimeoutSec = 60 }; & '${workspaceFolder}/scripts/ollama-executor/Drive-Ollama-Executor.ps1' @params -Verbose }"
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/Run-Locked-SourceDistribution.ps1",
+        "-RepoPath",
+        "${workspaceFolder}",
+        "-Model",
+        "llama3-8b-local",
+        "-CommandTimeoutSec",
+        "60",
+        "-PwshTimeoutSec",
+        "60"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -694,8 +708,14 @@
       "command": "pwsh",
       "args": [
         "-NoProfile",
-        "-Command",
-        "& { $allowedRuns = @('pwsh -NoProfile -File scripts/orchestration/Run-LocalSd-Ppl.ps1 -Repo . -RunKey local-sd-ppl -PwshTimeoutSec 7200'); $params = @{ Model = 'llama3-8b-local'; RepoPath = '${workspaceFolder}'; Goal = 'Respond ONLY with JSON: send exactly {\"run\":\"pwsh -NoProfile -File scripts/orchestration/Run-LocalSd-Ppl.ps1 -Repo . -RunKey local-sd-ppl -PwshTimeoutSec 7200\"} and then {\"done\":true}.'; MaxTurns = 2; StopAfterFirstCommand = $true; AllowedRuns = $allowedRuns; CommandTimeoutSec = 60 }; & '${workspaceFolder}/scripts/ollama-executor/Drive-Ollama-Executor.ps1' @params -Verbose }"
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/Run-Locked-LocalSdPpl.ps1",
+        "-RepoPath",
+        "${workspaceFolder}",
+        "-Model",
+        "llama3-8b-local",
+        "-CommandTimeoutSec",
+        "60"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
