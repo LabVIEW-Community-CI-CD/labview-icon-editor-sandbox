@@ -25,4 +25,4 @@ A Dev Container is provided in `.devcontainer/` (Dockerfile + devcontainer.json)
 - Tests (wrapper over `scripts/test/Test.ps1`):  
   `pwsh scripts/common/invoke-repo-cli.ps1 -Cli TestsCli -- --repo . --bitness both`
 - Ollama smoke (direct POST to /api/generate):  
-  `pwsh scripts/common/invoke-repo-cli.ps1 -Cli OllamaSmokeCli -- --endpoint http://localhost:11435 --model llama3-8b-local --prompt "Hello smoke"`
+  `pwsh scripts/common/invoke-repo-cli.ps1 -Cli OllamaSmokeCli -- --endpoint http://localhost:11435 --model llama3-8b-local --prompt "Hello smoke"` (add `--stream` to print tokens live)
