@@ -7,7 +7,7 @@ All C# utilities live under `Tooling/dotnet/` and target .NET 8:
 - `LvprojJsonTool` - lightweight LVPROJ JSON converter.
 - `RequirementsSummarizer` - renders summaries/tables from `docs/requirements/requirements.csv`.
 - `TestsCli` - runs `scripts/test/Test.ps1` for missing-in-project + unit tests.
-- `OllamaSmokeCli` - minimal Ollama POST to `/api/generate` (or `/api/chat` via `--chat`) for health checks.
+- `OllamaSmokeCli` - minimal Ollama POST to `/api/generate`, `/api/chat` (`--chat`), or `/api/embed` (`--embed`) for health checks.
 
 ## Dev container
 
@@ -26,4 +26,4 @@ A Dev Container is provided in `.devcontainer/` (Dockerfile + devcontainer.json)
   `pwsh scripts/common/invoke-repo-cli.ps1 -Cli TestsCli -- --repo . --bitness both`
 - Ollama smoke (direct POST to /api/generate or /api/chat):  
   `pwsh scripts/common/invoke-repo-cli.ps1 -Cli OllamaSmokeCli -- --endpoint http://localhost:11435 --model llama3-8b-local --prompt "Hello smoke"`  
-  Add `--chat` to call `/api/chat`, `--stream` to print tokens live, `--format text` to output plain text.
+  Add `--chat` to call `/api/chat`, `--embed` to call `/api/embed` (hash + length), `--stream` to print tokens live, `--format text` to output plain text.

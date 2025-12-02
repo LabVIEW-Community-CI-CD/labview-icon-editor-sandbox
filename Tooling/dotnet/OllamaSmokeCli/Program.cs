@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Linq;
 using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography;
 
 internal static class Program
 {
@@ -26,7 +28,11 @@ internal static class Program
     {
         var sw = Stopwatch.StartNew();
         var baseUri = opts.Endpoint.EndsWith("/") ? opts.Endpoint : $"{opts.Endpoint}/";
-        var path = opts.Mode.Equals("chat", StringComparison.OrdinalIgnoreCase) ? "api/chat" : "api/generate";
+        var path = opts.Mode.Equals("chat", StringComparison.OrdinalIgnoreCase)
+            ? "api/chat"
+            : opts.Mode.Equals("embed", StringComparison.OrdinalIgnoreCase)
+                ? "api/embed"
+                : "api/generate";
         var uri = new Uri(new Uri(baseUri), path);
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(opts.TimeoutSec > 0 ? opts.TimeoutSec : 30) };
@@ -37,8 +43,15 @@ internal static class Program
                 messages = new[] { new { role = "user", content = opts.Prompt } },
                 stream = opts.Stream
             })
-            : JsonSerializer.Serialize(new { model = opts.Model, prompt = opts.Prompt, stream = opts.Stream });
+            : opts.Mode.Equals("embed", StringComparison.OrdinalIgnoreCase)
+                ? JsonSerializer.Serialize(new { model = opts.Model, input = opts.Prompt })
+                : JsonSerializer.Serialize(new { model = opts.Model, prompt = opts.Prompt, stream = opts.Stream });
         using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+        if (opts.Mode.Equals("embed", StringComparison.OrdinalIgnoreCase))
+        {
+            return await RunEmbedAsync(client, uri, content, opts, sw);
+        }
 
         if (opts.Stream)
         {
@@ -76,6 +89,59 @@ internal static class Program
 
         Console.WriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
         return 0;
+    }
+
+    private static async Task<int> RunEmbedAsync(HttpClient client, Uri uri, HttpContent content, Options opts, Stopwatch sw)
+    {
+        var response = await client.PostAsync(uri, content);
+        var body = await response.Content.ReadAsStringAsync();
+        var elapsed = sw.ElapsedMilliseconds;
+
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.Error.WriteLine($"fail: status={(int)response.StatusCode} reason={response.ReasonPhrase}");
+            Console.Error.WriteLine(body);
+            return 1;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+            var vec = ExtractEmbedding(root);
+            if (vec == null || vec.Length == 0)
+            {
+                Console.Error.WriteLine("fail: embed response missing embedding data");
+                Console.Error.WriteLine(body);
+                return 1;
+            }
+
+            var hash = Sha256String(string.Join(",", vec.Select(v => v.ToString("G17"))));
+            if (opts.Format.Equals("text", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"len={vec.Length} sha256={hash}");
+                return 0;
+            }
+
+            var output = new
+            {
+                endpoint = uri.ToString(),
+                model = opts.Model,
+                prompt = opts.Prompt,
+                mode = opts.Mode,
+                elapsedMs = elapsed,
+                length = vec.Length,
+                sha256 = hash
+            };
+            Console.WriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"fail: embed parse error: {ex.Message}");
+            Console.Error.WriteLine(body);
+            return 1;
+        }
     }
 
     private static async Task<int> RunStreamAsync(HttpClient client, Uri uri, HttpContent content, Options opts, Stopwatch sw)
@@ -171,6 +237,31 @@ internal static class Program
         return string.Empty;
     }
 
+    private static double[]? ExtractEmbedding(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object) return null;
+        if (root.TryGetProperty("embedding", out var emb) && emb.ValueKind == JsonValueKind.Array)
+        {
+            return emb.EnumerateArray().Select(e => e.GetDouble()).ToArray();
+        }
+        if (root.TryGetProperty("embeddings", out var embs) && embs.ValueKind == JsonValueKind.Array)
+        {
+            var first = embs.EnumerateArray().FirstOrDefault();
+            if (first.ValueKind == JsonValueKind.Array)
+            {
+                return first.EnumerateArray().Select(e => e.GetDouble()).ToArray();
+            }
+        }
+        return null;
+    }
+
+    private static string Sha256String(string text)
+    {
+        var bytes = Encoding.UTF8.GetBytes(text);
+        var hash = SHA256.HashData(bytes);
+        return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+    }
+
     private static Options Parse(string[] args)
     {
         var endpoint = "http://localhost:11435";
@@ -219,6 +310,9 @@ internal static class Program
                         throw new ArgumentException($"Invalid format: {format} (expected json|text)");
                     }
                     break;
+                case "--embed":
+                    mode = "embed";
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -246,7 +340,7 @@ internal static class Program
     {
         Console.WriteLine("OllamaSmokeCli");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat] [--timeout-sec 30] [--stream] [--format json|text]");
-        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, generate mode, stream false, format json.");
+        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text]");
+        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json.");
     }
 }
