@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Security.Cryptography;
 using System.Collections.Generic;
+using System.Net;
 
 internal static class Program
 {
@@ -18,6 +19,7 @@ internal static class Program
     private const int ExitEmptyResponse = 6;
 
     private sealed record ChatMessage(string Role, string Content);
+    private sealed record Header(string Key, string Value);
 
     private sealed record Options(
         string Endpoint,
@@ -39,7 +41,9 @@ internal static class Program
         int ExpectStatus,
         bool ExitOnEmpty,
         bool Trace,
-        bool SkipCertCheck);
+        bool SkipCertCheck,
+        string? Proxy,
+        IReadOnlyList<Header> Headers);
 
     private static int Main(string[] args)
     {
@@ -70,6 +74,11 @@ internal static class Program
         if (opts.SkipCertCheck)
         {
             handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+        }
+        if (!string.IsNullOrWhiteSpace(opts.Proxy))
+        {
+            handler.Proxy = new WebProxy(opts.Proxy);
+            handler.UseProxy = true;
         }
         using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(opts.TimeoutSec > 0 ? opts.TimeoutSec : 30) };
 
@@ -113,7 +122,7 @@ internal static class Program
 
         if (opts.Verbose)
         {
-            Console.WriteLine($"[verbose] POST {uri} mode={opts.Mode} stream={opts.Stream} retries={opts.Retries} retryDelayMs={opts.RetryDelayMs} skipCertCheck={opts.SkipCertCheck}");
+            Console.WriteLine($"[verbose] POST {uri} mode={opts.Mode} stream={opts.Stream} retries={opts.Retries} retryDelayMs={opts.RetryDelayMs} skipCertCheck={opts.SkipCertCheck} proxy={opts.Proxy ?? "<none>"}");
             Console.WriteLine($"[verbose] payload: {payloadString}");
         }
 
@@ -127,7 +136,7 @@ internal static class Program
             return await RunStreamAsync(client, uri, payloadString, opts, sw);
         }
 
-        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payloadString), stream: false, opts.Retries, opts.RetryDelayMs, opts.Trace);
+        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payloadString, opts.Headers), stream: false, opts.Retries, opts.RetryDelayMs, opts.Trace);
         if (timedOut)
         {
             Console.Error.WriteLine("fail: request timed out");
@@ -193,7 +202,7 @@ internal static class Program
 
     private static async Task<int> RunEmbedAsync(HttpClient client, Uri uri, string payload, Options opts, Stopwatch sw)
     {
-        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payload), stream: false, opts.Retries, opts.RetryDelayMs, opts.Trace);
+        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payload, opts.Headers), stream: false, opts.Retries, opts.RetryDelayMs, opts.Trace);
         if (timedOut)
         {
             Console.Error.WriteLine("fail: request timed out");
@@ -272,7 +281,7 @@ internal static class Program
 
     private static async Task<int> RunStreamAsync(HttpClient client, Uri uri, string payload, Options opts, Stopwatch sw)
     {
-        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payload), stream: true, opts.Retries, opts.RetryDelayMs, opts.Trace);
+        var (response, timedOut) = await SendWithRetry(client, () => BuildPost(uri, payload, opts.Headers), stream: true, opts.Retries, opts.RetryDelayMs, opts.Trace);
         if (timedOut)
         {
             Console.Error.WriteLine("fail: request timed out");
@@ -363,10 +372,17 @@ internal static class Program
         return 0;
     }
 
-    private static HttpRequestMessage BuildPost(Uri uri, string payload)
+    private static HttpRequestMessage BuildPost(Uri uri, string payload, IReadOnlyList<Header> headers)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, uri);
         request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+        if (headers != null)
+        {
+            foreach (var h in headers)
+            {
+                request.Headers.TryAddWithoutValidation(h.Key, h.Value);
+            }
+        }
         return request;
     }
 
@@ -616,6 +632,8 @@ internal static class Program
         string? promptBase64 = null;
         string? messagesBase64 = null;
         var skipCertCheck = false;
+        string? proxy = null;
+        var headers = new List<Header>();
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -724,6 +742,14 @@ internal static class Program
                 case "--skip-cert-check":
                     skipCertCheck = true;
                     break;
+                case "--proxy":
+                    proxy = Next(args, ref i, arg);
+                    break;
+                case "--header":
+                    var rawHeader = Next(args, ref i, arg);
+                    var parsedHeader = ParseHeader(rawHeader);
+                    headers.Add(parsedHeader);
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -751,7 +777,7 @@ internal static class Program
             messages = LoadMessagesFromBase64(messagesBase64);
         }
 
-        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages, maxBytes, stopToken, outputPath, expectStatus, exitOnEmpty, trace, skipCertCheck);
+        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages, maxBytes, stopToken, outputPath, expectStatus, exitOnEmpty, trace, skipCertCheck, proxy, headers);
     }
 
     private static string Next(string[] args, ref int index, string name)
@@ -764,11 +790,21 @@ internal static class Program
         return args[index];
     }
 
+    private static Header ParseHeader(string raw)
+    {
+        var parts = raw.Split(new[] { ':', '=' }, 2, StringSplitOptions.TrimEntries);
+        if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
+        {
+            throw new ArgumentException($"Invalid header '{raw}', expected key:value");
+        }
+        return new Header(parts[0], parts[1]);
+    }
+
     private static void PrintUsage()
     {
         Console.WriteLine("OllamaSmokeCli");
         Console.WriteLine("Usage:");
         Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000] [--verbose] [--save-body <path>] [--prompt-file <path>] [--prompt-base64 <b64>] [--messages-file <path>] [--messages-base64 <b64>] [--max-bytes N] [--stop <token>] [--expect-status N] [--exit-on-empty] [--trace] [--skip-cert-check] [--output <path>]");
-        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json, retries 0, retry delay 1000ms, verbose off, no max-bytes, no stop token, no expect-status, no trace, cert check enforced.");
+        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json, retries 0, retry delay 1000ms, verbose off, no max-bytes, no stop token, no expect-status, no trace, cert check enforced, no proxy, no headers.");
     }
 }
