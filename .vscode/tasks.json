@@ -1134,13 +1134,13 @@
     {
       "id": "ollamaBundleUrl",
       "type": "promptString",
-      "description": "URL to llama3-8b-local .ollama bundle for preloaded image",
+      "description": "Optional URL to llama3-8b-local .ollama bundle for preloaded image (leave blank to pull)",
       "default": ""
     },
     {
       "id": "ollamaBundleSha",
       "type": "promptString",
-      "description": "SHA256 for the .ollama bundle",
+      "description": "Optional SHA256 for the .ollama bundle (used when URL is provided)",
       "default": ""
     },
     {
