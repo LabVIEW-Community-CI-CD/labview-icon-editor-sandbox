@@ -28,7 +28,11 @@ param(
 
     [string]$CommitIndexPath,
 
-    [switch]$VerboseGit
+    [switch]$VerboseGit,
+
+    [switch]$SkipAssetIsolation,
+
+    [string]$OverrideOutputRoot
 )
 
 $ErrorActionPreference = 'Stop'
@@ -440,7 +444,9 @@ $isolationTargets = @(
     Join-Path $lvRootIsolation 'resource\\plugins\\NIIconEditor'
     Join-Path $lvRootIsolation 'vi.lib\\LabVIEW Icon API'
 )
-Disable-LabVIEWAssets -Paths $isolationTargets
+if (-not $SkipAssetIsolation) {
+    Disable-LabVIEWAssets -Paths $isolationTargets
+}
 
 try {
 # Build the Icon API Source Distribution
@@ -477,11 +483,45 @@ Write-Stamp -Level "INFO" -Message "Build spec succeeded (pre-manifest/zip); loc
 
 }
 finally {
-    Restore-LabVIEWAssets
+    if (-not $SkipAssetIsolation) {
+        Restore-LabVIEWAssets
+    }
 }
 
-$distRoot = Get-DistRoot -Repo $repoRoot
+$distRoot = if ($OverrideOutputRoot) { $OverrideOutputRoot } else { Get-DistRoot -Repo $repoRoot }
 Write-Stamp -Level "INFO" -Message ("Using Source Distribution folder: {0}" -f $distRoot)
+
+# Copy supporting tooling (task schema + vi-history replay helpers) into the SD payload for post-extraction tasks.
+$supportFiles = @(
+    @{ Source = Join-Path $repoRoot 'configs/vscode/task-schema.sample.json'; Dest = Join-Path $distRoot 'configs/vscode/task-schema.sample.json'; Label = 'task-schema' },
+    @{ Source = Join-Path $repoRoot 'configs/vi-compare-run-request.sample.json'; Dest = Join-Path $distRoot 'configs/vi-compare-run-request.sample.json'; Label = 'vi-compare-request (sample)' },
+    @{ Source = Join-Path $repoRoot 'configs/vi-compare-run-request.failure.json'; Dest = Join-Path $distRoot 'configs/vi-compare-run-request.failure.json'; Label = 'vi-compare-request (failure)' },
+    @{ Source = Join-Path $repoRoot 'configs/vi-compare-run-request.disabled.json'; Dest = Join-Path $distRoot 'configs/vi-compare-run-request.disabled.json'; Label = 'vi-compare-request (disabled)' },
+    @{ Source = Join-Path $repoRoot 'scripts/vi-compare/run-vi-history-suite-sd.ps1'; Dest = Join-Path $distRoot 'scripts/vi-compare/run-vi-history-suite-sd.ps1'; Label = 'vi-history-suite-sd' },
+    @{ Source = Join-Path $repoRoot 'scripts/vi-compare/RunViCompareReplay.ps1'; Dest = Join-Path $distRoot 'scripts/vi-compare/RunViCompareReplay.ps1'; Label = 'vi-history-replay' }
+)
+foreach ($item in $supportFiles) {
+    if (-not (Test-Path -LiteralPath $item.Source -PathType Leaf)) {
+        Write-Warning ("[support] Missing {0}; skipping copy from {1}" -f $item.Label, $item.Source)
+        continue
+    }
+    $destDir = Split-Path -Parent $item.Dest
+    if (-not (Test-Path -LiteralPath $destDir)) {
+        New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+    }
+    Copy-Item -LiteralPath $item.Source -Destination $item.Dest -Force
+    Write-Stamp -Level "INFO" -Message ("[support] Copied {0} -> {1}" -f (Get-RelativePathSafe -Base $repoRoot -Target $item.Source), (Get-RelativePathSafe -Base $repoRoot -Target $item.Dest))
+}
+
+# Ensure the project file is present for downstream PPL-from-SD builds.
+$projectPath = Join-Path $repoRoot 'lv_icon_editor.lvproj'
+if (Test-Path -LiteralPath $projectPath -PathType Leaf) {
+    Copy-Item -LiteralPath $projectPath -Destination (Join-Path $distRoot 'lv_icon_editor.lvproj') -Force
+    Write-Stamp -Level "INFO" -Message "[support] Copied lv_icon_editor.lvproj into Source Distribution payload"
+}
+else {
+    Write-Warning "[support] lv_icon_editor.lvproj not found; PPL-from-SD runs may fail."
+}
 
 # Create manifest
 $manifestPath = Join-Path $distRoot 'manifest.json'
@@ -597,7 +637,19 @@ $allowedPrefixes = @(
     'Test/Unit tests/',
     'Program Files/National Instruments/'
 )
-$generatedFiles = @('manifest.json', 'manifest.csv', 'icon-api-manifest.json', 'icon-api.zip')
+$generatedFiles = @(
+    'manifest.json',
+    'manifest.csv',
+    'icon-api-manifest.json',
+    'icon-api.zip',
+    'configs/vscode/task-schema.sample.json',
+    'configs/vi-compare-run-request.sample.json',
+    'configs/vi-compare-run-request.failure.json',
+    'configs/vi-compare-run-request.disabled.json',
+    'scripts/vi-compare/run-vi-history-suite-sd.ps1',
+    'scripts/vi-compare/RunViCompareReplay.ps1',
+    'lv_icon_editor.lvproj'
+)
 $nonAllowed = @($manifest | Where-Object {
     $p = $_.path
     if ($generatedFiles -contains $p) { return $false }

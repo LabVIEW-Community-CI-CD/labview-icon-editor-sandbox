@@ -1,6 +1,4 @@
-# Minimal image for testing local-sd lock/run-key coordination (no LabVIEW).
-# Relies on mounting the repo into /workspace and using ORCH_SKIP_LOCAL_SD_BUILD=1.
-
+# Minimal image for consuming the SD handshake (lock/run-key) via OrchestrationCli inside Docker Desktop.
 FROM mcr.microsoft.com/dotnet/sdk:8.0
 
 RUN apt-get update \
@@ -13,7 +11,5 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Copy published OrchestrationCli binaries (host publishes into build context before docker build)
+# Publish the Linux OrchestrationCli binary into /app before building.
 COPY OrchestrationCli/ /app/
-
-ENTRYPOINT ["/app/OrchestrationCli"]

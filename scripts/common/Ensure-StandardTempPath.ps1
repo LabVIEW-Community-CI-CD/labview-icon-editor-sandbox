@@ -33,25 +33,70 @@ function New-TempDir {
     }
 }
 
+function Get-OneDriveRoots {
+    $roots = @()
+    foreach ($envVar in @('OneDrive', 'OneDriveCommercial', 'OneDriveConsumer')) {
+        $val = Get-Item -Path Env:$envVar -ErrorAction SilentlyContinue
+        if ($val -and $val.Value) {
+            try {
+                $roots += (Resolve-Path -LiteralPath $val.Value -ErrorAction Stop).Path
+            }
+            catch {
+                $roots += $val.Value
+            }
+        }
+    }
+    return $roots | Where-Object { $_ } | Sort-Object -Unique
+}
+
+function Is-OneDrivePath {
+    param([string]$Path,[string[]]$KnownRoots)
+    if (-not $Path) { return $false }
+    $normalized = $Path.Replace('/', '\').ToLowerInvariant()
+    foreach ($root in $KnownRoots) {
+        if (-not $root) { continue }
+        $rootNorm = $root.Replace('/', '\').ToLowerInvariant().TrimEnd('\')
+        if ($normalized.StartsWith($rootNorm + '\', [StringComparison]::OrdinalIgnoreCase) -or $normalized -eq $rootNorm) {
+            return $true
+        }
+    }
+    return $normalized -like '*\onedrive\*'
+}
+
 function Ensure-StandardTempPath {
     param([string]$Label = 'labview-icon-editor')
-    $base = $null
-    if ($IsWindows) {
-        $base = if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA 'Temp' } else { $env:TEMP }
-    } else {
-        $base = '/tmp'
-    }
+    $created = $null
+    $baseChosen = $null
+    $oneDriveRoots = Get-OneDriveRoots
 
-    $target = if ($base) { Join-Path $base $Label } else { $null }
-    $created = New-TempDir -Path $target
+    if ($IsWindows) {
+        $candidates = New-Object System.Collections.Generic.List[string]
+        if ($env:LOCALAPPDATA) { $candidates.Add((Join-Path $env:LOCALAPPDATA 'Temp')) }
+        if ($env:TEMP) { $candidates.Add($env:TEMP) }
+        if ($env:TMP) { $candidates.Add($env:TMP) }
+        $candidates.Add('C:\Temp')
+
+        foreach ($cand in $candidates) {
+            if (-not $cand) { continue }
+            if (Is-OneDrivePath -Path $cand -KnownRoots $oneDriveRoots) { continue }
+            $target = Join-Path $cand $Label
+            $created = New-TempDir -Path $target
+            if ($created) { $baseChosen = $cand; break }
+        }
+    }
+    else {
+        $created = New-TempDir -Path (Join-Path '/tmp' $Label)
+        $baseChosen = '/tmp'
+    }
 
     if (-not $created) {
         $fallback = Join-Path (Get-Location).Path (Join-Path '.tmp' $Label)
         $created = New-TempDir -Path $fallback
+        $baseChosen = $fallback
     }
 
     if (-not $created) {
-        throw "Failed to create a writable temp directory for label '$Label'. Checked base '$base' and repo-local fallback."
+        throw "Failed to create a writable temp directory for label '$Label'."
     }
 
     if ($IsWindows) {
@@ -61,7 +106,12 @@ function Ensure-StandardTempPath {
         $env:TMPDIR = $created
     }
 
-    Write-Host ("[temp] Using temp directory: {0}" -f $created)
+    if (Is-OneDrivePath -Path $baseChosen -KnownRoots $oneDriveRoots) {
+        Write-Host ("[temp] Avoided OneDrive; using fallback temp directory: {0}" -f $created)
+    }
+    else {
+        Write-Host ("[temp] Using temp directory: {0}" -f $created)
+    }
     return $created
 }
 

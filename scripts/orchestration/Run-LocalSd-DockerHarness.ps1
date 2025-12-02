@@ -17,11 +17,11 @@ function Publish-OrchestrationCli {
     $proj = Join-Path $RepoRoot "Tooling/dotnet/OrchestrationCli/OrchestrationCli.csproj"
     $out = Join-Path $RepoRoot "builds/docker/OrchestrationCli"
     if (Test-Path $out) { Remove-Item -Recurse -Force $out }
-    dotnet publish $proj -c Release -r linux-x64 --self-contained false -o $out
+    dotnet publish $proj -c Release -r linux-x64 --self-contained false -o $out | Out-Null
     return $out
 }
 
-$repoRoot = Resolve-Path $Repo
+$repoRoot = (Resolve-Path $Repo).ProviderPath
 Write-Host "Repo: $repoRoot"
 
 # Clean lock/artifacts for a fresh run
@@ -39,21 +39,23 @@ Copy-Item -Path (Join-Path $repoRoot "Tooling/docker/local-sd-lock/Dockerfile") 
 
 Push-Location $dockerContext
 docker build -t $ImageName .
+if ($LASTEXITCODE -ne 0) { throw "docker build failed with exit code $LASTEXITCODE" }
 Pop-Location
 
 function Run-LocalSdContainer {
-    param([string]$runKey,[switch]$Force)
-    $envs = @(
-        "ORCH_SKIP_LOCAL_SD_BUILD=1",
-        "ORCH_RUN_KEY=$runKey"
-    )
+    param([string]$runKey,[switch]$Force,[switch]$KeepLock)
+    $envs = @("ORCH_SKIP_LOCAL_SD_BUILD=1", "ORCH_RUN_KEY=$runKey")
     if ($Force) { $envs += "ORCH_FORCE=1" }
-    docker run --rm -v "$repoRoot:/workspace" -w /workspace --env $envs $ImageName local-sd --repo /workspace --run-key $runKey
-    return $LASTEXITCODE
+    if ($KeepLock) { $envs += "ORCH_KEEP_LOCK=1" }
+    $envArgs = @()
+    foreach ($envVar in $envs) { $envArgs += @("--env", $envVar) }
+    docker run --rm -v "${repoRoot}:/workspace" -w /workspace $envArgs $ImageName local-sd --repo /workspace --run-key $runKey | Out-Host
+    $code = $LASTEXITCODE
+    return $code
 }
 
-Write-Host "Running container A ($RunKeyA)..."
-$exitA = Run-LocalSdContainer -runKey $RunKeyA
+Write-Host "Running container A ($RunKeyA) (keeps lock)..."
+$exitA = Run-LocalSdContainer -runKey $RunKeyA -KeepLock
 Write-Host "Exit A: $exitA"
 
 Write-Host "Running container B ($RunKeyB) expecting busy..."

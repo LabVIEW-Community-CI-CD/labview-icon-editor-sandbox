@@ -34,7 +34,8 @@ param(
     [int]$Major = 0,
     [int]$Minor = 1,
     [int]$Patch = 0,
-    [int]$Build = 0
+    [int]$Build = 0,
+    [switch]$UseExistingExtract
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,13 +53,19 @@ if (-not $ExtractRoot) {
     $stamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
     $ExtractRoot = Join-Path $repo "builds\ppl-from-sd\$stamp"
 }
-if (Test-Path -LiteralPath $ExtractRoot) {
-    Remove-Item -LiteralPath $ExtractRoot -Recurse -Force
-}
-New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
 
-Write-Host ("[ppl-sd] Extracting {0} -> {1}" -f $SourceDistZip, $ExtractRoot)
-Expand-Archive -LiteralPath $SourceDistZip -DestinationPath $ExtractRoot -Force
+$skipExtract = $UseExistingExtract.IsPresent -and (Test-Path -LiteralPath $ExtractRoot -PathType Container) -and (Test-Path -LiteralPath (Join-Path $ExtractRoot 'lv_icon_editor.lvproj'))
+if ($skipExtract) {
+    Write-Host ("[ppl-sd] Reusing existing extract at {0}" -f $ExtractRoot)
+}
+else {
+    if (Test-Path -LiteralPath $ExtractRoot) {
+        Remove-Item -LiteralPath $ExtractRoot -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+    Write-Host ("[ppl-sd] Extracting {0} -> {1}" -f $SourceDistZip, $ExtractRoot)
+    Expand-Archive -LiteralPath $SourceDistZip -DestinationPath $ExtractRoot -Force
+}
 
 # Locate extracted root that contains lv_icon_editor.lvproj
 $candidateRoots = @($ExtractRoot) + (Get-ChildItem -Path $ExtractRoot -Directory -Recurse -Depth 2 | Select-Object -ExpandProperty FullName)

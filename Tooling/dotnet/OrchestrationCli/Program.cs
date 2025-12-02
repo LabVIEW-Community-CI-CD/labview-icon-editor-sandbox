@@ -221,6 +221,8 @@ public static class Program
         var lockPath = string.IsNullOrWhiteSpace(opts.LockPath) ? Path.Combine(repo, ".locks", "orchestration.lock") : opts.LockPath!;
         var lockTtlSec = opts.LockTtlSec > 0 ? opts.LockTtlSec : 900;
         var force = opts.ForceLock;
+        var keepLock = string.Equals(Environment.GetEnvironmentVariable("ORCH_KEEP_LOCK"), "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Environment.GetEnvironmentVariable("ORCH_KEEP_LOCK"), "true", StringComparison.OrdinalIgnoreCase);
 
         log($"[local-sd] runKey={runKey} lock={lockPath} ttl={lockTtlSec}s force={force}");
 
@@ -231,18 +233,23 @@ public static class Program
 
         try
         {
-        var stepDefs = new List<object>
+        var stepDefs = new List<(string Name, string[] Args)>();
+        if (opts.SkipLocalSdBuild)
         {
-            new { Name = "prereq", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/setup-runner/Verify-RunnerPrereqs.ps1" } },
-            new { Name = "commit-index-sd", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/New-CommitIndex.ps1", "-RepositoryPath", repo, "-OutputPath", "artifacts/commit-index-sd/commit-index.json", "-CsvOutputPath", "artifacts/commit-index-sd/commit-index.csv", "-AllowDirty" } },
-            new { Name = "commit-index-tooling", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/New-CommitIndex.ps1", "-RepositoryPath", repo, "-IncludePaths", ".vscode,configs,scenarios,runner_dependencies.vipc,scripts,Tooling,Tooling/x-cli/src/XCli,Tooling/x-cli/src/Telemetry", "-OutputPath", "artifacts/commit-index-tooling/tooling-commit-index.json", "-CsvOutputPath", "artifacts/commit-index-tooling/tooling-commit-index.csv", "-AllowDirty" } },
-        };
-        if (!opts.SkipLocalSdBuild)
-        {
-            stepDefs.Add(new { Name = "build-sd", Args = new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/Build_Source_Distribution.ps1", "-RepositoryPath", repo, "-CommitIndexPath", "artifacts/commit-index-sd/commit-index.json" } });
+            stepDefs.Add(("prepare-artifacts", new [] { "-NoProfile", "-Command", "New-Item -ItemType Directory -Path artifacts -Force | Out-Null; 'local-sd skip-local-sd-build=1 (lock harness)' | Set-Content artifacts/lock-harness.txt" }));
         }
-        stepDefs.Add(new { Name = "hash-artifacts", Args = new [] { "-NoProfile", "-Command", "$root='artifacts'; $files = Get-ChildItem -Path $root -Recurse -File; if (-not $files) { throw 'No artifacts to hash' } $out=@(); foreach ($f in $files) { $h = Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256; $out += ('{0}  {1}' -f $h.Hash, $h.Path) }; $out | Set-Content artifacts/sha256.txt" } });
-        stepDefs.Add(new { Name = "stage-run", Args = new [] { "-NoProfile", "-Command", $"$runKey='{runKey}'; $dst=Join-Path 'builds-isolated' $runKey; New-Item -ItemType Directory -Path $dst -Force | Out-Null; Copy-Item -Path 'artifacts' -Destination $dst -Recurse -Force; Write-Host \"Staged artifacts under $dst\"" } });
+        else
+        {
+            stepDefs.Add(("prereq", new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/setup-runner/Verify-RunnerPrereqs.ps1" }));
+            stepDefs.Add(("commit-index-sd", new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/New-CommitIndex.ps1", "-RepositoryPath", repo, "-OutputPath", "artifacts/commit-index-sd/commit-index.json", "-CsvOutputPath", "artifacts/commit-index-sd/commit-index.csv", "-AllowDirty" }));
+            stepDefs.Add(("commit-index-tooling", new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/New-CommitIndex.ps1", "-RepositoryPath", repo, "-IncludePaths", ".vscode,configs,scenarios,runner_dependencies.vipc,scripts,Tooling,Tooling/x-cli/src/XCli,Tooling/x-cli/src/Telemetry", "-OutputPath", "artifacts/commit-index-tooling/tooling-commit-index.json", "-CsvOutputPath", "artifacts/commit-index-tooling/tooling-commit-index.csv", "-AllowDirty" }));
+            if (!opts.SkipLocalSdBuild)
+            {
+                stepDefs.Add(("build-sd", new [] { "-ExecutionPolicy", "Bypass", "-File", "scripts/build-source-distribution/Build_Source_Distribution.ps1", "-RepositoryPath", repo, "-CommitIndexPath", "artifacts/commit-index-sd/commit-index.json" }));
+            }
+        }
+        stepDefs.Add(("hash-artifacts", new [] { "-NoProfile", "-Command", "$root='artifacts'; $files = Get-ChildItem -Path $root -Recurse -File; if (-not $files) { throw 'No artifacts to hash' } $out=@(); foreach ($f in $files) { $h = Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256; $out += ('{0}  {1}' -f $h.Hash, $h.Path) }; $out | Set-Content artifacts/sha256.txt" }));
+        stepDefs.Add(("stage-run", new [] { "-NoProfile", "-Command", $"$runKey='{runKey}'; $dst=Join-Path 'builds-isolated' $runKey; New-Item -ItemType Directory -Path $dst -Force | Out-Null; Copy-Item -Path 'artifacts' -Destination $dst -Recurse -Force; Write-Host \"Staged artifacts under $dst\"" }));
 
         foreach (var step in stepDefs)
         {
@@ -267,7 +274,14 @@ public static class Program
         }
         finally
         {
-            ReleaseLock(lockPath);
+            if (!keepLock)
+            {
+                ReleaseLock(lockPath);
+            }
+            else
+            {
+                log($"[local-sd] keeping lock at {lockPath} (ORCH_KEEP_LOCK=1)");
+            }
         }
     }
 
