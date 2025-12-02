@@ -12,12 +12,12 @@ on:
         required: false
         default: "cpu-latest"
       bundle_url:
-        description: "Optional URL to a .ollama model bundle (e.g., llama3-8b-local.ollama) to bake into the preloaded image"
-        required: false
+        description: "URL to a .ollama model bundle (e.g., llama3-8b-local.ollama) to bake into the preloaded image"
+        required: true
         default: ""
       bundle_sha256:
-        description: "Optional SHA256 for the bundle to verify integrity"
-        required: false
+        description: "SHA256 for the bundle to verify integrity"
+        required: true
         default: ""
   push:
     branches: [ main ]
@@ -36,6 +36,7 @@ jobs:
       image_name: ${{ steps.names.outputs.image_name }}
       tag_suffix: ${{ env.TAG_SUFFIX }}
       preload_suffix: ${{ env.PRELOAD_SUFFIX }}
+      base_digest: ${{ steps.build.outputs.digest }}
     env:
       OLLAMA_REF: ${{ github.event.inputs.ref || 'main' }}
       TAG_SUFFIX: ${{ github.event.inputs.tag || 'cpu-latest' }}
@@ -80,6 +81,7 @@ jobs:
             org.opencontainers.image.source=${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.description=CPU-only Ollama build (ggml)
+        id: build
 
   preload-and-push:
     needs: build-and-push
@@ -92,6 +94,8 @@ jobs:
       MODEL_TARGET: "llama3-8b-local"
       BUNDLE_URL: ${{ github.event.inputs.bundle_url || '' }}
       BUNDLE_SHA256: ${{ github.event.inputs.bundle_sha256 || '' }}
+      BASE_DIGEST: ${{ needs.build-and-push.outputs.base_digest }}
+      IS_MAIN: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout repo (for helper script)
         uses: actions/checkout@v4
@@ -111,34 +115,28 @@ jobs:
             echo "$BUNDLE_SHA256  /tmp/model.ollama" | sha256sum -c -
           fi
 
-      - name: Build preloaded image from bundle
-        if: env.BUNDLE_URL != ''
+      - name: Build preloaded image from bundle (pinned base)
         run: |
+          base_ref="${IMAGE_NAME}@${BASE_DIGEST:-${TAG_SUFFIX}}"
+          if [ -z "$BASE_DIGEST" ]; then
+            echo "Base digest missing; build job did not provide digest" >&2
+            exit 1
+          fi
           pwsh -NoProfile -File scripts/ollama-executor/build-preloaded-image.ps1 `
-            -BaseImage "${IMAGE_NAME}:${TAG_SUFFIX}" `
-            -PreloadedTag "${IMAGE_NAME}:cpu-preloaded" `
+            -BaseImage "$base_ref" `
+            -PreloadedTag "${IMAGE_NAME}:cpu-preloaded-${GITHUB_SHA}" `
             -ModelBundlePath /tmp/model.ollama `
             -BundleSha256 "$BUNDLE_SHA256" `
             -ImportTag "${MODEL_TARGET}" `
             -TargetTag "${MODEL_TARGET}" `
-            -ExtraTags @("${IMAGE_NAME}:cpu-preloaded-${GITHUB_SHA}", "${IMAGE_NAME}:${PRELOAD_SUFFIX}") `
+            -ExtraTags @("${IMAGE_NAME}:${PRELOAD_SUFFIX}") `
             -Push
 
-      - name: Fallback preload via pull (no bundle provided)
-        if: env.BUNDLE_URL == ''
+      - name: Push mutable preloaded tag (main only)
+        if: env.IS_MAIN == 'true'
         run: |
-          docker rm -f ollama-preload 2>/dev/null || true
-          docker pull "${IMAGE_NAME}:${TAG_SUFFIX}"
-          docker run -d --name ollama-preload "${IMAGE_NAME}:${TAG_SUFFIX}" serve
-          docker exec ollama-preload ollama pull "${MODEL_PULL}"
-          docker exec ollama-preload ollama cp "${MODEL_PULL}" "${MODEL_TARGET}"
-          docker stop ollama-preload
-          docker commit ollama-preload "${IMAGE_NAME}:cpu-preloaded"
-          docker tag "${IMAGE_NAME}:cpu-preloaded" "${IMAGE_NAME}:cpu-preloaded-${GITHUB_SHA}"
-          docker tag "${IMAGE_NAME}:cpu-preloaded" "${IMAGE_NAME}:${PRELOAD_SUFFIX}"
+          docker tag "${IMAGE_NAME}:cpu-preloaded-${GITHUB_SHA}" "${IMAGE_NAME}:cpu-preloaded"
           docker push "${IMAGE_NAME}:cpu-preloaded"
-          docker push "${IMAGE_NAME}:cpu-preloaded-${GITHUB_SHA}"
-          docker push "${IMAGE_NAME}:${PRELOAD_SUFFIX}"
 
       - name: Cleanup local images/containers
         if: always()
