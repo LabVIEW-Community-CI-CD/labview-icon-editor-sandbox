@@ -1081,7 +1081,7 @@
       "id": "ollamaGhcrTag",
       "type": "promptString",
       "description": "Tag for ollama-local image",
-      "default": "cpu-latest"
+      "default": "cpu-preloaded"
     },
     {
       "id": "ollamaHost",

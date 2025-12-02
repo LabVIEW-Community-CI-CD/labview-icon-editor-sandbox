@@ -15,7 +15,7 @@ Open-source LabVIEW Icon Editor packaged as a `.vip`, orchestrated by the Integr
 
 ## Ollama locked tasks (30/31/32)
 Two-turn, allowlisted PowerShell executor; timeout is prompted per task.
-- Prep helpers (devcontainer defaults: `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_MODEL_TAG=llama3-8b-local`): `28` pull image, `29` start container on 11435 with the persistent `ollama` volume (honors `OLLAMA_CPUS`/`OLLAMA_MEM`), `27` health check (endpoint + model), `33` stop, `34` stop + clear cache. Prompts cover GHCR owner/tag and OLLAMA_HOST/model tag.
+- Prep helpers (devcontainer defaults: `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_MODEL_TAG=llama3-8b-local`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-preloaded`): `28` pull image, `29` start container on 11435 with the persistent `ollama` volume (honors `OLLAMA_CPUS`/`OLLAMA_MEM`), `27` health check (endpoint + model), `33` stop, `34` stop + clear cache. Prompts cover GHCR owner/tag and OLLAMA_HOST/model tag.
 - Start the published CPU image manually if preferred:  
   `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/<ghcr-owner>/ollama-local:<tag>` (defaults `svelderrainruiz` / `cpu-latest`)
 - Pull/tag the model the tasks expect or set your own `OLLAMA_MODEL_TAG` and rerun the health check (offline alternative: provide a `.ollama` bundle path to task 29 to import without pulling from registry):  

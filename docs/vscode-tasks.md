@@ -4,7 +4,7 @@ Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driv
 
 ## Using the devcontainer Ollama bench
 - Purpose: Linux devcontainer for dotnet tooling + the Ollama/executor loop; LabVIEW/VIPM builds remain Windows-only on the host.
-- Defaults (devcontainer env): `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-latest`, `OLLAMA_MODEL_TAG=llama3-8b-local`; the host Docker socket is mounted and the scripts fail fast if the socket is missing or Docker Desktop is stopped.
+- Defaults (devcontainer env): `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-preloaded`, `OLLAMA_MODEL_TAG=llama3-8b-local`; the host Docker socket is mounted and the scripts fail fast if the socket is missing or Docker Desktop is stopped.
 - Workflow:
   1) Start Docker Desktop and open the devcontainer.
   2) Task **28** `Ollama: pull image` (GHCR owner/tag prompts).

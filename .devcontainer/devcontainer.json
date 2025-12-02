@@ -21,7 +21,7 @@
     }
   },
   "containerEnv": {
-    "OLLAMA_IMAGE": "ghcr.io/svelderrainruiz/ollama-local:cpu-latest",
+    "OLLAMA_IMAGE": "ghcr.io/svelderrainruiz/ollama-local:cpu-preloaded",
     "OLLAMA_MODEL_TAG": "llama3-8b-local",
     "OLLAMA_HOST": "http://host.docker.internal:11435"
   },
