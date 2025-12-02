@@ -38,7 +38,8 @@ internal static class Program
         string? OutputPath,
         int ExpectStatus,
         bool ExitOnEmpty,
-        bool Trace);
+        bool Trace,
+        bool SkipCertCheck);
 
     private static int Main(string[] args)
     {
@@ -65,7 +66,12 @@ internal static class Program
                 : "api/generate";
         var uri = new Uri(new Uri(baseUri), path);
 
-        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(opts.TimeoutSec > 0 ? opts.TimeoutSec : 30) };
+        var handler = new HttpClientHandler();
+        if (opts.SkipCertCheck)
+        {
+            handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+        }
+        using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(opts.TimeoutSec > 0 ? opts.TimeoutSec : 30) };
 
         if (opts.CheckModel && !await EnsureModelAsync(client, baseUri, opts.Model))
         {
@@ -107,7 +113,7 @@ internal static class Program
 
         if (opts.Verbose)
         {
-            Console.WriteLine($"[verbose] POST {uri} mode={opts.Mode} stream={opts.Stream} retries={opts.Retries} retryDelayMs={opts.RetryDelayMs}");
+            Console.WriteLine($"[verbose] POST {uri} mode={opts.Mode} stream={opts.Stream} retries={opts.Retries} retryDelayMs={opts.RetryDelayMs} skipCertCheck={opts.SkipCertCheck}");
             Console.WriteLine($"[verbose] payload: {payloadString}");
         }
 
@@ -609,6 +615,7 @@ internal static class Program
         var trace = false;
         string? promptBase64 = null;
         string? messagesBase64 = null;
+        var skipCertCheck = false;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -714,6 +721,9 @@ internal static class Program
                 case "--trace":
                     trace = true;
                     break;
+                case "--skip-cert-check":
+                    skipCertCheck = true;
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -741,7 +751,7 @@ internal static class Program
             messages = LoadMessagesFromBase64(messagesBase64);
         }
 
-        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages, maxBytes, stopToken, outputPath, expectStatus, exitOnEmpty, trace);
+        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages, maxBytes, stopToken, outputPath, expectStatus, exitOnEmpty, trace, skipCertCheck);
     }
 
     private static string Next(string[] args, ref int index, string name)
@@ -758,7 +768,7 @@ internal static class Program
     {
         Console.WriteLine("OllamaSmokeCli");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000] [--verbose] [--save-body <path>] [--prompt-file <path>] [--messages-file <path>] [--max-bytes N] [--stop <token>]");
-        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json, retries 0, retry delay 1000ms, verbose off, no max-bytes, no stop token.");
+        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000] [--verbose] [--save-body <path>] [--prompt-file <path>] [--prompt-base64 <b64>] [--messages-file <path>] [--messages-base64 <b64>] [--max-bytes N] [--stop <token>] [--expect-status N] [--exit-on-empty] [--trace] [--skip-cert-check] [--output <path>]");
+        Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json, retries 0, retry delay 1000ms, verbose off, no max-bytes, no stop token, no expect-status, no trace, cert check enforced.");
     }
 }
