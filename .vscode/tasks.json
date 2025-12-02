@@ -528,6 +528,30 @@
       "detail": "Runs the serialized Source Distribution -> PPL flow via OrchestrationCli (LabVIEWCLI builds, g-cli bind/unbind, per-run temp/logs)."
     },
     {
+      "label": "35 Ollama: publish preloaded image",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/dispatch-preloaded-image.ps1",
+        "-Ref",
+        "main",
+        "-TagSuffix",
+        "cpu-latest",
+        "-BundleUrl",
+        "${input:ollamaBundleUrl}",
+        "-BundleSha256",
+        "${input:ollamaBundleSha}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Dispatch the Publish Ollama CPU image workflow with a bundle URL/SHA256 to bake a preloaded tag."
+    },
+    {
       "label": "21 VIPB: Bump LabVIEW version",
       "type": "shell",
       "command": "pwsh",
@@ -1082,6 +1106,18 @@
       "type": "promptString",
       "description": "Tag for ollama-local image",
       "default": "cpu-preloaded"
+    },
+    {
+      "id": "ollamaBundleUrl",
+      "type": "promptString",
+      "description": "URL to llama3-8b-local .ollama bundle for preloaded image",
+      "default": ""
+    },
+    {
+      "id": "ollamaBundleSha",
+      "type": "promptString",
+      "description": "SHA256 for the .ollama bundle",
+      "default": ""
     },
     {
       "id": "ollamaHost",
