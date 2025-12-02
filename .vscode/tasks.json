@@ -691,7 +691,7 @@
         "-Model",
         "llama3-8b-local",
         "-CommandTimeoutSec",
-        "60"
+        "${input:ollamaSdTimeoutSec}"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -941,6 +941,12 @@
       "type": "promptString",
       "description": "Git ref to checkout for isolated test worktree",
       "default": "HEAD"
+    },
+    {
+      "id": "ollamaSdTimeoutSec",
+      "type": "promptString",
+      "description": "Command timeout (seconds) for task 31 Ollama locked source-distribution",
+      "default": "240"
     },
     {
       "label": "18 Tooling: Clear CLI cache entry",
