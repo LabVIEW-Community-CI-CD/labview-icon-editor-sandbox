@@ -43,3 +43,4 @@ See `adr-template.md` for the full template and `adr-template-lite.md` for a 1â€
 - ADR-2025-015 - [Source Distribution â†’ PPL orchestration via OrchestrationCLI](ADR-2025-015-sd-ppl-labviewcli-orchestration.md).
 - ADR-2025-016 - [Bundle minimal tooling in Source Distribution for VS Code use](ADR-2025-016-tooling-included-in-source-distribution.md).
 - ADR-2025-017 - [Ollama locked executor for scripted builds](ADR-2025-017-ollama-locked-executor.md).
+- ADR-2025-018 - [Automate self-signed TLS cert generation for App Gateway backends](ADR-2025-018-appgw-selfsigned-automation.md).
