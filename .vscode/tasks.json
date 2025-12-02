@@ -528,6 +528,22 @@
       "detail": "Runs the serialized Source Distribution -> PPL flow via OrchestrationCli (LabVIEWCLI builds, g-cli bind/unbind, per-run temp/logs)."
     },
     {
+      "label": "Ollama: Locked executor (allowlist)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "& { $allowedRuns = @('pwsh -NoProfile -File scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- package-build --repo . --bitness 64 --lvlibp-bitness both --major 0 --minor 1 --patch 0 --build 1 --company LabVIEW-Community-CI-CD --author \"Local Developer\"','pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64','pwsh -NoProfile -File scripts/orchestration/Run-LocalSd-Ppl.ps1 -Repo . -RunKey local-sd-ppl -PwshTimeoutSec 7200'); $params = @{ Model = 'llama3-8b-local'; RepoPath = '${workspaceFolder}'; Goal = 'Respond ONLY with JSON. Choose ONE allowed command, run it, then send {\"done\":true}. Allowed: package-build | source-distribution | local-sd-ppl.'; MaxTurns = 2; StopAfterFirstCommand = $true; AllowedRuns = $allowedRuns }; & '${workspaceFolder}/scripts/ollama-executor/Drive-Ollama-Executor.ps1' @params }"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Start Drive-Ollama-Executor with a hard allowlist (package-build, source-distribution, local-sd-ppl) and stop after the first accepted run."
+    },
+    {
       "label": "21 VIPB: Bump LabVIEW version",
       "type": "shell",
       "command": "pwsh",
