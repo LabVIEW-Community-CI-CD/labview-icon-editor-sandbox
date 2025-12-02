@@ -61,6 +61,14 @@ agent:
     traces: disabled
 ```
 
+### Quick requirements maintenance (ISO/IEC/IEEE 29148)
+- **Source of truth:** Edit only `docs/requirements/requirements_rewritten_29148_flags.csv` (clean statements). The companion `docs/requirements/requirements_29148_flags.csv` provides the 29148 issues column. Do not hand-edit `requirements.csv`.
+- **Review:** `pwsh -NoProfile -File scripts/run-requirements-summary-task.ps1` (writes `reports/requirements-summary*.md/html` for skim).  
+  Findings-only view: `pwsh -NoProfile -Command "$r=Import-Csv docs/requirements/requirements_rewritten_29148_flags.csv; $r|?{$_.'29148 Issues' -and $_.'29148 Issues' -ne 'None'}|Export-Csv reports/requirements-29148-findings.csv -NoTypeInformation"`
+- **Fix loop:** Update the rewritten CSV, rerun the two commands above, ensure `reports/requirements-29148-findings.csv` is empty or justified, then regenerate the plain-text view if needed: `pwsh -NoProfile -Command \"& { $orig=Import-Csv docs/requirements/requirements_29148_flags.csv; $rewrite=Import-Csv docs/requirements/requirements_rewritten_29148_flags.csv; $h=@{T='$orig'} }\"` (or reuse the existing helper that writes `docs/requirements/requirements.txt`).
+- **What to publish:** Keep `docs/requirements/requirements.txt` as the light, field-minimal view (ID, Section, Type/Priority, Status, Requirement, Acceptance Criteria, Verification Method, 29148 Issues). Include updated summaries (`reports/requirements-summary.md`, `reports/requirements-summary-high.md`) in evidence when requirements change.
+- **Checks before merge:** No “None”-less 29148 issues unless noted in `Version & Change Notes`; summaries regenerated; rewritten CSV stays schema-compatible.
+
 ---
 
 ## 1. Purpose & Scope
