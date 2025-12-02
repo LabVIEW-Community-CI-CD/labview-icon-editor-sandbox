@@ -21,7 +21,8 @@ param(
     [string]$Goal = "Build Source Distribution LV2025 64-bit",
     [int]$MaxTurns = 10,
     [switch]$StopAfterFirstCommand,
-    [string[]]$AllowedRuns = @("pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64")
+    [string[]]$AllowedRuns = @("pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64"),
+    [int]$CommandTimeoutSec = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -125,8 +126,21 @@ for ($turn = 1; $turn -le $MaxTurns; $turn++) {
             -WorkingDirectory $repoFull `
             -RedirectStandardOutput $stdoutPath `
             -RedirectStandardError $stderrPath `
-            -NoNewWindow -PassThru -Wait
-        $exitCode = $proc.ExitCode
+            -NoNewWindow -PassThru
+
+        $timedOut = $false
+        if ($CommandTimeoutSec -gt 0) {
+            $finished = $proc.WaitForExit($CommandTimeoutSec * 1000)
+            if (-not $finished) {
+                $timedOut = $true
+                try { $proc.Kill() } catch {}
+            }
+        }
+        else {
+            $proc.WaitForExit() | Out-Null
+        }
+
+        $exitCode = if ($timedOut) { -1 } else { $proc.ExitCode }
     }
     catch {
         $exitCode = -1
@@ -135,6 +149,9 @@ for ($turn = 1; $turn -le $MaxTurns; $turn++) {
 
     $stdout = if (Test-Path $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Raw } else { "" }
     $stderr = if (Test-Path $stderrPath) { Get-Content -LiteralPath $stderrPath -Raw } else { "" }
+    if ($timedOut) {
+        $stderr = "Timed out after ${CommandTimeoutSec}s`r`n$stderr"
+    }
     Remove-Item $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
 
     $result = @{
