@@ -82,17 +82,19 @@ for ($turn = 1; $turn -le $MaxTurns; $turn++) {
         $action = $content | ConvertFrom-Json -ErrorAction Stop
     }
     catch {
-        $messages += @{ role = "user"; content = "Invalid JSON; respond with {\"run\":\"cmd\"} or {\"done\":true}" }
+        $messages += @{ role = "user"; content = 'Invalid JSON; respond with {"run":"cmd"} or {"done":true}' }
         continue
     }
 
-    if ($action.done) {
+    $hasDone = ($action -is [psobject] -and $action.PSObject.Properties['done'])
+    if ($hasDone -and $action.done) {
         Write-Host ("[executor] Done: {0}" -f ($action.summary ?? "")) -ForegroundColor Green
         break
     }
 
-    if (-not $action.run) {
-        $messages += @{ role = "user"; content = "Missing run field; respond with {\"run\":\"cmd\"}." }
+    $hasRun = ($action -is [psobject] -and $action.PSObject.Properties['run'])
+    if (-not $hasRun) {
+        $messages += @{ role = "user"; content = 'Missing run field; respond with {"run":"cmd"}.' }
         continue
     }
 
