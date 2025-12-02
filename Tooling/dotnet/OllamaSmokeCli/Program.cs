@@ -634,6 +634,8 @@ internal static class Program
         var skipCertCheck = false;
         string? proxy = null;
         var headers = new List<Header>();
+        string? bearerToken = null;
+        string? bearerTokenFile = null;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -750,6 +752,12 @@ internal static class Program
                     var parsedHeader = ParseHeader(rawHeader);
                     headers.Add(parsedHeader);
                     break;
+                case "--bearer":
+                    bearerToken = Next(args, ref i, arg);
+                    break;
+                case "--bearer-file":
+                    bearerTokenFile = Next(args, ref i, arg);
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -775,6 +783,15 @@ internal static class Program
         if (!string.IsNullOrWhiteSpace(messagesBase64))
         {
             messages = LoadMessagesFromBase64(messagesBase64);
+        }
+
+        if (!string.IsNullOrWhiteSpace(bearerTokenFile))
+        {
+            bearerToken = File.ReadAllText(bearerTokenFile).Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(bearerToken))
+        {
+            headers.Add(new Header("Authorization", $"Bearer {bearerToken}"));
         }
 
         return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel, retries, retryDelayMs, verbose, saveBodyPath, messages, maxBytes, stopToken, outputPath, expectStatus, exitOnEmpty, trace, skipCertCheck, proxy, headers);
@@ -804,7 +821,7 @@ internal static class Program
     {
         Console.WriteLine("OllamaSmokeCli");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000] [--verbose] [--save-body <path>] [--prompt-file <path>] [--prompt-base64 <b64>] [--messages-file <path>] [--messages-base64 <b64>] [--max-bytes N] [--stop <token>] [--expect-status N] [--exit-on-empty] [--trace] [--skip-cert-check] [--output <path>]");
+        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model] [--retries N] [--retry-delay-ms 1000] [--verbose] [--save-body <path>] [--prompt-file <path>] [--prompt-base64 <b64>] [--messages-file <path>] [--messages-base64 <b64>] [--max-bytes N] [--stop <token>] [--expect-status N] [--exit-on-empty] [--trace] [--skip-cert-check] [--proxy <url>] [--header k:v] [--bearer <token>|--bearer-file <path>] [--output <path>]");
         Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json, retries 0, retry delay 1000ms, verbose off, no max-bytes, no stop token, no expect-status, no trace, cert check enforced, no proxy, no headers.");
     }
 }
