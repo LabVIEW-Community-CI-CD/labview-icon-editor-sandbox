@@ -24,7 +24,7 @@
 ## Ollama-driven orchestration quick start (ORCH-021/ORCH-022)
 
 ### Health check
-- Ensure the local Ollama container is running (we use `ollama-cpu` on `http://localhost:11435` with model `llama3-8b-local` loaded).
+- Ensure the local Ollama container is running (we use the **preloaded** tag on `http://localhost:11435` with model `llama3-8b-local` loaded). If missing, trigger the GH workflow **“Publish Ollama CPU image”** or run `scripts/ollama-executor/build-preloaded-image.ps1` with a `.ollama` bundle to bake/push the preloaded tag.
 - Quick check:
   ```bash
   curl -s -X POST http://localhost:11435/api/generate -d '{"model":"llama3-8b-local","prompt":"hi"}'
