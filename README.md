@@ -47,4 +47,4 @@ Two-turn, allowlisted PowerShell executor; timeout is prompted per task.
 ## Notes
 - VIPM missing? Dependency task will fail and LVAddon build writes `vipm-skipped-placeholder.vip`; install VIPM, remove the placeholder, rerun task 02.
 - Tooling cache is tiered (worktree → source → cache → publish). Use task 18 to clear a specific `<CLI>/<version>/<rid>`; task 19 exercises probe behavior.
-- Devcontainer (Ollama bench): `.devcontainer/` adds Docker CLI + model cache volume; good for dotnet tooling and Ollama/executor iteration. LabVIEW/VIPM builds remain Windows-only. Defaults: `OLLAMA_HOST=http://localhost:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-latest`, `OLLAMA_MODEL_TAG=llama3-8b-local`.
+- Devcontainer (Ollama bench): `.devcontainer/` adds Docker CLI, host Docker socket mount, and an Ollama model cache volume; good for dotnet tooling and Ollama/executor iteration. LabVIEW/VIPM builds remain Windows-only. Defaults: `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-latest`, `OLLAMA_MODEL_TAG=llama3-8b-local`.
