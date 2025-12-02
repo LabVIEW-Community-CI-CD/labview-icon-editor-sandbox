@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 
 internal static class Program
 {
-    private sealed record Options(string Endpoint, string Model, string Prompt, int TimeoutSec, bool Stream, string Mode, string Format);
+    private sealed record Options(string Endpoint, string Model, string Prompt, int TimeoutSec, bool Stream, string Mode, string Format, bool CheckModel);
 
     private static int Main(string[] args)
     {
@@ -36,6 +36,12 @@ internal static class Program
         var uri = new Uri(new Uri(baseUri), path);
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(opts.TimeoutSec > 0 ? opts.TimeoutSec : 30) };
+
+        if (opts.CheckModel && !await EnsureModelAsync(client, baseUri, opts.Model))
+        {
+            return 1;
+        }
+
         var payload = opts.Mode.Equals("chat", StringComparison.OrdinalIgnoreCase)
             ? JsonSerializer.Serialize(new
             {
@@ -237,6 +243,44 @@ internal static class Program
         return string.Empty;
     }
 
+    private static async Task<bool> EnsureModelAsync(HttpClient client, string baseUri, string model)
+    {
+        var uri = new Uri(new Uri(baseUri), "api/tags");
+        try
+        {
+            var response = await client.GetAsync(uri);
+            if (!response.IsSuccessStatusCode)
+            {
+                Console.Error.WriteLine($"fail: model check status={(int)response.StatusCode} reason={response.ReasonPhrase}");
+                return false;
+            }
+            var body = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("models", out var models) && models.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var m in models.EnumerateArray())
+                {
+                    var name = m.TryGetProperty("name", out var n) ? n.GetString() : null;
+                    var modelField = m.TryGetProperty("model", out var mf) ? mf.GetString() : null;
+                    if (string.Equals(name, model, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(modelField, model, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(name, $"{model}:latest", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(modelField, $"{model}:latest", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+            Console.Error.WriteLine($"fail: model '{model}' not found in tags");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"fail: model check error: {ex.Message}");
+            return false;
+        }
+    }
+
     private static double[]? ExtractEmbedding(JsonElement root)
     {
         if (root.ValueKind != JsonValueKind.Object) return null;
@@ -271,6 +315,7 @@ internal static class Program
         var stream = false;
         var mode = "generate";
         var format = "json";
+        var checkModel = false;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -313,6 +358,9 @@ internal static class Program
                 case "--embed":
                     mode = "embed";
                     break;
+                case "--check-model":
+                    checkModel = true;
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -323,7 +371,7 @@ internal static class Program
             }
         }
 
-        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format);
+        return new Options(endpoint, model, prompt, timeoutSec, stream, mode, format, checkModel);
     }
 
     private static string Next(string[] args, ref int index, string name)
@@ -340,7 +388,7 @@ internal static class Program
     {
         Console.WriteLine("OllamaSmokeCli");
         Console.WriteLine("Usage:");
-        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text]");
+        Console.WriteLine("  OllamaSmokeCli --endpoint <url> --model <name> --prompt <text> [--chat|--embed] [--timeout-sec 30] [--stream] [--format json|text] [--check-model]");
         Console.WriteLine("Defaults: endpoint http://localhost:11435, model llama3-8b-local, prompt \"Hello smoke\", timeout 30s, mode generate, stream false, format json.");
     }
 }
