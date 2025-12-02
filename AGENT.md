@@ -14,6 +14,48 @@
 - **Change control:** Proposed changes to Agent behavior **shall** follow the process in §9 (Change Management).
 - **One-run, non-admin Windows runner helper (CI):** If asked to run CI once on a temporary self-hosted Windows runner: (1) Set PAT env (`GH_PAT`/`GITHUB_PAT` with repo + actions:read/write); verify prereqs: `pwsh -ExecutionPolicy Bypass -File scripts/setup-runner/Verify-RunnerPrereqs.ps1` (dotnet 8.0.x, LabVIEW 2021 x64/x86, vipm CLI on PATH, git, Pester). (2) Register without service: `pwsh -ExecutionPolicy Bypass -File scripts/setup-runner/RegisterSelfHostedRunner.ps1 -Repo svelderrainruiz/labview-icon-editor-sandbox -RunnerDir "$env:USERPROFILE\\actions-runner-once" -RunnerName "self-hosted-windows-lv-once" -Labels @("self-hosted","windows","self-hosted-windows-lv") -InstallService $false`. (3) Start single job: `cd "$env:USERPROFILE\\actions-runner-once"; ./run.cmd --once` (start before/while dispatching). (4) Dispatch CI: `gh workflow run ci.yml --ref develop` (adjust ref). (5) Validate via runner console and `gh run view <run_id> --log`; rerun prereq script if needed. (6) Cleanup: `pwsh -ExecutionPolicy Bypass -File scripts/setup-runner/RemoveSelfHostedRunner.ps1 -Repo svelderrainruiz/labview-icon-editor-sandbox -RunnerDir "$env:USERPROFILE\\actions-runner-once"`. If jobs don't pick up, ensure labels match (`self-hosted-windows-lv`) and rerun dispatch. For repeated single runs, rerun register + `run.cmd --once`; for long-lived, set `-InstallService $true`.
 - **One-run source distribution (local artifacts, no PAT):** Use the helper above, then dispatch `gh workflow run ci.yml --ref <branch>` with `previous_run_id`/`upstream_repo` left empty so the pipeline builds artifacts locally using the fork `GITHUB_TOKEN` and the self-hosted runner. After completion, download the LabVIEW Icon API source distribution, manifests, and commit-index artifacts from the run. If the job stays queued, confirm the runner is polling and labels include `self-hosted-windows-lv`, then rerun the dispatch.
+- **Ollama SD->PPL handshake (Windows host, ORCH-020A):** From a LabVIEW-capable Windows host running Ollama, ask the model to execute from the repo root and return the printed values:  
+  ```text
+  Run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/orchestration/Run-Ollama-Host.ps1 -Repo .
+  Return: runKey, handshake path, zip sha256 (and PPL sha256 if built), runScoped path, summary JSON path, and note reports/logs/ollama-host-<runKey>.log.
+  ```  
+  The helper wraps `Run-LocalSd-Ppl.ps1`, stages artifacts under `artifacts/` and `builds-isolated/<runKey>/`, emits `artifacts/labview-icon-api-handshake.json`, and writes log + summary JSON under `reports/logs/` for the container follow-up prompt (ORCH-020B).
+
+## Ollama-driven orchestration quick start (ORCH-021/ORCH-022)
+
+### Health check
+- Ensure the local Ollama container is running (we use `ollama-cpu` on `http://localhost:11435` with model `llama3-8b-local` loaded).
+- Quick check:
+  ```bash
+  curl -s -X POST http://localhost:11435/api/generate -d '{"model":"llama3-8b-local","prompt":"hi"}'
+  ```
+
+### Smoke test (Ollama hook only, no LabVIEW build)
+- From repo root:
+  ```powershell
+  pwsh -NoProfile -File scripts/orchestration/Run-Ollama-Host.ps1 `
+    -Repo . `
+    -SmokeOnly `
+    -PwshTimeoutSec 300 `
+    -OllamaEndpoint http://localhost:11435 `
+    -OllamaModel llama3-8b-local `
+    -OllamaPrompt "Hello smoke"
+  ```
+- Exercises the OrchestrationCli `ollama` subcommand and exits quickly. Logs under `reports/logs/ollama-host-<runKey>.log`; failures emit `*.fail.json` with `detection_point=orchestration`.
+
+### Full SD→PPL run (Ollama-driven)
+- Use higher timeouts for the full LabVIEW flow:
+  ```powershell
+  pwsh -NoProfile -File scripts/orchestration/Run-Ollama-Host.ps1 `
+    -Repo . `
+    -RunKey ollama-full-$(Get-Date -Format yyyyMMdd-HHmmss) `
+    -PwshTimeoutSec 7200 `
+    -LockTtlSec 1800 `
+    -OllamaEndpoint http://localhost:11435 `
+    -OllamaModel llama3-8b-local `
+    -OllamaPrompt "local-sd/local-sd-ppl"
+  ```
+- On success: see `reports/logs/ollama-host-<runKey>.summary.json` for runKey + artifact hashes; artifacts under `artifacts/` and `builds-isolated/<runKey>/`. On failure: see `*.fail.json` with `detection_point=orchestration` diagnostics.
 
 ```yaml
 # ./agent.yaml (example)
@@ -387,4 +429,5 @@ How will we test and measure success? (link tests, dry-runs, dashboards)
 
 > **Change History**
 > - v0.1 — Initial baseline: responsibilities, requirements, interfaces, guardrails, RTM, change mgmt.
+
 
