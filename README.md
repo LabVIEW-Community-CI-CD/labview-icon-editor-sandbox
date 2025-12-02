@@ -16,7 +16,7 @@ Open-source LabVIEW Icon Editor packaged as a `.vip`, orchestrated by the Integr
 ## Ollama locked tasks (30/31/32)
 Two-turn, allowlisted PowerShell executor; timeout is prompted per task.
 - Start the published CPU image:  
-  `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/svelderrainruiz/ollama-local:cpu-latest serve`
+  `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/<ghcr-owner>/ollama-local:<tag>` (tasks prompt for `ollamaGhcrOwner`/`ollamaGhcrTag`, defaults `svelderrainruiz` / `cpu-latest`)
 - Pull/tag the model the tasks expect:  
   `docker exec -it ollama-local ollama pull llama3:8b`  
   `docker exec -it ollama-local ollama cp llama3:8b llama3-8b-local`

@@ -679,6 +679,54 @@
       "detail": "Locked executor: only package-build is allowed; two turns (run + done)."
     },
     {
+      "label": "28 Ollama: pull image",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/pull-ollama-image.ps1",
+        "-Owner",
+        "${input:ollamaGhcrOwner}",
+        "-Tag",
+        "${input:ollamaGhcrTag}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "detail": "Pull the published CPU-only Ollama image (ghcr.io/svelderrainruiz/ollama-local:cpu-latest)."
+    },
+    {
+      "label": "29 Ollama: start container",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/run-ollama-container.ps1",
+        "-Owner",
+        "${input:ollamaGhcrOwner}",
+        "-Tag",
+        "${input:ollamaGhcrTag}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "detail": "Start the published Ollama CPU container on localhost:11435 with persisted model volume."
+    },
+    {
       "label": "31 Ollama: source-distribution (locked)",
       "type": "shell",
       "command": "pwsh",
@@ -947,6 +995,18 @@
       "type": "promptString",
       "description": "Command timeout (seconds) for task 31 Ollama locked source-distribution",
       "default": "240"
+    },
+    {
+      "id": "ollamaGhcrOwner",
+      "type": "promptString",
+      "description": "GHCR owner/namespace for ollama-local image (lowercase)",
+      "default": "svelderrainruiz"
+    },
+    {
+      "id": "ollamaGhcrTag",
+      "type": "promptString",
+      "description": "Tag for ollama-local image",
+      "default": "cpu-latest"
     },
     {
       "id": "ollamaPackageTimeoutSec",
