@@ -33,9 +33,9 @@ Write-Host "=== Ollama Executor Performance Benchmark Suite ===" -ForegroundColo
 Write-Host ""
 
 # Cache OS detection for performance (avoid repeated checks)
-$script:isWindows = $IsWindows
-$script:isLinux = $IsLinux
-$script:isMacOS = $IsMacOS
+$script:cachedIsWindows = if ($null -ne $IsWindows) { $IsWindows } else { $false }
+$script:cachedIsLinux = if ($null -ne $IsLinux) { $IsLinux } else { $false }
+$script:cachedIsMacOS = if ($null -ne $IsMacOS) { $IsMacOS } else { $false }
 
 # Ensure reports directory exists
 $reportDir = Split-Path $OutputReport -Parent
@@ -46,7 +46,7 @@ if ($reportDir -and -not (Test-Path $reportDir)) {
 $results = @{
     timestamp = Get-Date -Format 'o'
     environment = @{
-        os = if ($script:isWindows) { "Windows" } elseif ($script:isLinux) { "Linux" } elseif ($script:isMacOS) { "macOS" } else { "Unknown" }
+        os = if ($script:cachedIsWindows) { "Windows" } elseif ($script:cachedIsLinux) { "Linux" } elseif ($script:cachedIsMacOS) { "macOS" } else { "Unknown" }
         pwsh_version = $PSVersionTable.PSVersion.ToString()
         processor_count = [Environment]::ProcessorCount
     }
@@ -103,8 +103,28 @@ function Measure-Benchmark {
 
 # Benchmark 1: Command Vetting Performance
 $results.benchmarks.command_vetting = Measure-Benchmark -Name "Command Vetting (1000 commands)" -Iterations 1 -ScriptBlock {
-    # Source vetting function
-    . "$PSScriptRoot/Test-CommandVetting.ps1" -ErrorAction SilentlyContinue
+    # Simple inline vetting function (core security checks only)
+    function Test-CommandAllowed {
+        param([string]$Command)
+        
+        # Allow only repo scripts invoked via pwsh -NoProfile -File scripts/...
+        $allowedPattern = '^pwsh\s+-NoProfile\s+-File\s+scripts[\\/][\w\-.\\/]+\.ps1\b'
+        if (-not ($Command -match $allowedPattern)) {
+            return "Rejected: command must start with 'pwsh -NoProfile -File scripts/...ps1'"
+        }
+        
+        # Check for path traversal (parent directory references)
+        if ($Command -match '\.\.[/\\]' -or $Command -match '[/\\]\.\.') {
+            return "Rejected: path traversal attempt detected (..)"
+        }
+        
+        # Check for command chaining/injection
+        if ($Command -match '[;&|`]' -or $Command -match '\$\(') {
+            return "Rejected: command injection attempt detected"
+        }
+        
+        return $null  # Allowed
+    }
     
     $commands = @(
         "pwsh -NoProfile -File scripts/test.ps1"
@@ -116,7 +136,7 @@ $results.benchmarks.command_vetting = Measure-Benchmark -Name "Command Vetting (
     $vetted = 0
     for ($i = 0; $i -lt 1000; $i++) {
         $cmd = $commands[$i % $commands.Count]
-        $result = Test-CommandAllowed -Command $cmd -AllowedRuns @()
+        $result = Test-CommandAllowed -Command $cmd
         if ($null -eq $result) { $vetted++ }
     }
     
