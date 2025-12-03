@@ -12,6 +12,14 @@ Show Seed help (auto-builds if needed):
 docker compose -f Tooling/docker/seed/docker-compose.yml run --rm seed
 ```
 
+Run the GitHub workflow locally (build + smoke test):
+```
+./Tooling/docker/seed/run-seed-image-smoke.sh
+```
+- Mirrors `.github/workflows/seed-image.yml` (same Dockerfile and vipb2json smoke test)
+- Defaults: `seed-local:local-smoke`; override with `IMAGE_NAME`/`TAG_SUFFIX`
+- Requires a running Docker engine (set `DOCKER_BIN` if you use podman/docker-rootless)
+
 Run a Seed command:
 ```
 docker compose -f Tooling/docker/seed/docker-compose.yml run --rm seed seed <args>
