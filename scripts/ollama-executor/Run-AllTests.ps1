@@ -153,12 +153,20 @@ Invoke-TestSuite `
     -ScriptPath "$PSScriptRoot/Test-SecurityFuzzing.ps1" `
     -Modes @('full', 'security')
 
-# Phase 3: Integration Tests (Medium duration)
+# Phase 3: Failure Tests (Medium duration, works in simulation mode)
 if ($Mode -in @('full', 'fast')) {
     Invoke-TestSuite `
-        -Name "Timeout and Failures" `
-        -ScriptPath "$PSScriptRoot/Test-TimeoutAndFailures.ps1" `
+        -Name "Failure Handling" `
+        -ScriptPath "$PSScriptRoot/Test-Failures.ps1" `
         -Modes @('fast', 'full')
+}
+
+# Phase 3b: Timeout Tests (Skip in fast mode - requires real execution)
+if ($Mode -eq 'full') {
+    Invoke-TestSuite `
+        -Name "Timeout Handling" `
+        -ScriptPath "$PSScriptRoot/Test-Timeout.ps1" `
+        -Modes @('full')
 }
 
 # Phase 4: Conversation Scenarios (Can be slow)
