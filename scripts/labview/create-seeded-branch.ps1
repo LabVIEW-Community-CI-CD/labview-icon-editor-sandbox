@@ -187,9 +187,13 @@ $vipbJson = Join-Path $stashDir 'seed.vipb.json'
 $vipbRel = 'Tooling/deployment/seed.vipb'
 $vipbJsonRel = 'builds/vipb-stash/seed.vipb.json'
 
+# Get current user ID for Docker to set correct ownership
+$userId = if ($IsLinux) { "$(id -u):$(id -g)" } else { $null }
+$userArg = if ($userId) { @('--user', $userId) } else { @() }
+
 Write-Host "Converting VIPB to JSON..." -ForegroundColor Gray
-docker run --rm -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/vipb2json `
-    $SeedImage --input "/repo/$vipbRel" --output "/repo/$vipbJsonRel"
+docker run --rm @userArg -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/VipbJsonTool `
+    $SeedImage vipb2json "/repo/$vipbRel" "/repo/$vipbJsonRel"
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert VIPB to JSON"
 }
@@ -198,15 +202,23 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Updating Package_LabVIEW_Version to '$versionString'..." -ForegroundColor Gray
 $json = Get-Content -Raw $vipbJson | ConvertFrom-Json
 $lg = $null
+$jsonShape = 'unknown'
 if ($json.PSObject.Properties['VI_Package_Builder_Settings']) {
     $lg = $json.VI_Package_Builder_Settings.Library_General_Settings
+    $jsonShape = 'VI_Package_Builder_Settings'
 }
 if (-not $lg -and $json.PSObject.Properties['Package']) {
     $lg = $json.Package.Library_General_Settings
+    $jsonShape = 'Package'
+}
+if (-not $lg -and $json.PSObject.Properties['Library_General_Settings']) {
+    $lg = $json.Library_General_Settings
+    $jsonShape = 'root'
 }
 if (-not $lg) {
     throw "Library_General_Settings not found in VIPB JSON"
 }
+Write-Host "  JSON shape: $jsonShape" -ForegroundColor Gray
 $lg.Package_LabVIEW_Version = $versionString
 if ($lg.PSObject.Properties['Library_Version']) {
     $lg.Library_Version = "$lvMajor.$LabVIEWMinor.0.1"
@@ -215,8 +227,8 @@ $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding 
 
 # Convert back to VIPB
 Write-Host "Converting JSON back to VIPB..." -ForegroundColor Gray
-docker run --rm -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/json2vipb `
-    $SeedImage --input "/repo/$vipbJsonRel" --output "/repo/$vipbRel"
+docker run --rm @userArg -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/VipbJsonTool `
+    $SeedImage json2vipb "/repo/$vipbJsonRel" "/repo/$vipbRel"
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert JSON to VIPB"
 }
