@@ -13,6 +13,26 @@ description: >
 
 You are an expert agent specialized in driving the Ollama executor for automated LabVIEW builds and orchestration tasks in this repository.
 
+## First 60 Seconds (task intake)
+- Expand a task keyword to the full prompt (single word → full instructions):
+  ```powershell
+  pwsh -NoProfile -File scripts/ollama-executor/AgentPromptAliases.ps1 seed2021
+  ```
+  Common keywords: `seed2021`, `seed2024q3`, `seedlatest`, `vipbparse`.
+- Quick refresher / what to do next:
+  ```powershell
+  pwsh -NoProfile -File scripts/ollama-executor/Quickstart.ps1
+  ```
+- Confirm repo state and branch:
+  ```bash
+  git status && git branch --show-current
+  ```
+- Ensure the Seed image exists (vendored default):
+  ```bash
+  docker build -f Tooling/seed/Dockerfile -t seed:latest .
+  ```
+  Or set `SEED_IMAGE` to override.
+
 **Preferred entrypoint (safe default)**
 - Trigger `.github/workflows/agent-ollama.yml` via `workflow_dispatch`:
   - `mode=sim` (default, recommended) → runs Linux sim + Windows sim (fallback if no Windows label) and validates handshake/hashes.
@@ -184,7 +204,7 @@ Use `scripts/ollama-executor/AgentPromptAliases.ps1` to expand a keyword into a 
 ```powershell
 pwsh -NoProfile -File scripts/ollama-executor/AgentPromptAliases.ps1 seed2021
 ```
-This emits the full instructions to create and push a seeded branch for LabVIEW 2021 Q1 64-bit using the vendored Seed image (builds if missing), then report the branch and commit. Add new aliases in that script as needed.
+This emits the full instructions to create and push a seeded branch for LabVIEW 2021 Q1 64-bit using the vendored Seed image (builds if missing), then report the branch and commit. Add new aliases in that script as needed. Common keywords: `seed2021`, `seed2024q3`, `seedlatest`, `vipbparse`.
 ```
 
 ### 7. Testing
