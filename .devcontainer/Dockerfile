@@ -20,4 +20,4 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /workspaces/labview-icon-editor-final-fork
+WORKDIR /workspaces/labview-icon-editor-sandbox
