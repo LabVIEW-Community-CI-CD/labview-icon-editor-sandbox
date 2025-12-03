@@ -661,53 +661,22 @@ jobs:
           $outDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/vscode-tasks-manifest'
           New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
-          $tasksFile = Join-Path $env:GITHUB_WORKSPACE '.vscode/tasks.json'
-          if (-not (Test-Path -LiteralPath $tasksFile -PathType Leaf)) {
-            throw "VSCode tasks.json not found at $tasksFile"
-          }
-
-          $fileInfo = Get-Item -LiteralPath $tasksFile
-          $hash = (Get-FileHash -LiteralPath $tasksFile -Algorithm SHA256).Hash.ToLower()
-
-          # Get commit author information from git
-          $commitAuthorName = git log -1 --format='%an' 2>$null
-          $commitAuthorEmail = git log -1 --format='%ae' 2>$null
-          if ([string]::IsNullOrWhiteSpace($commitAuthorName)) {
-            $commitAuthorName = '${{ github.actor }}'
-          }
-          if ([string]::IsNullOrWhiteSpace($commitAuthorEmail)) {
-            $commitAuthorEmail = '${{ github.actor }}@users.noreply.github.com'
-          }
-
-          $manifest = [pscustomobject]@{
-            schema           = 'urn:vscode-tasks-manifest:v1'
-            generated_at_utc = (Get-Date).ToUniversalTime().ToString('o')
-            commit           = '${{ github.sha }}'
-            commit_author    = [pscustomobject]@{
-              name  = $commitAuthorName
-              email = $commitAuthorEmail
-            }
-            ref              = '${{ github.ref }}'
-            run_id           = '${{ github.run_id }}'
-            run_attempt      = '${{ github.run_attempt }}'
-            repository       = '${{ github.repository }}'
-            actor            = '${{ github.actor }}'
-            files            = @(
-              [pscustomobject]@{
-                path       = '.vscode/tasks.json'
-                size_bytes = $fileInfo.Length
-                sha256     = $hash
-              }
-            )
-          }
-
           $manifestPath = Join-Path $outDir 'vscode-tasks-manifest.json'
-          $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding utf8
+          & "$env:GITHUB_WORKSPACE/.github/scripts/generate-vscode-tasks-manifest.ps1" `
+            -RepositoryPath $env:GITHUB_WORKSPACE `
+            -OutputPath $manifestPath `
+            -Commit '${{ github.sha }}' `
+            -Ref '${{ github.ref }}' `
+            -RunId '${{ github.run_id }}' `
+            -RunAttempt '${{ github.run_attempt }}' `
+            -Repository '${{ github.repository }}' `
+            -Actor '${{ github.actor }}'
 
           # Also copy the original tasks.json for reference
+          $tasksFile = Join-Path $env:GITHUB_WORKSPACE '.vscode/tasks.json'
           Copy-Item -LiteralPath $tasksFile -Destination (Join-Path $outDir 'tasks.json') -Force
 
-          Write-Host "Generated VSCode tasks manifest at $manifestPath"
+          Write-Host "Manifest contents:"
           Get-Content -LiteralPath $manifestPath
 
       - name: Upload VSCode tasks manifest artifact
