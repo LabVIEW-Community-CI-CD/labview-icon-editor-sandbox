@@ -19,18 +19,7 @@ permissions:
   actions: read
 
 jobs:
-  guard-owner:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ensure caller is repo owner
-        run: |
-          if [ "${{ github.actor }}" != "${{ github.repository_owner }}" ]; then
-            echo "This agent workflow may only be run by the repo owner." >&2
-            exit 1
-          fi
-
   ollama-sim:
-    needs: guard-owner
     if: inputs.mode == 'sim'
     name: Ollama executor (sim, safe default)
     runs-on: ubuntu-latest
@@ -80,7 +69,6 @@ jobs:
           if-no-files-found: warn
 
   ollama-real:
-    needs: guard-owner
     if: inputs.mode == 'real' && inputs.windows_runner_label != ''
     name: Ollama executor (real, Windows prereqs enforced)
     runs-on: ${{ fromJson(format('["{0}"]', inputs.windows_runner_label)) }}
@@ -114,7 +102,6 @@ jobs:
           if-no-files-found: warn
 
   ollama-windows-sim-fallback:
-    needs: guard-owner
     if: inputs.mode == 'real' && inputs.windows_runner_label == ''
     name: Ollama executor (sim fallback on Windows)
     runs-on: windows-latest
