@@ -795,6 +795,14 @@ jobs:
             ${{ steps.locate-sd.outputs.sd_manifest_json }}
             ${{ steps.locate-sd.outputs.sd_manifest_csv }}
           if-no-files-found: error
+      - name: Upload Source Distribution commit index artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: commit-index-sd
+          path: |
+            builds/cache/commit-index.json
+            builds/cache/commit-index.csv
+          if-no-files-found: error
 
   build-tooling:
     name: Build (Tooling Distribution)
@@ -915,6 +923,14 @@ jobs:
             ${{ steps.locate-tooling.outputs.tool_zip }}
             ${{ steps.locate-tooling.outputs.tool_manifest_json }}
             ${{ steps.locate-tooling.outputs.tool_manifest_csv }}
+          if-no-files-found: error
+      - name: Upload Tooling commit index artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: commit-index-tooling
+          path: |
+            builds/cache/tooling-commit-index.json
+            builds/cache/tooling-commit-index.csv
           if-no-files-found: error
       - name: Stage build reports under builds-isolated
         if: always()
@@ -1090,31 +1106,115 @@ jobs:
           echo "Downloaded Tooling Distribution contents:"
           ls -R artifacts/tooling
 
-      - name: Verify/generate commit index artifacts
+      - name: Validate version format
         shell: pwsh
         env:
-          PUBLISH_SKIP_COMMIT_INDEX: ${{ env.PUBLISH_SKIP_COMMIT_INDEX || '' }}
           TAG: ${{ needs.version.outputs.VERSION }}
           VERSION: ${{ needs.version.outputs.VERSION }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $isMainOrTag = ($env.GITHUB_REF -like 'refs/heads/main' -or $env.GITHUB_REF -like 'refs/tags/*')
-          $skip = ($env.PUBLISH_SKIP_COMMIT_INDEX -as [string]) -and ($env.PUBLISH_SKIP_COMMIT_INDEX.ToLower() -eq 'true')
-          if ($isMainOrTag -and $skip) {
-            throw 'PUBLISH_SKIP_COMMIT_INDEX=true is not allowed on main or tag refs; remove the bypass to publish.'
-          }
-
           if (-not $env:TAG -or $env:TAG -notmatch '^v\d+\.\d+\.\d+.*') {
             throw "TAG missing or malformed ('$env:TAG'); expected vMAJOR.MINOR.PATCH[...]"
           }
           if (-not $env:VERSION -or $env:VERSION -notmatch '^v\d+\.\d+\.\d+.*') {
             throw "VERSION missing or malformed ('$env:VERSION'); expected vMAJOR.MINOR.PATCH[...]"
           }
+          Write-Host "Version format validated: TAG=$env:TAG, VERSION=$env:VERSION"
 
+      - name: "Guard: commit index skip policy"
+        shell: pwsh
+        env:
+          PUBLISH_SKIP_COMMIT_INDEX: ${{ env.PUBLISH_SKIP_COMMIT_INDEX || '' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $isMainOrTag = ($env:GITHUB_REF -like 'refs/heads/main' -or $env:GITHUB_REF -like 'refs/tags/*')
+          $skip = ($env:PUBLISH_SKIP_COMMIT_INDEX -as [string]) -and ($env:PUBLISH_SKIP_COMMIT_INDEX.ToLower() -eq 'true')
+          if ($isMainOrTag -and $skip) {
+            throw 'PUBLISH_SKIP_COMMIT_INDEX=true is not allowed on main or tag refs; remove the bypass to publish.'
+          }
+          Write-Host "Commit index skip policy validated."
+
+      - name: Ensure commit index directories exist
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
           $repo = "$env:GITHUB_WORKSPACE"
           $sdDir = Join-Path $repo 'artifacts/commit-index-sd'
           $toolDir = Join-Path $repo 'artifacts/commit-index-tooling'
-          foreach ($d in @($sdDir, $toolDir)) { if (-not (Test-Path -LiteralPath $d)) { New-Item -ItemType Directory -Path $d -Force | Out-Null } }
+          foreach ($d in @($sdDir, $toolDir)) {
+            if (-not (Test-Path -LiteralPath $d)) {
+              New-Item -ItemType Directory -Path $d -Force | Out-Null
+              Write-Host "Created directory: $d"
+            }
+          }
+
+      - name: Generate missing SD commit index
+        shell: pwsh
+        env:
+          PUBLISH_SKIP_COMMIT_INDEX: ${{ env.PUBLISH_SKIP_COMMIT_INDEX || '' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $skip = ($env:PUBLISH_SKIP_COMMIT_INDEX -as [string]) -and ($env:PUBLISH_SKIP_COMMIT_INDEX.ToLower() -eq 'true')
+          $repo = "$env:GITHUB_WORKSPACE"
+          $sdDir = Join-Path $repo 'artifacts/commit-index-sd'
+
+          $json = Get-ChildItem -LiteralPath $sdDir -Filter 'commit-index.json' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          $csv  = Get-ChildItem -LiteralPath $sdDir -Filter 'commit-index.csv' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+
+          if ($json -and $csv) {
+            Write-Host "SD commit index already present."
+          } elseif ($skip) {
+            Write-Host "SD commit index missing, but PUBLISH_SKIP_COMMIT_INDEX=true -> skipping generation."
+          } else {
+            Write-Host "SD commit index missing; generating locally..."
+            $sdJsonOut = Join-Path $sdDir 'commit-index.json'
+            $sdCsvOut  = Join-Path $sdDir 'commit-index.csv'
+            & "$repo/scripts/build-source-distribution/New-CommitIndex.ps1" -RepositoryPath $repo -OutputPath $sdJsonOut -CsvOutputPath $sdCsvOut -AllowDirty
+          }
+
+      - name: Generate missing Tooling commit index
+        shell: pwsh
+        env:
+          PUBLISH_SKIP_COMMIT_INDEX: ${{ env.PUBLISH_SKIP_COMMIT_INDEX || '' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $skip = ($env:PUBLISH_SKIP_COMMIT_INDEX -as [string]) -and ($env:PUBLISH_SKIP_COMMIT_INDEX.ToLower() -eq 'true')
+          $repo = "$env:GITHUB_WORKSPACE"
+          $toolDir = Join-Path $repo 'artifacts/commit-index-tooling'
+
+          $json = Get-ChildItem -LiteralPath $toolDir -Filter 'tooling-commit-index.json' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          $csv  = Get-ChildItem -LiteralPath $toolDir -Filter 'tooling-commit-index.csv' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+
+          if ($json -and $csv) {
+            Write-Host "Tooling commit index already present."
+          } elseif ($skip) {
+            Write-Host "Tooling commit index missing, but PUBLISH_SKIP_COMMIT_INDEX=true -> skipping generation."
+          } else {
+            Write-Host "Tooling commit index missing; generating locally..."
+            $toolJsonOut = Join-Path $toolDir 'tooling-commit-index.json'
+            $toolCsvOut  = Join-Path $toolDir 'tooling-commit-index.csv'
+            $includePaths = @(
+              '.vscode','configs','scenarios','runner_dependencies.vipc',
+              'scripts/run-worktree-task.ps1','scripts/run-requirements-summary-task.ps1','scripts/task-devmode-bind.ps1',
+              'scripts/clear-labview-librarypaths-all.ps1','scripts/run-xcli.ps1','scripts/run-worktree-tests.ps1',
+              'scripts/test/Test.ps1','scripts/vi-compare','scripts/ppl-from-sd/Build_Ppl_From_SourceDistribution.ps1',
+              'scripts/labview/vipb-bump-worktree.ps1','scripts/clear-tooling-cache.ps1',
+              'Tooling/dotnet/OrchestrationCli','Tooling/dotnet/IntegrationEngineCli','Tooling/dotnet/DevModeAgentCli',
+              'Tooling/dotnet/RequirementsSummarizer','Tooling/dotnet/TestsCli','Tooling/x-cli/src/XCli','Tooling/x-cli/src/Telemetry'
+            )
+            & "$repo/scripts/build-source-distribution/New-CommitIndex.ps1" -RepositoryPath $repo -IncludePaths $includePaths -OutputPath $toolJsonOut -CsvOutputPath $toolCsvOut -AllowDirty
+          }
+
+      - name: Validate commit index artifacts
+        shell: pwsh
+        env:
+          PUBLISH_SKIP_COMMIT_INDEX: ${{ env.PUBLISH_SKIP_COMMIT_INDEX || '' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $skip = ($env:PUBLISH_SKIP_COMMIT_INDEX -as [string]) -and ($env:PUBLISH_SKIP_COMMIT_INDEX.ToLower() -eq 'true')
+          $repo = "$env:GITHUB_WORKSPACE"
+          $sdDir = Join-Path $repo 'artifacts/commit-index-sd'
+          $toolDir = Join-Path $repo 'artifacts/commit-index-tooling'
 
           function Get-IndexFiles([string]$dir,[string]$stem) {
             $json = Get-ChildItem -LiteralPath $dir -Filter "$stem.json" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -1127,41 +1227,6 @@ jobs:
           $missing = @()
           if (-not $sd.json -or -not $sd.csv)   { $missing += 'commit-index-sd' }
           if (-not $tool.json -or -not $tool.csv) { $missing += 'commit-index-tooling' }
-
-          if ($missing.Count -gt 0 -and -not $skip) {
-            Write-Host "Commit index artifact(s) missing ($($missing -join ', ')); generating locally..."
-            try {
-              $sdJsonOut = Join-Path $sdDir 'commit-index.json'
-              $sdCsvOut  = Join-Path $sdDir 'commit-index.csv'
-              & "$repo/scripts/build-source-distribution/New-CommitIndex.ps1" -RepositoryPath $repo -OutputPath $sdJsonOut -CsvOutputPath $sdCsvOut -AllowDirty
-            } catch {
-              Write-Error "Failed to generate commit-index-sd: $($_.Exception.Message)"
-            }
-
-            try {
-              $toolJsonOut = Join-Path $toolDir 'tooling-commit-index.json'
-              $toolCsvOut  = Join-Path $toolDir 'tooling-commit-index.csv'
-              $includePaths = @(
-                '.vscode','configs','scenarios','runner_dependencies.vipc',
-                'scripts/run-worktree-task.ps1','scripts/run-requirements-summary-task.ps1','scripts/task-devmode-bind.ps1',
-                'scripts/clear-labview-librarypaths-all.ps1','scripts/run-xcli.ps1','scripts/run-worktree-tests.ps1',
-                'scripts/test/Test.ps1','scripts/vi-compare','scripts/ppl-from-sd/Build_Ppl_From_SourceDistribution.ps1',
-                'scripts/labview/vipb-bump-worktree.ps1','scripts/clear-tooling-cache.ps1',
-                'Tooling/dotnet/OrchestrationCli','Tooling/dotnet/IntegrationEngineCli','Tooling/dotnet/DevModeAgentCli',
-                'Tooling/dotnet/RequirementsSummarizer','Tooling/dotnet/TestsCli','Tooling/x-cli/src/XCli','Tooling/x-cli/src/Telemetry'
-              )
-              & "$repo/scripts/build-source-distribution/New-CommitIndex.ps1" -RepositoryPath $repo -IncludePaths $includePaths -OutputPath $toolJsonOut -CsvOutputPath $toolCsvOut -AllowDirty
-            } catch {
-              Write-Error "Failed to generate commit-index-tooling: $($_.Exception.Message)"
-            }
-
-            # Re-evaluate
-            $sd    = Get-IndexFiles -dir $sdDir   -stem 'commit-index'
-            $tool  = Get-IndexFiles -dir $toolDir -stem 'tooling-commit-index'
-            $missing = @()
-            if (-not $sd.json -or -not $sd.csv)   { $missing += 'commit-index-sd' }
-            if (-not $tool.json -or -not $tool.csv) { $missing += 'commit-index-tooling' }
-          }
 
           $toHash = @()
           if ($sd.json)   { $toHash += $sd.json.FullName }
