@@ -6,6 +6,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$TargetLabVIEWVersion,
 
+    [ValidateSet('0', '3')]
+    [string]$TargetLabVIEWMinor = '0',
+
 [string]$VipbPath = 'Tooling/deployment/seed.vipb',
 [string]$WorktreeName = 'lvsd-next',
 [string]$SeedImage,
@@ -100,7 +103,9 @@ if ($currentVersion -and ($currentVersion -match '\((?<bits>\d+)-bit\)')) {
 }
 $lvMajorToken = $TargetLabVIEWVersion
 if ($lvMajorToken -match '^20(?<maj>\d{2})$') { $lvMajorToken = $Matches['maj'] }
-$newVersionString = ("{0}.0 ({1})" -f $lvMajorToken, $bitnessSuffix)
+# Use TargetLabVIEWMinor to specify Q1 (.0) or Q3 (.3) releases
+# Examples: 25.0 = LabVIEW 2025 Q1, 25.3 = LabVIEW 2025 Q3
+$newVersionString = ("{0}.{1} ({2})" -f $lvMajorToken, $TargetLabVIEWMinor, $bitnessSuffix)
 $json.VI_Package_Builder_Settings.Library_General_Settings.Package_LabVIEW_Version = $newVersionString
 $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding UTF8
 Write-Host "[vipb-bump] Updated Package_LabVIEW_Version to '$newVersionString'"
@@ -119,6 +124,8 @@ $manifest = [ordered]@{
     source_vipb    = $vipbFull
     staged_vipb    = $vipbStaged
     target_version = $TargetLabVIEWVersion
+    target_minor   = $TargetLabVIEWMinor
+    labview_version_string = $newVersionString
     repo_commit    = $repoCommit
     git_ref        = $repoRef
     hash           = $vipbHash
