@@ -7,6 +7,18 @@ on:
         description: "Image tag suffix (e.g., v1.0.0; default latest)"
         required: false
         default: "latest"
+      registry:
+        description: "Container registry hostname (default ghcr.io)"
+        required: false
+        default: "ghcr.io"
+      registry_owner:
+        description: "Registry namespace/owner (defaults to repository owner)"
+        required: false
+        default: ""
+      image_name:
+        description: "Image name (defaults to seed)"
+        required: false
+        default: ""
   push:
     branches: [main, develop, release-alpha, release-beta, release-rc]
     paths:
@@ -49,15 +61,23 @@ jobs:
 
       - name: Compute image name (lowercase owner)
         id: names
+        env:
+          INPUT_REGISTRY: ${{ github.event.inputs.registry }}
+          INPUT_OWNER: ${{ github.event.inputs.registry_owner }}
+          INPUT_IMAGE: ${{ github.event.inputs.image_name }}
         run: |
-          owner="${{ github.repository_owner }}"
+          registry="${INPUT_REGISTRY:-ghcr.io}"
+          owner="${INPUT_OWNER:-${{ github.repository_owner }}}"
+          image="${INPUT_IMAGE:-seed}"
           owner_lc="$(echo "$owner" | tr '[:upper:]' '[:lower:]')"
-          echo "image_name=ghcr.io/${owner_lc}/seed" >> "$GITHUB_OUTPUT"
+          image_lc="$(echo "$image" | tr '[:upper:]' '[:lower:]')"
+          echo "registry=${registry}" >> "$GITHUB_OUTPUT"
+          echo "image_name=${registry}/${owner_lc}/${image_lc}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ steps.names.outputs.registry }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
