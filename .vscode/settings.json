@@ -1,3 +1,4 @@
 {
-  "git.autofetch": false
+  "git.autofetch": false,
+  "dotnet.defaultSolution": "labview-icon-editor-sandbox.sln"
 }
