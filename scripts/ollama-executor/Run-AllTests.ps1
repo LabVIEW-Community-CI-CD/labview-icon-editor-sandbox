@@ -71,7 +71,7 @@ function Invoke-TestSuite {
     )
     
     # Check if test should run in current mode
-    if ($Modes -notcontains $Mode -and 'full' -notcontains $Mode) {
+    if ($Mode -ne 'full' -and $Modes -notcontains $Mode) {
         Write-Host "[$Name] Skipped (not in $Mode mode)" -ForegroundColor Gray
         $script:testResults.summary.skipped++
         return
