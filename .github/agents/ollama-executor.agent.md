@@ -147,7 +147,7 @@ pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distributio
 
 ### Seed Docker Container Reference
 
-The Seed container (`ghcr.io/labview-community-ci-cd/seed:latest`) is a **required dependency** for VIPB/LVPROJ manipulation. It provides a single point of bootstrapping for targeting LabVIEW builds from specific years and bitnesses.
+The Seed container (vendored `seed:latest`, build locally with `docker build -f Tooling/seed/Dockerfile -t seed:latest .`, or override via `SEED_IMAGE`) is a **required dependency** for VIPB/LVPROJ manipulation. It provides a single point of bootstrapping for targeting LabVIEW builds from specific years and bitnesses.
 
 **Requirement**: Seed Docker tooling SHALL be available before any VIPB modification workflow.
 
@@ -162,7 +162,7 @@ The Seed container (`ghcr.io/labview-community-ci-cd/seed:latest`) is a **requir
 # Step 1: Convert VIPB to JSON
 docker run --rm --entrypoint /usr/local/bin/VipbJsonTool \
   -v "${PWD}:/repo" -w /repo \
-  ghcr.io/labview-community-ci-cd/seed:latest \
+  seed:latest \
   vipb2json Tooling/deployment/seed.vipb Tooling/deployment/seed.vipb.json
 
 # Step 2: Modify the JSON (update Package_LabVIEW_Version)
@@ -171,13 +171,20 @@ docker run --rm --entrypoint /usr/local/bin/VipbJsonTool \
 # Step 3: Convert JSON back to VIPB
 docker run --rm --entrypoint /usr/local/bin/VipbJsonTool \
   -v "${PWD}:/repo" -w /repo \
-  ghcr.io/labview-community-ci-cd/seed:latest \
+  seed:latest \
   json2vipb Tooling/deployment/seed.vipb.json Tooling/deployment/seed.vipb
 ```
 
 Build the seed image locally if not available from registry:
 ```powershell
 docker build -f Tooling/seed/Dockerfile -t seed:latest .
+
+## Prompt Aliases (single-word -> full instructions)
+Use `scripts/ollama-executor/AgentPromptAliases.ps1` to expand a keyword into a ready-to-use prompt for the executor. Example:
+```powershell
+pwsh -NoProfile -File scripts/ollama-executor/AgentPromptAliases.ps1 seed2021
+```
+This emits the full instructions to create and push a seeded branch for LabVIEW 2021 Q1 64-bit using the vendored Seed image (builds if missing), then report the branch and commit. Add new aliases in that script as needed.
 ```
 
 ### 7. Testing
