@@ -200,8 +200,12 @@ if ($LASTEXITCODE -ne 0) {
 # Modify JSON
 Write-Host "Updating Package_LabVIEW_Version to '$versionString'..." -ForegroundColor Gray
 $json = Get-Content -Raw $vipbJson | ConvertFrom-Json
-$json.Library_General_Settings.Package_LabVIEW_Version = $versionString
-$json.Library_General_Settings.Library_Version = "$lvMajor.$LabVIEWMinor.0.1"
+$lg = $json.VI_Package_Builder_Settings.Library_General_Settings
+if (-not $lg) {
+    throw "Library_General_Settings not found in VIPB JSON"
+}
+$lg.Package_LabVIEW_Version = $versionString
+$lg.Library_Version = "$lvMajor.$LabVIEWMinor.0.1"
 $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding UTF8
 
 # Convert back to VIPB
