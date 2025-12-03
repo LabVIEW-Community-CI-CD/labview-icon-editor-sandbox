@@ -272,7 +272,7 @@ To achieve comprehensive test coverage and enable advanced testing scenarios, we
 ### Negative
 - **Maintenance Burden**: More test code to maintain
 - **Execution Time**: Full test suite may take 30+ minutes
-- **Learning Curve**: Developers need to understand test framework
+- **Learning Curve**: Developers should understand test framework
 - **Infrastructure**: Some features require CI/CD environment
 
 ### Mitigations

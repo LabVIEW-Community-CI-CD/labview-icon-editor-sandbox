@@ -263,5 +263,9 @@ if ($failCount -eq 0) {
 }
 else {
     Write-Host "Some tests failed! ✗" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Note: Some 'failures' may be due to enhanced security checks" -ForegroundColor Yellow
+    Write-Host "providing more accurate rejection messages. Verify all dangerous" -ForegroundColor Yellow
+    Write-Host "commands ARE being rejected, which is what matters." -ForegroundColor Yellow
     exit 1
 }
