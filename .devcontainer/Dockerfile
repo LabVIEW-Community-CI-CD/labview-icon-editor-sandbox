@@ -5,6 +5,7 @@ RUN echo '#!/bin/sh\nexit 101' > /usr/sbin/policy-rc.d \
     && chmod +x /usr/sbin/policy-rc.d
 
 # Install PowerShell, Docker CLI, and utilities
+# Note: Using semicolons after apt install to handle dbus trigger errors gracefully
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         wget \
