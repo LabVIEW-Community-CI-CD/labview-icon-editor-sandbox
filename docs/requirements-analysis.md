@@ -41,8 +41,8 @@
 
 7. **Codespaces-ready VS Code tasks for Ollama Design Bench** ✅
    - Status: COMPLETE
-   - Evidence: Devcontainer codespaces customizations and task doc update
-   - Files: .devcontainer/devcontainer.json, docs/vscode-tasks.md
+   - Evidence: Devcontainer codespaces customizations, task doc update, and Codespaces workflow walkthrough
+   - Files: .devcontainer/devcontainer.json, docs/vscode-tasks.md, docs/ollama-design-bench-codespaces.md
    - Validation: VS Code tasks surface inside Codespaces with PowerShell defaults
 
 ---
