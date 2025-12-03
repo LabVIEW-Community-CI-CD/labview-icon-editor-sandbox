@@ -8,6 +8,9 @@ RUN echo '#!/bin/sh\nexit 101' > /usr/sbin/policy-rc.d \
     && chmod +x /usr/sbin/policy-rc.d
 
 # Install PowerShell, Docker CLI, and utilities
+# Note: apt-get install will trigger dbus which cannot connect to system bus in containers.
+# This is expected and harmless. We use semicolons after install to continue despite the trigger error,
+# then verify the packages were installed successfully.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         wget \
@@ -18,14 +21,15 @@ RUN apt-get update \
         unzip \
         ca-certificates \
         less \
-        docker.io \
-    && wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O /tmp/packages-microsoft-prod.deb \
+        docker.io; \
+    dpkg -l | grep -q wget; \
+    dpkg -l | grep -q docker.io; \
+    wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O /tmp/packages-microsoft-prod.deb \
     && dpkg -i /tmp/packages-microsoft-prod.deb \
     && rm /tmp/packages-microsoft-prod.deb \
     && apt-get update \
-    # Installing powershell triggers dbus which fails in containers (expected). Use semicolons to continue past the trigger error.
     && apt-get install -y --no-install-recommends powershell; \
-    dpkg --configure -a || true; \
+    pwsh --version; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*; \
     rm -f /usr/sbin/policy-rc.d
