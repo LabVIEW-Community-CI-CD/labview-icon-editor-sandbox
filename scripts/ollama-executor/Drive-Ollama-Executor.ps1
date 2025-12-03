@@ -132,39 +132,60 @@ for ($turn = 1; $turn -le $MaxTurns; $turn++) {
     $stderrPath = Join-Path $env:TEMP "ollama-exec-err.txt"
     Remove-Item $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
 
-    try {
-        $proc = Start-Process -FilePath "pwsh" `
-            -ArgumentList @("-NoProfile", "-Command", $cmd) `
-            -WorkingDirectory $repoFull `
-            -RedirectStandardOutput $stdoutPath `
-            -RedirectStandardError $stderrPath `
-            -NoNewWindow -PassThru
+    # Check if simulation mode is enabled
+    $simulationMode = ($env:OLLAMA_EXECUTOR_MODE -eq 'sim')
+    
+    if ($simulationMode) {
+        # Use simulation provider instead of real execution
+        Write-Host "[executor] SIMULATION MODE - using SimulationProvider" -ForegroundColor Cyan
+        try {
+            $simResult = & "$PSScriptRoot/SimulationProvider.ps1" -Command $cmd -WorkingDirectory $repoFull
+            $exitCode = $simResult.ExitCode
+            $stdout = $simResult.StdOut
+            $stderr = $simResult.StdErr
+        }
+        catch {
+            $exitCode = -1
+            $stdout = ""
+            $stderr = "Simulation provider error: $($_.Exception.Message)"
+        }
+    }
+    else {
+        # Real execution path (existing code)
+        try {
+            $proc = Start-Process -FilePath "pwsh" `
+                -ArgumentList @("-NoProfile", "-Command", $cmd) `
+                -WorkingDirectory $repoFull `
+                -RedirectStandardOutput $stdoutPath `
+                -RedirectStandardError $stderrPath `
+                -NoNewWindow -PassThru
 
-        $timedOut = $false
-        if ($CommandTimeoutSec -gt 0) {
-            $finished = $proc.WaitForExit($CommandTimeoutSec * 1000)
-            if (-not $finished) {
-                $timedOut = $true
-                try { $proc.Kill() } catch {}
+            $timedOut = $false
+            if ($CommandTimeoutSec -gt 0) {
+                $finished = $proc.WaitForExit($CommandTimeoutSec * 1000)
+                if (-not $finished) {
+                    $timedOut = $true
+                    try { $proc.Kill() } catch {}
+                }
             }
+            else {
+                $proc.WaitForExit() | Out-Null
+            }
+
+            $exitCode = if ($timedOut) { -1 } else { $proc.ExitCode }
         }
-        else {
-            $proc.WaitForExit() | Out-Null
+        catch {
+            $exitCode = -1
+            Set-Content -LiteralPath $stderrPath -Value $_.Exception.Message
         }
 
-        $exitCode = if ($timedOut) { -1 } else { $proc.ExitCode }
+        $stdout = if (Test-Path $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Raw } else { "" }
+        $stderr = if (Test-Path $stderrPath) { Get-Content -LiteralPath $stderrPath -Raw } else { "" }
+        if ($timedOut) {
+            $stderr = "Timed out after ${CommandTimeoutSec}s`r`n$stderr"
+        }
+        Remove-Item $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
     }
-    catch {
-        $exitCode = -1
-        Set-Content -LiteralPath $stderrPath -Value $_.Exception.Message
-    }
-
-    $stdout = if (Test-Path $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Raw } else { "" }
-    $stderr = if (Test-Path $stderrPath) { Get-Content -LiteralPath $stderrPath -Raw } else { "" }
-    if ($timedOut) {
-        $stderr = "Timed out after ${CommandTimeoutSec}s`r`n$stderr"
-    }
-    Remove-Item $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
 
     $result = @{
         result = @{
