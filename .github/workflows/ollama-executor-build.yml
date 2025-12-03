@@ -1,0 +1,296 @@
+name: Ollama Executor Build Automation
+
+defaults:
+  run:
+    working-directory: './'
+
+on:
+  workflow_dispatch:
+    inputs:
+      goal:
+        description: "Build goal (e.g., 'Build Source Distribution LV2025 64-bit')"
+        required: true
+        default: "Build Source Distribution LV2025 64-bit"
+      max_turns:
+        description: "Maximum conversation turns"
+        required: false
+        default: "10"
+      simulation:
+        description: "Use simulation mode (no real LabVIEW required)"
+        required: false
+        default: "true"
+        type: boolean
+  pull_request:
+    paths:
+      - 'scripts/build-source-distribution/**'
+      - 'scripts/ppl-from-sd/**'
+      - 'scripts/ollama-executor/**'
+      - '.github/workflows/ollama-executor-build.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ollama-build-simulation:
+    name: Ollama Build (Simulation Mode)
+    runs-on: ubuntu-latest
+    if: github.event.inputs.simulation == 'true' || github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PowerShell
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+
+      - name: Run Ollama Executor (Simulation Mode)
+        shell: pwsh
+        env:
+          OLLAMA_EXECUTOR_MODE: sim
+          OLLAMA_SIM_DELAY_MS: 50
+          OLLAMA_SIM_CREATE_ARTIFACTS: true
+          OLLAMA_HOST: http://localhost:11436
+          OLLAMA_MODEL_TAG: llama3-8b-local
+        run: |
+          Write-Host "=== Starting Ollama Executor in Simulation Mode ===" -ForegroundColor Cyan
+          Write-Host ""
+          Write-Host "Goal: ${{ github.event.inputs.goal || 'Build Source Distribution LV2025 64-bit' }}" -ForegroundColor Yellow
+          Write-Host "Mode: SIMULATION (No real LabVIEW required)" -ForegroundColor Yellow
+          Write-Host ""
+          
+          # Start mock Ollama server
+          $mockJob = Start-Job -ScriptBlock {
+            & "$using:PWD/scripts/ollama-executor/MockOllamaServer.ps1" `
+              -Port 11436 `
+              -ScenarioFile "$using:PWD/scripts/ollama-executor/test-scenarios/successful-single-turn.json" `
+              -MaxRequests 50
+          }
+          
+          try {
+            Start-Sleep -Seconds 3
+            
+            # Run executor
+            & scripts/ollama-executor/Drive-Ollama-Executor.ps1 `
+              -Endpoint "http://localhost:11436" `
+              -Model "llama3-8b-local" `
+              -RepoPath . `
+              -Goal "${{ github.event.inputs.goal || 'Build Source Distribution LV2025 64-bit' }}" `
+              -MaxTurns ${{ github.event.inputs.max_turns || 10 }} `
+              -AllowedRuns @() `
+              -CommandTimeoutSec 30
+          }
+          finally {
+            Stop-Job $mockJob -ErrorAction SilentlyContinue
+            Remove-Job $mockJob -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Upload Build Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ollama-build-artifacts-simulation
+          path: |
+            builds/**/*.zip
+            builds/**/*.lvlibp
+            builds/**/*.vip
+          retention-days: 7
+
+      - name: Upload Build Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ollama-executor-logs
+          path: |
+            reports/logs/**
+          retention-days: 7
+
+  ollama-build-real:
+    name: Ollama Build (Real Execution)
+    runs-on: ubuntu-latest
+    if: github.event.inputs.simulation == 'false'
+    
+    services:
+      ollama:
+        image: ghcr.io/${{ github.repository_owner }}/ollama-local:cpu-preloaded
+        ports:
+          - 11435:11435
+        options: >-
+          --health-cmd "curl -f http://localhost:11435/api/tags || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup PowerShell
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+
+      - name: Verify Ollama Service
+        shell: pwsh
+        env:
+          OLLAMA_HOST: http://localhost:11435
+          OLLAMA_MODEL_TAG: llama3-8b-local
+        run: |
+          & scripts/ollama-executor/check-ollama-endpoint.ps1 `
+            -Host "http://localhost:11435" `
+            -ModelTag "llama3-8b-local" `
+            -RequireModelTag $true
+
+      - name: Run Ollama Executor (Real Mode)
+        shell: pwsh
+        env:
+          OLLAMA_HOST: http://localhost:11435
+          OLLAMA_MODEL_TAG: llama3-8b-local
+        run: |
+          Write-Host "=== Starting Ollama Executor (Real Mode) ===" -ForegroundColor Cyan
+          Write-Host ""
+          Write-Host "Goal: ${{ github.event.inputs.goal }}" -ForegroundColor Yellow
+          Write-Host "Mode: REAL (Using actual Ollama service)" -ForegroundColor Yellow
+          Write-Host ""
+          
+          & scripts/ollama-executor/Drive-Ollama-Executor.ps1 `
+            -Endpoint "http://localhost:11435" `
+            -Model "llama3-8b-local" `
+            -RepoPath . `
+            -Goal "${{ github.event.inputs.goal }}" `
+            -MaxTurns ${{ github.event.inputs.max_turns }} `
+            -AllowedRuns @() `
+            -CommandTimeoutSec 300
+
+      - name: Upload Build Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ollama-build-artifacts-real
+          path: |
+            builds/**/*.zip
+            builds/**/*.lvlibp
+            builds/**/*.vip
+          retention-days: 30
+
+      - name: Upload Build Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ollama-executor-logs-real
+          path: |
+            reports/logs/**
+          retention-days: 30
+
+  multi-platform-build:
+    name: Multi-Platform Build (Simulation)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    strategy:
+      matrix:
+        labview: ['2021', '2025']
+        bitness: ['32', '64']
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build LV${{ matrix.labview }} ${{ matrix.bitness }}-bit (Simulated)
+        shell: pwsh
+        env:
+          OLLAMA_EXECUTOR_MODE: sim
+          OLLAMA_SIM_DELAY_MS: 20
+          OLLAMA_SIM_CREATE_ARTIFACTS: true
+        run: |
+          Write-Host "=== Building for LV${{ matrix.labview }} ${{ matrix.bitness }}-bit ===" -ForegroundColor Cyan
+          
+          $result = & scripts/ollama-executor/SimulationProvider.ps1 `
+            -Command "pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version ${{ matrix.labview }} -SupportedBitness ${{ matrix.bitness }}" `
+            -WorkingDirectory .
+          
+          if ($result.ExitCode -eq 0) {
+            Write-Host "✓ Build succeeded for LV${{ matrix.labview }} ${{ matrix.bitness }}-bit" -ForegroundColor Green
+            exit 0
+          } else {
+            Write-Host "✗ Build failed for LV${{ matrix.labview }} ${{ matrix.bitness }}-bit" -ForegroundColor Red
+            Write-Host "Exit Code: $($result.ExitCode)"
+            Write-Host "StdErr: $($result.StdErr)"
+            exit 1
+          }
+
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-lv${{ matrix.labview }}-${{ matrix.bitness }}bit
+          path: builds/**/*LV${{ matrix.labview }}_${{ matrix.bitness }}bit*
+          retention-days: 7
+
+  comment-results:
+    name: Comment Build Results
+    runs-on: ubuntu-latest
+    needs: [ollama-build-simulation, multi-platform-build]
+    if: github.event_name == 'pull_request' && always()
+    
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const simStatus = '${{ needs.ollama-build-simulation.result }}';
+            const multiStatus = '${{ needs.multi-platform-build.result }}';
+            
+            const statusIcon = (status) => {
+              if (status === 'success') return '✅';
+              if (status === 'failure') return '❌';
+              return '⚠️';
+            };
+            
+            const comment = `## 🤖 Ollama Executor Build Results
+            
+            | Build Type | Status |
+            |------------|--------|
+            | Single Build (Simulation) | ${statusIcon(simStatus)} ${simStatus} |
+            | Multi-Platform Matrix | ${statusIcon(multiStatus)} ${multiStatus} |
+            
+            ### Simulated Platforms
+            - LabVIEW 2021 32-bit
+            - LabVIEW 2021 64-bit
+            - LabVIEW 2025 32-bit
+            - LabVIEW 2025 64-bit
+            
+            ${simStatus === 'success' && multiStatus === 'success'
+              ? '🎉 **All builds completed successfully!**'
+              : '⚠️ Some builds failed. Check the Actions tab for details.'}
+            
+            <details>
+            <summary>About Simulation Mode</summary>
+            
+            This PR uses **simulation mode** to test build scripts without requiring LabVIEW installation.
+            - ✅ Validates script syntax and parameters
+            - ✅ Tests error handling and timeouts
+            - ✅ Creates stub artifacts for verification
+            - ⚠️ Does not validate actual LabVIEW compilation
+            
+            For real builds, use \`workflow_dispatch\` with \`simulation: false\`.
+            </details>
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
