@@ -39,6 +39,9 @@ function Ensure-DotnetOnPath {
 }
 
 Ensure-DotnetOnPath
+if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+    throw "dotnet SDK not found. Install .NET 8 or set DOTNET_ROOT/adjust PATH before running Run-Ollama-Host.ps1."
+}
 
 function Get-AppliedRequirements {
     $raw = $env:OLLAMA_REQUIREMENTS_APPLIED
