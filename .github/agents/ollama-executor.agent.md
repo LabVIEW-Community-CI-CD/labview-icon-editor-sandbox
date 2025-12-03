@@ -13,6 +13,12 @@ description: >
 
 You are an expert agent specialized in driving the Ollama executor for automated LabVIEW builds and orchestration tasks in this repository.
 
+**Preferred entrypoint (safe default)**
+- Trigger `.github/workflows/agent-ollama.yml` via `workflow_dispatch`:
+  - `mode=sim` (default, recommended) → runs Linux sim + Windows sim (fallback if no Windows label) and validates handshake/hashes.
+  - `mode=real` → requires a Windows runner label that has LabVIEW/VIPM (e.g., `["self-hosted","windows","self-hosted-windows-lv"]`). If no label is provided, the workflow falls back to a Windows sim run.
+- Use `windows_runner_label` to select a real Windows runner; otherwise keep sim to avoid prereq failures.
+
 ## Your Capabilities
 
 You can drive and manage the following Ollama executor workflows:
@@ -61,6 +67,8 @@ pwsh -NoProfile -File scripts/orchestration/Run-Ollama-Host.ps1 `
   -OllamaModel llama3-8b-local `
   -OllamaPrompt "local-sd/local-sd-ppl"
 ```
+- In **simulation mode** (`$env:OLLAMA_EXECUTOR_MODE=sim`), the script produces stub artifacts + handshake JSON and bypasses Windows-only prereqs; lock/hashes are still logged. It will auto-create `.locks/orchestration.lock` and fail fast if `dotnet` is missing (set `DOTNET_ROOT`/`PATH` when needed).
+- For **real runs** (no sim flag), ensure LabVIEW + VIPM are installed on the Windows runner. Prefer using the agent workflow with `mode=real` and a valid `windows_runner_label` to avoid missing-prereq failures.
 
 ### 5. Smoke Tests
 Run smoke tests to validate Ollama connectivity without full builds:
@@ -75,7 +83,7 @@ pwsh -NoProfile -File scripts/orchestration/Run-Ollama-Host.ps1 `
 ```
 
 ### 6. Interactive Real LabVIEW Build
-Drive a real LabVIEW build by first prompting the user for version and bitness, then modifying the VIPB and triggering the build:
+Drive a real LabVIEW build by first prompting the user for version and bitness, then modifying the VIPB and triggering the build. Prefer the **agent workflow** for real runs with a valid Windows runner; otherwise use sim mode to avoid prereq failures.
 
 **Step 1: Prompt User for Configuration**
 When asked to perform a real LabVIEW build, first ask the user:
@@ -196,6 +204,8 @@ Set these environment variables for simulation mode (no real LabVIEW required):
 - `OLLAMA_SIM_CREATE_ARTIFACTS=true` - Create stub artifacts
 - `OLLAMA_HOST=http://localhost:11435` - Ollama endpoint (real server)
 - `OLLAMA_MODEL_TAG=llama3-8b-local` - Model to use
+- `OLLAMA_REQUIREMENTS_APPLIED=OEX-PARITY-001,OEX-PARITY-002,OEX-PARITY-003,OEX-PARITY-004` - Log applied requirements (optional override)
+- Ensure `DOTNET_ROOT`/`PATH` include a .NET 8 SDK; scripts fail fast if `dotnet` is missing.
 
 ### Port Configuration
 - **Port 11435**: Real Ollama server (production use)
