@@ -16,7 +16,7 @@ on:
         required: false
         default: ""
       image_name:
-        description: "Image name (defaults to seed)"
+        description: "Image name (defaults to <repo-name>-seed)"
         required: false
         default: ""
   push:
@@ -65,10 +65,13 @@ jobs:
           INPUT_REGISTRY: ${{ github.event.inputs.registry }}
           INPUT_OWNER: ${{ github.event.inputs.registry_owner }}
           INPUT_IMAGE: ${{ github.event.inputs.image_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           registry="${INPUT_REGISTRY:-ghcr.io}"
           owner="${INPUT_OWNER:-${{ github.repository_owner }}}"
-          image="${INPUT_IMAGE:-seed}"
+          repo_name="${GITHUB_REPOSITORY##*/}"
+          default_image="${repo_name}-seed"
+          image="${INPUT_IMAGE:-${default_image}}"
           owner_lc="$(echo "$owner" | tr '[:upper:]' '[:lower:]')"
           image_lc="$(echo "$image" | tr '[:upper:]' '[:lower:]')"
           echo "registry=${registry}" >> "$GITHUB_OUTPUT"
