@@ -35,7 +35,7 @@ jobs:
   ollama-build-simulation:
     name: Ollama Build (Simulation Mode)
     runs-on: ubuntu-latest
-    if: github.event.inputs.simulation == 'true' || github.event_name == 'pull_request'
+    if: github.event.inputs.simulation == true || github.event_name == 'pull_request'
     
     steps:
       - name: Checkout repository
@@ -118,13 +118,15 @@ jobs:
     # - Runner label: self-hosted-windows-lv
     runs-on: self-hosted-windows-lv
     # Run on PRs or when simulation is explicitly disabled via workflow_dispatch
-    if: github.event_name == 'pull_request' || github.event.inputs.simulation == 'false'
+    if: github.event_name == 'pull_request' || github.event.inputs.simulation == false
     
     steps:
+      # Runtime safety check: ensures job is running on expected Windows environment
       - name: "Guard: Windows runner"
         if: ${{ runner.os != 'Windows' }}
+        shell: pwsh
         run: |
-          echo "Error: This job requires a Windows runner but is running on ${{ runner.os }}"
+          Write-Host "Error: This job requires a Windows runner but is running on ${{ runner.os }}"
           exit 1
 
       - name: Checkout repository
