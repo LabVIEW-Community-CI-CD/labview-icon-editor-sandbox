@@ -211,8 +211,8 @@ for ($turn = 1; $turn -le $MaxTurns; $turn++) {
         continue
     }
 
-    # Use cross-platform temp directory
-    $tempBase = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { "/tmp" }
+    # Use cross-platform temp directory via .NET for reliability
+    $tempBase = [System.IO.Path]::GetTempPath()
     $stdoutPath = Join-Path $tempBase "ollama-exec-out.txt"
     $stderrPath = Join-Path $tempBase "ollama-exec-err.txt"
     Remove-Item $stdoutPath, $stderrPath -ErrorAction SilentlyContinue

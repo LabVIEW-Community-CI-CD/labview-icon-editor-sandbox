@@ -111,67 +111,58 @@ jobs:
 
   ollama-build-real:
     name: Ollama Build (Real Execution)
-    runs-on: ubuntu-latest
-    if: github.event.inputs.simulation == 'false'
-    
-    services:
-      ollama:
-        image: ghcr.io/${{ github.repository_owner }}/ollama-local:cpu-preloaded
-        ports:
-          - 11435:11435
-        options: >-
-          --health-cmd "curl -f http://localhost:11435/api/tags || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # Uses the self-hosted LabVIEW runner for real builds
+    # Requirements:
+    # - Windows OS with LabVIEW installed
+    # - PowerShell 7+
+    # - Runner label: self-hosted-windows-lv
+    runs-on: self-hosted-windows-lv
+    # Run on PRs or when simulation is explicitly disabled via workflow_dispatch
+    if: github.event_name == 'pull_request' || github.event.inputs.simulation == 'false'
     
     steps:
+      - name: "Guard: Windows runner"
+        if: ${{ runner.os != 'Windows' }}
+        run: |
+          echo "Error: This job requires a Windows runner but is running on ${{ runner.os }}"
+          exit 1
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          set-safe-directory: true
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Setup PowerShell
+      - name: Verify LabVIEW Installation
         shell: pwsh
         run: |
-          Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+          Write-Host "=== Verifying LabVIEW Installation ===" -ForegroundColor Cyan
+          $lvPath = Get-ChildItem -Path "C:\Program Files\National Instruments\LabVIEW*" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($lvPath) {
+            Write-Host "✓ Found LabVIEW at: $($lvPath.FullName)" -ForegroundColor Green
+            $lvExe = Join-Path $lvPath.FullName "LabVIEW.exe"
+            if (Test-Path $lvExe) {
+              Write-Host "✓ LabVIEW executable exists" -ForegroundColor Green
+            }
+          } else {
+            Write-Host "⚠ LabVIEW installation not found in default location" -ForegroundColor Yellow
+          }
 
-      - name: Verify Ollama Service
+      - name: Build Source Distribution (Real LabVIEW)
         shell: pwsh
-        env:
-          OLLAMA_HOST: http://localhost:11435
-          OLLAMA_MODEL_TAG: llama3-8b-local
         run: |
-          & scripts/ollama-executor/check-ollama-endpoint.ps1 `
-            -Host "http://localhost:11435" `
-            -ModelTag "llama3-8b-local" `
-            -RequireModelTag $true
-
-      - name: Run Ollama Executor (Real Mode)
-        shell: pwsh
-        env:
-          OLLAMA_HOST: http://localhost:11435
-          OLLAMA_MODEL_TAG: llama3-8b-local
-        run: |
-          Write-Host "=== Starting Ollama Executor (Real Mode) ===" -ForegroundColor Cyan
+          $ErrorActionPreference = 'Stop'
+          Write-Host "=== Starting Real LabVIEW Build ===" -ForegroundColor Cyan
           Write-Host ""
-          Write-Host "Goal: ${{ github.event.inputs.goal }}" -ForegroundColor Yellow
-          Write-Host "Mode: REAL (Using actual Ollama service)" -ForegroundColor Yellow
+          Write-Host "Goal: ${{ github.event.inputs.goal || 'Build Source Distribution LV2025 64-bit' }}" -ForegroundColor Yellow
+          Write-Host "Mode: REAL (Using actual LabVIEW installation)" -ForegroundColor Yellow
           Write-Host ""
           
-          & scripts/ollama-executor/Drive-Ollama-Executor.ps1 `
-            -Endpoint "http://localhost:11435" `
-            -Model "llama3-8b-local" `
-            -RepoPath . `
-            -Goal "${{ github.event.inputs.goal }}" `
-            -MaxTurns ${{ github.event.inputs.max_turns }} `
-            -AllowedRuns @() `
-            -CommandTimeoutSec 300
+          # Run the build script directly with LabVIEW
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/build-source-distribution/Build_Source_Distribution.ps1" `
+            -RepositoryPath "$env:GITHUB_WORKSPACE" `
+            -Package_LabVIEW_Version 2025 `
+            -SupportedBitness 64
 
       - name: Upload Build Artifacts
         if: always()
@@ -183,6 +174,7 @@ jobs:
             builds/**/*.lvlibp
             builds/**/*.vip
           retention-days: 30
+          if-no-files-found: warn
 
       - name: Upload Build Logs
         if: always()
@@ -192,6 +184,7 @@ jobs:
           path: |
             reports/logs/**
           retention-days: 30
+          if-no-files-found: ignore
 
   multi-platform-build:
     name: Multi-Platform Build (Simulation)
