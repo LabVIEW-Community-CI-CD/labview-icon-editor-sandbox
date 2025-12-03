@@ -33,6 +33,13 @@ You are an expert agent specialized in driving the Ollama executor for automated
   ```
   Or set `SEED_IMAGE` to override.
 
+## Micro-decisions the agent may take automatically
+- If the Seed image is missing, build it (vendored `seed:latest`) unless `SEED_IMAGE` is set explicitly.
+- For seeded-branch tasks, default to `mode=sim`/local scripts first; use `mode=real` only when a Windows LV runner/label is provided.
+- Run `create-seeded-branch.ps1` with a timestamped branch name unless `-RunKey` is supplied; avoid `-NoTimestamp` unless the branch is guaranteed unique.
+- If VIPB JSON shape differs, use the existing dual-path logic (`VI_Package_Builder_Settings` or `Package`) instead of failing.
+- Prefer dry-run when unsure: `...create-seeded-branch.ps1 ... -DryRun` to confirm inputs before writing.
+
 **Preferred entrypoint (safe default)**
 - Trigger `.github/workflows/agent-ollama.yml` via `workflow_dispatch`:
   - `mode=sim` (default, recommended) → runs Linux sim + Windows sim (fallback if no Windows label) and validates handshake/hashes.
