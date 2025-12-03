@@ -146,7 +146,7 @@ Based on impact, feasibility, and coverage improvement, implement these five tes
 - **CI/CD Ready**: No external dependencies for testing
 
 ### Negative
-- **Maintenance**: Test code must be kept in sync with executor changes
+- **Maintenance**: Test code should be kept in sync with executor changes
 - **Initial Effort**: Time required to implement all five features
 - **Mock Limitations**: Mock server may not catch Ollama-specific issues
 

@@ -5,7 +5,7 @@
 - **Date**: 2025-12-03
 
 ## Context
-The Ollama executor (`Drive-Ollama-Executor.ps1`) currently executes PowerShell commands that invoke real LabVIEW build tools (g-cli, VIPM, etc.) for building VIPs, source distributions, and PPLs across different LabVIEW versions (2021, 2025) and bitnesses (32-bit, 64-bit). This creates several challenges:
+The Ollama executor (`Drive-Ollama-Executor.ps1`) currently executes PowerShell commands that invoke real LabVIEW build tools (g-cli, VIPM, and similar tools) for building VIPs, source distributions, and PPLs across different LabVIEW versions (2021, 2025) and bitnesses (32-bit, 64-bit). This creates several challenges:
 
 1. **Platform Dependency**: Building for all target platforms requires all LabVIEW versions and bitnesses to be installed on the machine
 2. **Resource Intensive**: Running real builds consumes significant time and system resources
@@ -29,7 +29,7 @@ Implement a **cross-compilation simulation mode** for the Ollama executor that a
 - `OLLAMA_SIM_FAIL=true` - Forces simulated commands to fail
 - `OLLAMA_SIM_EXIT=<code>` - Sets exit code for simulated commands (default: 0)
 - `OLLAMA_SIM_DELAY_MS=<ms>` - Adds artificial delay to simulate build time (default: 100)
-- `OLLAMA_SIM_CREATE_ARTIFACTS=true` - Creates stub artifact files (VIP, source dist zip, etc.)
+- `OLLAMA_SIM_CREATE_ARTIFACTS=true` - Creates stub artifact files (VIP, source dist zip, and other build outputs)
 - `OLLAMA_SIM_PLATFORMS=2021-32,2021-64,2025-64` - Comma-separated list of simulated available platforms
 
 ### Implementation Components
@@ -72,7 +72,7 @@ The simulation mode can represent any platform combination:
 # Simulate LabVIEW 2021 32-bit build
 $env:OLLAMA_EXECUTOR_MODE = "sim"
 $env:OLLAMA_SIM_PLATFORMS = "2021-32"
-# Ollama executor will "build" for 2021 32-bit without having it installed
+# Ollama executor shall "build" for 2021 32-bit without having it installed
 
 # Simulate multi-platform build
 $env:OLLAMA_SIM_PLATFORMS = "2021-32,2021-64,2025-32,2025-64"
@@ -97,7 +97,7 @@ $env:OLLAMA_SIM_PLATFORMS = "2021-32,2021-64,2025-32,2025-64"
 - **Consistent Pattern**: Follows existing XCLI_PROVIDER=sim pattern from ADR-0004
 
 ### Negative
-- **Maintenance**: Simulation logic must be kept in sync with real build script signatures
+- **Maintenance**: Simulation logic should be kept in sync with real build script signatures
 - **Not a Replacement**: Simulation cannot catch real LabVIEW/VIPM errors
 - **Artifact Validity**: Stub artifacts are not functionally equivalent to real builds
 

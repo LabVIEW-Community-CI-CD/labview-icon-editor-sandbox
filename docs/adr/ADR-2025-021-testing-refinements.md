@@ -64,7 +64,7 @@ We have implemented 9 of 15 testing features. To achieve complete test coverage 
   - `builds/successful/` - Various successful build patterns
   - `builds/failures/` - Different failure types
   - `conversations/` - Multi-turn patterns
-  - `errors/` - Malformed JSON, timeouts, etc.
+  - `errors/` - Malformed JSON, timeouts, and other error conditions
 - Create `MockResponseLibrary.psm1` module
 - Helper functions: `Get-BuildResponse`, `Get-ErrorResponse`
 - MockOllamaServer integration
@@ -226,7 +226,7 @@ We have implemented 9 of 15 testing features. To achieve complete test coverage 
 ### Negative
 - **Time Investment**: Significant implementation effort
 - **Complexity**: More moving parts to maintain
-- **Learning Curve**: Contributors need to understand framework
+- **Learning Curve**: Contributors should understand framework
 
 ### Mitigations
 - Incremental delivery - each refinement adds value independently
