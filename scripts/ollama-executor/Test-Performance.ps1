@@ -32,6 +32,11 @@ Set-StrictMode -Version Latest
 Write-Host "=== Ollama Executor Performance Benchmark Suite ===" -ForegroundColor Cyan
 Write-Host ""
 
+# Cache OS detection for performance (avoid repeated checks)
+$script:isWindows = $IsWindows
+$script:isLinux = $IsLinux
+$script:isMacOS = $IsMacOS
+
 # Ensure reports directory exists
 $reportDir = Split-Path $OutputReport -Parent
 if ($reportDir -and -not (Test-Path $reportDir)) {
@@ -41,7 +46,7 @@ if ($reportDir -and -not (Test-Path $reportDir)) {
 $results = @{
     timestamp = Get-Date -Format 'o'
     environment = @{
-        os = if ($IsWindows) { "Windows" } elseif ($IsLinux) { "Linux" } elseif ($IsMacOS) { "macOS" } else { "Unknown" }
+        os = if ($script:isWindows) { "Windows" } elseif ($script:isLinux) { "Linux" } elseif ($script:isMacOS) { "macOS" } else { "Unknown" }
         pwsh_version = $PSVersionTable.PSVersion.ToString()
         processor_count = [Environment]::ProcessorCount
     }
@@ -276,3 +281,6 @@ foreach ($benchName in $results.benchmarks.Keys) {
 
 Write-Host ""
 Write-Host "Benchmark suite completed! ✓" -ForegroundColor Green
+
+# Explicit exit code for CI/CD
+exit 0

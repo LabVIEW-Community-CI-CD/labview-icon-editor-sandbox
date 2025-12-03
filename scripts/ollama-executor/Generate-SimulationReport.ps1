@@ -52,3 +52,6 @@ if ($outputDir -and -not (Test-Path $outputDir)) {
 
 $html | Set-Content $OutputPath -Encoding UTF8
 Write-Host "Report generated: $OutputPath" -ForegroundColor Green
+
+# Explicit exit code for CI/CD
+exit 0

@@ -180,7 +180,7 @@ scripts/ollama-executor/
 ├── Test-ConversationScenarios.ps1 # Scenario tests
 ├── Test-TimeoutAndFailures.ps1    # Failure handling
 ├── test-scenarios/                # Scenario files
-│   ├── successful-single-turn.json
+│   ├── successful-two-turn.json
 │   ├── max-turns.json
 │   ├── invalid-json-recovery.json
 │   └── command-vetoing.json
