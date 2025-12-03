@@ -294,4 +294,8 @@ for ($turn = 1; $turn -le $MaxTurns; $turn++) {
 
 if ($turn -gt $MaxTurns) {
     Write-Host "[executor] Max turns reached without completion." -ForegroundColor Yellow
+    exit 1
 }
+
+# Executor completed successfully
+exit 0
