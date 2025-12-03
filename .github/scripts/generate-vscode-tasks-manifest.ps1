@@ -68,9 +68,10 @@ if ([string]::IsNullOrWhiteSpace($Commit)) {
     Push-Location $RepositoryPath
     try {
         $Commit = git rev-parse HEAD 2>$null
-        if ([string]::IsNullOrWhiteSpace($Commit)) {
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($Commit)) {
             $Commit = 'unknown'
         }
+        $global:LASTEXITCODE = 0  # Clear git exit code
     }
     finally {
         Pop-Location
@@ -81,7 +82,7 @@ if ([string]::IsNullOrWhiteSpace($Commit)) {
 Push-Location $RepositoryPath
 try {
     $commitAuthorName = git log -1 --format='%an' 2>$null
-    $commitAuthorEmail = git log -1 --format='%ae' 2>$null
+    $global:LASTEXITCODE = 0  # Clear git exit code
 }
 finally {
     Pop-Location
@@ -93,13 +94,13 @@ if ([string]::IsNullOrWhiteSpace($commitAuthorName)) {
         $commitAuthorName = 'unknown'
     }
 }
-if ([string]::IsNullOrWhiteSpace($commitAuthorEmail)) {
-    if (-not [string]::IsNullOrWhiteSpace($Actor)) {
-        $commitAuthorEmail = "$Actor@users.noreply.github.com"
-    }
-    else {
-        $commitAuthorEmail = 'unknown'
-    }
+
+# Always use noreply email to avoid exposing personal emails in artifacts
+if (-not [string]::IsNullOrWhiteSpace($Actor)) {
+    $commitAuthorEmail = "$Actor@users.noreply.github.com"
+}
+else {
+    $commitAuthorEmail = 'unknown@users.noreply.github.com'
 }
 
 # Build manifest object
@@ -136,7 +137,7 @@ $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $OutputPath -Enco
 
 Write-Host "Generated VSCode tasks manifest at $OutputPath"
 Write-Host "Commit: $Commit"
-Write-Host "Author: $commitAuthorName <$commitAuthorEmail>"
+Write-Host "Author: $commitAuthorName"
 Write-Host "File hash: $hash"
 
 # Return manifest path for caller
