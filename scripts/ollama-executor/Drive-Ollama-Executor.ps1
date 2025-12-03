@@ -211,8 +211,10 @@ for ($turn = 1; $turn -le $MaxTurns; $turn++) {
         continue
     }
 
-    $stdoutPath = Join-Path $env:TEMP "ollama-exec-out.txt"
-    $stderrPath = Join-Path $env:TEMP "ollama-exec-err.txt"
+    # Use cross-platform temp directory
+    $tempBase = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { "/tmp" }
+    $stdoutPath = Join-Path $tempBase "ollama-exec-out.txt"
+    $stderrPath = Join-Path $tempBase "ollama-exec-err.txt"
     Remove-Item $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
 
     # Check if simulation mode is enabled
