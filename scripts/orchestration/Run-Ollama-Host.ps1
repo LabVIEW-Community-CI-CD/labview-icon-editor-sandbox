@@ -38,6 +38,17 @@ function Ensure-DotnetOnPath {
     }
 }
 
+function Ensure-LockPath([string]$Path) {
+    $dir = Split-Path -Parent $Path
+    if ($dir -and -not (Test-Path -LiteralPath $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        New-Item -ItemType File -Path $Path -Force | Out-Null
+    }
+    return (Resolve-Path -LiteralPath $Path).Path
+}
+
 Ensure-DotnetOnPath
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
     throw "dotnet SDK not found. Install .NET 8 or set DOTNET_ROOT/adjust PATH before running Run-Ollama-Host.ps1."
@@ -133,7 +144,7 @@ if ($simMode) {
     $appliedReqs = Get-AppliedRequirements
     $handshake = @{
         runKey     = $resolvedRunKey
-        lockPath   = (Resolve-Path -LiteralPath $lockPath).Path
+        lockPath   = (Ensure-LockPath -Path $lockPath)
         lockTtlSec = $LockTtlSec
         forceLock  = $ForceLock.IsPresent
         zipRelPath = (Rel $zipPath)
