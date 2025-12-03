@@ -36,8 +36,10 @@ Write-Host ""
 # Test 2: Simulation with artifact creation
 Write-Host "Test 2: Simulation with artifact creation" -ForegroundColor Yellow
 $env:OLLAMA_SIM_CREATE_ARTIFACTS = "true"
-$tempRepo = if ($IsWindows -or $env:TEMP) {
-    Join-Path $env:TEMP "sim-test-repo"
+$tempRepo = if ($env:TEMP) { 
+    Join-Path $env:TEMP "sim-test-repo" 
+} elseif ($env:TMPDIR) {
+    Join-Path $env:TMPDIR "sim-test-repo"
 } else {
     Join-Path "/tmp" "sim-test-repo"
 }

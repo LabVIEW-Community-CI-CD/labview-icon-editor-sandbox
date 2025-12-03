@@ -120,8 +120,8 @@ Artifact: $artifactPath
             $buildDir = Join-Path $repoPath "builds\source-distribution"
             New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
             
-            # Create a minimal ZIP file structure
-            $tempBase = if ($IsWindows -or $env:TEMP) { $env:TEMP } else { "/tmp" }
+            # Create a minimal ZIP file structure - use cross-platform temp directory
+            $tempBase = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { "/tmp" }
             $tempDir = Join-Path $tempBase "sim-sd-$(New-Guid)"
             New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
             
