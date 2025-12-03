@@ -187,9 +187,13 @@ $vipbJson = Join-Path $stashDir 'seed.vipb.json'
 $vipbRel = 'Tooling/deployment/seed.vipb'
 $vipbJsonRel = 'builds/vipb-stash/seed.vipb.json'
 
+# Get current user/group IDs for Docker (Linux only; fallback to defaults on Windows)
+$dockerUser = if ($IsLinux -or $IsMacOS) { "$(id -u):$(id -g)" } else { $null }
+$userArgs = if ($dockerUser) { @("--user", $dockerUser) } else { @() }
+
 Write-Host "Converting VIPB to JSON..." -ForegroundColor Gray
-docker run --rm -v "${repo}:/repo" -w /repo $SeedImage `
-    VipbJsonTool vipb2json "/repo/$vipbRel" "/repo/$vipbJsonRel"
+docker run --rm @userArgs --entrypoint /usr/local/bin/VipbJsonTool -v "${repo}:/repo" -w /repo $SeedImage `
+    vipb2json "/repo/$vipbRel" "/repo/$vipbJsonRel"
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert VIPB to JSON"
 }
@@ -219,8 +223,8 @@ $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding 
 
 # Convert back to VIPB
 Write-Host "Converting JSON back to VIPB..." -ForegroundColor Gray
-docker run --rm -v "${repo}:/repo" -w /repo $SeedImage `
-    VipbJsonTool json2vipb "/repo/$vipbJsonRel" "/repo/$vipbRel"
+docker run --rm @userArgs --entrypoint /usr/local/bin/VipbJsonTool -v "${repo}:/repo" -w /repo $SeedImage `
+    json2vipb "/repo/$vipbJsonRel" "/repo/$vipbRel"
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert JSON to VIPB"
 }
