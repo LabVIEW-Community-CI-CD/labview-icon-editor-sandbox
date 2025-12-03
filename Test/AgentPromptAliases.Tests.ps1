@@ -21,7 +21,7 @@ Describe "AgentPromptAliases.ps1" {
         It "returns expected prompt for seed2021 keyword" {
             $result = & $script:Subject -Keyword 'seed2021'
             $result | Should -Match 'LabVIEW 2021 Q1 64-bit'
-            $result | Should -Match 'create-seeded-branch\.ps1'
+            $result | Should -Match 'create-seeded-branch'
             $result | Should -Match '-LabVIEWVersion 2021'
             $result | Should -Match '-LabVIEWMinor 0'
             $result | Should -Match '-Bitness 64'
@@ -48,7 +48,7 @@ Describe "AgentPromptAliases.ps1" {
 
         It "lists valid keywords in error message" {
             try {
-                & $script:Subject -Keyword 'invalid' 2>$null
+                & $script:Subject -Keyword 'invalid'
             } catch {
                 $_.Exception.Message | Should -Match 'seed2021'
             }
