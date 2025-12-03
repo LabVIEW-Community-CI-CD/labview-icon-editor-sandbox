@@ -116,3 +116,5 @@ Write-Host "- Control behavior with OLLAMA_SIM_* environment variables"
 Write-Host "- Create stub artifacts with OLLAMA_SIM_CREATE_ARTIFACTS=true"
 Write-Host "- Simulate failures with OLLAMA_SIM_FAIL=true"
 Write-Host ""
+Write-Host "✓ All simulation tests completed successfully!" -ForegroundColor Green
+exit 0
