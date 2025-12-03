@@ -18,6 +18,16 @@
         "ms-dotnettools.csharp",
         "ms-vscode.powershell"
       ]
+    },
+    "codespaces": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-vscode.powershell"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "pwsh",
+        "task.allowAutomaticTasks": "on"
+      }
     }
   },
   "containerEnv": {

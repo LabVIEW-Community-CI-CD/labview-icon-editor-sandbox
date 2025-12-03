@@ -39,6 +39,18 @@
    - Files: ollama-executor-smoke.yml, ollama-executor-build.yml
    - Validation: Workflows configured and documented
 
+7. **Codespaces-ready VS Code tasks for Ollama Design Bench** ✅
+   - Status: COMPLETE
+   - Evidence: Devcontainer codespaces customizations, task doc update, and Codespaces workflow walkthrough
+   - Files: .devcontainer/devcontainer.json, docs/vscode-tasks.md, docs/ollama-design-bench-codespaces.md
+   - Validation: VS Code tasks surface inside Codespaces with PowerShell defaults
+
+8. **Turn-key Ollama Design Bench entrypoint** ✅
+   - Status: COMPLETE
+   - Evidence: Single-command runner and VS Code task 26 for pull/start/health + locked flows
+   - Files: scripts/ollama-executor/Run-OllamaDesignBench.ps1, .vscode/tasks.json, docs/ollama-design-bench-codespaces.md, docs/vscode-tasks.md
+   - Validation: Defaults match devcontainer env and expose flow selection + cleanup options in one step
+
 ---
 
 ## 🚩 Contradictions and Issues Identified
