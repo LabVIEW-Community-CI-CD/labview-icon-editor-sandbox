@@ -705,6 +705,44 @@
       "detail": "Run vi-history/vi-compare replay from extracted SD with execution enabled (after building bundled x-cli)."
     },
     {
+      "label": "26 Ollama: turn-key bench",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/Run-OllamaDesignBench.ps1",
+        "-RepoPath",
+        "${workspaceFolder}",
+        "-Host",
+        "${input:ollamaHost}",
+        "-ModelTag",
+        "${input:ollamaModelTag}",
+        "-Owner",
+        "${input:ollamaGhcrOwner}",
+        "-Tag",
+        "${input:ollamaGhcrTag}",
+        "-ModelBundlePath",
+        "${input:ollamaModelBundlePath}",
+        "-Mode",
+        "${input:ollamaBenchMode}",
+        "-CommandTimeoutSec",
+        "${input:ollamaBenchTimeoutSec}",
+        "-StopMode",
+        "${input:ollamaBenchStopMode}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": [],
+      "detail": "Pull/start/health-check Ollama in one step and optionally run the locked Design Bench flows."
+    },
+    {
       "label": "27 Ollama: health check",
       "type": "shell",
       "command": "pwsh",
@@ -1162,10 +1200,34 @@
       "default": "llama3-8b-local:latest"
     },
     {
-      "id": "ollamaGhcrTag",
+      "id": "ollamaBenchMode",
+      "type": "pickString",
+      "description": "Turn-key bench flow to run after startup",
+      "options": [
+        "setup",
+        "package-build",
+        "source-distribution",
+        "local-sd-ppl",
+        "full"
+      ],
+      "default": "setup"
+    },
+    {
+      "id": "ollamaBenchTimeoutSec",
       "type": "promptString",
-      "description": "Tag for ollama-local image",
-      "default": "cpu-latest"
+      "description": "Command timeout (seconds) for turn-key bench locked flows",
+      "default": "600"
+    },
+    {
+      "id": "ollamaBenchStopMode",
+      "type": "pickString",
+      "description": "What to do with the container after the turn-key bench",
+      "options": [
+        "leave-running",
+        "stop",
+        "reset"
+      ],
+      "default": "leave-running"
     },
     {
       "id": "ollamaPackageTimeoutSec",
