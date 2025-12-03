@@ -151,12 +151,9 @@ if ($existingBranch -or $existingRemote) {
     Write-Host "New branch name: $branchName" -ForegroundColor Yellow
 }
 
-# Fetch and checkout base branch
-Write-Host "Fetching base branch '$BaseBranch'..." -ForegroundColor Gray
+# Fetch base branch (best effort)
+Write-Host "Fetching base branch '$BaseBranch' (best effort)..." -ForegroundColor Gray
 git -C $repo fetch origin $BaseBranch 2>$null
-if ($LASTEXITCODE -ne 0) {
-    throw "Failed to fetch base branch '$BaseBranch'"
-}
 
 # Ensure seed image exists (build unless explicitly skipped)
 if (-not $SkipSeedBuild) {
@@ -169,9 +166,9 @@ if (-not $SkipSeedBuild) {
     Write-Host "Skipping seed image build (--SkipSeedBuild). Expecting image '$SeedImage' to be available." -ForegroundColor Yellow
 }
 
-# Create new branch from base
+# Create new branch from local base (works even if remote is stale)
 Write-Host "Creating branch '$branchName' from '$BaseBranch'..." -ForegroundColor Gray
-git -C $repo checkout -B $branchName "origin/$BaseBranch"
+git -C $repo checkout -B $branchName $BaseBranch
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to create branch '$branchName'"
 }
@@ -200,12 +197,20 @@ if ($LASTEXITCODE -ne 0) {
 # Modify JSON
 Write-Host "Updating Package_LabVIEW_Version to '$versionString'..." -ForegroundColor Gray
 $json = Get-Content -Raw $vipbJson | ConvertFrom-Json
-$lg = $json.VI_Package_Builder_Settings.Library_General_Settings
+$lg = $null
+if ($json.PSObject.Properties['VI_Package_Builder_Settings']) {
+    $lg = $json.VI_Package_Builder_Settings.Library_General_Settings
+}
+if (-not $lg -and $json.PSObject.Properties['Package']) {
+    $lg = $json.Package.Library_General_Settings
+}
 if (-not $lg) {
     throw "Library_General_Settings not found in VIPB JSON"
 }
 $lg.Package_LabVIEW_Version = $versionString
-$lg.Library_Version = "$lvMajor.$LabVIEWMinor.0.1"
+if ($lg.PSObject.Properties['Library_Version']) {
+    $lg.Library_Version = "$lvMajor.$LabVIEWMinor.0.1"
+}
 $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding UTF8
 
 # Convert back to VIPB
