@@ -360,9 +360,18 @@ Repository Root
 - Release v1.0.0
 
 ### Future: Milestone 1 (10 weeks)
-**Status**: PLANNED
-- VI History Suite implementation
-- Release v1.1.0
+**Status**: PLANNED  
+**Focus**: VI History Suite implementation  
+**Target**: LabVIEW 2025.3+ (VI History Suite and VI Comparison report introduced)
+
+**Key Components**:
+- Leverage LabVIEW 2025.3 VI History Suite API
+- Integrate with LabVIEW 2025.3 VI Comparison report format
+- Cross-version VI analysis and comparison
+- Compatibility matrix generation
+- Breaking change detection
+
+**Deliverable**: Release v1.1.0
 
 ---
 

@@ -37,3 +37,6 @@ $params = @{
 }
 
 & "$PSScriptRoot/Drive-Ollama-Executor.ps1" @params -Verbose
+
+# Explicit exit code for CI/CD
+exit $LASTEXITCODE

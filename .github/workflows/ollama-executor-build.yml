@@ -67,7 +67,7 @@ jobs:
           $mockJob = Start-Job -ScriptBlock {
             & "$using:PWD/scripts/ollama-executor/MockOllamaServer.ps1" `
               -Port 11436 `
-              -ScenarioFile "$using:PWD/scripts/ollama-executor/test-scenarios/successful-single-turn.json" `
+              -ScenarioFile "$using:PWD/scripts/ollama-executor/test-scenarios/successful-two-turn.json" `
               -MaxRequests 50
           }
           
