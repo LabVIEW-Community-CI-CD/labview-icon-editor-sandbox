@@ -45,6 +45,12 @@
    - Files: .devcontainer/devcontainer.json, docs/vscode-tasks.md, docs/ollama-design-bench-codespaces.md
    - Validation: VS Code tasks surface inside Codespaces with PowerShell defaults
 
+8. **Turn-key Ollama Design Bench entrypoint** ✅
+   - Status: COMPLETE
+   - Evidence: Single-command runner and VS Code task 26 for pull/start/health + locked flows
+   - Files: scripts/ollama-executor/Run-OllamaDesignBench.ps1, .vscode/tasks.json, docs/ollama-design-bench-codespaces.md, docs/vscode-tasks.md
+   - Validation: Defaults match devcontainer env and expose flow selection + cleanup options in one step
+
 ---
 
 ## 🚩 Contradictions and Issues Identified

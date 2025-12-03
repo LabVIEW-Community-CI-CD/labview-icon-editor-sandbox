@@ -7,6 +7,7 @@ Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driv
 - Defaults (devcontainer env): `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-preloaded`, `OLLAMA_MODEL_TAG=llama3-8b-local:latest`; the host Docker socket is mounted and the scripts fail fast if the socket is missing or Docker Desktop is stopped.
 - Codespaces note: `.devcontainer/devcontainer.json` mirrors the VS Code extensions for Codespaces and forces the default shell to PowerShell (`pwsh`) so **Terminal → Run Task…** exposes the Ollama Design Bench tasks in web or desktop clients without extra setup.
 - Workflow (see [Codespaces workflow: Ollama Design Bench](./ollama-design-bench-codespaces.md) for the full sequence):
+  0) Prefer a single action? Run **26** `Ollama: turn-key bench` to pull/start/health-check and optionally run the locked flows in one step (choose the flow + stop/reset behavior when prompted).
   1) Start Docker Desktop (or ensure Codespaces Docker is up) and open the devcontainer.
   2) Task **28** `Ollama: pull image` (GHCR owner/tag prompts).
   3) Task **29** `Ollama: start container` on 11435 with the persistent `ollama` volume (set `OLLAMA_CPUS`/`OLLAMA_MEM` to cap resources). Optional: provide a `.ollama` bundle path to import a model offline; it will retag to `OLLAMA_MODEL_TAG` if set.

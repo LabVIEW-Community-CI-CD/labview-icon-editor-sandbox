@@ -8,6 +8,25 @@ A step-by-step flow for using the Ollama Design Bench tasks from GitHub Codespac
 - Default environment inside the devcontainer: `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-preloaded`, `OLLAMA_MODEL_TAG=llama3-8b-local:latest`. The Docker socket is mounted and `host.docker.internal` is pre-wired to the host gateway so sibling containers are reachable.
 - Optional: forward port **11435** in Codespaces if you want to hit the Ollama API from outside VS Code (not required for the tasks themselves).
 
+## Turn-key command (terminal)
+- From the devcontainer terminal, run the single command below to pull/start the container, import an optional bundle, verify the model tag, and run the locked flows you choose:
+
+  ```pwsh
+  pwsh -NoProfile -File scripts/ollama-executor/Run-OllamaDesignBench.ps1 `
+    -Mode full `
+    -StopMode stop
+  ```
+
+- Adjust the switches when needed:
+  - `-Mode` options: `setup` (prep only), `package-build`, `source-distribution`, `local-sd-ppl`, `full` (all locked flows).
+  - `-StopMode` options: `leave-running` (default), `stop`, `reset` (stop + clear the `ollama` volume).
+  - Offline bundle import: add `-ModelBundlePath <path>` and the script will retag it to `OLLAMA_MODEL_TAG`.
+  - Skip pulls when the image already exists locally: add `-SkipPull`.
+  - Override image owner/tag or host: use `-Owner/-Tag/-Host` (defaults come from `.devcontainer/devcontainer.json`).
+
+## VS Code one-click option
+- Prefer Tasks UI? Run **26** `Ollama: turn-key bench` from **Terminal → Run Task…** to execute the same workflow with prompts for host, tag, flow, timeout, and stop/reset choice. The task surfaces the same defaults as the terminal command above.
+
 ## Workflow
 1) **Verify the socket**: In the devcontainer terminal, run `docker ps` to ensure the Docker daemon is reachable. If you see a permissions or connection error, restart the Codespace and re-run the command.
 2) **Pull the image**: Run task **28** `Ollama: pull image` (defaults owner/tag to `svelderrainruiz/cpu-preloaded`). If you need to test a different tag, override when prompted. Network-less Codespaces can skip this when providing a `.ollama` bundle in the next step.
