@@ -12,6 +12,7 @@
 tasks:
   - id: prereq-check
     description: Verify runner prerequisites for SD build
+    condition: "!env.OLLAMA_EXECUTOR_MODE || env.OLLAMA_EXECUTOR_MODE != 'sim'"
     command: pwsh
     args:
       - -ExecutionPolicy
