@@ -431,6 +431,79 @@ jobs:
           path: lychee/report.json
           if-no-files-found: error
 
+  ollama-sim-linux:
+    name: Ollama executor parity (sim, Linux)
+    needs: [verify-checklist-sync]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+
+      - name: Install PowerShell
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y powershell
+
+      - name: Run Ollama host (sim mode)
+        shell: pwsh
+        env:
+          OLLAMA_EXECUTOR_MODE: sim
+          OLLAMA_SIM_CREATE_ARTIFACTS: "true"
+          OLLAMA_SIM_FAIL: "false"
+        run: |
+          pwsh -NoProfile -File scripts/orchestration/Run-Ollama-Host.ps1 `
+            -Repo . `
+            -RunKey ci-linux-sim `
+            -PwshTimeoutSec 900 `
+            -OllamaPrompt "local-sd/local-sd-ppl"
+
+      - name: Upload sim artifacts (Linux)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ollama-sim-linux
+          path: |
+            artifacts/**
+            builds-isolated/ci-linux-sim/**
+            reports/logs/ollama-host-ci-linux-sim.log
+            reports/logs/ollama-host-ci-linux-sim.summary.json
+          if-no-files-found: warn
+
+  ollama-sim-windows:
+    name: Ollama executor parity (sim, Windows)
+    needs: [verify-checklist-sync]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+
+      - name: Run Ollama host (sim mode)
+        shell: pwsh
+        env:
+          OLLAMA_EXECUTOR_MODE: sim
+          OLLAMA_SIM_CREATE_ARTIFACTS: "true"
+          OLLAMA_SIM_FAIL: "false"
+        run: |
+          pwsh -NoProfile -File scripts/orchestration/Run-Ollama-Host.ps1 `
+            -Repo . `
+            -RunKey ci-windows-sim `
+            -PwshTimeoutSec 900 `
+            -OllamaPrompt "local-sd/local-sd-ppl"
+
+      - name: Upload sim artifacts (Windows)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ollama-sim-windows
+          path: |
+            artifacts/**
+            builds-isolated/ci-windows-sim/**
+            reports/logs/ollama-host-ci-windows-sim.log
+            reports/logs/ollama-host-ci-windows-sim.summary.json
+          if-no-files-found: warn
+
   dev-mode-binder-tests:
     name: Dev-mode binder tests
     needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, enforce-verify-checklist-needs]
