@@ -172,10 +172,13 @@ jobs:
       LABVIEW_SEARCH_PATHS: "C:\\Program Files\\National Instruments;C:\\Program Files (x86)\\National Instruments"
     
     steps:
+      # Runtime safety check: ensures job is running on expected Windows environment
       - name: "Guard: Windows runner"
         if: ${{ runner.os != 'Windows' }}
         shell: pwsh
-        run: exit 1
+        run: |
+          Write-Host "Error: This job requires a Windows runner but is running on ${{ runner.os }}"
+          exit 1
 
       - name: Checkout repository
         uses: actions/checkout@v4
