@@ -30,7 +30,7 @@
       <Pre-Uninstall_VI>custom-actions\VIP_Pre-Uninstall Custom Action 2021.vi</Pre-Uninstall_VI>
       <Post-Uninstall_VI>custom-actions\VIP_Post-Uninstall Custom Action 2021.vi</Post-Uninstall_VI>
     </Custom_Action_VIs>
-    <VI_Package_Configuration_File>seed.vipc</VI_Package_Configuration_File>
+    <VI_Package_Configuration_File></VI_Package_Configuration_File>
     <Description>
       <One_Line_Description_Summary>Community icon editor for LabVIEW</One_Line_Description_Summary>
       <Description/>
