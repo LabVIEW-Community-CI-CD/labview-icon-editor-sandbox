@@ -94,13 +94,34 @@ $listener.Prefixes.Add("http://localhost:$Port/")
 $listener.Start()
 
 Write-Host "[MockOllama] Listening on http://localhost:$Port" -ForegroundColor Green
-Write-Host "[MockOllama] Press Ctrl+C to stop" -ForegroundColor Yellow
+Write-Host "[MockOllama] Max requests: $MaxRequests" -ForegroundColor Yellow
 
 $requestCount = 0
 
 try {
     while ($listener.IsListening -and $requestCount -lt $MaxRequests) {
-        $context = $listener.GetContext()
+        # Use async pattern with timeout to allow graceful shutdown
+        $contextTask = $listener.GetContextAsync()
+        
+        # Wait with timeout (1 second intervals to check for shutdown)
+        $waitTimeout = 1000  # 1 second
+        while (-not $contextTask.Wait($waitTimeout)) {
+            # Check if we should stop (e.g., max requests reached externally)
+            if (-not $listener.IsListening) {
+                break
+            }
+        }
+        
+        if (-not $listener.IsListening) {
+            break
+        }
+        
+        if ($contextTask.IsFaulted) {
+            Write-Host "[MockOllama] Listener error, stopping" -ForegroundColor Yellow
+            break
+        }
+        
+        $context = $contextTask.Result
         $request = $context.Request
         $response = $context.Response
         
@@ -147,13 +168,16 @@ try {
         }
         catch {
             Write-Host "[MockOllama] Error handling request: $_" -ForegroundColor Red
-            $response.StatusCode = 500
-            $response.Close()
+            try { $response.StatusCode = 500; $response.Close() } catch {}
         }
     }
 }
+catch {
+    # Listener was stopped externally
+    Write-Host "[MockOllama] Listener stopped: $_" -ForegroundColor Yellow
+}
 finally {
-    $listener.Stop()
-    $listener.Close()
+    try { $listener.Stop() } catch {}
+    try { $listener.Close() } catch {}
     Write-Host "[MockOllama] Stopped after $requestCount requests" -ForegroundColor Yellow
 }
