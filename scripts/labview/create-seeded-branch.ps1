@@ -168,7 +168,7 @@ $vipbJsonRel = 'builds/vipb-stash/seed.vipb.json'
 
 Write-Host "Converting VIPB to JSON..." -ForegroundColor Gray
 docker run --rm -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/VipbJsonTool `
-    ghcr.io/labview-community-ci-cd/seed:latest vipb2json $vipbRel $vipbJsonRel
+    seed:latest vipb2json $vipbRel $vipbJsonRel
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert VIPB to JSON"
 }
@@ -183,7 +183,7 @@ $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding 
 # Convert back to VIPB
 Write-Host "Converting JSON back to VIPB..." -ForegroundColor Gray
 docker run --rm -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/VipbJsonTool `
-    ghcr.io/labview-community-ci-cd/seed:latest json2vipb $vipbJsonRel $vipbRel
+    seed:latest json2vipb $vipbJsonRel $vipbRel
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert JSON to VIPB"
 }

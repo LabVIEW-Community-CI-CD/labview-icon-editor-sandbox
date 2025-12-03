@@ -87,14 +87,16 @@ Usage: json2buildspec --input path/to/file.json --output path/to/file.(vipb|lvpr
 Each of these commands will print a brief help message if invoked with -h or --help. They also validate their inputs: if required flags are missing or an unknown flag is provided, the tool will exit with an error message.
 Obtaining the Tools
 There are two main ways to get the LabVIEW CI/CD Seed tools:
-Via Docker Image: A pre-built Docker image (based on Ubuntu) is available with the conversion binary and all wrapper scripts installed in /usr/local/bin. This image also includes git, patch, yq, and gh. You can pull it from GitHub Packages (GHCR) or build it yourself (from the repo root with `docker build -f Tooling/seed/Dockerfile .`). For example, to use Docker (assuming the image is published as ghcr.io/labview-community-ci-cd/seed:latest):
-bash
-Copy
-docker pull ghcr.io/labview-community-ci-cd/seed:latest
-# Convert a VIPB to JSON using the container:
-docker run --rm -v "$PWD:/data" ghcr.io/labview-community-ci-cd/seed:latest \
+Via Docker Image (vendored): Build the image locally from this repo (no GHCR pull needed):
+```
+docker build -f Tooling/seed/Dockerfile -t seed:latest .
+```
+# Convert a VIPB to JSON using the vendored container:
+```
+docker run --rm -v "$PWD:/data" seed:latest \
   vipb2json --input /data/MyBuildSpec.vipb --output /data/MyBuildSpec.json
-In the above example, we run the vipb2json tool inside the container, mounting the current directory to /data in the container to access input and output files. The container’s entrypoint is configured to recognize the CLI commands. Running the container with no command will display a help message about available tools.
+```
+The container includes the conversion binary and wrapper scripts in /usr/local/bin (plus git, patch, yq, gh). Running the container with no command prints help.
 From Source (Local Build): If you prefer to run the tools natively, you can compile the .NET tool and use the scripts directly on your machine. This requires the .NET 8.0 SDK and PowerShell (for running tests). Clone this repository and see the Development & Contributing section below for build instructions. Once built, you can find the VipbJsonTool binary (or use dotnet run) and the wrapper scripts in the bin/ directory. In this fork the C# tools live under `Tooling/dotnet` (e.g., `Tooling/dotnet/VipbJsonTool` and `Tooling/dotnet/LvprojJsonTool`); build them with `dotnet build Tooling/dotnet/VipbJsonTool/VipbJsonTool.csproj` and `dotnet build Tooling/dotnet/LvprojJsonTool/LvprojJsonTool.csproj` if you need the stand-alone converters outside Docker.
 Note: The CLI wrapper scripts are simple front-ends that call the underlying VipbJsonTool with the appropriate mode. They ensure arguments are provided and offer --help documentation.
 Development & Contributing

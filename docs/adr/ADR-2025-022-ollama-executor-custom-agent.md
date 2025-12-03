@@ -95,7 +95,7 @@ Choose **Option A**: Create a custom agent definition at `.github/agents/ollama-
 7. Test Suites (`Test-CommandVetting.ps1`, `Test-SecurityFuzzing.ps1`, etc.)
 
 ### Seed Docker integration
-The agent documents using the Seed container (`ghcr.io/labview-community-ci-cd/seed:latest`) for:
+The agent documents using the vendored Seed container (`seed:latest`, built locally from `Tooling/seed/Dockerfile`) for:
 - `vipb2json` — Convert VIPB to JSON for editing
 - `json2vipb` — Convert JSON back to VIPB format
 - Additional tools: `lvproj2json`, `json2lvproj`, `buildspec2json`, `json2buildspec`

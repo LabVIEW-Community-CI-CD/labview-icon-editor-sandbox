@@ -73,7 +73,8 @@ function Get-RepoOwner {
 }
 $owner = Get-RepoOwner -RepoPath $repo
 if (-not $SeedImage) {
-    $SeedImage = if ($owner) { "ghcr.io/$owner/seed:latest" } else { "seed:latest" }
+    # Use vendored/local Seed image; override via env:SEED_IMAGE if needed.
+    $SeedImage = if ($env:SEED_IMAGE) { $env:SEED_IMAGE } else { "seed:latest" }
 }
 $SeedBuildContext = if ($SeedBuildContext) { (Resolve-Path -LiteralPath (Join-Path $repo $SeedBuildContext)).ProviderPath } else { $repo }
 $SeedDockerfile = if ($SeedDockerfile) { (Resolve-Path -LiteralPath (Join-Path $repo $SeedDockerfile)).ProviderPath } else { (Join-Path $repo 'Tooling/seed/Dockerfile') }
