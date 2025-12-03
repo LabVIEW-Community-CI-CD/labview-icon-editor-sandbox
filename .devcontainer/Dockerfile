@@ -1,13 +1,15 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0
 
+# Set environment to avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Prevent services from starting during package installation
 RUN echo '#!/bin/sh\nexit 101' > /usr/sbin/policy-rc.d \
     && chmod +x /usr/sbin/policy-rc.d
 
 # Install PowerShell, Docker CLI, and utilities
-# Note: Using semicolons after apt install to handle dbus trigger errors gracefully
 RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
         wget \
         apt-transport-https \
         software-properties-common \
@@ -21,7 +23,7 @@ RUN apt-get update \
     && dpkg -i /tmp/packages-microsoft-prod.deb \
     && rm /tmp/packages-microsoft-prod.deb \
     && apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends powershell; \
+    && apt-get install -y --no-install-recommends powershell; \
     dpkg --configure -a || true; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*; \
