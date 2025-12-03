@@ -47,9 +47,8 @@ Describe "AgentPromptAliases.ps1" {
         }
 
         It "lists valid keywords in error message" {
-            $error = $null
             try {
-                & $script:Subject -Keyword 'invalid' -ErrorVariable error 2>$null
+                & $script:Subject -Keyword 'invalid' 2>$null
             } catch {
                 $_.Exception.Message | Should -Match 'seed2021'
             }
