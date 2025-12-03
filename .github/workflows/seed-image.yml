@@ -23,10 +23,29 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     env:
-      TAG_SUFFIX: ${{ github.event.inputs.tag || 'latest' }}
+      TAG_SUFFIX: ${{ github.event.inputs.tag || '' }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: Resolve tag suffix
+        id: tag
+        run: |
+          tag="${TAG_SUFFIX}"
+          if [ -z "${tag}" ]; then
+            case "${GITHUB_REF_NAME}" in
+              main) tag="latest" ;;
+              develop) tag="develop" ;;
+              release-alpha) tag="alpha" ;;
+              release-beta) tag="beta" ;;
+              release-rc) tag="rc" ;;
+              *) tag="${GITHUB_REF_NAME}" ;;
+            esac
+          fi
+          tag="${tag//\//-}"
+          tag="${tag,,}"
+          echo "tag_suffix=${tag}" >> "$GITHUB_OUTPUT"
+          echo "TAG_SUFFIX=${tag}" >> "$GITHUB_ENV"
 
       - name: Compute image name (lowercase owner)
         id: names
