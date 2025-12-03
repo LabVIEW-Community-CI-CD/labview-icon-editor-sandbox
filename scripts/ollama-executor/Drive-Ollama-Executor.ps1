@@ -59,6 +59,15 @@ $messages = @(
 
 function Test-CommandAllowed {
     param([string]$Command)
+    
+    # Normalize: trim whitespace
+    $Command = $Command.Trim()
+    
+    # Block empty or whitespace-only commands
+    if ([string]::IsNullOrWhiteSpace($Command)) {
+        return "Rejected: empty or whitespace-only command"
+    }
+    
     # Hard allowlist: exact matches only (case-insensitive)
     if ($AllowedRuns -and -not ($AllowedRuns | Where-Object { $_.ToLower() -eq $Command.ToLower() })) {
         return "Rejected: command not in allowlist."
@@ -70,15 +79,89 @@ function Test-CommandAllowed {
         return "Rejected: command must start with 'pwsh -NoProfile -File scripts/...ps1'"
     }
 
-    # Forbid dangerous tokens
-    $forbidden = @('rm ', 'del ', 'Remove-Item', 'Format-',
-                   'Invoke-WebRequest', 'curl ', 'Start-Process', 'shutdown', 'reg ', 'sc ',
-                   '..\')
-    foreach ($tok in $forbidden) {
-        if ($Command -like "*$tok*") {
-            return "Rejected: contains forbidden token '$tok'"
+    # Require parameters after the script name (scripts should not be called without arguments)
+    if ($Command -match '^pwsh\s+-NoProfile\s+-File\s+scripts[\\/][\w\-.\\/]+\.ps1\s*$') {
+        return "Rejected: script must be called with parameters"
+    }
+
+    # Check for path traversal (parent directory references)
+    if ($Command -match '\.\.[/\\]' -or $Command -match '[/\\]\.\.') {
+        return "Rejected: path traversal attempt detected (..)"
+    }
+
+    # Check for command chaining/injection (expanded to catch more patterns)
+    if ($Command -match '[;&|`]' -or $Command -match '\$[\(\{]' -or 
+        $Command -match '<<' -or $Command -match '\$\s' -or
+        $Command -match '@\{') {  # Block PowerShell hashtable literals
+        return "Rejected: command injection attempt detected"
+    }
+
+    # Block script injection (HTML/XML/JS tags)
+    if ($Command -match '<script[\s>]' -or $Command -match '</script>' -or 
+        $Command -match '<img\s' -or $Command -match 'onerror\s*=' -or 
+        $Command -match 'onclick\s*=' -or $Command -match 'onload\s*=') {
+        return "Rejected: script injection attempt detected"
+    }
+
+    # Block privilege escalation attempts
+    if ($Command -match '\brunas\b' -or $Command -match '\bsudo\b' -or
+        $Command -match '-ExecutionPolicy\s+Bypass' -or $Command -match '-ExecutionPolicy\s+Unrestricted' -or
+        $Command -match '\bsu\b' -or $Command -match '\belevate\b') {
+        return "Rejected: privilege escalation attempt detected"
+    }
+
+    # Block file redirection operators
+    if ($Command -match '\s+>\s+' -or $Command -match '\s+>>\s+' -or 
+        $Command -match '\s+<\s+' -or $Command -match '\s+2>\s+' -or
+        $Command -match '\s+2>>\s+' -or $Command -match '\s+2>&1\s+') {
+        return "Rejected: file redirection attempt detected"
+    }
+
+    # Block network tools and commands
+    if ($Command -match '\bwget\b' -or $Command -match '\bcurl\b' -or 
+        $Command -match '\bnc\b' -or $Command -match '\bnetcat\b' -or
+        $Command -match '\bnmap\b' -or $Command -match '\btelnet\b' -or
+        $Command -match 'Invoke-WebRequest' -or $Command -match 'Invoke-RestMethod') {
+        return "Rejected: network tool usage detected"
+    }
+
+    # Block SQL injection patterns
+    if ($Command -match '\bOR\s+1\s*=\s*1\b' -or $Command -match '\bAND\s+1\s*=\s*1\b' -or
+        $Command -match '--\s*$' -or $Command -match '/\*.*\*/' -or
+        $Command -match ';--' -or $Command -match 'UNION\s+SELECT') {
+        return "Rejected: SQL injection pattern detected"
+    }
+
+    # Block encoded/obfuscated content
+    if ($Command -match '\b[A-Za-z0-9+/]{50,}={0,2}\b' -or  # Base64-like
+        $Command -match '%[0-9A-Fa-f]{2}' -or  # URL encoding
+        $Command -match '\\x[0-9A-Fa-f]{2}' -or  # Hex encoding
+        $Command -match '\\u[0-9A-Fa-f]{4}') {  # Unicode escapes
+        return "Rejected: encoded/obfuscated content detected"
+    }
+
+    # Block null bytes and control characters
+    if ($Command -match '\x00' -or $Command -match '[\x01-\x08\x0B\x0C\x0E-\x1F]') {
+        return "Rejected: null byte or control character detected"
+    }
+
+    # Forbid dangerous tokens - case insensitive matching with word boundaries
+    $forbiddenPatterns = @(
+        '\brm\b', '\bdel\b', 'Remove-Item', 'Format-',
+        'Start-Process', '\bshutdown\b', '\breg\b', '\bsc\b',
+        'net\s+user', 'net\s+localgroup', '\bicacls\b', '\btakeown\b',
+        '\bschtasks\b', '\bat\b', '\bcrontab\b', '\bsystemctl\b',
+        '/bin/bash', '/bin/sh', 'cmd\.exe', 'powershell\.exe',
+        '\bwget\b', '\bcurl\b', '\bnc\b', '\bnetcat\b', '\bssh\b', '\bftp\b',
+        '\btftp\b', '\bscp\b', '\brsync\b', '\bnet\b'
+    )
+    
+    foreach ($pattern in $forbiddenPatterns) {
+        if ($Command -match $pattern) {
+            return "Rejected: contains forbidden pattern '$pattern'"
         }
     }
+    
     return $null
 }
 
@@ -132,39 +215,60 @@ for ($turn = 1; $turn -le $MaxTurns; $turn++) {
     $stderrPath = Join-Path $env:TEMP "ollama-exec-err.txt"
     Remove-Item $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
 
-    try {
-        $proc = Start-Process -FilePath "pwsh" `
-            -ArgumentList @("-NoProfile", "-Command", $cmd) `
-            -WorkingDirectory $repoFull `
-            -RedirectStandardOutput $stdoutPath `
-            -RedirectStandardError $stderrPath `
-            -NoNewWindow -PassThru
+    # Check if simulation mode is enabled
+    $simulationMode = ($env:OLLAMA_EXECUTOR_MODE -eq 'sim')
+    
+    if ($simulationMode) {
+        # Use simulation provider instead of real execution
+        Write-Host "[executor] SIMULATION MODE - using SimulationProvider" -ForegroundColor Cyan
+        try {
+            $simResult = & "$PSScriptRoot/SimulationProvider.ps1" -Command $cmd -WorkingDirectory $repoFull
+            $exitCode = $simResult.ExitCode
+            $stdout = $simResult.StdOut
+            $stderr = $simResult.StdErr
+        }
+        catch {
+            $exitCode = -1
+            $stdout = ""
+            $stderr = "Simulation provider error: $($_.Exception.Message)"
+        }
+    }
+    else {
+        # Real execution path (existing code)
+        try {
+            $proc = Start-Process -FilePath "pwsh" `
+                -ArgumentList @("-NoProfile", "-Command", $cmd) `
+                -WorkingDirectory $repoFull `
+                -RedirectStandardOutput $stdoutPath `
+                -RedirectStandardError $stderrPath `
+                -NoNewWindow -PassThru
 
-        $timedOut = $false
-        if ($CommandTimeoutSec -gt 0) {
-            $finished = $proc.WaitForExit($CommandTimeoutSec * 1000)
-            if (-not $finished) {
-                $timedOut = $true
-                try { $proc.Kill() } catch {}
+            $timedOut = $false
+            if ($CommandTimeoutSec -gt 0) {
+                $finished = $proc.WaitForExit($CommandTimeoutSec * 1000)
+                if (-not $finished) {
+                    $timedOut = $true
+                    try { $proc.Kill() } catch {}
+                }
             }
+            else {
+                $proc.WaitForExit() | Out-Null
+            }
+
+            $exitCode = if ($timedOut) { -1 } else { $proc.ExitCode }
         }
-        else {
-            $proc.WaitForExit() | Out-Null
+        catch {
+            $exitCode = -1
+            Set-Content -LiteralPath $stderrPath -Value $_.Exception.Message
         }
 
-        $exitCode = if ($timedOut) { -1 } else { $proc.ExitCode }
+        $stdout = if (Test-Path $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Raw } else { "" }
+        $stderr = if (Test-Path $stderrPath) { Get-Content -LiteralPath $stderrPath -Raw } else { "" }
+        if ($timedOut) {
+            $stderr = "Timed out after ${CommandTimeoutSec}s`r`n$stderr"
+        }
+        Remove-Item $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
     }
-    catch {
-        $exitCode = -1
-        Set-Content -LiteralPath $stderrPath -Value $_.Exception.Message
-    }
-
-    $stdout = if (Test-Path $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Raw } else { "" }
-    $stderr = if (Test-Path $stderrPath) { Get-Content -LiteralPath $stderrPath -Raw } else { "" }
-    if ($timedOut) {
-        $stderr = "Timed out after ${CommandTimeoutSec}s`r`n$stderr"
-    }
-    Remove-Item $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
 
     $result = @{
         result = @{

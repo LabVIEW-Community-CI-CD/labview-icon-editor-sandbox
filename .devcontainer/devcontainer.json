@@ -6,7 +6,7 @@
   },
   "remoteUser": "root",
   "workspaceFolder": "/workspaces/labview-icon-editor-sandbox",
-  "postCreateCommand": "dotnet restore && dotnet build Tooling/dotnet/RequirementsSummarizer/RequirementsSummarizer.csproj",
+  "postCreateCommand": "dotnet restore Tooling/dotnet/RequirementsSummarizer/RequirementsSummarizer.csproj && dotnet build Tooling/dotnet/RequirementsSummarizer/RequirementsSummarizer.csproj",
   "mounts": [
     "source=nuget-cache,target=/root/.nuget/packages,type=volume",
     "source=ollama-cache,target=/root/.ollama,type=volume",
