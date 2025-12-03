@@ -59,20 +59,17 @@ Choose **Option A**: Create a custom agent definition at `.github/agents/ollama-
 3. **Seed Docker integration** for cross-platform VIPB modification
 4. **Interactive build workflow** with user prompting for LabVIEW version/bitness
 5. **Security guardrails reference** (allowlist, path traversal, command chaining prevention)
-6. **Requirements traceability** via `docs/requirements/ollama-executor-agent-requirements.csv`
 
 ## Consequences
 
 ### Positive
 - **+** AI assistants can discover and invoke executor capabilities correctly
 - **+** Single source of truth for executor documentation
-- **+** Requirements CSV enables verification and traceability
 - **+** Seed Docker integration enables cross-platform VIPB modification
 - **+** Interactive workflow guides users through version/bitness selection
 
 ### Negative / trade-offs
 - **–** Agent file must be updated when executor capabilities change
-- **–** Requirements CSV adds maintenance overhead (35 requirements)
 - **–** Seed Docker dependency for cross-platform VIPB modification
 
 ### Follow-up actions
@@ -84,7 +81,7 @@ Choose **Option A**: Create a custom agent definition at `.github/agents/ollama-
 
 ### Affected components
 - `.github/agents/ollama-executor.agent.md` — Agent definition (created)
-- `docs/requirements/ollama-executor-agent-requirements.csv` — Requirements traceability (created)
+- `.github/agents/requirements-injector.agent.md` — Requirements injection agent (created)
 - `scripts/ollama-executor/` — Existing executor scripts (unchanged)
 - `Tooling/seed/` — Docker container for VIPB modification (referenced)
 
