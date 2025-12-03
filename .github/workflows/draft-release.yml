@@ -57,7 +57,7 @@ jobs:
           else
             # Manual trigger without run_id - find latest successful CI run on current branch
             echo "Finding latest successful CI run on branch: ${{ github.ref_name }}"
-            run_id=$(gh run list --workflow=ci.yml --branch="${{ github.ref_name }}" --status=success --limit=1 --json databaseId --jq '.[0].databaseId')
+            run_id=$(gh run list --workflow=ci.yml --branch="${{ github.ref_name }}" --status=success --limit=1 --json databaseId --jq '.[0].databaseId // empty')
             if [ -z "$run_id" ]; then
               echo "ERROR: No successful CI run found on branch ${{ github.ref_name }}" >&2
               exit 1
