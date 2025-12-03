@@ -253,7 +253,9 @@ jobs:
               RepoPath = "."
               Goal = "Build Source Distribution LV${{ matrix.labview }} ${{ matrix.bitness }}-bit"
               MaxTurns = 5
-              AllowedRuns = @($buildCmd)
+              # Use empty allowlist in simulation mode - mock server returns fixed commands
+              # Real execution should use strict allowlist
+              AllowedRuns = @()
               CommandTimeoutSec = 60
             }
             
