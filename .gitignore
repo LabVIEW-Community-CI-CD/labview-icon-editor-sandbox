@@ -52,3 +52,4 @@ reports/logs/
 builds/artifacts/source-distribution.zip
 builds/Source Distribution/manifest.csv
 builds/Source Distribution/manifest.json
+reports/test-results/
