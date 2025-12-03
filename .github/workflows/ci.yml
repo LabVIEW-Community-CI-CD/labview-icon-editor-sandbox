@@ -1178,13 +1178,13 @@ jobs:
           for local_dir in sd tooling commit-index-sd commit-index-tooling; do
             if [ -d "$local_dir" ]; then
               artifact_name="${dir_to_artifact[$local_dir]}"
-              find "$local_dir" -type f -print0 | while IFS= read -r -d '' file; do
+              while IFS= read -r -d '' file; do
                 # Replace local dir with artifact name in path
                 rel_file="${file#$local_dir/}"
-                hash=$(sha256sum "$file" | awk '{print $1}')
+                hash=$(sha256sum "$file" | cut -d' ' -f1)
                 # Path relative to integrity-hashes directory pointing to sibling artifact dir
                 echo "$hash  ../$artifact_name/$rel_file" >> integrity-hashes/artifacts.sha256
-              done
+              done < <(find "$local_dir" -type f -print0)
             fi
           done
 
