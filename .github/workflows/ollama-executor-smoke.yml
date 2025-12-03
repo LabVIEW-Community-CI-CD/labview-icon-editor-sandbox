@@ -1,0 +1,253 @@
+name: Ollama Executor Smoke Test
+
+defaults:
+  run:
+    working-directory: './'
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ollama-executor/**'
+      - '.devcontainer/**'
+      - 'install-ollama.ps1'
+      - '.github/workflows/ollama-executor-smoke.yml'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'scripts/ollama-executor/**'
+      - '.devcontainer/**'
+      - 'install-ollama.ps1'
+
+jobs:
+  smoke-test:
+    name: Smoke Test - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PowerShell 7+
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+          Write-Host "OS: $($PSVersionTable.OS)"
+
+      - name: Run Command Vetting Tests
+        shell: pwsh
+        run: |
+          Write-Host "=== Running Command Vetting Tests ===" -ForegroundColor Cyan
+          pwsh -NoProfile -File scripts/ollama-executor/Test-CommandVetting.ps1
+        continue-on-error: false
+
+      - name: Run Simulation Mode Tests
+        shell: pwsh
+        run: |
+          Write-Host "=== Running Simulation Mode Tests ===" -ForegroundColor Cyan
+          pwsh -NoProfile -File scripts/ollama-executor/Test-SimulationMode.ps1
+        continue-on-error: false
+
+      - name: Run Security Fuzzing Tests
+        shell: pwsh
+        run: |
+          Write-Host "=== Running Security Fuzzing Tests ===" -ForegroundColor Cyan
+          pwsh -NoProfile -File scripts/ollama-executor/Test-SecurityFuzzing.ps1
+        continue-on-error: false
+
+      - name: Run Regression Tests
+        shell: pwsh
+        run: |
+          Write-Host "=== Running Regression Tests ===" -ForegroundColor Cyan
+          pwsh -NoProfile -File scripts/ollama-executor/Test-Regressions.ps1
+        continue-on-error: false
+
+      - name: Run Fast Test Suite
+        shell: pwsh
+        run: |
+          Write-Host "=== Running Fast Test Suite ===" -ForegroundColor Cyan
+          pwsh -NoProfile -File scripts/ollama-executor/Run-AllTests.ps1 -Mode fast -CI
+        continue-on-error: false
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            reports/test-results/*.json
+            reports/test-results/*.xml
+          retention-days: 30
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ matrix.os }}
+          path: |
+            reports/test-results/*.html
+          retention-days: 30
+
+  security-gate:
+    name: Security Hard Gate
+    runs-on: ubuntu-latest
+    needs: smoke-test
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Security Fuzzing (Critical)
+        shell: pwsh
+        run: |
+          Write-Host "=== SECURITY HARD GATE ===" -ForegroundColor Red
+          Write-Host "Running comprehensive security fuzzing..." -ForegroundColor Yellow
+          $result = pwsh -NoProfile -File scripts/ollama-executor/Test-SecurityFuzzing.ps1
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "SECURITY GATE FAILED: Vulnerabilities detected!" -ForegroundColor Red
+            exit 1
+          }
+          Write-Host "SECURITY GATE PASSED: No vulnerabilities detected" -ForegroundColor Green
+
+      - name: Verify Regression Tests
+        shell: pwsh
+        run: |
+          Write-Host "=== REGRESSION GATE ===" -ForegroundColor Red
+          Write-Host "Verifying no previously-fixed bugs have reappeared..." -ForegroundColor Yellow
+          $result = pwsh -NoProfile -File scripts/ollama-executor/Test-Regressions.ps1
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "REGRESSION GATE FAILED: Fixed bugs have reappeared!" -ForegroundColor Red
+            exit 1
+          }
+          Write-Host "REGRESSION GATE PASSED: All fixes intact" -ForegroundColor Green
+
+  performance-baseline:
+    name: Performance Baseline Check
+    runs-on: ubuntu-latest
+    needs: smoke-test
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Performance Benchmarks
+        shell: pwsh
+        run: |
+          Write-Host "=== Running Performance Benchmarks ===" -ForegroundColor Cyan
+          pwsh -NoProfile -File scripts/ollama-executor/Test-Performance.ps1 -OutputReport reports/performance-baseline.json
+
+      - name: Upload Performance Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-baseline
+          path: reports/performance-baseline.json
+          retention-days: 90
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [smoke-test, security-gate, performance-baseline]
+    if: always()
+    
+    steps:
+      - name: Download All Test Results
+        uses: actions/download-artifact@v4
+        with:
+          path: test-results
+
+      - name: Generate Summary
+        shell: pwsh
+        run: |
+          Write-Host "=== Ollama Executor Smoke Test Summary ===" -ForegroundColor Cyan
+          Write-Host ""
+          
+          $allPassed = $true
+          
+          # Check smoke test results
+          if ("${{ needs.smoke-test.result }}" -eq "success") {
+            Write-Host "✅ Smoke Tests: PASSED" -ForegroundColor Green
+          } else {
+            Write-Host "❌ Smoke Tests: FAILED" -ForegroundColor Red
+            $allPassed = $false
+          }
+          
+          # Check security gate
+          if ("${{ needs.security-gate.result }}" -eq "success") {
+            Write-Host "✅ Security Gate: PASSED" -ForegroundColor Green
+          } else {
+            Write-Host "❌ Security Gate: FAILED" -ForegroundColor Red
+            $allPassed = $false
+          }
+          
+          # Check performance baseline
+          if ("${{ needs.performance-baseline.result }}" -eq "success") {
+            Write-Host "✅ Performance Baseline: PASSED" -ForegroundColor Green
+          } else {
+            Write-Host "⚠️  Performance Baseline: FAILED" -ForegroundColor Yellow
+            # Don't fail on performance issues, just warn
+          }
+          
+          Write-Host ""
+          if ($allPassed) {
+            Write-Host "🎉 ALL GATES PASSED - Ready to merge!" -ForegroundColor Green
+            exit 0
+          } else {
+            Write-Host "🚫 GATES FAILED - Cannot merge until all tests pass" -ForegroundColor Red
+            exit 1
+          }
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const smokeStatus = '${{ needs.smoke-test.result }}';
+            const securityStatus = '${{ needs.security-gate.result }}';
+            const perfStatus = '${{ needs.performance-baseline.result }}';
+            
+            const statusIcon = (status) => status === 'success' ? '✅' : '❌';
+            
+            const comment = `## 🧪 Ollama Executor Smoke Test Results
+            
+            | Test Category | Status |
+            |---------------|--------|
+            | Smoke Tests (Multi-OS) | ${statusIcon(smokeStatus)} ${smokeStatus} |
+            | Security Hard Gate | ${statusIcon(securityStatus)} ${securityStatus} |
+            | Performance Baseline | ${statusIcon(perfStatus)} ${perfStatus} |
+            
+            ### Test Coverage
+            - ✅ Command vetting (26 test cases)
+            - ✅ Simulation mode (4 scenarios)
+            - ✅ Security fuzzing (1000+ attack vectors)
+            - ✅ Regression tracking (all fixed bugs)
+            - ✅ Cross-platform (Linux, Windows, macOS)
+            
+            ${smokeStatus === 'success' && securityStatus === 'success' 
+              ? '🎉 **All gates passed!** This PR is ready to merge.' 
+              : '🚫 **Gates failed.** Please review the test failures above.'}
+            
+            <details>
+            <summary>View detailed results</summary>
+            
+            Artifacts:
+            - Test results (JSON/XML)
+            - Test reports (HTML)
+            - Performance baseline
+            
+            Check the Actions tab for detailed logs.
+            </details>
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
