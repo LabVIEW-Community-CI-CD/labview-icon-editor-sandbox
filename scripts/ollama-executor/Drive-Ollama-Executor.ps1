@@ -70,10 +70,19 @@ function Test-CommandAllowed {
         return "Rejected: command must start with 'pwsh -NoProfile -File scripts/...ps1'"
     }
 
+    # Check for path traversal (parent directory references)
+    if ($Command -match '\.\.[/\\]' -or $Command -match '[/\\]\.\.') {
+        return "Rejected: path traversal attempt detected (..)"
+    }
+
+    # Check for command chaining/injection
+    if ($Command -match '[;&|`]' -or $Command -match '\$\(') {
+        return "Rejected: command injection attempt detected"
+    }
+
     # Forbid dangerous tokens
     $forbidden = @('rm ', 'del ', 'Remove-Item', 'Format-',
-                   'Invoke-WebRequest', 'curl ', 'Start-Process', 'shutdown', 'reg ', 'sc ',
-                   '..\')
+                   'Invoke-WebRequest', 'curl ', 'Start-Process', 'shutdown', 'reg ', 'sc ')
     foreach ($tok in $forbidden) {
         if ($Command -like "*$tok*") {
             return "Rejected: contains forbidden token '$tok'"
