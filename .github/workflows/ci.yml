@@ -1148,6 +1148,64 @@ jobs:
           echo "Downloaded Tooling Distribution contents:"
           ls -R artifacts/tooling
 
+      - name: Generate integrity hashes
+        id: integrity
+        shell: bash
+        env:
+          REPO_NAME: ${{ github.event.repository.name || 'labview-icon-editor' }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/integrity-hashes
+
+          echo "Generating SHA256 checksums for all downloaded artifacts..."
+
+          cd artifacts
+
+          # Generate checksums for all artifact files
+          # The path format needs to match what draft-release.yml will see after downloading
+          # draft-release downloads artifacts into directories named after the artifact names
+          # So we need to map our local directories to the actual artifact names
+
+          # Map local download paths to actual artifact names
+          declare -A dir_to_artifact=(
+            ["sd"]="${REPO_NAME}-labview-icon-api"
+            ["tooling"]="${REPO_NAME}-tooling-distribution"
+            ["commit-index-sd"]="commit-index-sd"
+            ["commit-index-tooling"]="commit-index-tooling"
+          )
+
+          # Generate checksums with paths matching how draft-release.yml will see them
+          for local_dir in sd tooling commit-index-sd commit-index-tooling; do
+            if [ -d "$local_dir" ]; then
+              artifact_name="${dir_to_artifact[$local_dir]}"
+              find "$local_dir" -type f -print0 | while IFS= read -r -d '' file; do
+                # Replace local dir with artifact name in path
+                rel_file="${file#$local_dir/}"
+                hash=$(sha256sum "$file" | awk '{print $1}')
+                # Path relative to integrity-hashes directory pointing to sibling artifact dir
+                echo "$hash  ../$artifact_name/$rel_file" >> integrity-hashes/artifacts.sha256
+              done
+            fi
+          done
+
+          # Sort for consistent output
+          if [ -f integrity-hashes/artifacts.sha256 ]; then
+            sort -k2 integrity-hashes/artifacts.sha256 -o integrity-hashes/artifacts.sha256
+            echo "Generated checksums (artifacts.sha256):"
+            cat integrity-hashes/artifacts.sha256
+            echo "CHECKSUM_COUNT=$(wc -l < integrity-hashes/artifacts.sha256)" >> "$GITHUB_OUTPUT"
+          else
+            echo "ERROR: No artifact files found to checksum!" >&2
+            exit 1
+          fi
+
+      - name: Upload integrity hashes artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrity-hashes
+          path: artifacts/integrity-hashes/
+          if-no-files-found: error
+
       - name: Validate version format
         shell: pwsh
         env:
