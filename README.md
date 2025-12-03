@@ -51,6 +51,7 @@ The Ollama executor supports cross-compilation simulation mode for testing build
 - VS Code tasks: `docs/vscode-tasks.md`
 - CI overview: `docs/ci-workflows.md`
 - Repo structure: `docs/adr/ADR-2025-011-repo-structure.md`
+- Python env + pyenv: `docs/python-env.md`
 - Ollama decision: `docs/adr/ADR-2025-017-ollama-locked-executor.md`
 - Ollama simulation mode: `docs/adr/ADR-2025-018-ollama-cross-compilation-simulation.md`
 - Requirements (ISO/IEC/IEEE 29148): `docs/requirements/requirements.csv` and summary under `reports/requirements-summary.md`

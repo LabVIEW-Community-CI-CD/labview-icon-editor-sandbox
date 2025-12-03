@@ -352,7 +352,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version-file: .python-version
       - name: Validate RTM
         run: python3 .github/scripts/validate_rtm.py
       - name: Enforce RTM coverage thresholds
@@ -394,7 +394,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version-file: .python-version
       - name: Lint ADRs and agent language
         run: |
           set -euo pipefail
