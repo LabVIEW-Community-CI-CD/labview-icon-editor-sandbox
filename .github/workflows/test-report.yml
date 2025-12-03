@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version-file: .python-version
       - name: Generate test report
         run: python3 .github/scripts/generate_test_report.py
       - name: Generate ISO 29119-3 test status report (with structured results)
