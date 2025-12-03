@@ -1104,6 +1104,7 @@ jobs:
       - docs-quality
       - version
       - version-report
+      - vscode-tasks-manifest
     runs-on: ubuntu-latest
     permissions:
       contents: write
