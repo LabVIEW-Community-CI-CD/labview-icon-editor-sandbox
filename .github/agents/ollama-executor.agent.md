@@ -74,7 +74,85 @@ pwsh -NoProfile -File scripts/orchestration/Run-Ollama-Host.ps1 `
   -OllamaPrompt "Hello smoke"
 ```
 
-### 6. Testing
+### 6. Interactive Real LabVIEW Build
+Drive a real LabVIEW build by first prompting the user for version and bitness, then modifying the VIPB and triggering the build:
+
+**Step 1: Prompt User for Configuration**
+When asked to perform a real LabVIEW build, first ask the user:
+- Which LabVIEW version? (e.g., 2021, 2023, 2024, 2025)
+- Which bitness? (32 or 64)
+
+**Step 2: Modify VIPB Using Seed Docker Container (Preferred)**
+Use the Seed Docker container to modify VIPB files. The Seed container provides tools for converting VIPB to JSON, modifying it, and converting back:
+
+```powershell
+# Build or pull the seed Docker image
+pwsh -NoProfile -File scripts/run-seed-runner.ps1
+
+# Or manually use Docker to modify the VIPB:
+# Convert VIPB to JSON for editing
+docker run --rm -v "${PWD}:/repo" ghcr.io/labview-community-ci-cd/seed:latest `
+  vipb2json --input /repo/Tooling/deployment/seed.vipb --output /repo/Tooling/deployment/seed.vipb.json
+
+# After modifying the JSON (e.g., updating Package_LabVIEW_Version), convert back
+docker run --rm -v "${PWD}:/repo" ghcr.io/labview-community-ci-cd/seed:latest `
+  json2vipb --input /repo/Tooling/deployment/seed.vipb.json --output /repo/Tooling/deployment/seed.vipb
+```
+
+Use the VIPB bump script which wraps the seed container:
+```powershell
+pwsh -NoProfile -File scripts/labview/vipb-bump-worktree.ps1 `
+  -RepositoryPath . `
+  -TargetLabVIEWVersion 2025 `
+  -VipbPath "Tooling/deployment/seed.vipb" `
+  -NoWorktree
+```
+
+**Step 2 Alternative: PowerShell-Based VIPB Modification**
+Use the display info modifier for in-place updates without Docker:
+```powershell
+pwsh -NoProfile -File scripts/modify-vipb-display-info/ModifyVIPBDisplayInfo.ps1 `
+  -RepositoryPath . `
+  -VIPBPath "Tooling/deployment/seed.vipb" `
+  -SupportedBitness 64 `
+  -Package_LabVIEW_Version 2025 `
+  -Major 1 -Minor 0 -Patch 0 -Build 1 `
+  -Commit "$(git rev-parse --short HEAD)" `
+  -ReleaseNotesFile "Tooling/deployment/release_notes.md" `
+  -DisplayInformationJSON '{"Company Name":"LabVIEW Icon Editor","Product Name":"Icon Editor","Product Description Summary":"LabVIEW Icon Editor","Product Description":"LabVIEW Icon Editor Package"}'
+```
+
+**Step 3: Trigger Real LabVIEW Build**
+After VIPB modification, trigger the source distribution build:
+```powershell
+pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 `
+  -RepositoryPath . `
+  -Package_LabVIEW_Version 2025 `
+  -SupportedBitness 64
+```
+
+**Important Notes for Real Builds:**
+- Requires Windows runner with LabVIEW installed (or Docker for VIPB modification only)
+- The LabVIEW version must be installed on the host machine for actual builds
+- VIPB modifications can be done on any platform using the Seed Docker container
+- Build artifacts are placed under `builds/` directory
+
+### Seed Docker Container Reference
+
+The Seed container (`ghcr.io/labview-community-ci-cd/seed:latest`) provides these CLI tools:
+- `vipb2json` - Convert VIPB to JSON for editing
+- `json2vipb` - Convert JSON back to VIPB format
+- `lvproj2json` - Convert LabVIEW project to JSON
+- `json2lvproj` - Convert JSON back to LabVIEW project
+- `buildspec2json` - Auto-detect and convert to JSON
+- `json2buildspec` - Auto-detect and convert back
+
+Build the seed image locally:
+```powershell
+docker build -f Tooling/seed/Dockerfile -t seed:latest .
+```
+
+### 7. Testing
 Run the Ollama executor test suites:
 ```powershell
 # Command vetting tests
