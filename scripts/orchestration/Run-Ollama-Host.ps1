@@ -29,6 +29,17 @@ New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 $logPath = Join-Path $logDir "ollama-host-$resolvedRunKey.log"
 $simMode = [string]::Equals($env:OLLAMA_EXECUTOR_MODE, 'sim', 'OrdinalIgnoreCase')
 
+function Ensure-DotnetOnPath {
+    if (Get-Command dotnet -ErrorAction SilentlyContinue) { return }
+    $homeDotnet = Join-Path $HOME '.dotnet'
+    if (Test-Path -LiteralPath $homeDotnet) {
+        $env:DOTNET_ROOT = $homeDotnet
+        $env:PATH = "$homeDotnet;$homeDotnet\tools;$env:PATH"
+    }
+}
+
+Ensure-DotnetOnPath
+
 function Get-AppliedRequirements {
     $raw = $env:OLLAMA_REQUIREMENTS_APPLIED
     if ($raw) {
