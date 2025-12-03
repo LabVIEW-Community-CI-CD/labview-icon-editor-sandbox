@@ -1,0 +1,57 @@
+name: Publish Seed Docker image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag suffix (e.g., v1.0.0; default latest)"
+        required: false
+        default: "latest"
+  push:
+    branches: [main, develop, release-alpha, release-beta, release-rc]
+    paths:
+      - "Tooling/seed/**"
+      - "Tooling/dotnet/VipbJsonTool/**"
+      - "Tooling/docker/seed/**"
+      - ".github/workflows/seed-image.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    env:
+      TAG_SUFFIX: ${{ github.event.inputs.tag || 'latest' }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Compute image name (lowercase owner)
+        id: names
+        run: |
+          owner="${{ github.repository_owner }}"
+          owner_lc="$(echo "$owner" | tr '[:upper:]' '[:lower:]')"
+          echo "image_name=ghcr.io/${owner_lc}/seed" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Tooling/seed/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.names.outputs.image_name }}:${{ env.TAG_SUFFIX }}
+            ${{ steps.names.outputs.image_name }}:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.description=LabVIEW CI/CD Seed - VIPB/LVPROJ conversion and seeding tools
