@@ -23,6 +23,7 @@ RUN apt-get update \
     && dpkg -i /tmp/packages-microsoft-prod.deb \
     && rm /tmp/packages-microsoft-prod.deb \
     && apt-get update \
+    # Installing powershell triggers dbus which fails in containers (expected). Use semicolons to continue past the trigger error.
     && apt-get install -y --no-install-recommends powershell; \
     dpkg --configure -a || true; \
     apt-get clean; \
