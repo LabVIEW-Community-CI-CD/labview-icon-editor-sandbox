@@ -139,15 +139,35 @@ pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distributio
 
 ### Seed Docker Container Reference
 
-The Seed container (`ghcr.io/labview-community-ci-cd/seed:latest`) provides these CLI tools:
-- `vipb2json` - Convert VIPB to JSON for editing
-- `json2vipb` - Convert JSON back to VIPB format
-- `lvproj2json` - Convert LabVIEW project to JSON
-- `json2lvproj` - Convert JSON back to LabVIEW project
-- `buildspec2json` - Auto-detect and convert to JSON
-- `json2buildspec` - Auto-detect and convert back
+The Seed container (`ghcr.io/labview-community-ci-cd/seed:latest`) is a **required dependency** for VIPB/LVPROJ manipulation. It provides a single point of bootstrapping for targeting LabVIEW builds from specific years and bitnesses.
 
-Build the seed image locally:
+**Requirement**: Seed Docker tooling SHALL be available before any VIPB modification workflow.
+
+**Available CLI tools:**
+- `VipbJsonTool vipb2json <input> <output>` - Convert VIPB to JSON for editing
+- `VipbJsonTool json2vipb <input> <output>` - Convert JSON back to VIPB format
+- `VipbJsonTool lvproj2json <input> <output>` - Convert LabVIEW project to JSON
+- `VipbJsonTool json2lvproj <input> <output>` - Convert JSON back to LabVIEW project
+
+**Example: Modify seed.vipb to target LabVIEW 2020 32-bit:**
+```powershell
+# Step 1: Convert VIPB to JSON
+docker run --rm --entrypoint /usr/local/bin/VipbJsonTool \
+  -v "${PWD}:/repo" -w /repo \
+  ghcr.io/labview-community-ci-cd/seed:latest \
+  vipb2json Tooling/deployment/seed.vipb Tooling/deployment/seed.vipb.json
+
+# Step 2: Modify the JSON (update Package_LabVIEW_Version)
+# Change "25.3 (64-bit)" to "20.0 (32-bit)" for LabVIEW 2020 32-bit
+
+# Step 3: Convert JSON back to VIPB
+docker run --rm --entrypoint /usr/local/bin/VipbJsonTool \
+  -v "${PWD}:/repo" -w /repo \
+  ghcr.io/labview-community-ci-cd/seed:latest \
+  json2vipb Tooling/deployment/seed.vipb.json Tooling/deployment/seed.vipb
+```
+
+Build the seed image locally if not available from registry:
 ```powershell
 docker build -f Tooling/seed/Dockerfile -t seed:latest .
 ```
