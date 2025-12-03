@@ -25,7 +25,7 @@ Two-turn, allowlisted PowerShell executor; timeout is prompted per task.
   - `30 Ollama: package-build (locked)` - build the VIP.
   - `31 Ollama: source-distribution (locked)` - build the source-distribution zip.
   - `32 Ollama: local-sd-ppl (locked)` - build PPL from the source distribution.
-- Traffic stays on `OLLAMA_HOST` (`http://host.docker.internal:11435` in the devcontainer; use `http://localhost:11435` on the host); the executor fails fast if the host is unreachable or the model tag is empty and only the allowlisted command runs.
+- Traffic stays on `OLLAMA_HOST` (`http://host.docker.internal:11435` in the devcontainer; use `http://localhost:11435` on the host); the executor fails fast if the host is unreachable or the model tag is empty and only the allowlisted command runs. Default model tag is `llama3-8b-local:latest` for preloaded images built from the host cache.
 
 ## CLIs and scripts
 - IntegrationEngineCli, OrchestrationCli, DevModeAgentCli, XCli: run via `scripts/common/invoke-repo-cli.ps1` or tasks.

@@ -4,7 +4,7 @@ Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driv
 
 ## Using the devcontainer Ollama bench
 - Purpose: Linux devcontainer for dotnet tooling + the Ollama/executor loop; LabVIEW/VIPM builds remain Windows-only on the host.
-- Defaults (devcontainer env): `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-preloaded`, `OLLAMA_MODEL_TAG=llama3-8b-local`; the host Docker socket is mounted and the scripts fail fast if the socket is missing or Docker Desktop is stopped.
+- Defaults (devcontainer env): `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-preloaded`, `OLLAMA_MODEL_TAG=llama3-8b-local:latest`; the host Docker socket is mounted and the scripts fail fast if the socket is missing or Docker Desktop is stopped.
 - Workflow:
   1) Start Docker Desktop and open the devcontainer.
   2) Task **28** `Ollama: pull image` (GHCR owner/tag prompts).
@@ -16,7 +16,7 @@ Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driv
 ## Ollama locked tasks (30-32)
 - Two-turn, allowlisted PowerShell executor (package-build, source-distribution, local-sd-ppl) against `OLLAMA_HOST`; timeout prompted per task.
 - Prep via the steps above; traffic stays on the host you pass (devcontainer default `http://host.docker.internal:11435`). Manual start alternative: `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/<ghcr-owner>/ollama-local:<tag>`.
-- Pull/tag the model the tasks expect: `docker exec -it ollama-local ollama pull llama3:8b` then `docker exec -it ollama-local ollama cp llama3:8b llama3-8b-local`, or set `OLLAMA_MODEL_TAG` to your preferred tag and rerun the health check. Offline alternative: supply a `.ollama` bundle path in task **29** to import without hitting `registry.ollama.ai`.
+- Pull/tag the model the tasks expect: `docker exec -it ollama-local ollama pull llama3:8b` then `docker exec -it ollama-local ollama cp llama3:8b llama3-8b-local:latest`, or set `OLLAMA_MODEL_TAG` to your preferred tag and rerun the health check. Offline alternative: supply a `.ollama` bundle path in task **29** to import without hitting `registry.ollama.ai`.
 - Custom models: update the input/model tag and re-run task 27 to confirm availability before triggering the locked tasks.
 
 ## 01 Verify / Apply dependencies

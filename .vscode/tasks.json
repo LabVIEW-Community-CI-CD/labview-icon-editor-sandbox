@@ -1159,7 +1159,7 @@
       "id": "ollamaModelTag",
       "type": "promptString",
       "description": "Model tag expected for Ollama tasks",
-      "default": "llama3-8b-local"
+      "default": "llama3-8b-local:latest"
     },
     {
       "id": "ollamaGhcrTag",
