@@ -224,6 +224,63 @@ public static class Program
         return overallExit;
     }
 
+    private static bool IsSimMode()
+    {
+        static bool IsOn(string? val) =>
+            string.Equals(val, "1", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(val, "true", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(val, "yes", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(val, "sim", StringComparison.OrdinalIgnoreCase);
+
+        var env = Environment.GetEnvironmentVariable("OLLAMA_EXECUTOR_MODE");
+        if (IsOn(env)) return true;
+        return IsOn(Environment.GetEnvironmentVariable("ORCH_SIM_MODE"));
+    }
+
+    private static CommandResult RunLocalSdSim(Action<string> log, string repo, string runKey, string lockPath, int lockTtlSec, bool force, bool keepLock)
+    {
+        var sw = Stopwatch.StartNew();
+        var steps = new List<object>();
+
+        log($"[local-sd][sim] runKey={runKey} lock={lockPath} ttl={lockTtlSec}s force={force}");
+
+        if (!TryAcquireLock(repo, lockPath, runKey, lockTtlSec, force, out var lockError))
+        {
+            return new CommandResult("local-sd", "fail", 1, sw.ElapsedMilliseconds, new { error = lockError });
+        }
+
+        try
+        {
+            var artifactsDir = Path.Combine(repo, "artifacts");
+            Directory.CreateDirectory(artifactsDir);
+            var zipPath = Path.Combine(artifactsDir, "labview-icon-api.zip");
+            File.WriteAllText(zipPath, $"SIMULATION MODE stub zip for {runKey}");
+            var hash = RunPwsh(new Options(), new[] { "-NoProfile", "-Command", $"(Get-FileHash -LiteralPath '{zipPath}' -Algorithm SHA256).Hash | Set-Content '{Path.Combine(artifactsDir, "sha256.txt")}'" }, 0);
+
+            steps.Add(new { Name = "sim-prepare", status = "success", exit = 0, durationMs = 0, stdout = $"[sim] created stub at {zipPath}", stderr = string.Empty });
+            steps.Add(new { Name = "hash-artifacts", status = hash.ExitCode == 0 ? "success" : "fail", exit = hash.ExitCode, durationMs = hash.DurationMs, stdout = hash.StdOut, stderr = hash.StdErr });
+
+            var stage = RunPwsh(new Options(), new[] { "-NoProfile", "-Command", $"$dst=Join-Path 'builds-isolated' '{runKey}'; New-Item -ItemType Directory -Path $dst -Force | Out-Null; Copy-Item -Path 'artifacts' -Destination $dst -Recurse -Force; Write-Host \"[sim] staged artifacts under $dst\"" }, 0);
+            steps.Add(new { Name = "stage-run", status = stage.ExitCode == 0 ? "success" : "fail", exit = stage.ExitCode, durationMs = stage.DurationMs, stdout = stage.StdOut, stderr = stage.StdErr });
+
+            var failed = steps.FirstOrDefault(s => ((string)s.GetType().GetProperty("status")!.GetValue(s)!) != "success");
+            var exitCode = failed == null ? 0 : 1;
+            var status = exitCode == 0 ? "success" : "fail";
+            return new CommandResult("local-sd", status, exitCode, sw.ElapsedMilliseconds, new { mode = "sim", steps });
+        }
+        finally
+        {
+            if (!keepLock)
+            {
+                ReleaseLock(lockPath);
+            }
+            else
+            {
+                log($"[local-sd][sim] keeping lock at {lockPath} (ORCH_KEEP_LOCK=1)");
+            }
+        }
+    }
+
     private static CommandResult RunLocalSdOnce(Action<string> log, Options opts, string repo)
     {
         var sw = Stopwatch.StartNew();
@@ -240,6 +297,11 @@ public static class Program
         if (!TryAcquireLock(repo, lockPath, runKey, lockTtlSec, force, out var lockError))
         {
             return new CommandResult("local-sd", "fail", 1, sw.ElapsedMilliseconds, new { error = lockError });
+        }
+
+        if (IsSimMode())
+        {
+            return RunLocalSdSim(log, repo, runKey, lockPath, lockTtlSec, force, keepLock);
         }
 
         try
