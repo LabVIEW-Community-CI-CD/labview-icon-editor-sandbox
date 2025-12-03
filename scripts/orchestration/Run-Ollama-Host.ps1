@@ -27,6 +27,7 @@ $resolvedRunKey = if ($RunKey) { $RunKey } else { "ollama-sd-ppl-$((Get-Date).To
 $logDir = Join-Path $repoRoot 'reports/logs'
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 $logPath = Join-Path $logDir "ollama-host-$resolvedRunKey.log"
+$simMode = [string]::Equals($env:OLLAMA_EXECUTOR_MODE, 'sim', 'OrdinalIgnoreCase')
 
 $localScript = Join-Path $repoRoot 'scripts/orchestration/Run-LocalSd-Ppl.ps1'
 if (-not (Test-Path -LiteralPath $localScript -PathType Leaf)) {
@@ -75,6 +76,69 @@ if ($SmokeOnly) {
         exit $result.ExitCode
     }
     Write-Host "[ollama-host] smoke success (ollama call only)"
+    exit 0
+}
+
+if ($simMode) {
+    $messages = @()
+    function LogSim([string]$msg) {
+        $script:messages += $msg
+        Write-Host $msg
+    }
+
+    $lockPath = Join-Path $repoRoot '.locks/orchestration.lock'
+    $artifactsDir = Join-Path $repoRoot 'artifacts'
+    $buildsArtifacts = Join-Path $repoRoot 'builds/artifacts'
+    $isoRoot = Join-Path $repoRoot 'builds-isolated'
+    $runDir = Join-Path $isoRoot $resolvedRunKey
+
+    foreach ($dir in @($artifactsDir, $buildsArtifacts, $isoRoot)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+
+    $zipPath = Join-Path $artifactsDir 'labview-icon-api.zip'
+    $pplPath = Join-Path $artifactsDir 'labview-icon-api.ppl'
+
+    "SIMULATION MODE - stub source distribution for $resolvedRunKey" | Set-Content -LiteralPath $zipPath -Encoding utf8
+    "SIMULATION MODE - stub PPL for $resolvedRunKey" | Set-Content -LiteralPath $pplPath -Encoding utf8
+
+    Copy-Item -LiteralPath $zipPath -Destination (Join-Path $buildsArtifacts (Split-Path $zipPath -Leaf)) -Force
+    Copy-Item -LiteralPath $pplPath -Destination (Join-Path $buildsArtifacts (Split-Path $pplPath -Leaf)) -Force
+
+    $zipHash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash
+    $pplHash = (Get-FileHash -LiteralPath $pplPath -Algorithm SHA256).Hash
+
+    $handshake = @{
+        runKey     = $resolvedRunKey
+        lockPath   = (Resolve-Path -LiteralPath $lockPath).Path
+        lockTtlSec = $LockTtlSec
+        forceLock  = $ForceLock.IsPresent
+        zipRelPath = (Rel $zipPath)
+        zipSha256  = $zipHash
+        pplRelPath = (Rel $pplPath)
+        pplSha256  = $pplHash
+        timestampUtc = (Get-Date).ToUniversalTime().ToString('o')
+        mode       = 'sim'
+        requirements = @('OEX-PARITY-001','OEX-PARITY-002','OEX-PARITY-003','OEX-PARITY-004')
+    }
+
+    $handshakePath = Join-Path $artifactsDir 'labview-icon-api-handshake.json'
+    ConvertTo-Json $handshake -Depth 5 | Set-Content -LiteralPath $handshakePath -Encoding utf8
+
+    New-Item -ItemType Directory -Path $runDir -Force | Out-Null
+    Copy-Item -Path $artifactsDir -Destination $runDir -Recurse -Force
+
+    $summaryPath = Join-Path $logDir "ollama-host-$resolvedRunKey.summary.json"
+    $handshake | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $summaryPath -Encoding utf8
+
+    LogSim "[ollama-host][sim] runKey=$resolvedRunKey lock=$($handshake.lockPath) ttl=$($handshake.lockTtlSec)s mode=sim"
+    LogSim "[ollama-host][sim][requirements] applied=$($handshake.requirements -join ',')"
+    LogSim "[artifact][labview-icon-api.zip] $($handshake.zipRelPath) ($zipHash)"
+    LogSim "[artifact][labview-icon-api.ppl] $($handshake.pplRelPath) ($pplHash)"
+    LogSim "[ollama-host][sim] handshake=$((Rel $handshakePath))"
+    LogSim "[ollama-host][sim] staged=$((Rel $runDir))"
+    LogSim "[ollama-host][sim] summary-json=$((Rel $summaryPath))"
+    $messages | Set-Content -LiteralPath $logPath -Encoding utf8
     exit 0
 }
 
