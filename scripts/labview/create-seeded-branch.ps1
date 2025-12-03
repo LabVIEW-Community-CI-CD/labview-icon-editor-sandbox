@@ -74,7 +74,13 @@ param(
 
     [switch]$NoTimestamp,
 
-    [switch]$DryRun
+    [switch]$DryRun,
+
+    # Seed image settings (vendored/local by default)
+    [string]$SeedImage,
+    [string]$SeedBuildContext = '.',
+    [string]$SeedDockerfile = 'Tooling/seed/Dockerfile',
+    [switch]$SkipSeedBuild
 )
 
 Set-StrictMode -Version Latest
@@ -82,6 +88,9 @@ $ErrorActionPreference = 'Stop'
 
 # Resolve repository path
 $repo = (Resolve-Path -LiteralPath $RepositoryPath -ErrorAction Stop).ProviderPath
+$SeedImage = if ($SeedImage) { $SeedImage } elseif ($env:SEED_IMAGE) { $env:SEED_IMAGE } else { 'seed:latest' }
+$SeedBuildContext = (Resolve-Path -LiteralPath (Join-Path $repo $SeedBuildContext)).ProviderPath
+$SeedDockerfile = (Resolve-Path -LiteralPath (Join-Path $repo $SeedDockerfile)).ProviderPath
 
 # Calculate version string
 $lvMajor = $LabVIEWVersion - 2000
@@ -104,11 +113,15 @@ Write-Host "Base Branch: $BaseBranch"
 if ($uniqueId) {
     Write-Host "Unique ID: $uniqueId"
 }
+Write-Host "Seed Image: $SeedImage"
+Write-Host "Seed Build Context: $SeedBuildContext"
+Write-Host "Seed Dockerfile: $SeedDockerfile"
 Write-Host ""
 
 if ($DryRun) {
     Write-Host "[DRY RUN] Would create branch '$branchName' from '$BaseBranch'" -ForegroundColor Yellow
     Write-Host "[DRY RUN] Would update VIPB to: Package_LabVIEW_Version = $versionString" -ForegroundColor Yellow
+    Write-Host "[DRY RUN] Seed image would be built/used: $SeedImage (Dockerfile: $SeedDockerfile)" -ForegroundColor Yellow
     return [PSCustomObject]@{
         BranchName = $branchName
         LabVIEWVersion = $LabVIEWVersion
@@ -145,6 +158,17 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed to fetch base branch '$BaseBranch'"
 }
 
+# Ensure seed image exists (build unless explicitly skipped)
+if (-not $SkipSeedBuild) {
+    Write-Host "Building seed image '$SeedImage' (Dockerfile: $SeedDockerfile)" -ForegroundColor Gray
+    docker build -f $SeedDockerfile -t $SeedImage $SeedBuildContext
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to build seed image '$SeedImage'"
+    }
+} else {
+    Write-Host "Skipping seed image build (--SkipSeedBuild). Expecting image '$SeedImage' to be available." -ForegroundColor Yellow
+}
+
 # Create new branch from base
 Write-Host "Creating branch '$branchName' from '$BaseBranch'..." -ForegroundColor Gray
 git -C $repo checkout -B $branchName "origin/$BaseBranch"
@@ -167,8 +191,8 @@ $vipbRel = 'Tooling/deployment/seed.vipb'
 $vipbJsonRel = 'builds/vipb-stash/seed.vipb.json'
 
 Write-Host "Converting VIPB to JSON..." -ForegroundColor Gray
-docker run --rm -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/VipbJsonTool `
-    seed:latest vipb2json $vipbRel $vipbJsonRel
+docker run --rm -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/vipb2json `
+    $SeedImage --input "/repo/$vipbRel" --output "/repo/$vipbJsonRel"
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert VIPB to JSON"
 }
@@ -182,8 +206,8 @@ $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding 
 
 # Convert back to VIPB
 Write-Host "Converting JSON back to VIPB..." -ForegroundColor Gray
-docker run --rm -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/VipbJsonTool `
-    seed:latest json2vipb $vipbJsonRel $vipbRel
+docker run --rm -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/json2vipb `
+    $SeedImage --input "/repo/$vipbJsonRel" --output "/repo/$vipbRel"
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert JSON to VIPB"
 }
