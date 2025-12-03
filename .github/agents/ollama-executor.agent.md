@@ -227,8 +227,11 @@ Successful runs produce artifacts in:
 
 ## Reference Documentation
 
-- ADR: `docs/adr/ADR-2025-017-ollama-locked-executor.md`
+- ADR (Custom Agent): `docs/adr/ADR-2025-022-ollama-executor-custom-agent.md`
+- ADR (Locked Executor): `docs/adr/ADR-2025-017-ollama-locked-executor.md`
+- Requirements: `docs/requirements/ollama-executor-agent-requirements.csv`
 - Testing Guide: `scripts/ollama-executor/TESTING.md`
 - Testing Summary: `scripts/ollama-executor/TESTING-SUMMARY.md`
 - GitHub Actions: `docs/github-actions-ollama-executor.md`
 - Main executor: `scripts/ollama-executor/Drive-Ollama-Executor.ps1`
+- Seed Docker: `Tooling/seed/README.md`
