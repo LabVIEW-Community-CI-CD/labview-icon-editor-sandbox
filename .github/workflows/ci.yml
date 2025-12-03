@@ -645,6 +645,22 @@ jobs:
           path: artifacts/version-report/*
           if-no-files-found: error
 
+  vscode-tasks-manifest:
+    name: VSCode Tasks Manifest
+    needs: [verify-checklist-sync]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+          fetch-depth: 1
+      - name: Upload VSCode tasks manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-tasks-manifest
+          path: .vscode/tasks.json
+          if-no-files-found: error
+
   list-collaborators:
     name: List Repo Collaborators
     needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes]
