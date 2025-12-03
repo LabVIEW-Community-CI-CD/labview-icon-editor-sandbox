@@ -188,15 +188,15 @@ $vipbRel = 'Tooling/deployment/seed.vipb'
 $vipbJsonRel = 'builds/vipb-stash/seed.vipb.json'
 
 Write-Host "Converting VIPB to JSON..." -ForegroundColor Gray
-docker run --rm -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/vipb2json `
-    $SeedImage --input "/repo/$vipbRel" --output "/repo/$vipbJsonRel"
+docker run --rm -v "${repo}:/repo" -w /repo $SeedImage `
+    VipbJsonTool vipb2json "/repo/$vipbRel" "/repo/$vipbJsonRel"
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert VIPB to JSON"
 }
 
 # Modify JSON
 Write-Host "Updating Package_LabVIEW_Version to '$versionString'..." -ForegroundColor Gray
-$json = Get-Content -Raw $vipbJson | ConvertFrom-Json
+$json = Get-Content -Raw -Encoding UTF8 $vipbJson | ConvertFrom-Json
 $lg = $null
 if ($json.PSObject.Properties['VI_Package_Builder_Settings']) {
     $lg = $json.VI_Package_Builder_Settings.Library_General_Settings
@@ -204,8 +204,12 @@ if ($json.PSObject.Properties['VI_Package_Builder_Settings']) {
 if (-not $lg -and $json.PSObject.Properties['Package']) {
     $lg = $json.Package.Library_General_Settings
 }
+if (-not $lg -and $json.PSObject.Properties['Library_General_Settings']) {
+    $lg = $json.Library_General_Settings
+}
 if (-not $lg) {
-    throw "Library_General_Settings not found in VIPB JSON"
+    $known = ($json.PSObject.Properties.Name -join ', ')
+    throw "Library_General_Settings not found in VIPB JSON. Known top-level properties: $known"
 }
 $lg.Package_LabVIEW_Version = $versionString
 if ($lg.PSObject.Properties['Library_Version']) {
@@ -215,8 +219,8 @@ $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding 
 
 # Convert back to VIPB
 Write-Host "Converting JSON back to VIPB..." -ForegroundColor Gray
-docker run --rm -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/json2vipb `
-    $SeedImage --input "/repo/$vipbJsonRel" --output "/repo/$vipbRel"
+docker run --rm -v "${repo}:/repo" -w /repo $SeedImage `
+    VipbJsonTool json2vipb "/repo/$vipbJsonRel" "/repo/$vipbRel"
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert JSON to VIPB"
 }
