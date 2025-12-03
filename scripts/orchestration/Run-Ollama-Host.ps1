@@ -29,6 +29,14 @@ New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 $logPath = Join-Path $logDir "ollama-host-$resolvedRunKey.log"
 $simMode = [string]::Equals($env:OLLAMA_EXECUTOR_MODE, 'sim', 'OrdinalIgnoreCase')
 
+function Get-AppliedRequirements {
+    $raw = $env:OLLAMA_REQUIREMENTS_APPLIED
+    if ($raw) {
+        return ($raw -split '[,\s]+' | Where-Object { $_ }) | Select-Object -Unique
+    }
+    return @('OEX-PARITY-001','OEX-PARITY-002','OEX-PARITY-003','OEX-PARITY-004')
+}
+
 $localScript = Join-Path $repoRoot 'scripts/orchestration/Run-LocalSd-Ppl.ps1'
 if (-not (Test-Path -LiteralPath $localScript -PathType Leaf)) {
     throw "Local SD/PPL helper missing at $localScript"
@@ -108,6 +116,7 @@ if ($simMode) {
     $zipHash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash
     $pplHash = (Get-FileHash -LiteralPath $pplPath -Algorithm SHA256).Hash
 
+    $appliedReqs = Get-AppliedRequirements
     $handshake = @{
         runKey     = $resolvedRunKey
         lockPath   = (Resolve-Path -LiteralPath $lockPath).Path
@@ -119,7 +128,8 @@ if ($simMode) {
         pplSha256  = $pplHash
         timestampUtc = (Get-Date).ToUniversalTime().ToString('o')
         mode       = 'sim'
-        requirements = @('OEX-PARITY-001','OEX-PARITY-002','OEX-PARITY-003','OEX-PARITY-004')
+        requirements = $appliedReqs
+        prereqBypassed = $true
     }
 
     $handshakePath = Join-Path $artifactsDir 'labview-icon-api-handshake.json'
@@ -132,7 +142,7 @@ if ($simMode) {
     $handshake | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $summaryPath -Encoding utf8
 
     LogSim "[ollama-host][sim] runKey=$resolvedRunKey lock=$($handshake.lockPath) ttl=$($handshake.lockTtlSec)s mode=sim"
-    LogSim "[ollama-host][sim][requirements] applied=$($handshake.requirements -join ',')"
+    LogSim "[ollama-host][sim][requirements] applied=$($appliedReqs -join ',')"
     LogSim "[artifact][labview-icon-api.zip] $($handshake.zipRelPath) ($zipHash)"
     LogSim "[artifact][labview-icon-api.ppl] $($handshake.pplRelPath) ($pplHash)"
     LogSim "[ollama-host][sim] handshake=$((Rel $handshakePath))"
