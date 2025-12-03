@@ -4,6 +4,7 @@
 tasks:
   - id: prereq-check
     description: Ensure dotnet, LabVIEW, VIPM, and git prerequisites exist before starting the SD build.
+    condition: "!env.OLLAMA_EXECUTOR_MODE || env.OLLAMA_EXECUTOR_MODE != 'sim'"
     command: pwsh
     args:
       - -ExecutionPolicy
