@@ -37,7 +37,7 @@ function Test-EndToEndSuccessfulBuild {
     $env:OLLAMA_MODEL_TAG = "llama3-8b-local"
     
     # Start mock server with successful build scenario
-    $scenarioFile = "$PSScriptRoot/test-scenarios/successful-single-turn.json"
+    $scenarioFile = "$PSScriptRoot/test-scenarios/successful-two-turn.json"
     $mockJob = Start-Job -ScriptBlock {
         param($Script, $Port, $Scenario)
         & $Script -Port $Port -ScenarioFile $Scenario -MaxRequests 20

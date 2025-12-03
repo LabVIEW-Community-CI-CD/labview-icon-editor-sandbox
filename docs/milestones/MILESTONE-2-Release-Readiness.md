@@ -101,7 +101,7 @@ Prepare the current implementation for production release by completing remainin
   - Fix exit 1 logic
   
 - [ ] **Fix scenario naming**
-  - Rename "successful-single-turn" → "successful-two-turn"
+  - ~~Rename "successful-single-turn" → "successful-two-turn"~~ ✅ DONE
   - Update all references
   
 - [ ] **Optimize Test-Performance.ps1**

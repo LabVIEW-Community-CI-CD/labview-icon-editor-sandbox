@@ -29,7 +29,7 @@
 - **Status**: PARTIALLY IMPLEMENTED
 - **Completed**:
   - Scenario file structure defined
-  - Sample scenario created: `test-scenarios/successful-single-turn.json`
+  - Sample scenario created: `test-scenarios/successful-two-turn.json`
 - **Remaining**:
   - Test harness script (`Test-ConversationScenarios.ps1`)
   - Additional scenario files (max-turns, invalid-json-recovery, command-vetoing, build-failure)
@@ -97,7 +97,7 @@ pwsh -NoProfile -File scripts/ollama-executor/Drive-Ollama-Executor.ps1 -Goal "B
 # Start mock server with scenario
 pwsh -NoProfile -File scripts/ollama-executor/MockOllamaServer.ps1 `
     -Port 11436 `
-    -ScenarioFile scripts/ollama-executor/test-scenarios/successful-single-turn.json
+    -ScenarioFile scripts/ollama-executor/test-scenarios/successful-two-turn.json
 ```
 
 ## Testing Strategy
