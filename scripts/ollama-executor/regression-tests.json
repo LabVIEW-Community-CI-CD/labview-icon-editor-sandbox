@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "tests": [
+    {
+      "expected_result": "rejected",
+      "added_date": "2025-12-03",
+      "id": "REG-001",
+      "description": "Commands using ..\\ or ../ should be rejected",
+      "bug_id": "Parent directory traversal not blocked",
+      "verification": "vetting",
+      "test_command": "pwsh -NoProfile -File scripts/../other.ps1"
+    },
+    {
+      "expected_result": "rejected",
+      "added_date": "2025-12-03",
+      "id": "REG-002",
+      "description": "Commands with ; should be rejected to prevent injection",
+      "bug_id": "Command chaining with semicolon not blocked",
+      "verification": "vetting",
+      "test_command": "pwsh -NoProfile -File scripts/test.ps1; rm -rf /"
+    }
+  ]
+}
