@@ -30,6 +30,14 @@ function Rel([string]$Path) {
     return [System.IO.Path]::GetRelativePath($repoRoot, $Path)
 }
 
+function Get-AppliedRequirements {
+    $raw = $env:OLLAMA_REQUIREMENTS_APPLIED
+    if ($raw) {
+        return ($raw -split '[,\s]+' | Where-Object { $_ }) | Select-Object -Unique
+    }
+    return @('OEX-PARITY-001','OEX-PARITY-002','OEX-PARITY-003','OEX-PARITY-004')
+}
+
 if ($simMode) {
     $logDir = Join-Path $repoRoot 'reports/logs'
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
@@ -55,6 +63,7 @@ if ($simMode) {
     $zipHash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash
     $pplHash = (Get-FileHash -LiteralPath $pplPath -Algorithm SHA256).Hash
 
+    $appliedReqs = Get-AppliedRequirements
     $handshake = @{
         runKey     = $runKey
         lockPath   = (Resolve-Path -LiteralPath $lockPath).Path
@@ -66,7 +75,8 @@ if ($simMode) {
         pplSha256  = $pplHash
         timestampUtc = (Get-Date).ToUniversalTime().ToString('o')
         mode       = 'sim'
-        requirements = @('OEX-PARITY-001','OEX-PARITY-002','OEX-PARITY-003','OEX-PARITY-004')
+        requirements = $appliedReqs
+        prereqBypassed = $true
     }
 
     $handshakePath = Join-Path $artifactsDir 'labview-icon-api-handshake.json'
@@ -80,7 +90,7 @@ if ($simMode) {
 
     $messages = @(
         "[local-sd-ppl][sim] runKey=$($handshake.runKey) lock=$($handshake.lockPath) ttl=$($handshake.lockTtlSec)s mode=sim",
-        "[local-sd-ppl][sim][requirements] applied=$($handshake.requirements -join ',')",
+        "[local-sd-ppl][sim][requirements] applied=$($appliedReqs -join ',')",
         "[artifact][labview-icon-api.zip] $($handshake.zipRelPath) ($zipHash)",
         "[artifact][labview-icon-api.ppl] $($handshake.pplRelPath) ($pplHash)",
         "[local-sd-ppl][sim] handshake=$((Rel $handshakePath))",
