@@ -1,6 +1,6 @@
 {
-  "name": "Successful Single-Turn Build",
-  "description": "LLM successfully builds source distribution in one turn",
+  "name": "Successful Two-Turn Build",
+  "description": "LLM successfully builds source distribution in two turns (propose command, then mark done)",
   "goal": "Build Source Distribution LV2025 64-bit",
   "expectedTurns": 2,
   "turns": [
