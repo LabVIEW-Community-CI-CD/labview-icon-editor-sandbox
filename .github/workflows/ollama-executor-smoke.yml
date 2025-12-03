@@ -4,6 +4,11 @@ defaults:
   run:
     working-directory: './'
 
+# Minimal permissions required
+permissions:
+  contents: read
+  pull-requests: write
+
 on:
   pull_request:
     paths:
@@ -152,9 +157,19 @@ jobs:
 
   real-labview-validation:
     name: Real LabVIEW Validation
+    # This job runs on the self-hosted Windows runner with LabVIEW installed
+    # Requirements for the runner:
+    # - Windows OS
+    # - LabVIEW 2021+ installed in standard location (C:\Program Files\National Instruments\LabVIEW*)
+    # - PowerShell 7+
+    # - Runner label: self-hosted-windows-lv
     runs-on: self-hosted-windows-lv
     needs: [smoke-test, security-gate]
     if: github.event_name == 'pull_request' || github.event_name == 'push'
+    
+    env:
+      # Configurable LabVIEW search paths (semicolon-separated)
+      LABVIEW_SEARCH_PATHS: "C:\\Program Files\\National Instruments;C:\\Program Files (x86)\\National Instruments"
     
     steps:
       - name: "Guard: Windows runner"
@@ -171,7 +186,21 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "=== Verifying LabVIEW Installation ===" -ForegroundColor Cyan
-          $lvPath = Get-ChildItem -Path "C:\Program Files\National Instruments\LabVIEW*" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+          
+          # Search in configurable paths
+          $searchPaths = $env:LABVIEW_SEARCH_PATHS -split ';' | Where-Object { $_ }
+          $lvPath = $null
+          
+          foreach ($basePath in $searchPaths) {
+            if (Test-Path $basePath) {
+              $found = Get-ChildItem -Path "$basePath\LabVIEW*" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($found) {
+                $lvPath = $found
+                break
+              }
+            }
+          }
+          
           if ($lvPath) {
             Write-Host "✓ Found LabVIEW at: $($lvPath.FullName)" -ForegroundColor Green
             $lvExe = Join-Path $lvPath.FullName "LabVIEW.exe"
@@ -179,7 +208,7 @@ jobs:
               Write-Host "✓ LabVIEW executable exists" -ForegroundColor Green
             }
           } else {
-            Write-Host "⚠ LabVIEW installation not found in default location" -ForegroundColor Yellow
+            Write-Host "⚠ LabVIEW installation not found in search paths: $($searchPaths -join ', ')" -ForegroundColor Yellow
           }
 
       - name: Run Real Build Script Validation
@@ -225,10 +254,25 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "=== LabVIEW Version Detection ===" -ForegroundColor Cyan
-          $versionScript = Join-Path $env:GITHUB_WORKSPACE "scripts/get-package-lv-version.ps1"
-          if (Test-Path $versionScript) {
+          
+          # Validate workspace path is safe (GitHub-provided and within expected structure)
+          $workspace = $env:GITHUB_WORKSPACE
+          if (-not $workspace -or -not (Test-Path -LiteralPath $workspace -PathType Container)) {
+            Write-Host "⚠ GITHUB_WORKSPACE is not set or invalid" -ForegroundColor Yellow
+            exit 0
+          }
+          
+          # Ensure we're working within the expected checkout directory
+          $gitDir = Join-Path $workspace ".git"
+          if (-not (Test-Path -LiteralPath $gitDir -PathType Container)) {
+            Write-Host "⚠ Not a valid git repository" -ForegroundColor Yellow
+            exit 0
+          }
+          
+          $versionScript = Join-Path $workspace "scripts/get-package-lv-version.ps1"
+          if (Test-Path -LiteralPath $versionScript -PathType Leaf) {
             try {
-              $version = & $versionScript -RepositoryPath $env:GITHUB_WORKSPACE
+              $version = & $versionScript -RepositoryPath $workspace
               Write-Host "✓ Detected LabVIEW version from VIPB: $version" -ForegroundColor Green
             }
             catch {
