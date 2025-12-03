@@ -17,6 +17,10 @@
 /resource/plugins/lv_icon.lvlibp
 *.xml
 
+# Build artifacts (including simulation mode test artifacts)
+builds/source-distribution/*.zip
+builds/ppl/*.lvlibp
+
 # .NET build output
 Tooling/dotnet/**/bin/
 Tooling/dotnet/**/obj/

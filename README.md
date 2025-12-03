@@ -27,6 +27,18 @@ Two-turn, allowlisted PowerShell executor; timeout is prompted per task.
   - `32 Ollama: local-sd-ppl (locked)` - build PPL from the source distribution.
 - Traffic stays on `OLLAMA_HOST` (`http://host.docker.internal:11435` in the devcontainer; use `http://localhost:11435` on the host); the executor fails fast if the host is unreachable or the model tag is empty and only the allowlisted command runs. Default model tag is `llama3-8b-local:latest` for preloaded images built from the host cache.
 
+### Ollama Executor Simulation Mode
+The Ollama executor supports cross-compilation simulation mode for testing build flows without requiring all LabVIEW versions/bitnesses to be installed:
+- **Enable**: Set `OLLAMA_EXECUTOR_MODE=sim`
+- **Control behavior**:
+  - `OLLAMA_SIM_FAIL=true` - Force simulated commands to fail
+  - `OLLAMA_SIM_EXIT=<code>` - Set specific exit code (default: 0)
+  - `OLLAMA_SIM_DELAY_MS=<ms>` - Add artificial delay (default: 100)
+  - `OLLAMA_SIM_CREATE_ARTIFACTS=true` - Create stub artifact files
+  - `OLLAMA_SIM_PLATFORMS=2021-32,2021-64,2025-64` - Specify available platforms
+- **Test**: Run `pwsh -NoProfile -File scripts/ollama-executor/Test-SimulationMode.ps1`
+- See `docs/adr/ADR-2025-018-ollama-cross-compilation-simulation.md` for details
+
 ## CLIs and scripts
 - IntegrationEngineCli, OrchestrationCli, DevModeAgentCli, XCli: run via `scripts/common/invoke-repo-cli.ps1` or tasks.
 - Source distribution: `scripts/build-source-distribution/Build_Source_Distribution.ps1`.
@@ -40,6 +52,7 @@ Two-turn, allowlisted PowerShell executor; timeout is prompted per task.
 - CI overview: `docs/ci-workflows.md`
 - Repo structure: `docs/adr/ADR-2025-011-repo-structure.md`
 - Ollama decision: `docs/adr/ADR-2025-017-ollama-locked-executor.md`
+- Ollama simulation mode: `docs/adr/ADR-2025-018-ollama-cross-compilation-simulation.md`
 - Requirements (ISO/IEC/IEEE 29148): `docs/requirements/requirements.csv` and summary under `reports/requirements-summary.md`
 - Provenance/cache: `docs/provenance-and-cache.md`
 - Additional ADRs: `docs/adr/adr-index.md`
