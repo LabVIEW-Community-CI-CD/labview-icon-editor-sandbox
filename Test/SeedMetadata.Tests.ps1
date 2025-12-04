@@ -40,7 +40,7 @@ Describe "Seed metadata (vipb json)" {
         $general['Package_File_Name'] | Should -Not -BeNullOrEmpty
     }
     It "has the canonical library version" {
-        $general['Library_Version'] | Should -Be '21.0.0.12'
+        $general['Library_Version'] | Should -Be '25.3.0.1'
     }
     It "declares a LabVIEW version" {
         $general['Package_LabVIEW_Version'] | Should -Not -BeNullOrEmpty
