@@ -198,6 +198,13 @@ public static class Program
         var results = new List<CommandResult>();
         var overallExit = 0;
 
+        if (opts.Subcommand.Equals("source-dist-build", StringComparison.OrdinalIgnoreCase))
+        {
+            var build = RunSourceDistBuild(Log, opts, repo);
+            Console.WriteLine(JsonSerializer.Serialize(new[] { build }, new JsonSerializerOptions { WriteIndented = true }));
+            return build.Status.Equals("success", StringComparison.OrdinalIgnoreCase) ? 0 : build.ExitCode;
+        }
+
         if (opts.Subcommand.Equals("source-dist-verify", StringComparison.OrdinalIgnoreCase))
         {
             var verify = RunSourceDistVerify(Log, opts, repo);
@@ -928,6 +935,160 @@ public static class Program
         public long SizeBytes { get; set; }
     }
 
+    private static CommandResult RunSourceDistBuild(Action<string> log, Options opts, string repo)
+    {
+        var sw = Stopwatch.StartNew();
+
+        var gcliPath = string.IsNullOrWhiteSpace(opts.GcliPath) ? "g-cli" : opts.GcliPath!;
+        if (!string.Equals(gcliPath, "g-cli", StringComparison.OrdinalIgnoreCase) && !File.Exists(gcliPath))
+        {
+            return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { gcliPath, error = "g-cli path not found" });
+        }
+
+        var commitIndexPath = string.IsNullOrWhiteSpace(opts.SourceDistCommitIndex)
+            ? Path.Combine(repo, "builds", "cache", "commit-index.json")
+            : (Path.IsPathRooted(opts.SourceDistCommitIndex!) ? opts.SourceDistCommitIndex! : Path.Combine(repo, opts.SourceDistCommitIndex!));
+
+        if (!File.Exists(commitIndexPath))
+        {
+            return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { commitIndexPath, error = "commit-index.json not found" });
+        }
+
+        var distRoot = string.IsNullOrWhiteSpace(opts.SourceDistOutput)
+            ? Path.Combine(repo, "builds", "LabVIEWIconAPI")
+            : (Path.IsPathRooted(opts.SourceDistOutput!) ? opts.SourceDistOutput! : Path.Combine(repo, opts.SourceDistOutput!));
+
+        Directory.CreateDirectory(distRoot);
+
+        var lvVersion = string.IsNullOrWhiteSpace(opts.LvVersion) ? "2025" : opts.LvVersion!;
+        var bitness = string.IsNullOrWhiteSpace(opts.Bitness) ? "64" : opts.Bitness;
+
+        var gcliArgs = new List<string>
+        {
+            "--repo", repo,
+            "--dist", distRoot,
+            "--lv-ver", lvVersion,
+            "--bitness", bitness,
+            "--name", "LabVIEWIconAPI"
+        };
+
+        var gcliResult = RunProcess(gcliPath, repo, gcliArgs, opts.TimeoutSeconds);
+        if (gcliResult.ExitCode != 0)
+        {
+            return new CommandResult("source-dist-build", "fail", gcliResult.ExitCode, sw.ElapsedMilliseconds, new { gcliPath, args = gcliArgs, stdout = gcliResult.StdOut, stderr = gcliResult.StdErr });
+        }
+
+        List<SourceManifestEntry> entries;
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(commitIndexPath));
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("entries", out var entryNode) || entryNode.ValueKind != JsonValueKind.Array)
+            {
+                return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { commitIndexPath, error = "entries[] missing from commit-index" });
+            }
+
+            entries = new List<SourceManifestEntry>();
+            foreach (var node in entryNode.EnumerateArray())
+            {
+                var relPath = node.TryGetProperty("path", out var p) ? p.GetString() ?? string.Empty : string.Empty;
+                var commit = node.TryGetProperty("commit", out var c) ? c.GetString() ?? string.Empty : string.Empty;
+                var author = node.TryGetProperty("author", out var a) ? a.GetString() : null;
+                var date = node.TryGetProperty("date", out var d) ? d.GetString() : null;
+                var fullPath = Path.Combine(distRoot, relPath.Replace('/', Path.DirectorySeparatorChar));
+                long size = 0;
+                try { if (File.Exists(fullPath)) { size = new FileInfo(fullPath).Length; } }
+                catch { size = 0; }
+
+                entries.Add(new SourceManifestEntry
+                {
+                    Path = relPath,
+                    LastCommit = commit,
+                    CommitAuthor = author,
+                    CommitDate = date,
+                    CommitSource = "index",
+                    SizeBytes = size
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { commitIndexPath, error = ex.Message });
+        }
+
+        var manifestJson = Path.Combine(distRoot, "manifest.json");
+        var manifestCsv = Path.Combine(distRoot, "manifest.csv");
+        try
+        {
+            File.WriteAllText(manifestJson, JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true }));
+
+            var sb = new StringBuilder();
+            sb.AppendLine("path,last_commit,commit_author,commit_date,commit_source,size_bytes");
+            foreach (var e in entries)
+            {
+                sb.AppendLine(string.Join(',',
+                    EscapeCsv(e.Path),
+                    EscapeCsv(e.LastCommit ?? string.Empty),
+                    EscapeCsv(e.CommitAuthor ?? string.Empty),
+                    EscapeCsv(e.CommitDate ?? string.Empty),
+                    EscapeCsv(e.CommitSource ?? string.Empty),
+                    e.SizeBytes.ToString()));
+            }
+            File.WriteAllText(manifestCsv, sb.ToString());
+        }
+        catch (Exception ex)
+        {
+            return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { manifestJson, error = ex.Message });
+        }
+
+        var artifactsDir = Path.Combine(repo, "builds", "artifacts");
+        Directory.CreateDirectory(artifactsDir);
+        var zipPath = Path.Combine(artifactsDir, "source-distribution.zip");
+        try
+        {
+            if (File.Exists(zipPath)) File.Delete(zipPath);
+            ZipFile.CreateFromDirectory(distRoot, zipPath);
+        }
+        catch (Exception ex)
+        {
+            return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { zipPath, error = ex.Message });
+        }
+
+        try
+        {
+            var logsDir = Path.Combine(repo, "builds", "logs");
+            Directory.CreateDirectory(logsDir);
+            var telemetryPath = Path.Combine(logsDir, $"telemetry-source-dist-build-{DateTime.UtcNow:yyyyMMdd-HHmmssfff}.json");
+            var telemetry = new
+            {
+                build_spec = "source-dist-build",
+                labview_version = lvVersion,
+                bitness = bitness,
+                repo_root = repo,
+                gcli_path = gcliPath,
+                commit_index = GetRelativePathSafe(repo, commitIndexPath),
+                manifest = GetRelativePathSafe(repo, manifestJson),
+                generated_at = DateTime.UtcNow.ToString("o")
+            };
+            File.WriteAllText(telemetryPath, JsonSerializer.Serialize(telemetry, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch
+        {
+            // telemetry best-effort
+        }
+
+        log($"source-dist-build: manifest entries={entries.Count}, dist={GetRelativePathSafe(repo, distRoot)}");
+        sw.Stop();
+        return new CommandResult("source-dist-build", "success", 0, sw.ElapsedMilliseconds, new
+        {
+            distRoot,
+            manifestJson,
+            manifestCsv,
+            zipPath,
+            commitIndexPath
+        });
+    }
+
     private static CommandResult RunSourceDistVerify(Action<string> log, Options opts, string repo)
     {
         var sw = Stopwatch.StartNew();
@@ -992,6 +1153,39 @@ public static class Program
         var warnings = new List<object>();
         var invalidPaths = new List<object>();
         var checkedCount = 0;
+
+        var commitIndexPath = string.IsNullOrWhiteSpace(opts.SourceDistCommitIndex)
+            ? Path.Combine(repo, "builds", "cache", "commit-index.json")
+            : (Path.IsPathRooted(opts.SourceDistCommitIndex!) ? opts.SourceDistCommitIndex! : Path.Combine(repo, opts.SourceDistCommitIndex!));
+        var commitIndex = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (File.Exists(commitIndexPath))
+        {
+            try
+            {
+                using var indexDoc = JsonDocument.Parse(File.ReadAllText(commitIndexPath));
+                if (indexDoc.RootElement.TryGetProperty("entries", out var entriesNode) && entriesNode.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var entry in entriesNode.EnumerateArray())
+                    {
+                        var path = entry.TryGetProperty("path", out var p) ? p.GetString() ?? string.Empty : string.Empty;
+                        var commit = entry.TryGetProperty("commit", out var c) ? c.GetString() ?? string.Empty : string.Empty;
+                        if (!string.IsNullOrWhiteSpace(path) && !string.IsNullOrWhiteSpace(commit))
+                        {
+                            commitIndex[path] = commit;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                warnings.Add(new { path = GetRelativePathSafe(repo, commitIndexPath), reason = $"Failed to parse commit-index: {ex.Message}" });
+            }
+        }
+        else
+        {
+            warnings.Add(new { path = GetRelativePathSafe(repo, commitIndexPath), reason = "commit-index.json not found" });
+        }
+
         foreach (var entry in entries)
         {
             var relPath = entry.Path ?? string.Empty;
@@ -1007,6 +1201,15 @@ public static class Program
                 nullCommits.Add(new { path = relPath, reason = "last_commit missing" });
                 warnings.Add(new { path = relPath, reason = "last_commit missing (allowed; reported)" });
                 continue;
+            }
+
+            if (commitIndex.TryGetValue(relPath, out var expectedCommit) && !string.IsNullOrWhiteSpace(expectedCommit))
+            {
+                if (!string.Equals(expectedCommit, commit, StringComparison.OrdinalIgnoreCase))
+                {
+                    failures.Add(new { path = relPath, expected = expectedCommit, actual = commit, reason = "manifest commit mismatch vs commit-index" });
+                    continue;
+                }
             }
 
             var commitSource = entry.CommitSource?.Trim() ?? string.Empty;
@@ -1038,13 +1241,15 @@ public static class Program
             manifestCsv = manifestCsv != null ? GetRelativePathSafe(repo, manifestCsv) : null,
             extracted = GetRelativePathSafe(repo, extractDir),
             strict = opts.SourceDistStrict,
+            status,
             totalEntries = entries.Count,
             commitsChecked = checkedCount,
             nullCommitCount = nullCommits.Count,
             failures,
             nullCommits,
             warnings,
-            invalidPaths
+            invalidPaths,
+            commitIndexPath = GetRelativePathSafe(repo, commitIndexPath)
         };
 
         Directory.CreateDirectory(outputRoot);
@@ -3571,6 +3776,15 @@ public static class Program
     private static (int ExitCode, string StdOut, string StdErr, long DurationMs) RunPwsh(Options opts, IEnumerable<string> argList, int timeoutSec)
     {
         return RunProcess(opts.Pwsh, opts.Repo, argList, timeoutSec);
+    }
+
+    private static string EscapeCsv(string value)
+    {
+        if (value.Contains('"') || value.Contains(',') || value.Contains('\n'))
+        {
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 
     private static string QuoteArg(string arg)
