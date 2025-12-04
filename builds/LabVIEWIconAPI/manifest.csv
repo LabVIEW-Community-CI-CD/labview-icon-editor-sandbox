@@ -1,0 +1,3 @@
+path,last_commit,commit_author,commit_date,commit_source,size_bytes
+mock.txt,smoke-sha,smoke,2025-12-04T13:48:27.6922381-08:00,index,66
+data/mock-data.txt,smoke-sha,smoke,2025-12-04T13:48:27.6922381-08:00,index,14
