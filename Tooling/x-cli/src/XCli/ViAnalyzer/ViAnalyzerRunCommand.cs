@@ -187,13 +187,19 @@ public static class ViAnalyzerRunCommand
         }
         if (request.ReportInclude is { Length: > 0 })
         {
+            var includeArgs = new List<string>();
             foreach (var include in request.ReportInclude)
             {
                 if (!string.IsNullOrWhiteSpace(include))
                 {
-                    argsList.Add("-ReportInclude");
-                    argsList.Add(include);
+                    includeArgs.Add(include);
                 }
+            }
+
+            if (includeArgs.Count > 0)
+            {
+                argsList.Add("-ReportInclude");
+                argsList.AddRange(includeArgs);
             }
         }
         if (request.AdditionalArguments is { Length: > 0 })
