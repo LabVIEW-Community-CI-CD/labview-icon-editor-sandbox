@@ -85,6 +85,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$isWindows = $PSVersionTable.OS -like '*Windows*'
 
 # Resolve repository path
 $repo = (Resolve-Path -LiteralPath $RepositoryPath -ErrorAction Stop).ProviderPath
@@ -160,10 +161,25 @@ if (-not $SkipSeedBuild) {
     Write-Host "Building seed image '$SeedImage' (Dockerfile: $SeedDockerfile)" -ForegroundColor Gray
     docker build -f $SeedDockerfile -t $SeedImage $SeedBuildContext
     if ($LASTEXITCODE -ne 0) {
-        throw "Failed to build seed image '$SeedImage'"
+        Write-Warning "Seed image build failed (code $LASTEXITCODE). Attempting to pull fallback ghcr.io/labview-community-ci-cd/seed:latest..."
+        docker pull ghcr.io/labview-community-ci-cd/seed:latest
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to build or pull seed image '$SeedImage'"
+        }
+        if ($SeedImage -ne 'seed:latest') {
+            docker tag ghcr.io/labview-community-ci-cd/seed:latest $SeedImage
+        }
     }
 } else {
     Write-Host "Skipping seed image build (--SkipSeedBuild). Expecting image '$SeedImage' to be available." -ForegroundColor Yellow
+}
+
+# Docker user mapping to avoid root-owned outputs on Linux
+$dockerUserArgs = @()
+if (-not $isWindows) {
+    $uid = (& id -u)
+    $gid = (& id -g)
+    $dockerUserArgs = @('--user', "$uid`:$gid")
 }
 
 # Create new branch from local base (works even if remote is stale)
@@ -187,16 +203,8 @@ $vipbJson = Join-Path $stashDir 'seed.vipb.json'
 $vipbRel = 'Tooling/deployment/seed.vipb'
 $vipbJsonRel = 'builds/vipb-stash/seed.vipb.json'
 
-# Get current user ID for Docker to set correct ownership on Linux
-$userId = if ($IsLinux) { 
-    $uid = & id -u
-    $gid = & id -g
-    "${uid}:${gid}"
-} else { $null }
-$userArg = if ($userId) { @('--user', $userId) } else { @() }
-
 Write-Host "Converting VIPB to JSON..." -ForegroundColor Gray
-docker run --rm @userArg -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/VipbJsonTool `
+docker run --rm @dockerUserArgs -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/VipbJsonTool `
     $SeedImage vipb2json "/repo/$vipbRel" "/repo/$vipbJsonRel"
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert VIPB to JSON"
@@ -227,7 +235,7 @@ $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding 
 
 # Convert back to VIPB
 Write-Host "Converting JSON back to VIPB..." -ForegroundColor Gray
-docker run --rm @userArg -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/VipbJsonTool `
+docker run --rm @dockerUserArgs -v "${repo}:/repo" -w /repo --entrypoint /usr/local/bin/VipbJsonTool `
     $SeedImage json2vipb "/repo/$vipbJsonRel" "/repo/$vipbRel"
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to convert JSON to VIPB"

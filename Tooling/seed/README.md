@@ -91,6 +91,12 @@ Via Docker Image (vendored): Build the image locally from this repo (no GHCR pul
 ```
 docker build -f Tooling/seed/Dockerfile -t seed:latest .
 ```
+
+If a local build fails due to offline/SSL/nuget access (e.g., NU1301 or self-signed proxy), pull the published image instead and retag it:
+```
+docker pull ghcr.io/labview-community-ci-cd/seed:latest
+docker tag ghcr.io/labview-community-ci-cd/seed:latest seed:latest
+```
 # Convert a VIPB to JSON using the vendored container:
 ```
 docker run --rm -v "$PWD:/data" seed:latest \
