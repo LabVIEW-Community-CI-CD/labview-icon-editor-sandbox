@@ -11,7 +11,17 @@ param(
     [int]$CommandTimeoutSec = 60
 )
 
-$resolvedHost = if ([string]::IsNullOrWhiteSpace($Endpoint)) { "http://localhost:11435" } else { $Endpoint }
+. "$PSScriptRoot/Resolve-OllamaHost.ps1"
+. "$PSScriptRoot/CommandBuilder.ps1"
+
+$resolvedHost = Resolve-OllamaHost -RequestedHost $Endpoint
+if ([string]::IsNullOrWhiteSpace($Endpoint)) {
+    Write-Host "[locked-package] Auto-selected OLLAMA_HOST=$resolvedHost"
+}
+elseif ($resolvedHost -ne $Endpoint) {
+    Write-Warning "Requested OLLAMA_HOST '$Endpoint' was unreachable; fell back to '$resolvedHost'."
+}
+
 if ([string]::IsNullOrWhiteSpace($Model)) {
     $Model = "llama3-8b-local:latest"
     Write-Warning "OLLAMA_MODEL_TAG missing; defaulting to '$Model'. Override with -Model or set the env var."
@@ -24,7 +34,19 @@ $healthParams = @{
 }
 & "$PSScriptRoot/check-ollama-endpoint.ps1" @healthParams
 
-$pkgCmd = 'pwsh -NoProfile -File scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- package-build --repo . --bitness 64 --lvlibp-bitness both --major 0 --minor 1 --patch 0 --build 1 --company LabVIEW-Community-CI-CD --author "Local Developer"'
+$pkgArgs = @(
+    'package-build',
+    '--repo', '.',
+    '--bitness', '64',
+    '--lvlibp-bitness', 'both',
+    '--major', '0',
+    '--minor', '1',
+    '--patch', '0',
+    '--build', '1',
+    '--company', 'LabVIEW-Community-CI-CD',
+    '--author', 'Local Developer'
+)
+$pkgCmd = New-InvokeRepoCliCommandString -CliName 'OrchestrationCli' -RepoRoot '.' -CliArguments $pkgArgs
 $allowedRuns = @($pkgCmd)
 $goal = 'Respond ONLY with JSON: send exactly {"run":"' + $pkgCmd + '"} and then {"done":true}.'
 

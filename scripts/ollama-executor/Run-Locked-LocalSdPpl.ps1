@@ -11,7 +11,15 @@ param(
     [int]$CommandTimeoutSec = 60
 )
 
-$resolvedHost = if ([string]::IsNullOrWhiteSpace($Endpoint)) { "http://localhost:11435" } else { $Endpoint }
+. "$PSScriptRoot/Resolve-OllamaHost.ps1"
+
+$resolvedHost = Resolve-OllamaHost -RequestedHost $Endpoint
+if ([string]::IsNullOrWhiteSpace($Endpoint)) {
+    Write-Host "[locked-local-sd-ppl] Auto-selected OLLAMA_HOST=$resolvedHost"
+}
+elseif ($resolvedHost -ne $Endpoint) {
+    Write-Warning "Requested OLLAMA_HOST '$Endpoint' was unreachable; fell back to '$resolvedHost'."
+}
 if ([string]::IsNullOrWhiteSpace($Model)) {
     $Model = "llama3-8b-local:latest"
     Write-Warning "OLLAMA_MODEL_TAG missing; defaulting to '$Model'. Override with -Model or set the env var."

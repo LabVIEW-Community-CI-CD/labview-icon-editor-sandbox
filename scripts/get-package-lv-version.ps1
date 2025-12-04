@@ -32,10 +32,16 @@ catch {
     throw ("Failed to parse VIPB XML at {0}: {1}" -f $vipb.FullName, $_.Exception.Message)
 }
 
-$settings = $vipbXml.VI_Package_Builder_Settings
-if (-not $settings) { throw ("VIPB is missing VI_Package_Builder_Settings: {0}" -f $vipb.FullName) }
+$settings = $vipbXml.SelectSingleNode('/VI_Package_Builder_Settings')
+if (-not $settings) {
+    $settings = $vipbXml.SelectSingleNode('/Package')
+}
+if (-not $settings) {
+    $rootName = $vipbXml.DocumentElement.Name
+    throw ("VIPB is missing VI_Package_Builder_Settings/Package root (found '{0}'): {1}" -f $rootName, $vipb.FullName)
+}
 
-$generalSettings = $settings.Library_General_Settings
+$generalSettings = $settings.SelectSingleNode('Library_General_Settings')
 if (-not $generalSettings) { throw ("VIPB is missing Library_General_Settings: {0}" -f $vipb.FullName) }
 
 $raw = [string]$generalSettings.Package_LabVIEW_Version

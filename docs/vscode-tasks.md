@@ -15,12 +15,14 @@ Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driv
   5) Tasks **30/31/32** drive the allowlisted executor; they fail fast if the host is unreachable and now warn + default to `llama3-8b-local:latest` when you omit the model tag.
   6) Task **33** stops the container; task **34** stops and drops the model cache volume for a clean slate.
 
-## Ollama locked tasks (30-32)
+## Ollama locked tasks (30-32b)
+
 - Two-turn, allowlisted PowerShell executor (package-build, source-distribution, local-sd-ppl) against `OLLAMA_HOST`; timeout prompted per task.
 - Prep via the steps above; traffic stays on the host you pass (devcontainer default `http://host.docker.internal:11435`). Manual start alternative: `docker run -d --name ollama-local -p 11435:11435 -e OLLAMA_HOST=0.0.0.0:11435 -v ollama:/root/.ollama ghcr.io/<ghcr-owner>/ollama-local:<tag>`.
 - Pull/tag the model the tasks expect: `docker exec -it ollama-local ollama pull llama3:8b` then `docker exec -it ollama-local ollama cp llama3:8b llama3-8b-local:latest`, or set `OLLAMA_MODEL_TAG` to your preferred tag and rerun the health check. Offline alternative: supply a `.ollama` bundle path in task **29** to import without hitting `registry.ollama.ai`.
 - Custom models: update the input/model tag and re-run task 27 to confirm availability before triggering the locked tasks.
 - Need a quick mock for successful runs (no tuned model handy)? Use `pwsh -NoProfile -File scripts/ollama-executor/Run-MockScenario.ps1 -Task source-distribution` (or `package-build` / `local-sd-ppl`). The helper spins up `MockOllamaServer`, injects the allowlisted command, sets `OLLAMA_HOST/MODEL_TAG/EXECUTOR_MODE`, runs the locked script, and tears everything down. Pass `-NoRun` to leave the mock server running so you can trigger the task yourself.
+- Task **32b** adds a locked reset flow by shelling through OrchestrationCli `reset-source-dist`: it archives/culls `builds/LabVIEWIconAPI`, replays `Reset-SourceDistributionWorkspace.ps1` (commit-index + rebuild), and publishes a JSON summary. Run `pwsh -NoProfile -File scripts/ollama-executor/Run-MockScenario.ps1 -Task reset-source-dist` to simulate the same executor handshake when you just want to validate automation.
 - Custom scripts: combine `-CommandScriptPath` with either native PowerShell hashtables (same session) or JSON strings (`-CommandScriptParameters '{"RepositoryPath":".","SupportedBitness":64}'` when launching via `pwsh -File`) to auto-generate ad-hoc commands, and pass `-LockedScriptPath`/`-LockedScriptParameters` to exercise new locked flows without hand-editing the task definitions.
 
 ## 01 Verify / Apply dependencies
@@ -50,6 +52,7 @@ Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driv
 - Runs `pwsh -NoProfile -File scripts/run-xcli.ps1 -Runner <runner> -- source-dist-build --repo . --commit-index builds/cache/commit-index.json --verbose-git --perf-cpu --allow-dirty`.
 - Runner input (`sourceDistRunner`) defaults to `gcli` (x-cli/g-cli flow). Choose `labviewcli` to use `scripts/labview/build-source-distribution.ps1` (LabVIEWCLI) if g-cli is unavailable.
 - Enforces a standard temp dir, stops stale XCli processes, and emits step/heartbeat/duration logs; artifacts land under `builds/` (manifest/csv/zip) when successful.
+- Need to reset or archive a huge `builds/LabVIEWIconAPI` tree (thousands of files) before rerunning? Use `pwsh -NoProfile -File scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- reset-source-dist --repo . --reset-archive-existing --reset-run-commit-index --reset-run-full-build --reset-emit-summary --reset-summary-json builds/reports/source-dist-reset.json` to inventory, optionally move the old payload under `builds/archive/<timestamp>/`, delete the working folders, regenerate the commit index in isolation, and finally kick off the task again (pass `--reset-additional-path` to track extra folders or `--reset-clear-additional-paths` to opt out of the default `builds/cache`). Add `--reset-dry-run` to preview actions. Task **32b** runs the same CLI entrypoint under the locked Ollama executor if you prefer a guarded workflow.
 
 ## 21 Verify: Source Distribution
 

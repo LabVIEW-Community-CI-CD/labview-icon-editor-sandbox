@@ -24,7 +24,8 @@ param(
     [int]$MaxTurns = 10,
     [switch]$StopAfterFirstCommand,
     [string[]]$AllowedRuns = @("pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64"),
-    [int]$CommandTimeoutSec = 0
+    [int]$CommandTimeoutSec = 0,
+    [string]$SeedAssistantRunCommand
 )
 
 $ErrorActionPreference = "Stop"
@@ -56,6 +57,15 @@ $messages = @(
     @{ role = "system"; content = $systemPrompt },
     @{ role = "user"; content = "Goal: $Goal" }
 )
+
+$seedRunCommand = $null
+$seedRunContent = $null
+if (-not [string]::IsNullOrWhiteSpace($SeedAssistantRunCommand)) {
+    $seedRunCommand = $SeedAssistantRunCommand.Trim()
+    if ($seedRunCommand.Length -gt 0) {
+        $seedRunContent = (@{ run = $seedRunCommand } | ConvertTo-Json -Compress)
+    }
+}
 
 function Test-CommandAllowed {
     param([string]$Command)
@@ -176,22 +186,36 @@ function Invoke-Ollama {
 }
 
 for ($turn = 1; $turn -le $MaxTurns; $turn++) {
-    $resp = Invoke-Ollama -Msgs $messages
-    $content = $resp.message.content
-    $messages += @{ role = "assistant"; content = $content }
-
+    $content = $null
     $action = $null
-    try {
-        $action = $content | ConvertFrom-Json -ErrorAction Stop
+
+    if ($seedRunContent -and $turn -eq 1) {
+        $content = $seedRunContent
+        $messages += @{ role = "assistant"; content = $content }
+        $action = [pscustomobject]@{ run = $seedRunCommand }
     }
-    catch {
-        $messages += @{ role = "user"; content = 'Invalid JSON; respond with {"run":"cmd"} or {"done":true}' }
-        continue
+    else {
+        $resp = Invoke-Ollama -Msgs $messages
+        $content = $resp.message.content
+        $messages += @{ role = "assistant"; content = $content }
+
+        try {
+            $action = $content | ConvertFrom-Json -ErrorAction Stop
+        }
+        catch {
+            $messages += @{ role = "user"; content = 'Invalid JSON; respond with {"run":"cmd"} or {"done":true}' }
+            continue
+        }
     }
 
     $hasDone = ($action -is [psobject] -and $action.PSObject.Properties['done'])
     if ($hasDone -and $action.done) {
-        Write-Host ("[executor] Done: {0}" -f ($action.summary ?? "")) -ForegroundColor Green
+        $summary = ""
+        if ($action.PSObject.Properties['summary']) {
+            $summary = $action.summary
+        }
+
+        Write-Host ("[executor] Done: {0}" -f ($summary ?? "")) -ForegroundColor Green
         break
     }
 

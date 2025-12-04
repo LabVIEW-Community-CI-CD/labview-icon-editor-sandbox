@@ -1,7 +1,7 @@
 [CmdletBinding(DefaultParameterSetName = "Preset")]
 param(
     [Parameter(ParameterSetName = "Preset")]
-    [ValidateSet("package-build", "source-distribution", "local-sd-ppl")]
+    [ValidateSet("package-build", "source-distribution", "local-sd-ppl", "reset-source-dist")]
     [string]$Task = "source-distribution",
 
     [Parameter(ParameterSetName = "Custom")]
@@ -32,6 +32,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+. "$PSScriptRoot/CommandBuilder.ps1"
 
 function ConvertTo-Hashtable {
     param([object]$InputObject, [string]$ParameterName)
@@ -129,6 +130,18 @@ function New-ScriptCommand {
 $resolvedCommandParameters = ConvertTo-Hashtable -InputObject $CommandScriptParameters -ParameterName "CommandScriptParameters"
 $resolvedLockedParameters = ConvertTo-Hashtable -InputObject $LockedScriptParameters -ParameterName "LockedScriptParameters"
 
+$resetCliArgs = @(
+    'reset-source-dist',
+    '--repo', '.',
+    '--reset-archive-existing',
+    '--reset-run-commit-index',
+    '--reset-run-full-build',
+    '--reset-emit-summary',
+    '--reset-summary-json', 'builds/reports/source-dist-reset.json',
+    '--reset-additional-path', 'builds/cache'
+)
+$resetCliCommand = New-InvokeRepoCliCommandString -CliName 'OrchestrationCli' -RepoRoot '.' -CliArguments $resetCliArgs
+
 $taskMap = @{
     "source-distribution" = @{
         Command = 'pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64'
@@ -144,6 +157,11 @@ $taskMap = @{
         Command = 'pwsh -NoProfile -File scripts/orchestration/Run-LocalSd-Ppl.ps1 -Repo . -RunKey local-sd-ppl'
         Summary = 'local-sd-ppl orchestration completed successfully (simulated)'
         Script = "$PSScriptRoot/Run-Locked-LocalSdPpl.ps1"
+    }
+    "reset-source-dist" = @{
+        Command = $resetCliCommand
+        Summary = 'Source Distribution workspace reset completed successfully (simulated)'
+        Script = "$PSScriptRoot/Run-Locked-ResetSourceDistribution.ps1"
     }
 }
 
