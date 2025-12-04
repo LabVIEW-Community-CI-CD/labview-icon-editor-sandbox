@@ -16,7 +16,7 @@ The Ollama locked executor (ADR-2025-017) provides a secure mechanism for LLM-dr
 
 **Decision drivers** (ranked):
 1. **Discoverability**: AI assistants should find and understand executor capabilities automatically
-2. **Security**: Agent must enforce existing guardrails and not introduce new attack vectors
+2. **Security**: Agent SHALL enforce existing guardrails and SHALL not introduce new attack vectors
 3. **Portability**: VIPB modification should work cross-platform (Windows/macOS/Linux)
 4. **Traceability**: Requirements should be documented for verification
 
@@ -63,16 +63,19 @@ Choose **Option A**: Create a custom agent definition at `.github/agents/ollama-
 ## Consequences
 
 ### Positive
+
 - **+** AI assistants can discover and invoke executor capabilities correctly
 - **+** Single source of truth for executor documentation
 - **+** Seed Docker integration enables cross-platform VIPB modification
 - **+** Interactive workflow guides users through version/bitness selection
 
 ### Negative / trade-offs
-- **–** Agent file must be updated when executor capabilities change
+
+- **–** Agent file SHALL be updated when executor capabilities change
 - **–** Seed Docker dependency for cross-platform VIPB modification
 
 ### Follow-up actions
+
 - [ ] Add agent to VS Code task documentation
 - [ ] Create smoke test for agent discovery by GitHub Copilot
 - [ ] Monitor GitHub agent specification for format changes
@@ -80,22 +83,26 @@ Choose **Option A**: Create a custom agent definition at `.github/agents/ollama-
 ## Implementation
 
 ### Affected components
+
 - `.github/agents/ollama-executor.agent.md` — Agent definition (created)
 - `.github/agents/requirements-injector.agent.md` — Requirements injection agent (created)
 - `scripts/ollama-executor/` — Existing executor scripts (unchanged)
 - `Tooling/seed/` — Docker container for VIPB modification (referenced)
 
 ### Agent capabilities documented
+
 1. Source Distribution Builds (`Run-Locked-SourceDistribution.ps1`)
 2. Package Builds (`Run-Locked-PackageBuild.ps1`)
 3. Local SD→PPL Pipeline (`Run-Locked-LocalSdPpl.ps1`)
 4. Ollama Host Orchestration (`Run-Ollama-Host.ps1`)
 5. Smoke Tests (`-SmokeOnly` switch)
 6. Interactive Real LabVIEW Build (user prompting + VIPB modification + build)
-7. Test Suites (`Test-CommandVetting.ps1`, `Test-SecurityFuzzing.ps1`, etc.)
+7. Test Suites (`Test-CommandVetting.ps1`, `Test-SecurityFuzzing.ps1`, and `Test-SimulationMode.ps1`)
 
 ### Seed Docker integration
+
 The agent documents using the vendored Seed container (`seed:latest`, built locally from `Tooling/seed/Dockerfile`) for:
+
 - `vipb2json` — Convert VIPB to JSON for editing
 - `json2vipb` — Convert JSON back to VIPB format
 - Additional tools: `lvproj2json`, `json2lvproj`, `buildspec2json`, `json2buildspec`
@@ -103,43 +110,52 @@ The agent documents using the vendored Seed container (`seed:latest`, built loca
 ## Verification & validation
 
 ### Success criteria
+
 - Agent file passes YAML frontmatter validation
 - All 35 requirements in CSV have status "Completed"
 - Simulation mode tests pass (command vetting, smoke tests)
 - Documentation accurately reflects executor capabilities
 
 ### Verification method
+
 - **Inspection**: Review agent file and requirements CSV
 - **Test**: Run `Test-SimulationMode.ps1` to validate build workflow execution
 
 ## Security, privacy & compliance
 
 ### Threats & mitigations
+
 - **Command injection**: Mitigated by allowlist-only execution in executor
 - **Path traversal**: Mitigated by `../` pattern rejection
 - **Privilege escalation**: Mitigated by sudo/runas keyword blocking
 - **Data exfiltration**: Mitigated by network tool blocking (wget/curl/nc)
 
 ### Agent security model
+
 The agent inherits all security guardrails from the locked executor (ADR-2025-017):
+
 1. Exact allowlist matching for commands
-2. Forbidden token detection (rm, del, Remove-Item, Format-*, etc.)
+2. Forbidden token detection (rm, del, Remove-Item, Format-*, sudo, runas)
 3. Command chaining prevention (`;`, `|`, `&` rejected)
 4. Configurable timeout enforcement (`CommandTimeoutSec`)
 
 ## Traceability
 
 ### Upstream
+
 - ADR-2025-017: Ollama locked executor for scripted builds
 - AGENT.md: Repository agent configuration
 
 ### Requirements
+
 - OLLAMA-AGENT-001 to OLLAMA-AGENT-035 in `docs/requirements/ollama-executor-agent-requirements.csv`
 
 ### Downstream
+
 - VS Code tasks 30–32 in `.vscode/tasks.json`
 - Executor scripts under `scripts/ollama-executor/`
 - Seed Docker container `Tooling/seed/Dockerfile`
 
 ## Change log
+
 - 2025-12-03 — @copilot — Created ADR for ollama-executor custom agent
