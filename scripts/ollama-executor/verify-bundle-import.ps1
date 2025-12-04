@@ -34,8 +34,10 @@ $args = @{
 
 & "$PSScriptRoot/run-ollama-container.ps1" @args
 
-Write-Host "Running health check at $Host for model $ModelTag"
-& "$PSScriptRoot/check-ollama-endpoint.ps1" -Endpoint $Host -ModelTag $ModelTag -RequireModelTag
+$defaultHost = "http://localhost:$Port"
+$resolvedHost = if (-not $PSBoundParameters.ContainsKey('Host') -or [string]::IsNullOrWhiteSpace($Host)) { $defaultHost } else { $Host }
+Write-Host "Running health check at $resolvedHost for model $ModelTag"
+& "$PSScriptRoot/check-ollama-endpoint.ps1" -Endpoint $resolvedHost -ModelTag $ModelTag -RequireModelTag
 
 if (-not $SkipCleanup) {
     Write-Host "Stopping test container"

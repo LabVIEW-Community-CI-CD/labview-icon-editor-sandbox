@@ -23,7 +23,10 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $resolvedRepo = (Resolve-Path -LiteralPath $RepoPath).ProviderPath
-$resolvedHost = if ([string]::IsNullOrWhiteSpace($Endpoint)) { "http://host.docker.internal:${Port}" } else { $Endpoint }
+$insideContainer = Test-Path -LiteralPath "/.dockerenv"
+# Default host to localhost unless we are running inside the devcontainer (needs host.docker.internal).
+$defaultHost = if ($insideContainer) { "http://host.docker.internal:${Port}" } else { "http://localhost:${Port}" }
+$resolvedHost = if ([string]::IsNullOrWhiteSpace($Endpoint)) { $defaultHost } else { $Endpoint }
 $resolvedModel = if ([string]::IsNullOrWhiteSpace($ModelTag)) { "llama3-8b-local:latest" } else { $ModelTag }
 
 Write-Host "[design-bench] Repo: $resolvedRepo"

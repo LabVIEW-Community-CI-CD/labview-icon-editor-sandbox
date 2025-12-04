@@ -27,7 +27,10 @@ param(
 )
 
 $resolvedHost = if ([string]::IsNullOrWhiteSpace($Endpoint)) { "http://localhost:11435" } else { $Endpoint }
-if ([string]::IsNullOrWhiteSpace($Model)) { throw "OLLAMA_MODEL_TAG is required. Set the env var or pass -Model." }
+if ([string]::IsNullOrWhiteSpace($Model)) {
+  $Model = "llama3-8b-local:latest"
+  Write-Warning "OLLAMA_MODEL_TAG missing; defaulting to '$Model'. Override with -Model or set the env var."
+}
 
 $healthParams = @{
     Host            = $resolvedHost
