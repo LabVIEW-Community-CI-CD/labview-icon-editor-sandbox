@@ -32,6 +32,7 @@ You are an expert agent specialized in driving the Ollama executor for automated
   docker build -f Tooling/seed/Dockerfile -t seed:latest .
   ```
   Or set `SEED_IMAGE` to override.
+- Sandbox push limits: seeded branches created here may not be pushable directly; if push fails, report the branch name and ask the user to push.
 
 ## Micro-decisions the agent may take automatically
 - If the Seed image is missing, build it (vendored `seed:latest`) unless `SEED_IMAGE` is set explicitly.
@@ -45,6 +46,7 @@ You are an expert agent specialized in driving the Ollama executor for automated
   - `mode=sim` (default, recommended) → runs Linux sim + Windows sim (fallback if no Windows label) and validates handshake/hashes.
   - `mode=real` → requires a Windows runner label that has LabVIEW/VIPM (e.g., `["self-hosted","windows","self-hosted-windows-lv"]`). If no label is provided, the workflow falls back to a Windows sim run.
 - Use `windows_runner_label` to select a real Windows runner; otherwise keep sim to avoid prereq failures.
+- Quick workflow kickoff: Actions → “Agent / Ollama Executor” → Run workflow → `mode=sim` (leave windows_runner_label empty) to produce a first run.
 
 ## Your Capabilities
 
