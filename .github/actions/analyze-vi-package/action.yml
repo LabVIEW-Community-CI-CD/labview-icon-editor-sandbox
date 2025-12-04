@@ -5,9 +5,9 @@ inputs:
     description: "Path to the built .vip file to analyze (direct file path recommended)"
     required: true
   min_labview:
-    description: "Minimum LabVIEW version (major.minor) the package must support (e.g., 21.0)"
+    description: "Minimum LabVIEW version (major.minor) the package must support (e.g., 23.0)"
     required: false
-    default: "21.0"
+    default: "23.0"
 runs:
   using: "composite"
   steps:

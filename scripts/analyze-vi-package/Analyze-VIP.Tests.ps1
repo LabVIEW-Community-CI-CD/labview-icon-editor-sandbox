@@ -91,7 +91,7 @@ if (-not $env:MIN_LV_VERSION -and $MinLVVersion) {
     $env:MIN_LV_VERSION = $MinLVVersion
 }
 elseif (-not $env:MIN_LV_VERSION) {
-    $env:MIN_LV_VERSION = '21.0'
+    $env:MIN_LV_VERSION = '23.0'
 }
 
 BeforeAll {
@@ -152,7 +152,7 @@ BeforeAll {
 
     if (-not $env:MIN_LV_VERSION) {
         if ($MinLVVersion) { $env:MIN_LV_VERSION = $MinLVVersion }
-        else { $env:MIN_LV_VERSION = '21.0' }
+        else { $env:MIN_LV_VERSION = '23.0' }
     }
 
     $localVip = (Get-Variable -Scope Script -Name ResolvedVipPath -ErrorAction SilentlyContinue).Value

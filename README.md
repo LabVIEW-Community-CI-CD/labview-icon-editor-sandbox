@@ -45,7 +45,7 @@ The Ollama executor supports cross-compilation simulation mode for testing build
 - PPL from SD: `scripts/ppl-from-sd/Build_Ppl_From_SourceDistribution.ps1`.
 - Dev mode bind/unbind: `scripts/task-devmode-bind.ps1`, `scripts/clear-labview-librarypaths-all.ps1`.
 - Analyze VI packages:  
-  `pwsh -NoProfile -File scripts/analyze-vi-package/run-workflow-local.ps1 -VipArtifactPath "<vip or dir>" -MinLabVIEW "21.0"`
+  `pwsh -NoProfile -File scripts/analyze-vi-package/run-workflow-local.ps1 -VipArtifactPath "<vip or dir>" -MinLabVIEW "23.0"`
 
 ## Docs & references
 - VS Code tasks: `docs/vscode-tasks.md`

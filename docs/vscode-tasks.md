@@ -122,7 +122,7 @@ Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driv
 The VS Code task was removed; invoke the analyzer directly:
 
 ```pwsh
-pwsh -NoProfile -File scripts/analyze-vi-package/run-workflow-local.ps1 -VipArtifactPath "<vip or dir>" -MinLabVIEW "21.0"
+pwsh -NoProfile -File scripts/analyze-vi-package/run-workflow-local.ps1 -VipArtifactPath "<vip or dir>" -MinLabVIEW "23.0"
 ```
 
 Provide a real `.vip` (placeholders like `vipm-skipped-placeholder.vip` are skipped). `scripts/analyze-vi-package/VIPReader.psm1` auto-loads as part of the workflow.

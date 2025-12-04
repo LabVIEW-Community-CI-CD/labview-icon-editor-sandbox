@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory)][string]$VipArtifactPath,
-    [Parameter(Mandatory)][string]$MinLabVIEW = "21.0"
+    [Parameter(Mandatory)][string]$MinLabVIEW = "23.0"
 )
 
 $ErrorActionPreference = 'Stop'
