@@ -598,6 +598,39 @@
       "detail": "Build seed docker image locally, bump seed.vipb LabVIEW version, and create a one-commit-ahead worktree with the change."
     },
     {
+      "label": "21d Seed: dotnet VIPB update",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/labview/invoke-update-vipb-dotnet-task.ps1",
+        "-RepositoryPath",
+        "${workspaceFolder}",
+        "-TargetBranch",
+        "${input:vipbTargetBranch}",
+        "-BaseBranch",
+        "${input:vipbBaseBranch}",
+        "-WorkingBranch",
+        "${input:vipbWorkingBranch}",
+        "-LabVIEWVersion",
+        "${input:vipbTargetLv}",
+        "-LabVIEWMinor",
+        "${input:vipbTargetMinor}",
+        "-Bitness",
+        "${input:vipbTargetBitness}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "VIPB_COMMIT_MESSAGE": "${input:vipbCommitMessage}"
+        }
+      },
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Checks out the chosen branch, re-encodes seed.vipb via VipbJsonTool, and commits the LabVIEW version change."
+    },
+    {
       "label": "09 x-cli: VI History (vi-compare-run)",
       "type": "shell",
       "command": "dotnet",
@@ -1176,6 +1209,56 @@
       "default": "HEAD"
     },
     {
+      "id": "vipbTargetLv",
+      "type": "promptString",
+      "description": "Target LabVIEW version to set in seed.vipb (e.g., 2021, 2025)",
+      "default": "2023"
+    },
+    {
+      "id": "vipbTargetMinor",
+      "type": "pickString",
+      "description": "LabVIEW minor release to encode in seed.vipb (0 = Q1, 3 = Q3)",
+      "options": [
+        "0",
+        "3"
+      ],
+      "default": "3"
+    },
+    {
+      "id": "vipbTargetBitness",
+      "type": "pickString",
+      "description": "LabVIEW bitness for VIPB encoding",
+      "options": [
+        "64",
+        "32"
+      ],
+      "default": "64"
+    },
+    {
+      "id": "vipbBaseBranch",
+      "type": "promptString",
+      "description": "Base branch to branch from before running the dotnet VIPB update",
+      "default": "develop"
+    },
+    {
+      "id": "vipbWorkingBranch",
+      "type": "promptString",
+      "description": "Working branch to create/reset from the base branch (leave blank to operate directly on the fallback branch)",
+      "default": "seed/vipb-dotnet"
+    },
+    {
+      "id": "vipbTargetBranch",
+      "type": "promptString",
+      "description": "Fallback branch to update when no working branch name is provided",
+      "default": "develop"
+    },
+    {
+      "id": "vipbCommitMessage",
+      "type": "promptString",
+      "description": "Optional commit message override for the dotnet VIPB update",
+      "default": ""
+    },
+    {
       "id": "ollamaSdTimeoutSec",
       "type": "promptString",
       "description": "Command timeout (seconds) for task 31 Ollama locked source-distribution",
@@ -1272,28 +1355,6 @@
       "default": "360"
     },
     {
-      "label": "18 Tooling: Clear CLI cache entry",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-File",
-        "${workspaceFolder}/scripts/clear-tooling-cache.ps1",
-        "-CliName",
-        "${input:cacheCliName}",
-        "-Version",
-        "${input:cacheVersion}",
-        "-Rid",
-        "${input:cacheRid}"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": "build",
-      "problemMatcher": [],
-      "detail": "Clears a specific <CLI>/<version>/<rid> entry from the tooling cache. After clearing, the next helper run should republish on cache miss."
-    },
-    {
       "id": "cacheCliName",
       "type": "pickString",
       "description": "CLI name for clear-tooling-cache",
@@ -1321,18 +1382,6 @@
         "osx-x64"
       ],
       "default": "win-x64"
-    },
-    {
-      "id": "vipbTargetLv",
-      "type": "promptString",
-      "description": "Target LabVIEW version to set in seed.vipb (e.g., 2021, 2025)",
-      "default": "2023"
-    },
-    {
-      "id": "vipbTargetLv",
-      "type": "promptString",
-      "description": "Target LabVIEW version to set in seed.vipb (e.g., 2021, 2025)",
-      "default": "2023"
     }
   ]
 }
