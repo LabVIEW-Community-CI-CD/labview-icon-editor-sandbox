@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  MIN_LABVIEW_POLICY: "25.0"
+  MIN_LABVIEW_POLICY: "21.0"
 
 on:
   push:
