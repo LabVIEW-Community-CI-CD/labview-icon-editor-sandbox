@@ -40,10 +40,19 @@ runs:
         # Resolve paths
         artifacts_root="${ARTIFACTS_PATH}"
         output_dir="${OUTPUT_PATH}"
-        output_file="${output_dir}/${OUTPUT_FILENAME}"
 
         # Create output directory
         mkdir -p "$output_dir"
+
+        # Normalize paths to absolute locations so later cd operations do not break writes
+        if command -v realpath &> /dev/null; then
+          artifacts_root="$(realpath "$artifacts_root")"
+        else
+          artifacts_root="$(cd "$artifacts_root" && pwd)"
+        fi
+
+        output_dir="$(cd "$output_dir" && pwd)"
+        output_file="${output_dir}/${OUTPUT_FILENAME}"
 
         # Parse artifact mappings using jq if provided
         # Format: {"local_dir": "artifact_name", ...}
