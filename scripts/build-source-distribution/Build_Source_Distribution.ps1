@@ -16,6 +16,9 @@
 .PARAMETER SupportedBitness
     Bitness to use (32 or 64). If omitted, resolves from VIPB and defaults
     to 64 when VIPB reports "both".
+
+.PARAMETER GcliPath
+    Optional explicit path to the g-cli executable. Defaults to relying on PATH.
 #>
 param(
     [Parameter(Mandatory = $true)]
@@ -32,7 +35,9 @@ param(
 
     [switch]$SkipAssetIsolation,
 
-    [string]$OverrideOutputRoot
+    [string]$OverrideOutputRoot,
+
+    [string]$GcliPath = 'g-cli'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -147,7 +152,7 @@ function Sync-IconEditorAssets {
         )
         & robocopy @args | Out-Null
         $rc = $LASTEXITCODE
-        # Robocopy returns 0–7 for success / minor issues; anything higher is failure.
+        # Robocopy returns 0ΓÇô7 for success / minor issues; anything higher is failure.
         if ($rc -gt 7) {
             throw ("Robocopy failed ({0}) while syncing {1} -> {2}" -f $rc, $p.Source, $p.Dest)
         }
@@ -284,6 +289,25 @@ function Get-HeadCommitInfo {
     return $null
 }
 
+function Resolve-GcliInvocation {
+    param([string]$Candidate)
+
+    if ([string]::IsNullOrWhiteSpace($Candidate)) {
+        $Candidate = 'g-cli'
+    }
+
+    if (Test-Path -LiteralPath $Candidate -PathType Leaf) {
+        return (Resolve-Path -LiteralPath $Candidate).Path
+    }
+
+    $command = Get-Command $Candidate -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
+
+    return $null
+}
+
 function Get-LlbContainerPath {
     param([string]$RelativePath)
     $p = $RelativePath.Replace('\','/')
@@ -408,8 +432,10 @@ if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) {
     throw "Project not found: $projectPath"
 }
 
-$gcli = Get-Command g-cli -ErrorAction SilentlyContinue
-if (-not $gcli) { throw "g-cli is required but was not found on PATH." }
+$gcliInvocation = Resolve-GcliInvocation -Candidate $GcliPath
+if (-not $gcliInvocation) {
+    throw "g-cli is required but was not found (looked for '$GcliPath')."
+}
 
 $script:AssetBackups = @()
 function Disable-LabVIEWAssets {
@@ -472,11 +498,11 @@ $buildArgs = @(
     '-p', $projectPath,
     '-b', 'LabVIEWIconAPI'
 )
-Write-Stamp -Level "STEP" -Message ("Building LabVIEWIconAPI Source Distribution via g-cli: {0}" -f ($buildArgs -join ' '))
+Write-Stamp -Level "STEP" -Message ("Building LabVIEWIconAPI Source Distribution via g-cli [{0}]: {1}" -f $gcliInvocation, ($buildArgs -join ' '))
 $buildArgsEscaped = $buildArgs | ForEach-Object {
     if ($_ -match '\s') { '"' + $_.Replace('"','\"') + '"' } else { $_ }
 }
-$buildProc = Start-Process -FilePath "g-cli" -ArgumentList $buildArgsEscaped -PassThru -NoNewWindow
+$buildProc = Start-Process -FilePath $gcliInvocation -ArgumentList $buildArgsEscaped -PassThru -NoNewWindow
 if (-not $buildProc) {
     throw "Failed to start g-cli process."
 }
@@ -497,6 +523,7 @@ else {
 }
 
 }
+
 finally {
     if (-not $SkipAssetIsolation) {
         Restore-LabVIEWAssets
@@ -580,13 +607,26 @@ else {
 # Create manifest
 $manifestPath = Join-Path $distRoot 'manifest.json'
 $manifestStartTime = Get-Date
-$files = Get-ChildItem -Path $distRoot -File -Recurse
+$files = @(Get-ChildItem -Path $distRoot -File -Recurse)
 $totalFiles = $files.Count
 $processed = 0
 $repoRootResolved = (Resolve-Path -LiteralPath $repoRoot).Path
 $repoName = Split-Path -Leaf $repoRootResolved
 $manifest = @()
 $headCommitInfo = Get-HeadCommitInfo -Repo $repoRootResolved
+$generatedFiles = @(
+    'manifest.json',
+    'manifest.csv',
+    'icon-api-manifest.json',
+    'icon-api.zip',
+    'configs/vscode/task-schema.sample.json',
+    'configs/vi-compare-run-request.sample.json',
+    'configs/vi-compare-run-request.failure.json',
+    'configs/vi-compare-run-request.disabled.json',
+    'scripts/vi-compare/run-vi-history-suite-sd.ps1',
+    'scripts/vi-compare/RunViCompareReplay.ps1',
+    'lv_icon_editor.lvproj'
+)
 
   # Build a commit index based on the actual built files (post-build) only if one does not already exist.
     $commitIndexMap = @{}
@@ -619,6 +659,9 @@ foreach ($f in $files) {
     $sourceRel = $relDist.Replace('\','/')
     $mappedRel = Map-RelativePath -RelativePath $relDist -RepoName $repoName
     $pathForManifest = if ($mappedRel) { $mappedRel } else { $sourceRel }
+    if ($generatedFiles -contains $pathForManifest) {
+        continue
+    }
     $commitInfo = $headCommitInfo
     $commitSource = 'repo_head'
     $indexKey = ($mappedRel ? $mappedRel : $relDist).Replace('\','/').ToLowerInvariant()
@@ -689,19 +732,6 @@ $allowedPrefixes = @(
     'Test/Unit tests/',
     'Program Files/National Instruments/',
     'Tooling/'
-)
-$generatedFiles = @(
-    'manifest.json',
-    'manifest.csv',
-    'icon-api-manifest.json',
-    'icon-api.zip',
-    'configs/vscode/task-schema.sample.json',
-    'configs/vi-compare-run-request.sample.json',
-    'configs/vi-compare-run-request.failure.json',
-    'configs/vi-compare-run-request.disabled.json',
-    'scripts/vi-compare/run-vi-history-suite-sd.ps1',
-    'scripts/vi-compare/RunViCompareReplay.ps1',
-    'lv_icon_editor.lvproj'
 )
 $nonAllowed = @($manifest | Where-Object {
     $p = $_.path

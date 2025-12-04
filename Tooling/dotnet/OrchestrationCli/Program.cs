@@ -42,8 +42,10 @@ public static class Program
         bool Verbose,
         string? SourceDistZip,
         string? SourceDistOutput,
+        string? SourceDistCommitIndex,
         bool SourceDistStrict,
         bool SourceDistLogStash,
+        string? GcliPath,
         string? LabviewCliPath,
         string? LabviewPath,
         int? LabviewPort,
@@ -70,7 +72,8 @@ public static class Program
         bool ResetDryRun,
         bool ResetEmitSummary,
         string? ResetSummaryJson,
-        string[] ResetAdditionalPaths)
+        string[] ResetAdditionalPaths,
+        string? ScriptsRoot)
     {
         public Options() : this(
             Subcommand: string.Empty,
@@ -104,8 +107,10 @@ public static class Program
             Verbose: false,
             SourceDistZip: null,
             SourceDistOutput: null,
+            SourceDistCommitIndex: null,
             SourceDistStrict: false,
             SourceDistLogStash: false,
+            GcliPath: null,
             LabviewCliPath: null,
             LabviewPath: null,
             LabviewPort: null,
@@ -132,7 +137,8 @@ public static class Program
             ResetDryRun: false,
             ResetEmitSummary: false,
             ResetSummaryJson: null,
-            ResetAdditionalPaths: Array.Empty<string>())
+            ResetAdditionalPaths: Array.Empty<string>(),
+            ScriptsRoot: null)
         {
         }
     }
@@ -2986,8 +2992,10 @@ public static class Program
         var verbose = false;
         string? sourceDistZip = null;
         string? sourceDistOutput = null;
+        string? sourceDistCommitIndex = null;
         var sourceDistStrict = false;
         var sourceDistLogStash = false;
+        string? gcliPath = null;
         string? labviewCliPath = null;
         string? labviewPath = null;
         int? labviewPort = null;
@@ -3019,6 +3027,7 @@ public static class Program
         var resetEmitSummary = false;
         string? resetSummaryJson = null;
         var resetAdditionalPaths = new List<string> { "builds/cache" };
+        string? scriptsRoot = null;
 
         try
         {
@@ -3029,6 +3038,9 @@ public static class Program
                 {
                     case "--repo":
                         repo = RequireNext(args, ref i, "--repo");
+                        break;
+                    case "--scripts-root":
+                        scriptsRoot = RequireNext(args, ref i, "--scripts-root");
                         break;
                     case "--ref":
                         refName = RequireNext(args, ref i, "--ref");
@@ -3132,11 +3144,17 @@ public static class Program
                     case "--source-dist-output":
                         sourceDistOutput = RequireNext(args, ref i, "--source-dist-output");
                         break;
+                    case "--source-dist-commit-index":
+                        sourceDistCommitIndex = RequireNext(args, ref i, "--source-dist-commit-index");
+                        break;
                     case "--source-dist-strict":
                         sourceDistStrict = true;
                         break;
                     case "--source-dist-log-stash":
                         sourceDistLogStash = true;
+                        break;
+                    case "--gcli-path":
+                        gcliPath = RequireNext(args, ref i, "--gcli-path");
                         break;
                     case "--labviewcli-path":
                         labviewCliPath = RequireNext(args, ref i, "--labviewcli-path");
@@ -3280,7 +3298,7 @@ public static class Program
         var runKeyResolved = string.IsNullOrWhiteSpace(runKeyArg) ? $"local-sd-{DateTime.UtcNow:yyyyMMdd-HHmmss}" : runKeyArg!;
         var lockPathResolved = string.IsNullOrWhiteSpace(lockPathArg) ? Path.Combine(repoFull, ".locks", "orchestration.lock") : lockPathArg!;
 
-        return (new Options(sub, repoFull, bitness, pwsh, refName, lvlibpBitness, major, minor, patch, build, company, author, labviewMinor, runBothBitnessSeparately, managed, lv, vipc, requestPath, projectPath, scenarioPath, vipmManifestPath, worktreeRoot, skipWorktree, skipPreflight, requireDevmode, autoBindDevmode, timeoutSec, plain, verbose, sourceDistZip, sourceDistOutput, sourceDistStrict, sourceDistLogStash, labviewCliPath, labviewPath, labviewPort, tempRoot, logRoot, labviewCliTimeoutSec, forceWorktree, copyOnFail, retryBuilds, expectSha, runKeyResolved, lockPathResolved, lockTtlSec, forceLock, skipLocalSdBuild, ollamaEndpoint, ollamaModel, ollamaPrompt, resetArchiveExisting, resetSkipCleanup, resetRunCommitIndex, resetRunFullBuild, resetRunner, resetDryRun, resetEmitSummary, resetSummaryJson, resetAdditionalPaths.ToArray()), null, false);
+        return (new Options(sub, repoFull, bitness, pwsh, refName, lvlibpBitness, major, minor, patch, build, company, author, labviewMinor, runBothBitnessSeparately, managed, lv, vipc, requestPath, projectPath, scenarioPath, vipmManifestPath, worktreeRoot, skipWorktree, skipPreflight, requireDevmode, autoBindDevmode, timeoutSec, plain, verbose, sourceDistZip, sourceDistOutput, sourceDistCommitIndex, sourceDistStrict, sourceDistLogStash, gcliPath, labviewCliPath, labviewPath, labviewPort, tempRoot, logRoot, labviewCliTimeoutSec, forceWorktree, copyOnFail, retryBuilds, expectSha, runKeyResolved, lockPathResolved, lockTtlSec, forceLock, skipLocalSdBuild, ollamaEndpoint, ollamaModel, ollamaPrompt, resetArchiveExisting, resetSkipCleanup, resetRunCommitIndex, resetRunFullBuild, resetRunner, resetDryRun, resetEmitSummary, resetSummaryJson, resetAdditionalPaths.ToArray(), scriptsRoot), null, false);
     }
 
     private static List<string> ResolveBitness(string value)
