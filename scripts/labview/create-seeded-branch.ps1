@@ -188,7 +188,14 @@ $vipbRel = 'Tooling/deployment/seed.vipb'
 $vipbJsonRel = 'builds/vipb-stash/seed.vipb.json'
 
 # Get current user/group IDs for Docker (Linux only; fallback to defaults on Windows)
-$dockerUser = if ($IsLinux -or $IsMacOS) { "$(id -u):$(id -g)" } else { $null }
+$dockerUser = $null
+if ($IsLinux -or $IsMacOS) {
+    $uid = (& id -u 2>$null)
+    $gid = (& id -g 2>$null)
+    if ($uid -and $gid) {
+        $dockerUser = "${uid}:${gid}"
+    }
+}
 $userArgs = if ($dockerUser) { @("--user", $dockerUser) } else { @() }
 
 Write-Host "Converting VIPB to JSON..." -ForegroundColor Gray
