@@ -85,7 +85,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$isWindowsOS = $PSVersionTable.OS -like '*Windows*'
+# Use PowerShell Core's built-in $IsWindows automatic variable (available in PS 6.0+)
+# For Windows PowerShell (5.x), $IsWindows is not defined, so we default to true
+$runningOnWindows = if ($null -ne $IsWindows) { $IsWindows } else { $true }
 
 # Resolve repository path
 $repo = (Resolve-Path -LiteralPath $RepositoryPath -ErrorAction Stop).ProviderPath
@@ -176,7 +178,7 @@ if (-not $SkipSeedBuild) {
 
 # Docker user mapping to avoid root-owned outputs on Linux
 $dockerUserArgs = @()
-if (-not $isWindowsOS) {
+if (-not $runningOnWindows) {
     $uid = (& id -u)
     $gid = (& id -g)
     $dockerUserArgs = @('--user', "$uid`:$gid")
