@@ -2,6 +2,35 @@
 
 Two VS Code tasks are provided for local builds of the LabVIEW Icon Editor, driven by the Integration Engine build tooling. Run them from **Terminal → Run Task…** (or `Ctrl/Cmd+Shift+B`).
 
+## Seeded Branch (Windows-native VipbJsonTool)
+
+- Script: `scripts/labview/create-seeded-branch.ps1` creates a branch that updates the VIPB `Package_LabVIEW_Version` and commits it.
+- Behavior on Windows: prefers native VipbJsonTool via `.NET 8` (`dotnet run` on `Tooling/dotnet/VipbJsonTool/VipbJsonTool.csproj`). If native is unavailable or fails, it falls back to the vendored Seed Docker image.
+- Docker fallback: set `SEED_IMAGE` (e.g., `ghcr.io/labview-community-ci-cd/seed:latest`). Use `-SkipSeedBuild` to skip local docker build; the script verifies the image exists.
+- New flags:
+  - `-AutoPush`: pushes the new branch to `origin` with upstream tracking.
+  - `-AutoPR`: opens a PR via GitHub CLI (`gh`). Optional `-PRTitle`, `-PRBody` customize the PR.
+- Prereqs: Windows + `.NET 8 SDK` for native path; Docker Desktop only needed for fallback; `gh` required for `-AutoPR`.
+- Examples:
+
+```pwsh
+# Dry run (no changes)
+pwsh -NoProfile -File scripts/labview/create-seeded-branch.ps1 `
+  -LabVIEWVersion 2025 -LabVIEWMinor 3 -Bitness 32 -BaseBranch develop -DryRun
+
+# Real (native if possible), auto push + PR
+pwsh -NoProfile -File scripts/labview/create-seeded-branch.ps1 `
+  -LabVIEWVersion 2025 -LabVIEWMinor 3 -Bitness 32 -BaseBranch develop `
+  -AutoPush -AutoPR -PRTitle "Seed: LabVIEW 2025 Q3 32-bit" `
+  -PRBody "Automated seeded branch for 25.3 (32-bit)."
+
+# Force Docker fallback (pre-pulled image), skip local build
+$env:SEED_IMAGE = "ghcr.io/labview-community-ci-cd/seed:latest"
+pwsh -NoProfile -File scripts/labview/create-seeded-branch.ps1 `
+  -LabVIEWVersion 2025 -LabVIEWMinor 3 -Bitness 32 -BaseBranch develop `
+  -SkipSeedBuild -AutoPush
+```
+
 ## Using the devcontainer Ollama bench (Codespaces-friendly)
 - Purpose: Linux devcontainer for dotnet tooling + the Ollama/executor loop; LabVIEW/VIPM builds remain Windows-only on the host.
 - Defaults (devcontainer env): `OLLAMA_HOST=http://host.docker.internal:11435`, `OLLAMA_IMAGE=ghcr.io/svelderrainruiz/ollama-local:cpu-preloaded`, `OLLAMA_MODEL_TAG=llama3-8b-local:latest`; the host Docker socket is mounted and the scripts fail fast if the socket is missing or Docker Desktop is stopped.
