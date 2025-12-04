@@ -629,13 +629,29 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
+          if (-not $env:MIN_LABVIEW_POLICY -or $env:MIN_LABVIEW_POLICY -notmatch '^\d{4}(\.\d+)?$') {
+            throw "MIN_LABVIEW_POLICY must be formatted as 'YYYY' or 'YYYY.minor' (received '$env:MIN_LABVIEW_POLICY')."
+          }
+
           function Normalize-LVVersion([string]$raw) {
             if ([string]::IsNullOrWhiteSpace($raw)) { throw "Version string is empty." }
-            $match = [regex]::Match($raw, '(?<maj>\d{2,4})')
-            if (-not $match.Success) { throw "Unable to parse LabVIEW major version from '$raw'." }
+
+            $pattern = '(?<maj>\d{2,4})(?:\.(?<min>\d{1,2}))?'
+            $match = [regex]::Match($raw, $pattern)
+            if (-not $match.Success) { throw "Unable to parse LabVIEW version from '$raw'." }
+
             $maj = [int]$match.Groups['maj'].Value
             if ($maj -lt 100) { $maj = 2000 + $maj }
-            return $maj.ToString()
+            if ($maj -lt 2009 -or $maj -gt 2100) {
+              throw "Parsed LabVIEW major version '$maj' is outside the supported range (2009-2100)."
+            }
+
+            $minor = 0
+            if ($match.Groups['min'].Success) {
+              $minor = [int]$match.Groups['min'].Value
+            }
+
+            return ('{0}.{1}' -f $maj, $minor)
           }
 
           $derivedRaw = & "$env:GITHUB_WORKSPACE/scripts/get-package-lv-version.ps1" -RepositoryPath "$env:GITHUB_WORKSPACE"

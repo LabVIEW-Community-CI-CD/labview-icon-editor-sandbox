@@ -94,6 +94,39 @@ elseif (-not $env:MIN_LV_VERSION) {
     $env:MIN_LV_VERSION = '23.0'
 }
 
+function Normalize-LabVIEWVersion {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "LabVIEW version input is empty."
+    }
+
+    $pattern = '(?<maj>\d{2,4})(?:\.(?<min>\d{1,2}))?'
+    $match = [regex]::Match($Value, $pattern)
+    if (-not $match.Success) {
+        throw "Unable to parse LabVIEW version from '$Value'."
+    }
+
+    $maj = [int]$match.Groups['maj'].Value
+    if ($maj -lt 100) { $maj += 2000 }
+    $minor = 0
+    if ($match.Groups['min'].Success) {
+        $minor = [int]$match.Groups['min'].Value
+    }
+    if ($minor -eq 0) {
+        $spMatch = [regex]::Match($Value, '(?i)SP\s*(?<sp>\d+)')
+        if ($spMatch.Success) {
+            $minor = [int]$spMatch.Groups['sp'].Value
+        }
+    }
+
+    return [pscustomobject]@{
+        Major    = $maj
+        Minor    = $minor
+        AsString = ('{0}.{1}' -f $maj, $minor)
+    }
+}
+
 BeforeAll {
     function Resolve-VipPath {
         param([string]$ExplicitPath)
@@ -310,12 +343,10 @@ Describe "Platform constraints" {
     It "VIP-PLAT-001: Platform.Exclusive_LabVIEW_Version SHALL specify a minimal version using 'LabVIEW>='" {
         $val = Get-VipField -Sections $S -Section 'Platform' -Key 'Exclusive_LabVIEW_Version'
         $val | Should -Match '^LabVIEW>='
-        $m = [regex]::Match($val, 'LabVIEW>=(\d+\.\d+)')
-        $m.Success | Should -BeTrue
-        $specified = $m.Groups[1].Value
-        # Compare major.minor numerically
-        $minParts = (Get-VersionPart $env:MIN_LV_VERSION)
-        $specParts = (Get-VersionPart $specified)
+        $specNorm = Normalize-LabVIEWVersion $val
+        $minNorm = Normalize-LabVIEWVersion $env:MIN_LV_VERSION
+        $specParts = @($specNorm.Major, $specNorm.Minor)
+        $minParts = @($minNorm.Major, $minNorm.Minor)
         # Pad to equal length for comparison
         while ($minParts.Count -lt 2) { $minParts += 0 }
         while ($specParts.Count -lt 2) { $specParts += 0 }
@@ -400,6 +431,23 @@ Describe "File layout" {
     }
     It "VIP-FILE-004: File Group 0.Replace Mode SHALL be Always" {
         (Get-VipField -Sections $S -Section 'File Group 0' -Key 'Replace Mode') | Should -BeExactly 'Always'
+    }
+}
+
+Describe "LabVIEW version normalization helper" {
+    $matrix = @(
+        @{ Label = 'YYYY'; Raw = '2023'; ExpectedMajor = 2023; ExpectedMinor = 0 },
+        @{ Label = 'YY.decimal'; Raw = '23.0'; ExpectedMajor = 2023; ExpectedMinor = 0 },
+        @{ Label = 'LabVIEW>=major.minor'; Raw = 'LabVIEW>=23.5 (64-bit)'; ExpectedMajor = 2023; ExpectedMinor = 5 },
+        @{ Label = 'Year with SP annotation'; Raw = '2025 SP1 64-bit'; ExpectedMajor = 2025; ExpectedMinor = 1 }
+    )
+
+    foreach ($entry in $matrix) {
+        It ("normalizes {0}" -f $entry.Label) {
+            $normalized = Normalize-LabVIEWVersion $entry.Raw
+            $normalized.Major | Should -Be $entry.ExpectedMajor
+            $normalized.Minor | Should -Be $entry.ExpectedMinor
+        }
     }
 }
 

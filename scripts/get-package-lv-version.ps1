@@ -44,11 +44,25 @@ if (-not $settings) {
 $generalSettings = $settings.SelectSingleNode('Library_General_Settings')
 if (-not $generalSettings) { throw ("VIPB is missing Library_General_Settings: {0}" -f $vipb.FullName) }
 
-$raw = [string]$generalSettings.Package_LabVIEW_Version
+$raw = ([string]$generalSettings.Package_LabVIEW_Version).Trim()
 if ([string]::IsNullOrWhiteSpace($raw)) { throw "Package_LabVIEW_Version not found in $($vipb.FullName)" }
 
-$verMatch = [regex]::Match($raw, '^(?<majmin>\d{2}\.\d)')
-if (-not $verMatch.Success) { throw "Unable to parse LabVIEW version from '$raw' in $($vipb.FullName)" }
-$maj = [int]($verMatch.Groups['majmin'].Value.Split('.')[0])
-$lvVersion = if ($maj -ge 20) { "20$maj" } else { $maj.ToString() }
-Write-Output $lvVersion
+if ($raw -notmatch '(?i)labview') {
+    throw "Package_LabVIEW_Version must reference 'LabVIEW' or 'LabVIEW>=' (found '$raw' in $($vipb.FullName))."
+}
+
+$pattern = '(?i)LabVIEW\s*(?:>=\s*)?(?<ver>\d{2,4}(?:\.\d+)?)'
+$match = [regex]::Match($raw, $pattern)
+if (-not $match.Success) {
+    throw "Package_LabVIEW_Version must specify a numeric LabVIEW version after the label (found '$raw' in $($vipb.FullName))."
+}
+
+$verToken = $match.Groups['ver'].Value
+$parts = $verToken.Split('.')
+$maj = [int]$parts[0]
+if ($maj -lt 100) { $maj += 2000 }
+if ($maj -lt 2009 -or $maj -gt 2100) {
+    throw "Parsed LabVIEW major version '$maj' is outside the supported range (2009-2100)."
+}
+
+Write-Output ($maj.ToString())
