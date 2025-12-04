@@ -1,0 +1,66 @@
+{
+  "recommendation": "Compatibility warnings - 2 version(s) incompatible",
+  "generated_at": "2025-12-04T14:15:39.8975763-08:00",
+  "compatibility_impact": {
+    "lv2023": "compatible",
+    "lv2024": "incompatible",
+    "lv2025": "incompatible",
+    "lv2021": "compatible"
+  },
+  "compare": {
+    "dependencies": [],
+    "file_size": 12,
+    "lv_version_normalized": 2023,
+    "saved_date": "2025-12-04T14:14:14.2110686-08:00",
+    "deprecated_apis": [],
+    "connector_pane": {
+      "has_error_terminals": false,
+      "input_count": 0,
+      "output_count": 0,
+      "terminals": []
+    },
+    "lv_version": "23.0",
+    "vi_name": "CompareVI.vi",
+    "extracted_with": "Binary_Parser",
+    "vi_path": "temp/CompareVI.vi",
+    "platform_features": [],
+    "compatibility": {
+      "lv2023": true,
+      "lv2024": false,
+      "lv2025": false,
+      "lv2021": true
+    }
+  },
+  "breaking_changes": null,
+  "base": {
+    "dependencies": [],
+    "file_size": 12,
+    "lv_version_normalized": 2023,
+    "saved_date": "2025-12-04T14:14:14.2100632-08:00",
+    "deprecated_apis": [],
+    "connector_pane": {
+      "has_error_terminals": false,
+      "input_count": 0,
+      "output_count": 0,
+      "terminals": []
+    },
+    "lv_version": "23.0",
+    "vi_name": "BaseVI.vi",
+    "extracted_with": "Binary_Parser",
+    "vi_path": "temp/BaseVI.vi",
+    "platform_features": [],
+    "compatibility": {
+      "lv2023": true,
+      "lv2024": false,
+      "lv2025": false,
+      "lv2021": true
+    }
+  },
+  "tool_version": "1.0",
+  "differences": {
+    "dependency_changes": [],
+    "connector_pane_changes": null,
+    "version_change": null,
+    "deprecated_api_usage": []
+  }
+}

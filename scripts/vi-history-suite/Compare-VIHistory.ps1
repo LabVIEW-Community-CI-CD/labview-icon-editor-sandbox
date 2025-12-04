@@ -70,27 +70,159 @@ function Compare-VIVersions {
 
 function Compare-ConnectorPanes {
     param($Base, $Compare)
-    
+
     $changes = @()
-    
-    if ($Base.connector_pane.input_count -ne $Compare.connector_pane.input_count) {
+    $basePane = $Base.connector_pane
+    $comparePane = $Compare.connector_pane
+    if (-not $basePane) {
+        $basePane = [pscustomobject]@{ input_count = 0; output_count = 0; terminals = @(); has_error_terminals = $false }
+    }
+    if (-not $comparePane) {
+        $comparePane = [pscustomobject]@{ input_count = 0; output_count = 0; terminals = @(); has_error_terminals = $false }
+    }
+
+    $baseInputs = $basePane.input_count
+    $compareInputs = $comparePane.input_count
+    if ($baseInputs -ne $compareInputs) {
         $changes += @{
             type = "input_count_changed"
-            from = $Base.connector_pane.input_count
-            to = $Compare.connector_pane.input_count
+            from = $baseInputs
+            to = $compareInputs
             severity = "high"
         }
     }
-    
-    if ($Base.connector_pane.output_count -ne $Compare.connector_pane.output_count) {
+
+    $baseOutputs = $basePane.output_count
+    $compareOutputs = $comparePane.output_count
+    if ($baseOutputs -ne $compareOutputs) {
         $changes += @{
             type = "output_count_changed"
-            from = $Base.connector_pane.output_count
-            to = $Compare.connector_pane.output_count
+            from = $baseOutputs
+            to = $compareOutputs
             severity = "high"
         }
     }
-    
+
+    $baseTerminals = @($basePane.terminals)
+    $compareTerminals = @($comparePane.terminals)
+    $baseKeys = @{}
+    $compareKeys = @{}
+
+    foreach ($term in $baseTerminals) {
+        $key = "{0}:{1}" -f $term.direction, $term.name
+        $baseKeys[$key] = $term
+    }
+    foreach ($term in $compareTerminals) {
+        $key = "{0}:{1}" -f $term.direction, $term.name
+        $compareKeys[$key] = $term
+    }
+
+    foreach ($key in $compareKeys.Keys) {
+        if (-not $baseKeys.ContainsKey($key)) {
+            $parts = $key.Split(':')
+            $changes += @{
+                type = "terminal_added"
+                direction = $parts[0]
+                terminal = $parts[1]
+                severity = "high"
+            }
+        }
+    }
+
+    foreach ($key in $baseKeys.Keys) {
+        if (-not $compareKeys.ContainsKey($key)) {
+            $parts = $key.Split(':')
+            $changes += @{
+                type = "terminal_removed"
+                direction = $parts[0]
+                terminal = $parts[1]
+                severity = "high"
+            }
+        }
+    }
+
+    return $changes
+}
+
+function Compare-Dependencies {
+    param($Base, $Compare)
+
+    $changes = @()
+    $baseDeps = @{ }
+    $compareDeps = @{ }
+
+    foreach ($dep in @($Base.dependencies)) {
+        if ($dep.vi) { $baseDeps[$dep.vi] = $dep }
+    }
+    foreach ($dep in @($Compare.dependencies)) {
+        if ($dep.vi) { $compareDeps[$dep.vi] = $dep }
+    }
+
+    foreach ($vi in $baseDeps.Keys) {
+        if (-not $compareDeps.ContainsKey($vi)) {
+            $changes += @{
+                type = "dependency_removed"
+                vi = $vi
+                version = $baseDeps[$vi].version
+                severity = "medium"
+            }
+        }
+    }
+
+    foreach ($vi in $compareDeps.Keys) {
+        if (-not $baseDeps.ContainsKey($vi)) {
+            $changes += @{
+                type = "dependency_added"
+                vi = $vi
+                version = $compareDeps[$vi].version
+                severity = "medium"
+            }
+            continue
+        }
+
+        $baseVersion = $baseDeps[$vi].version
+        $compareVersion = $compareDeps[$vi].version
+        if ($baseVersion -and $compareVersion -and $baseVersion -ne $compareVersion) {
+            $changes += @{
+                type = "dependency_version_changed"
+                vi = $vi
+                from = $baseVersion
+                to = $compareVersion
+                severity = "medium"
+            }
+        }
+    }
+
+    return $changes
+}
+
+function Compare-DeprecatedApis {
+    param($Base, $Compare)
+
+    $changes = @()
+    $baseSet = @($Base.deprecated_apis)
+    $compareSet = @($Compare.deprecated_apis)
+
+    foreach ($api in $compareSet) {
+        if (-not ($baseSet -contains $api)) {
+            $changes += @{
+                type = "deprecated_api_introduced"
+                api = $api
+                severity = "medium"
+            }
+        }
+    }
+
+    foreach ($api in $baseSet) {
+        if (-not ($compareSet -contains $api)) {
+            $changes += @{
+                type = "deprecated_api_removed"
+                api = $api
+                severity = "low"
+            }
+        }
+    }
+
     return $changes
 }
 
@@ -116,6 +248,26 @@ function Detect-BreakingChanges {
                 type = "connector_pane_modified"
                 severity = "high"
                 description = "Connector pane $($change.type)"
+            }
+        }
+    }
+
+    foreach ($change in $Differences.dependency_changes) {
+        if ($change.severity -in @("high","medium")) {
+            $breakingChanges += @{
+                type = "dependency_issue"
+                severity = $change.severity
+                description = "Dependency $($change.vi) change: $($change.type)"
+            }
+        }
+    }
+
+    foreach ($change in $Differences.deprecated_api_changes) {
+        if ($change.severity -ne "low") {
+            $breakingChanges += @{
+                type = "deprecated_api_usage"
+                severity = $change.severity
+                description = "Deprecated API detected: $($change.api)"
             }
         }
     }
@@ -181,12 +333,14 @@ function Main {
         Write-Host "Comparing VIs..." -ForegroundColor Yellow
         $versionChange = Compare-VIVersions -Base $baseMeta -Compare $compareMeta
         $connectorChanges = Compare-ConnectorPanes -Base $baseMeta -Compare $compareMeta
+        $dependencyChanges = Compare-Dependencies -Base $baseMeta -Compare $compareMeta
+        $deprecatedChanges = Compare-DeprecatedApis -Base $baseMeta -Compare $compareMeta
         
         $differences = @{
             version_change = $versionChange
             connector_pane_changes = $connectorChanges
-            dependency_changes = @()  # Would be populated in full implementation
-            deprecated_api_usage = @()  # Would be populated in full implementation
+            dependency_changes = $dependencyChanges
+            deprecated_api_changes = $deprecatedChanges
         }
         
         $breakingChanges = Detect-BreakingChanges -Differences $differences

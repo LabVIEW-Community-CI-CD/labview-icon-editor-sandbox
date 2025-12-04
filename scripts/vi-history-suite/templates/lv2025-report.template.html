@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="lv-version" content="25.3">
+    <meta name="report-type" content="vi-comparison">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VI Comparison Report - LV 2025.3 Compatible</title>
+    <style>
+        body { font-family: Segoe UI, Arial, sans-serif; margin: 0; background: #121212; color: #f0f0f0; }
+        .lv-report-header { background: linear-gradient(90deg, #0057b8, #003469); padding: 24px; text-align: center; }
+        .lv-report-header h1 { margin: 8px 0; font-size: 2.5rem; }
+        .lv-report-header p { margin: 0; opacity: 0.8; }
+        .content { padding: 24px; }
+        .section { margin-bottom: 24px; }
+        .section h2 { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
+        .card { background: #1e1e1e; padding: 16px; border-radius: 8px; margin-bottom: 12px; }
+        .card ul { margin: 0; padding-left: 20px; }
+        .matrix table { width: 100%; border-collapse: collapse; }
+        .matrix th, .matrix td { border: 1px solid rgba(255,255,255,0.05); padding: 8px; text-align: center; }
+        .matrix th { background: rgba(255,255,255,0.05); }
+        .matrix .compatible { background: #1b5e20; }
+        .matrix .warnings { background: #f57c00; }
+        .matrix .incompatible { background: #b71c1c; }
+        .break { word-break: break-word; }
+    </style>
+</head>
+<body>
+    <div class="lv-report-header">
+        <img src="labview-logo.png" alt="LabVIEW" style="height: 48px;" />
+        <h1>VI Comparison Report</h1>
+        <p>Generated with the VI History Suite (LabVIEW 2025.3 compatible format)</p>
+    </div>
+    <div class="content">
+        <div class="section">
+            <h2>Summary Dashboard</h2>
+            <div class="card" id="summary">{{SUMMARY}}</div>
+        </div>
+        <div class="section">
+            <h2>Comparison View</h2>
+            <div class="card" id="comparison">{{COMPARISON}}</div>
+        </div>
+        <div class="section matrix">
+            <h2>Compatibility Matrix</h2>
+            <div class="card" id="matrix">{{MATRIX}}</div>
+        </div>
+        <div class="section">
+            <h2>Detailed Analysis</h2>
+            <div class="card" id="details">{{DETAILS}}</div>
+        </div>
+    </div>
+</body>
+</html>
