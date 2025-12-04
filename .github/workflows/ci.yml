@@ -1192,6 +1192,7 @@ jobs:
             exit 1
           fi
 
+
       - name: Checkout (for scripts)
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
@@ -1204,7 +1205,7 @@ jobs:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-labview-icon-api
           path: artifacts/sd
           repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
-          token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
+          github-token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Tooling Distribution artifact
@@ -1213,7 +1214,7 @@ jobs:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-tooling-distribution
           path: artifacts/tooling
           repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
-          token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
+          github-token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Source Distribution commit index artifact
@@ -1223,7 +1224,7 @@ jobs:
           name: commit-index-sd
           path: artifacts/commit-index-sd
           repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
-          token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
+          github-token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: Download Tooling commit index artifact
@@ -1233,7 +1234,7 @@ jobs:
           name: commit-index-tooling
           path: artifacts/commit-index-tooling
           repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
-          token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
+          github-token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.previous_run_id || github.run_id }}
 
       - name: List downloaded artifacts
