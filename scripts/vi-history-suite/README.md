@@ -21,7 +21,8 @@ Compares two VI versions and identifies breaking changes, deprecated APIs, and c
 **Usage:**
 ```powershell
 pwsh -NoProfile -File Compare-VIHistory.ps1 -BaseVI "v1/MyVI.vi" -CompareVI "v2/MyVI.vi"
-pwsh -NoProfile -File Compare-VIHistory.ps1 -BaseVI "v1/MyVI.vi" -CompareVI "v2/MyVI.vi" -OutputFormat html -OutputPath "report.html"
+pwsh -NoProfile -File Compare-VIHistory.ps1 -BaseVI "v1/MyVI.vi" -CompareVI "v2/MyVI.vi" -OutputFormat lv2025 -OutputPath "comparison.json"
+pwsh -NoProfile -File Compare-VIHistory.ps1 -BaseVI "v1/MyVI.vi" -CompareVI "v2/MyVI.vi" -OutputFormat html -OutputPath "report.html"  # renders LV 2025.3 HTML via the generator
 ```
 
 ### 3. Analyze-VICompatibility.ps1
@@ -46,6 +47,7 @@ Comprehensive database of deprecated APIs with migration guides and severity rat
 Run the test suite:
 ```powershell
 pwsh -NoProfile -File Test-VIMetadata.ps1
+pwsh -NoProfile -File Test-VIComparison.ps1
 ```
 
 ## Implementation Status
@@ -58,9 +60,9 @@ pwsh -NoProfile -File Test-VIMetadata.ps1
 
 ### Phase 2: Comparison (Weeks 3-4) ✅ IN PROGRESS
 - [x] Compare-VIHistory.ps1
-- [ ] Test-VIComparison.ps1
-- [ ] Full connector pane diff implementation
-- [ ] Dependency tracking
+- [x] Test-VIComparison.ps1
+- [x] Full connector pane diff implementation
+- [x] Dependency tracking
 
 ### Phase 3: Compatibility (Weeks 5-6) ✅ IN PROGRESS
 - [x] Analyze-VICompatibility.ps1
@@ -74,8 +76,8 @@ pwsh -NoProfile -File Test-VIMetadata.ps1
 - [ ] GitHub Actions workflow
 
 ### Phase 5: Reporting (Weeks 9-10) 📋 PLANNED
-- [ ] Generate-VIHistoryReport.ps1
-- [ ] LV 2025.3 compatible HTML templates
+- [x] Generate-VIHistoryReport.ps1
+- [x] LV 2025.3 compatible HTML templates
 - [ ] Test-ReportGeneration.ps1
 - [ ] Complete documentation
 

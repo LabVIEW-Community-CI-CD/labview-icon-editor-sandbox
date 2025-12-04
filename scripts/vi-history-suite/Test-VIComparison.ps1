@@ -1,16 +1,18 @@
 <#
 .SYNOPSIS
-    Pester regression suite for the VI comparison engine.
+    Pester regression suite for the VI comparison engine and report generator.
 .DESCRIPTION
     Constructs lightweight VI fixtures with metadata overrides, invokes
-    Compare-VIHistory.ps1, and asserts that connector, dependency, and
-    deprecated-API diff helpers trigger the expected report values.
+    Compare-VIHistory.ps1 and Generate-VIHistoryReport.ps1, and asserts that
+    connector, dependency, deprecated-API diff helpers, and LV 2025.3 report
+    payloads are produced as expected.
 #>
 
 Set-StrictMode -Version Latest
 $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "vi-history-suite-test"
 $comparisonReport = $null
 $comparisonReportPath = $null
+$reportHtmlPath = $null
 $baseViPath = $null
 $compareViPath = $null
 
@@ -96,14 +98,21 @@ Describe 'Compare-VIHistory integration' {
         Write-MetadataOverride -ViPath $compareViPath -Metadata $compareMetadata
 
         $comparisonReportPath = Join-Path $temporaryRoot 'comparison-report.json'
+        $reportHtmlPath = Join-Path $temporaryRoot 'comparison-report.html'
 
         $script:compareScript = Join-Path $PSScriptRoot 'Compare-VIHistory.ps1'
         if (-not (Test-Path $script:compareScript)) {
             throw "Comparison script not found at $script:compareScript"
         }
 
-        $null = & $script:compareScript -BaseVI $baseViPath -CompareVI $compareViPath -OutputFormat json -OutputPath $comparisonReportPath
+        $null = & $script:compareScript -BaseVI $baseViPath -CompareVI $compareViPath -OutputFormat lv2025 -OutputPath $comparisonReportPath
         $comparisonReport = Get-Content -Path $comparisonReportPath -Raw | ConvertFrom-Json
+
+        $generatorScript = Join-Path $PSScriptRoot 'Generate-VIHistoryReport.ps1'
+        if (-not (Test-Path $generatorScript)) {
+            throw "Report generator script not found at $generatorScript"
+        }
+        & $generatorScript -ComparisonDataPath $comparisonReportPath -OutputPath $reportHtmlPath | Out-Null
     }
 
     AfterAll {
@@ -130,5 +139,25 @@ Describe 'Compare-VIHistory integration' {
         ($deprecated | Where-Object { $_.type -eq 'deprecated_api_introduced' -and $_.api -eq 'DeprecatedFn.vi' }).Count | Should -Be 1
         ($comparisonReport.breaking_changes | Where-Object { $_.type -eq 'connector_pane_modified' }).Count | Should -BeGreaterThan 0
         $comparisonReport.recommendation | Should -Match 'Breaking changes detected'
+    }
+
+    It 'emits LV2025.3 diff payload required by the VI Comparison report' {
+        $payload = $comparisonReport.lv2025_payload
+        $payload.format.version | Should -Be '25.3'
+        $payload.header.base_vi.name | Should -Be 'BaseExample.vi'
+        $payload.summary.counts.connector_changes | Should -BeGreaterThan 0
+        $payload.diff.connector_pane.added.Count | Should -Be 1
+        $payload.diff.dependencies.updated.Count | Should -Be 1
+        $payload.diff.deprecated_apis.introduced.Count | Should -Be 1
+    }
+
+    It 'renders an LV2025.3-compatible HTML report' {
+        Test-Path $reportHtmlPath | Should -BeTrue
+        $html = Get-Content -Path $reportHtmlPath -Raw
+        $html | Should -Match 'vi-comparison-data'
+        $html | Should -Match 'VI Comparison Report'
+        $html | Should -Match 'meta name=\"lv-version\" content=\"25.3\"'
+        $html | Should -Match 'BaseExample.vi'
+        $html | Should -Match 'CompareExample.vi'
     }
 }
