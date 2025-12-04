@@ -94,6 +94,13 @@ jobs:
           run-id: ${{ steps.ci_run.outputs.run_id }}
           path: artifacts
 
+      - name: Generate integrity hashes
+        id: integrity
+        uses: ./.github/actions/generate-integrity-hashes
+        with:
+          artifacts_path: artifacts
+          output_path: artifacts/integrity-hashes
+
       - name: Build release asset inventory
         shell: bash
         env:
