@@ -85,7 +85,11 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$isWindows = $PSVersionTable.OS -like '*Windows*'
+$runningOnWindows = if ($PSVersionTable.Keys -contains 'IsWindows') {
+    [bool]$IsWindows
+} else {
+    $PSVersionTable.OS -like '*Windows*'
+}
 
 # Resolve repository path
 $repo = (Resolve-Path -LiteralPath $RepositoryPath -ErrorAction Stop).ProviderPath
@@ -176,7 +180,7 @@ if (-not $SkipSeedBuild) {
 
 # Docker user mapping to avoid root-owned outputs on Linux
 $dockerUserArgs = @()
-if (-not $isWindows) {
+if (-not $runningOnWindows) {
     $uid = (& id -u)
     $gid = (& id -g)
     $dockerUserArgs = @('--user', "$uid`:$gid")
