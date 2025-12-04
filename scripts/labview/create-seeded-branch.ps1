@@ -187,8 +187,12 @@ $vipbJson = Join-Path $stashDir 'seed.vipb.json'
 $vipbRel = 'Tooling/deployment/seed.vipb'
 $vipbJsonRel = 'builds/vipb-stash/seed.vipb.json'
 
-# Get current user ID for Docker to set correct ownership
-$userId = if ($IsLinux) { "$(id -u):$(id -g)" } else { $null }
+# Get current user ID for Docker to set correct ownership on Linux
+$userId = if ($IsLinux) { 
+    $uid = & id -u
+    $gid = & id -g
+    "${uid}:${gid}"
+} else { $null }
 $userArg = if ($userId) { @('--user', $userId) } else { @() }
 
 Write-Host "Converting VIPB to JSON..." -ForegroundColor Gray
@@ -200,25 +204,21 @@ if ($LASTEXITCODE -ne 0) {
 
 # Modify JSON
 Write-Host "Updating Package_LabVIEW_Version to '$versionString'..." -ForegroundColor Gray
-$json = Get-Content -Raw $vipbJson | ConvertFrom-Json
+$json = Get-Content -Raw -Encoding UTF8 $vipbJson | ConvertFrom-Json
 $lg = $null
-$jsonShape = 'unknown'
 if ($json.PSObject.Properties['VI_Package_Builder_Settings']) {
     $lg = $json.VI_Package_Builder_Settings.Library_General_Settings
-    $jsonShape = 'VI_Package_Builder_Settings'
 }
 if (-not $lg -and $json.PSObject.Properties['Package']) {
     $lg = $json.Package.Library_General_Settings
-    $jsonShape = 'Package'
 }
 if (-not $lg -and $json.PSObject.Properties['Library_General_Settings']) {
     $lg = $json.Library_General_Settings
-    $jsonShape = 'root'
 }
 if (-not $lg) {
-    throw "Library_General_Settings not found in VIPB JSON"
+    $known = ($json.PSObject.Properties.Name -join ', ')
+    throw "Library_General_Settings not found in VIPB JSON. Known top-level properties: $known"
 }
-Write-Host "  JSON shape: $jsonShape" -ForegroundColor Gray
 $lg.Package_LabVIEW_Version = $versionString
 if ($lg.PSObject.Properties['Library_Version']) {
     $lg.Library_Version = "$lvMajor.$LabVIEWMinor.0.1"
