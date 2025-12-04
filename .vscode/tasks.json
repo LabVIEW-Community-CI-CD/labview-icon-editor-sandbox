@@ -891,6 +891,30 @@
       "detail": "Locked executor: only local-sd-ppl orchestration is allowed; two turns (run + done)."
     },
     {
+      "label": "32b Ollama: reset source-dist workspace (locked)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/ollama-executor/Run-Locked-ResetSourceDistribution.ps1",
+        "-RepoPath",
+        "${workspaceFolder}",
+        "-Host",
+        "${input:ollamaHost}",
+        "-Model",
+        "${input:ollamaModelTag}",
+        "-CommandTimeoutSec",
+        "${input:ollamaResetTimeoutSec}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": [],
+      "detail": "Locked executor: archives/cleans Source Distribution output, regenerates commit index, and reruns the build via OrchestrationCli reset-source-dist."
+    },
+    {
       "label": "33 Ollama: stop container",
       "type": "shell",
       "command": "pwsh",
@@ -1185,7 +1209,7 @@
       "id": "ollamaHost",
       "type": "promptString",
       "description": "OLLAMA_HOST endpoint (health check + executor)",
-      "default": "http://host.docker.internal:11435"
+      "default": "http://localhost:11436"
     },
     {
       "id": "ollamaModelBundlePath",
@@ -1240,6 +1264,12 @@
       "type": "promptString",
       "description": "Command timeout (seconds) for task 32 Ollama locked local-sd-ppl",
       "default": "120"
+    },
+    {
+      "id": "ollamaResetTimeoutSec",
+      "type": "promptString",
+      "description": "Command timeout (seconds) for task 32b Ollama locked reset",
+      "default": "360"
     },
     {
       "label": "18 Tooling: Clear CLI cache entry",
