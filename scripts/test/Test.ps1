@@ -198,7 +198,15 @@ function New-VIAnalyzerRequestWithVersion {
 
 function Test-LabVIEWInstalled {
     param([string]$Version,[string]$Bitness)
-    $root = if ($Bitness -eq '32') { Join-Path $env:ProgramFilesX86 "National Instruments" } else { Join-Path $env:ProgramFiles "National Instruments" }
+
+    $pf64 = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+    $pf32 = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFilesX86)
+    $niRoot = if ($Bitness -eq '32') { $pf32 } else { $pf64 }
+    if ([string]::IsNullOrWhiteSpace($niRoot)) {
+        return $false
+    }
+
+    $root = Join-Path $niRoot "National Instruments"
     $exe = Join-Path $root ("LabVIEW {0}\\LabVIEW.exe" -f $Version)
     return [IO.File]::Exists($exe)
 }

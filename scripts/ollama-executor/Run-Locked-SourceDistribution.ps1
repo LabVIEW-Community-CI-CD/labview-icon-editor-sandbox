@@ -23,7 +23,8 @@ param(
     [ValidateSet('0', '3')]
     [string]$LabVIEWMinor = '3',
     [ValidateSet('32', '64')]
-    [string]$Bitness = '64'
+    [string]$Bitness = '64',
+    [string]$SeedAssistantRunCommand
 )
 
 . "$PSScriptRoot/Resolve-OllamaHost.ps1"
@@ -52,12 +53,13 @@ $healthParams = @{
 # Build version string: e.g., "2025" with minor "3" for Q3, or "0" for Q1
 Write-Host "[locked-sd] Target: LabVIEW $LabVIEWVersion Q$(if ($LabVIEWMinor -eq '3') { '3' } else { '1' }) ${Bitness}-bit"
 
-$seededInfo = Ensure-SeededWorktree -RepoPath $RepoPath -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
+$seededInfo = Get-SeededWorktree -RepoPath $RepoPath -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
 $worktreePath = $seededInfo.WorktreePath
 $repoArgument = Format-CommandValue $worktreePath
 $sdCmd = "pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath $repoArgument -Package_LabVIEW_Version $LabVIEWVersion -SupportedBitness $Bitness"
-$allowedRuns = @($sdCmd)
-$goal = 'Respond ONLY with JSON: send exactly {"run":"' + $sdCmd + '"} and then {"done":true}.'
+$effectiveCmd = if (-not [string]::IsNullOrWhiteSpace($SeedAssistantRunCommand)) { $SeedAssistantRunCommand.Trim() } else { $sdCmd }
+$allowedRuns = @($effectiveCmd)
+$goal = 'Respond ONLY with JSON: send exactly {"run":"' + $effectiveCmd + '"} and then {"done":true}.'
 
 $params = @{
     Host                 = $resolvedHost
@@ -68,6 +70,7 @@ $params = @{
     StopAfterFirstCommand = $true
     AllowedRuns           = $allowedRuns
     CommandTimeoutSec     = $CommandTimeoutSec
+    SeedAssistantRunCommand = $effectiveCmd
 }
 
 & "$PSScriptRoot/Drive-Ollama-Executor.ps1" @params -Verbose

@@ -35,12 +35,28 @@ $repoFull = (Resolve-Path -LiteralPath $RepoPath).Path
 $ollamaHost = if ([string]::IsNullOrWhiteSpace($Endpoint)) { "http://localhost:11435" } else { $Endpoint }
 if ([string]::IsNullOrWhiteSpace($Model)) { throw "Model tag is required. Set OLLAMA_MODEL_TAG or pass -Model." }
 
-$healthParams = @{
-    Host            = $ollamaHost
-    ModelTag        = $Model
-    RequireModelTag = $true
+$seedRunCommand = $null
+if (-not [string]::IsNullOrWhiteSpace($SeedAssistantRunCommand)) {
+    $trimmed = $SeedAssistantRunCommand.Trim()
+    if ($trimmed.Length -gt 0) {
+        $seedRunCommand = $trimmed
+    }
 }
-& "$PSScriptRoot/check-ollama-endpoint.ps1" @healthParams
+$stopAfterFirst = [bool]$StopAfterFirstCommand
+$offlineSeededMode = ($null -ne $seedRunCommand) -and $stopAfterFirst
+
+if ($offlineSeededMode) {
+    Write-Host "[executor] Seeded run command provided with StopAfterFirstCommand; running without contacting Ollama." -ForegroundColor Cyan
+}
+else {
+    $healthParams = @{
+        Host            = $ollamaHost
+        ModelTag        = $Model
+        RequireModelTag = $true
+    }
+    & "$PSScriptRoot/check-ollama-endpoint.ps1" @healthParams
+}
+
 Write-Host ("Executor targeting {0} with model {1}" -f $ollamaHost, $Model)
 
 $systemPrompt = @"
@@ -58,13 +74,9 @@ $messages = @(
     @{ role = "user"; content = "Goal: $Goal" }
 )
 
-$seedRunCommand = $null
 $seedRunContent = $null
-if (-not [string]::IsNullOrWhiteSpace($SeedAssistantRunCommand)) {
-    $seedRunCommand = $SeedAssistantRunCommand.Trim()
-    if ($seedRunCommand.Length -gt 0) {
-        $seedRunContent = (@{ run = $seedRunCommand } | ConvertTo-Json -Compress)
-    }
+if ($seedRunCommand) {
+    $seedRunContent = (@{ run = $seedRunCommand } | ConvertTo-Json -Compress)
 }
 
 function Test-CommandAllowed {

@@ -12,7 +12,7 @@ function Get-VipbVersionInfo {
         [xml]$vipbXml = Get-Content -LiteralPath $vipbPath -Raw
     }
     catch {
-        Write-Warning "[seeded-worktree] Failed to parse $vipbPath: $($_.Exception.Message)"
+        Write-Warning "[seeded-worktree] Failed to parse ${vipbPath}: $($_.Exception.Message)"
         return $null
     }
 
@@ -44,7 +44,7 @@ function Get-VipbVersionInfo {
     }
 }
 
-function Ensure-SeededWorktree {
+function Get-SeededWorktree {
     [CmdletBinding()]
     param(
         [string]$RepoPath = ".",
@@ -84,7 +84,7 @@ function Ensure-SeededWorktree {
             throw "vipb-bump-worktree.ps1 not found at $vipbScript"
         }
 
-        $args = @(
+        $callArgs = @(
             '-RepositoryPath', $repoFull,
             '-TargetLabVIEWVersion', $TargetLabVIEWVersion,
             '-TargetLabVIEWMinor', $TargetLabVIEWMinor,
@@ -94,7 +94,7 @@ function Ensure-SeededWorktree {
         )
 
         Write-Host "[seeded-worktree] Creating worktree '$WorktreeName' for LabVIEW $TargetLabVIEWVersion.$TargetLabVIEWMinor $TargetBitness-bit"
-        & pwsh -NoProfile -File $vipbScript @args
+        $null = & pwsh -NoProfile -File $vipbScript @callArgs
         if ($LASTEXITCODE -ne 0) {
             throw "vipb-bump-worktree.ps1 failed with exit code $LASTEXITCODE"
         }

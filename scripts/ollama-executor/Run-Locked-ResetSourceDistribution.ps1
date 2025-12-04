@@ -15,7 +15,8 @@ param(
     [ValidateSet('0','3')]
     [string]$LabVIEWMinor = '3',
     [ValidateSet('32','64')]
-    [string]$Bitness = '64'
+    [string]$Bitness = '64',
+    [string]$SeedAssistantRunCommand
 )
 
 $ErrorActionPreference = "Stop"
@@ -94,7 +95,7 @@ Invoke-LockedResetStep -Name "Ollama health check" -Action {
 Write-Host "[locked-reset] Target: Source Distribution workspace cleanup"
 
 $seededInfo = Invoke-LockedResetStep -Name "Ensure seeded worktree" -Action {
-    Ensure-SeededWorktree -RepoPath $RepoPath -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
+    Get-SeededWorktree -RepoPath $RepoPath -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
 }
 $worktreePath = $seededInfo.WorktreePath
 
@@ -124,12 +125,20 @@ Invoke-LockedResetStep -Name "Decompose command" -Action {
     Write-Host ($plan | ConvertTo-Json -Depth 4)
 }
 
-Invoke-LockedResetStep -Name "Atomic command compliance verification" -Action {
-    Test-CommandCompliance -Command $resetCmd
+$effectiveCmd = Invoke-LockedResetStep -Name "Select executor command" -Action {
+    if (-not [string]::IsNullOrWhiteSpace($SeedAssistantRunCommand)) {
+        Write-Host "[locked-reset] Using supplied SeedAssistantRunCommand override."
+        return $SeedAssistantRunCommand.Trim()
+    }
+    return $resetCmd
 }
 
-$allowedRuns = @($resetCmd)
-$goal = "Respond ONLY with JSON: send exactly {`"run`":`"$resetCmd`"} and then {`"done`":true}."
+Invoke-LockedResetStep -Name "Atomic command compliance verification" -Action {
+    Test-CommandCompliance -Command $effectiveCmd
+}
+
+$allowedRuns = @($effectiveCmd)
+$goal = "Respond ONLY with JSON: send exactly {`"run`":`"$effectiveCmd`"} and then {`"done`":true}."
 
 $params = @{
     Host                 = $resolvedHost
@@ -140,7 +149,7 @@ $params = @{
     StopAfterFirstCommand= $true
     AllowedRuns          = $allowedRuns
     CommandTimeoutSec    = $CommandTimeoutSec
-    SeedAssistantRunCommand = $resetCmd
+    SeedAssistantRunCommand = $effectiveCmd
 }
 
 $attempt = 0

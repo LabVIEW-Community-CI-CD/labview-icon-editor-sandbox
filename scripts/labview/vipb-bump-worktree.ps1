@@ -89,7 +89,23 @@ if (-not (Test-Path -LiteralPath $vipbJson)) {
     throw "vipb2json did not produce JSON at $vipbJson"
 }
 $json = Get-Content -LiteralPath $vipbJson -Raw | ConvertFrom-Json
-$currentVersion = $json.VI_Package_Builder_Settings.Library_General_Settings.Package_LabVIEW_Version
+$vipbRoot = $null
+if ($json.PSObject.Properties['VI_Package_Builder_Settings']) {
+    $vipbRoot = $json.VI_Package_Builder_Settings
+}
+elseif ($json.PSObject.Properties['Package']) {
+    $vipbRoot = $json.Package
+}
+if (-not $vipbRoot) {
+    throw "Unrecognized VIPB JSON structure; expected VI_Package_Builder_Settings or Package root."
+}
+
+$generalSettings = $vipbRoot.Library_General_Settings
+if (-not $generalSettings) {
+    throw "VIPB JSON missing Library_General_Settings node."
+}
+
+$currentVersion = $generalSettings.Package_LabVIEW_Version
 $bitnessSuffix = if ($TargetBitness) { "$TargetBitness-bit" } else { '64-bit' }
 if (-not $TargetBitness -and $currentVersion -and ($currentVersion -match '\((?<bits>\d+)-bit\)')) {
     $bitnessSuffix = "$($Matches['bits'])-bit"
@@ -99,7 +115,7 @@ if ($lvMajorToken -match '^20(?<maj>\d{2})$') { $lvMajorToken = $Matches['maj'] 
 # Use TargetLabVIEWMinor to specify Q1 (.0) or Q3 (.3) releases
 # Examples: 25.0 = LabVIEW 2025 Q1, 25.3 = LabVIEW 2025 Q3
 $newVersionString = ("{0}.{1} ({2})" -f $lvMajorToken, $TargetLabVIEWMinor, $bitnessSuffix)
-$json.VI_Package_Builder_Settings.Library_General_Settings.Package_LabVIEW_Version = $newVersionString
+$generalSettings.Package_LabVIEW_Version = $newVersionString
 $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding UTF8
 Write-Host "[vipb-bump] Updated Package_LabVIEW_Version to '$newVersionString'"
 docker run --rm -v "${repo}:/repo" --entrypoint /usr/local/bin/json2vipb $SeedImage --input "/repo/$vipbJsonRel" --output "/repo/$vipbRel"

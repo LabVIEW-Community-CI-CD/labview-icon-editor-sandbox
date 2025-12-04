@@ -13,7 +13,8 @@ param(
     [ValidateSet('0','3')]
     [string]$LabVIEWMinor = '3',
     [ValidateSet('32','64')]
-    [string]$Bitness = '64'
+    [string]$Bitness = '64',
+    [string]$SeedAssistantRunCommand
 )
 
 . "$PSScriptRoot/Resolve-OllamaHost.ps1"
@@ -40,7 +41,7 @@ $healthParams = @{
 }
 & "$PSScriptRoot/check-ollama-endpoint.ps1" @healthParams
 
-$seededInfo = Ensure-SeededWorktree -RepoPath $RepoPath -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
+$seededInfo = Get-SeededWorktree -RepoPath $RepoPath -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
 $worktreePath = $seededInfo.WorktreePath
 
 $pkgArgs = @(
@@ -56,8 +57,9 @@ $pkgArgs = @(
     '--author', 'Local Developer'
 )
 $pkgCmd = New-InvokeRepoCliCommandString -CliName 'OrchestrationCli' -RepoRoot $worktreePath -CliArguments $pkgArgs
-$allowedRuns = @($pkgCmd)
-$goal = 'Respond ONLY with JSON: send exactly {"run":"' + $pkgCmd + '"} and then {"done":true}.'
+$effectiveCmd = if (-not [string]::IsNullOrWhiteSpace($SeedAssistantRunCommand)) { $SeedAssistantRunCommand.Trim() } else { $pkgCmd }
+$allowedRuns = @($effectiveCmd)
+$goal = 'Respond ONLY with JSON: send exactly {"run":"' + $effectiveCmd + '"} and then {"done":true}.'
 
 $params = @{
     Host                 = $resolvedHost
@@ -68,6 +70,7 @@ $params = @{
     StopAfterFirstCommand = $true
     AllowedRuns           = $allowedRuns
     CommandTimeoutSec     = $CommandTimeoutSec
+    SeedAssistantRunCommand = $effectiveCmd
 }
 
 & "$PSScriptRoot/Drive-Ollama-Executor.ps1" @params -Verbose

@@ -13,7 +13,8 @@ param(
     [ValidateSet('0','3')]
     [string]$LabVIEWMinor = '3',
     [ValidateSet('32','64')]
-    [string]$Bitness = '64'
+    [string]$Bitness = '64',
+    [string]$SeedAssistantRunCommand
 )
 
 . "$PSScriptRoot/Resolve-OllamaHost.ps1"
@@ -39,12 +40,13 @@ $healthParams = @{
 }
 & "$PSScriptRoot/check-ollama-endpoint.ps1" @healthParams
 
-$seededInfo = Ensure-SeededWorktree -RepoPath $RepoPath -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
+$seededInfo = Get-SeededWorktree -RepoPath $RepoPath -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
 $worktreePath = $seededInfo.WorktreePath
 $repoArgument = Format-CommandValue $worktreePath
 $pplCmd = "pwsh -NoProfile -File scripts/orchestration/Run-LocalSd-Ppl.ps1 -Repo $repoArgument -RunKey local-sd-ppl"
-$allowedRuns = @($pplCmd)
-$goal = 'Respond ONLY with JSON: send exactly {"run":"' + $pplCmd + '"} and then {"done":true}.'
+$effectiveCmd = if (-not [string]::IsNullOrWhiteSpace($SeedAssistantRunCommand)) { $SeedAssistantRunCommand.Trim() } else { $pplCmd }
+$allowedRuns = @($effectiveCmd)
+$goal = 'Respond ONLY with JSON: send exactly {"run":"' + $effectiveCmd + '"} and then {"done":true}.'
 
 $params = @{
     Host                 = $resolvedHost
@@ -55,6 +57,7 @@ $params = @{
     StopAfterFirstCommand = $true
     AllowedRuns           = $allowedRuns
     CommandTimeoutSec     = $CommandTimeoutSec
+    SeedAssistantRunCommand = $effectiveCmd
 }
 
 & "$PSScriptRoot/Drive-Ollama-Executor.ps1" @params -Verbose

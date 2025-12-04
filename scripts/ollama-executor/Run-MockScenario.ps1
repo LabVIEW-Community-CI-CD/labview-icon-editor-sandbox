@@ -137,7 +137,7 @@ $resolvedCommandParameters = ConvertTo-Hashtable -InputObject $CommandScriptPara
 $resolvedLockedParameters = ConvertTo-Hashtable -InputObject $LockedScriptParameters -ParameterName "LockedScriptParameters"
 
 $resolvedRepo = (Resolve-Path -LiteralPath $RepoPath).ProviderPath
-$seededInfo = Ensure-SeededWorktree -RepoPath $resolvedRepo -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
+$seededInfo = Get-SeededWorktree -RepoPath $resolvedRepo -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
 $worktreePath = $seededInfo.WorktreePath
 $repoArgument = Format-CommandValue $worktreePath
 
@@ -202,6 +202,9 @@ if ($usingPreset) {
     $Command = $preset.Command
     $Summary = $preset.Summary
     $LockedScriptPath = $preset.Script
+    if (-not [string]::IsNullOrWhiteSpace($Command) -and -not $resolvedLockedParameters.ContainsKey('SeedAssistantRunCommand')) {
+        $resolvedLockedParameters['SeedAssistantRunCommand'] = $Command
+    }
 }
 else {
     if ([string]::IsNullOrWhiteSpace($Command) -and [string]::IsNullOrWhiteSpace($CommandScriptPath)) {
