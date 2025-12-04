@@ -9,6 +9,9 @@ param(
     [ValidateSet('0', '3')]
     [string]$TargetLabVIEWMinor = '0',
 
+    [ValidateSet('32','64')]
+    [string]$TargetBitness,
+
 [string]$VipbPath = 'Tooling/deployment/seed.vipb',
 [string]$WorktreeName = 'lvsd-next',
 [string]$SeedImage,
@@ -18,7 +21,7 @@ param(
 [switch]$NoWorktree,
 [switch]$RunSourceDistribution,
 [switch]$RunPackageBuild,
-[switch]$RunDevModeBind = $true,
+[bool]$RunDevModeBind = $true,
 [switch]$ForceWorktree,
 [string]$CompanyName = "LabVIEW Icon Editor",
 [string]$AuthorName = "Automation Agent",
@@ -61,17 +64,6 @@ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $vipbDest) | Out-N
 Copy-Item -LiteralPath $vipbStaged -Destination $vipbDest -Force
 
 # Derive fork owner and seed image/tag
-function Get-RepoOwner {
-    param([string]$RepoPath)
-    try {
-        $url = git -C $RepoPath config --get remote.origin.url
-        if ($url -match '[:/](?<owner>[^/]+)/(?<repo>[^/]+?)(\.git)?$') {
-            return $Matches['owner']
-        }
-    } catch {}
-    return $null
-}
-$owner = Get-RepoOwner -RepoPath $repo
 if (-not $SeedImage) {
     # Use vendored/local Seed image; override via env:SEED_IMAGE if needed.
     $SeedImage = if ($env:SEED_IMAGE) { $env:SEED_IMAGE } else { "seed:latest" }
@@ -98,8 +90,8 @@ if (-not (Test-Path -LiteralPath $vipbJson)) {
 }
 $json = Get-Content -LiteralPath $vipbJson -Raw | ConvertFrom-Json
 $currentVersion = $json.VI_Package_Builder_Settings.Library_General_Settings.Package_LabVIEW_Version
-$bitnessSuffix = '64-bit'
-if ($currentVersion -and ($currentVersion -match '\((?<bits>\d+)-bit\)')) {
+$bitnessSuffix = if ($TargetBitness) { "$TargetBitness-bit" } else { '64-bit' }
+if (-not $TargetBitness -and $currentVersion -and ($currentVersion -match '\((?<bits>\d+)-bit\)')) {
     $bitnessSuffix = "$($Matches['bits'])-bit"
 }
 $lvMajorToken = $TargetLabVIEWVersion
@@ -126,6 +118,7 @@ $manifest = [ordered]@{
     staged_vipb    = $vipbStaged
     target_version = $TargetLabVIEWVersion
     target_minor   = $TargetLabVIEWMinor
+    target_bitness = if ($TargetBitness) { $TargetBitness } else { $bitnessSuffix -replace '-bit','' }
     labview_version_string = $newVersionString
     repo_commit    = $repoCommit
     git_ref        = $repoRef

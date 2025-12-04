@@ -27,6 +27,8 @@ param(
 )
 
 . "$PSScriptRoot/Resolve-OllamaHost.ps1"
+. "$PSScriptRoot/CommandBuilder.ps1"
+. "$PSScriptRoot/SeededWorktree.ps1"
 
 $resolvedHost = Resolve-OllamaHost -RequestedHost $Endpoint
 if ([string]::IsNullOrWhiteSpace($Endpoint)) {
@@ -50,14 +52,17 @@ $healthParams = @{
 # Build version string: e.g., "2025" with minor "3" for Q3, or "0" for Q1
 Write-Host "[locked-sd] Target: LabVIEW $LabVIEWVersion Q$(if ($LabVIEWMinor -eq '3') { '3' } else { '1' }) ${Bitness}-bit"
 
-$sdCmd = "pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version $LabVIEWVersion -SupportedBitness $Bitness"
+$seededInfo = Ensure-SeededWorktree -RepoPath $RepoPath -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
+$worktreePath = $seededInfo.WorktreePath
+$repoArgument = Format-CommandValue $worktreePath
+$sdCmd = "pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath $repoArgument -Package_LabVIEW_Version $LabVIEWVersion -SupportedBitness $Bitness"
 $allowedRuns = @($sdCmd)
 $goal = 'Respond ONLY with JSON: send exactly {"run":"' + $sdCmd + '"} and then {"done":true}.'
 
 $params = @{
     Host                 = $resolvedHost
     Model                 = $Model
-    RepoPath              = $RepoPath
+  RepoPath              = $worktreePath
     Goal                  = $goal
     MaxTurns              = 2
     StopAfterFirstCommand = $true

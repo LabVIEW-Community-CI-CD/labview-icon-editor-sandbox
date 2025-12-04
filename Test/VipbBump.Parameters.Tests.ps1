@@ -29,6 +29,18 @@ Describe "vipb-bump-worktree.ps1 Parameters" {
         $attr.ValidValues | Should -Contain '3'
     }
 
+    It "has TargetBitness parameter" {
+        $params = (Get-Command $script:Subject).Parameters
+        $params.ContainsKey('TargetBitness') | Should -BeTrue
+    }
+
+    It "TargetBitness validates 32 and 64" {
+        $params = (Get-Command $script:Subject).Parameters
+        $attr = $params['TargetBitness'].Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+        $attr.ValidValues | Should -Contain '32'
+        $attr.ValidValues | Should -Contain '64'
+    }
+
     It "requires RepositoryPath" {
         $params = (Get-Command $script:Subject).Parameters
         $attr = $params['RepositoryPath'].Attributes | Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] -and $_.Mandatory }

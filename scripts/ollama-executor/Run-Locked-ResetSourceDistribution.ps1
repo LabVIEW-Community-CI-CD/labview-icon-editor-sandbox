@@ -10,13 +10,19 @@ param(
     [string]$Model = $env:OLLAMA_MODEL_TAG,
     [int]$CommandTimeoutSec = 600,
     [string]$SummaryRelativePath = "builds/reports/source-dist-reset.json",
-    [int]$MaxExecutorAttempts = 1
+    [int]$MaxExecutorAttempts = 1,
+    [int]$LabVIEWVersion = 2025,
+    [ValidateSet('0','3')]
+    [string]$LabVIEWMinor = '3',
+    [ValidateSet('32','64')]
+    [string]$Bitness = '64'
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 . "$PSScriptRoot/Resolve-OllamaHost.ps1"
 . "$PSScriptRoot/CommandBuilder.ps1"
+. "$PSScriptRoot/SeededWorktree.ps1"
 
 $script:LockedResetStepIndex = 0
 function Invoke-LockedResetStep {
@@ -87,10 +93,15 @@ Invoke-LockedResetStep -Name "Ollama health check" -Action {
 
 Write-Host "[locked-reset] Target: Source Distribution workspace cleanup"
 
+$seededInfo = Invoke-LockedResetStep -Name "Ensure seeded worktree" -Action {
+    Ensure-SeededWorktree -RepoPath $RepoPath -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
+}
+$worktreePath = $seededInfo.WorktreePath
+
 $summaryPath = if ([string]::IsNullOrWhiteSpace($SummaryRelativePath)) { "builds/reports/source-dist-reset.json" } else { $SummaryRelativePath }
 $resetCliArgs = @(
     'reset-source-dist',
-    '--repo', '.',
+    '--repo', $worktreePath,
     '--reset-archive-existing',
     '--reset-run-commit-index',
     '--reset-run-full-build',
@@ -100,7 +111,7 @@ $resetCliArgs = @(
 )
 
 $resetCmd = Invoke-LockedResetStep -Name "Build invoke-repo-cli command" -Action {
-    New-InvokeRepoCliCommandString -CliName 'OrchestrationCli' -RepoRoot '.' -CliArguments $resetCliArgs
+    New-InvokeRepoCliCommandString -CliName 'OrchestrationCli' -RepoRoot $worktreePath -CliArguments $resetCliArgs
 }
 
 Invoke-LockedResetStep -Name "Decompose command" -Action {
@@ -123,7 +134,7 @@ $goal = "Respond ONLY with JSON: send exactly {`"run`":`"$resetCmd`"} and then {
 $params = @{
     Host                 = $resolvedHost
     Model                = $Model
-    RepoPath             = $RepoPath
+    RepoPath             = $worktreePath
     Goal                 = $goal
     MaxTurns             = 4
     StopAfterFirstCommand= $true

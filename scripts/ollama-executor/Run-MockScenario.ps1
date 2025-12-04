@@ -27,12 +27,18 @@ param(
     [switch]$KeepMockServer,
     [switch]$NoRun,
     [object]$LockedScriptParameters,
-    [int]$MaxRequests = 10
+    [int]$MaxRequests = 10,
+    [int]$LabVIEWVersion = 2025,
+    [ValidateSet('0','3')]
+    [string]$LabVIEWMinor = '3',
+    [ValidateSet('32','64')]
+    [string]$Bitness = '64'
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 . "$PSScriptRoot/CommandBuilder.ps1"
+. "$PSScriptRoot/SeededWorktree.ps1"
 
 function ConvertTo-Hashtable {
     param([object]$InputObject, [string]$ParameterName)
@@ -130,9 +136,14 @@ function New-ScriptCommand {
 $resolvedCommandParameters = ConvertTo-Hashtable -InputObject $CommandScriptParameters -ParameterName "CommandScriptParameters"
 $resolvedLockedParameters = ConvertTo-Hashtable -InputObject $LockedScriptParameters -ParameterName "LockedScriptParameters"
 
+$resolvedRepo = (Resolve-Path -LiteralPath $RepoPath).ProviderPath
+$seededInfo = Ensure-SeededWorktree -RepoPath $resolvedRepo -TargetLabVIEWVersion $LabVIEWVersion -TargetLabVIEWMinor $LabVIEWMinor -TargetBitness $Bitness
+$worktreePath = $seededInfo.WorktreePath
+$repoArgument = Format-CommandValue $worktreePath
+
 $resetCliArgs = @(
     'reset-source-dist',
-    '--repo', '.',
+    '--repo', $worktreePath,
     '--reset-archive-existing',
     '--reset-run-commit-index',
     '--reset-run-full-build',
@@ -140,22 +151,39 @@ $resetCliArgs = @(
     '--reset-summary-json', 'builds/reports/source-dist-reset.json',
     '--reset-additional-path', 'builds/cache'
 )
-$resetCliCommand = New-InvokeRepoCliCommandString -CliName 'OrchestrationCli' -RepoRoot '.' -CliArguments $resetCliArgs
+$resetCliCommand = New-InvokeRepoCliCommandString -CliName 'OrchestrationCli' -RepoRoot $worktreePath -CliArguments $resetCliArgs
+
+$packageArgs = @(
+    'package-build',
+    '--repo', $worktreePath,
+    '--bitness', $Bitness,
+    '--lvlibp-bitness', 'both',
+    '--major', '0',
+    '--minor', '1',
+    '--patch', '0',
+    '--build', '1',
+    '--company', 'LabVIEW-Community-CI-CD',
+    '--author', 'Local Developer'
+)
+$packageCommand = New-InvokeRepoCliCommandString -CliName 'OrchestrationCli' -RepoRoot $worktreePath -CliArguments $packageArgs
+
+$sourceDistCommand = "pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath $repoArgument -Package_LabVIEW_Version $LabVIEWVersion -SupportedBitness $Bitness"
+$localSdPplCommand = "pwsh -NoProfile -File scripts/orchestration/Run-LocalSd-Ppl.ps1 -Repo $repoArgument -RunKey local-sd-ppl"
 
 $taskMap = @{
     "source-distribution" = @{
-        Command = 'pwsh -NoProfile -File scripts/build-source-distribution/Build_Source_Distribution.ps1 -RepositoryPath . -Package_LabVIEW_Version 2025 -SupportedBitness 64'
-        Summary = 'Source distribution built successfully for LV2025 64-bit'
+        Command = $sourceDistCommand
+        Summary = "Source distribution built successfully for LV$LabVIEWVersion $Bitness-bit"
         Script = "$PSScriptRoot/Run-Locked-SourceDistribution.ps1"
     }
     "package-build" = @{
-        Command = 'pwsh -NoProfile -File scripts/common/invoke-repo-cli.ps1 -Cli OrchestrationCli -- package-build --repo . --bitness 64 --lvlibp-bitness both --major 0 --minor 1 --patch 0 --build 1 --company LabVIEW-Community-CI-CD --author "Local Developer"'
-        Summary = 'Package build completed successfully (simulated)'
+        Command = $packageCommand
+        Summary = "Package build completed successfully for LV$LabVIEWVersion $Bitness-bit (simulated)"
         Script = "$PSScriptRoot/Run-Locked-PackageBuild.ps1"
     }
     "local-sd-ppl" = @{
-        Command = 'pwsh -NoProfile -File scripts/orchestration/Run-LocalSd-Ppl.ps1 -Repo . -RunKey local-sd-ppl'
-        Summary = 'local-sd-ppl orchestration completed successfully (simulated)'
+        Command = $localSdPplCommand
+        Summary = "local-sd-ppl orchestration completed successfully for LV$LabVIEWVersion $Bitness-bit (simulated)"
         Script = "$PSScriptRoot/Run-Locked-LocalSdPpl.ps1"
     }
     "reset-source-dist" = @{
@@ -193,7 +221,6 @@ if (-not $NoRun -and ( -not $LockedScriptPath -or -not (Test-Path -LiteralPath $
     throw "Locked script path '$LockedScriptPath' not found."
 }
 
-$resolvedRepo = (Resolve-Path -LiteralPath $RepoPath).ProviderPath
 $mockServerScript = "$PSScriptRoot/MockOllamaServer.ps1"
 
 # Build scenario payload
