@@ -336,7 +336,7 @@ jobs:
             }
             
             # Check worktree was created
-            $worktreePath = Join-Path (Split-Path -Parent $PWD) "seeded-lv${{ matrix.labview }}0-${{ matrix.bitness }}"
+            $worktreePath = Join-Path (Split-Path -Parent $PWD) "seeded-lv${{ matrix.labview }}$lvMinor-${{ matrix.bitness }}"
             if (Test-Path -LiteralPath $worktreePath) {
               Write-Host "  ✓ Isolated worktree created at: $worktreePath" -ForegroundColor Green
             }
