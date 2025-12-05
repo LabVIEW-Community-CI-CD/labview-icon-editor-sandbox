@@ -51,6 +51,9 @@ param(
     # Auto-disable color/progress in CI (e.g., GitHub Actions) to keep logs clean
     [switch]$ForcePlainOutput,
 
+    # Enable log-stash emission for build logs and attachments
+    [switch]$EnableLogStash,
+
     # When true (default for non-CI), prompt the user to acknowledge any first-launch LabVIEW/VIPM dialog.
     [switch]$PromptForVipmReady,
 
@@ -173,6 +176,21 @@ function Resolve-CommitKey {
     return $key
 }
 
+function Get-EnvOrDefaultBool {
+    param(
+        [string]$Name,
+        [bool]$Default = $false
+    )
+
+    $val = $env:$Name
+    if ([string]::IsNullOrWhiteSpace($val)) { return $Default }
+    switch -Regex ($val.Trim()) {
+        '^(1|true|yes|on)$' { return $true }
+        '^(0|false|no|off)$' { return $false }
+        default { return $Default }
+    }
+}
+
 $isCi = ($env:GITHUB_ACTIONS -eq 'true' -or $env:CI -eq 'true' -or $ForcePlainOutput)
 if ($isCi) {
     try { $PSStyle.OutputRendering = 'PlainText' } catch { }
@@ -182,6 +200,12 @@ if ($isCi) {
 }
 
 $hasStyle = (-not $isCi) -and ($PSStyle -ne $null)
+$logStashOptIn = $EnableLogStash -or (Get-EnvOrDefaultBool -Name 'LOG_STASH_ENABLE' -Default:$false)
+$logStashCompress = Get-EnvOrDefaultBool -Name 'LOG_STASH_COMPRESS' -Default:$isCi
+$logStashRetentionDays = 14
+if ($env:LOG_STASH_RETENTION_DAYS -match '^-?\d+$') {
+    $logStashRetentionDays = [int]$env:LOG_STASH_RETENTION_DAYS
+}
 $bitnessPalette = @{}
 $bitnessPalette['32'] = ''
 if ($hasStyle) { $bitnessPalette['32'] = $PSStyle.Foreground.BrightCyan }
@@ -2054,7 +2078,7 @@ try {
     }
 
     $logStashScript = Join-Path $RepositoryPath 'scripts/log-stash/Write-LogStashEntry.ps1'
-    if (Test-Path -LiteralPath $logStashScript) {
+    if ($logStashOptIn -and (Test-Path -LiteralPath $logStashScript)) {
         try {
             $logs = @()
             if ($logFile -and (Test-Path -LiteralPath $logFile)) { $logs += $logFile }
@@ -2078,11 +2102,16 @@ try {
                     BuildVersion  = "{0}.{1}.{2}.{3}" -f $Major,$Minor,$Patch,$Build
                 } `
                 -StartedAtUtc $script:BuildStart.ToUniversalTime() `
-                -DurationMs $durationMs
+                -DurationMs $durationMs `
+                -CompressBundle:$logStashCompress `
+                -RetentionDays $logStashRetentionDays
         }
         catch {
             Write-Warning ("Failed to write build log-stash bundle: {0}" -f $_.Exception.Message)
         }
+    }
+    elseif (-not $logStashOptIn) {
+        Write-Verbose "Log-stash disabled (use -EnableLogStash or LOG_STASH_ENABLE=1)"
     }
 }
 catch {
@@ -2097,7 +2126,7 @@ catch {
     }
 
     $logStashScript = Join-Path $RepositoryPath 'scripts/log-stash/Write-LogStashEntry.ps1'
-    if (Test-Path -LiteralPath $logStashScript) {
+    if ($logStashOptIn -and (Test-Path -LiteralPath $logStashScript)) {
         try {
             $logs = @()
             if ($logFile -and (Test-Path -LiteralPath $logFile)) { $logs += $logFile }
@@ -2119,11 +2148,16 @@ catch {
                     BuildVersion  = "{0}.{1}.{2}.{3}" -f $Major,$Minor,$Patch,$Build
                 } `
                 -StartedAtUtc $(if ($script:BuildStart) { $script:BuildStart.ToUniversalTime() }) `
-                -DurationMs $durationMs
+                -DurationMs $durationMs `
+                -CompressBundle:$logStashCompress `
+                -RetentionDays $logStashRetentionDays
         }
         catch {
             Write-Warning ("Failed to write build log-stash bundle (error path): {0}" -f $_.Exception.Message)
         }
+    }
+    elseif (-not $logStashOptIn) {
+        Write-Verbose "Log-stash disabled (use -EnableLogStash or LOG_STASH_ENABLE=1)"
     }
     exit 1
 }

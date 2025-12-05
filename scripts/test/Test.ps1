@@ -10,7 +10,9 @@ param(
     [switch]$ViAnalyzerOnly,
     [string]$ViAnalyzerRequestPath = 'configs/vi-analyzer-request.sample.json',
 
-    [switch]$ForcePlainOutput
+    [switch]$ForcePlainOutput,
+
+    [switch]$EnableLogStash
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,6 +27,21 @@ if ($isPlain) {
     $env:CLICOLOR = '0'
 }
 $hasStyle = (-not $isPlain) -and ($PSStyle -ne $null)
+
+function Get-EnvOrDefaultBool {
+    param(
+        [string]$Name,
+        [bool]$Default = $false
+    )
+
+    $val = $env:$Name
+    if ([string]::IsNullOrWhiteSpace($val)) { return $Default }
+    switch -Regex ($val.Trim()) {
+        '^(1|true|yes|on)$' { return $true }
+        '^(0|false|no|off)$' { return $false }
+        default { return $Default }
+    }
+}
 
 function Test-PathExistence {
     param([string]$Path,[string]$Description)
@@ -79,6 +96,13 @@ function Resolve-CommitKey {
     }
     if ([string]::IsNullOrWhiteSpace($key)) { $key = 'manual' }
     return $key
+}
+
+$logStashOptIn = $EnableLogStash -or (Get-EnvOrDefaultBool -Name 'LOG_STASH_ENABLE' -Default:$false)
+$logStashCompress = Get-EnvOrDefaultBool -Name 'LOG_STASH_COMPRESS' -Default:$isCi
+$logStashRetentionDays = 14
+if ($env:LOG_STASH_RETENTION_DAYS -match '^-?\d+$') {
+    $logStashRetentionDays = [int]$env:LOG_STASH_RETENTION_DAYS
 }
 
 function Write-Step {
@@ -471,7 +495,7 @@ finally {
         }
 
         $logStashScript = Join-Path $repoRoot 'scripts/log-stash/Write-LogStashEntry.ps1'
-        if (Test-Path -LiteralPath $logStashScript) {
+        if ($logStashOptIn -and (Test-Path -LiteralPath $logStashScript)) {
             try {
                 $logs = @()
                 if ($logFile -and (Test-Path -LiteralPath $logFile)) { $logs += $logFile }
@@ -493,11 +517,16 @@ finally {
                     -ProducerTask 'Test.ps1' `
                     -ProducerArgs @{ SupportedBitness = $SupportedBitness; ForcePlainOutput = $ForcePlainOutput.IsPresent } `
                     -StartedAtUtc $script:BuildStart.ToUniversalTime() `
-                    -DurationMs $durationMs
+                    -DurationMs $durationMs `
+                    -CompressBundle:$logStashCompress `
+                    -RetentionDays $logStashRetentionDays
             }
             catch {
                 Write-Warning ("Failed to write log-stash bundle: {0}" -f $_.Exception.Message)
             }
+        }
+        elseif (-not $logStashOptIn) {
+            Write-Verbose "Log-stash disabled (use -EnableLogStash or LOG_STASH_ENABLE=1)"
         }
     }
     catch {
