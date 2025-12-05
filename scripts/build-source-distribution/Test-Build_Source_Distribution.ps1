@@ -5,7 +5,6 @@
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-Import-Module Pester -ErrorAction Stop
 
 $scriptPath = Join-Path $PSScriptRoot 'Build_Source_Distribution.ps1'
 
