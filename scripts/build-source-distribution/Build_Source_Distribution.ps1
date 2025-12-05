@@ -19,6 +19,10 @@
 
 .PARAMETER GcliPath
     Optional explicit path to the g-cli executable. Defaults to relying on PATH.
+
+.PARAMETER AllowFallback
+    When specified, allows fallback to copy-based staging if g-cli build fails.
+    Default is off (fail fast on build errors). Not recommended for CI use.
 #>
 param(
     [Parameter(Mandatory = $true)]
@@ -37,7 +41,11 @@ param(
 
     [string]$OverrideOutputRoot,
 
-    [string]$GcliPath = 'g-cli'
+    [string]$GcliPath = 'g-cli',
+
+    # When true, allows fallback to copy-based staging if g-cli build fails.
+    # Default is false to fail fast on build errors.
+    [switch]$AllowFallback
 )
 
 $ErrorActionPreference = 'Stop'
@@ -432,6 +440,26 @@ if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) {
     throw "Project not found: $projectPath"
 }
 
+# Preflight: Validate critical source files exist in repo
+$criticalFiles = @(
+    'resource/plugins/NIIconEditor/Miscellaneous/Undo Redo/FGV_Undo Redo.vi',
+    'resource/plugins/NIIconEditor/Miscellaneous/Undo Redo/Add Data to History.vi',
+    'resource/plugins/NIIconEditor/Miscellaneous/Undo Redo/Replay Data from History.vi',
+    'vi.lib/LabVIEW Icon API/LabVIEW Icon API.lvlib'
+)
+$missingFiles = @()
+foreach ($f in $criticalFiles) {
+    $fullPath = Join-Path $repoRoot $f
+    if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
+        $missingFiles += $f
+    }
+}
+if ($missingFiles.Count -gt 0) {
+    $fileList = $missingFiles -join ', '
+    throw "Critical source files missing from repo. Cannot build Source Distribution. Missing files: $fileList"
+}
+Write-Stamp -Level "INFO" -Message ("Preflight check passed: {0} critical files verified" -f $criticalFiles.Count)
+
 $gcliInvocation = Resolve-GcliInvocation -Candidate $GcliPath
 if (-not $gcliInvocation) {
     throw "g-cli is required but was not found (looked for '$GcliPath')."
@@ -470,6 +498,18 @@ $iconManifest    = Join-Path $iconCacheRoot 'icon-api-manifest.json'
 $iconZip         = Join-Path $iconCacheRoot 'icon-api.zip'
 $iconPayloadInfo = New-IconApiPayload -SourcePath $iconApiSource -ManifestPath $iconManifest -ZipPath $iconZip
 Write-Stamp -Level "INFO" -Message ("Icon API payload: {0} files, zip SHA256={1}" -f $iconPayloadInfo.entries_count, $iconPayloadInfo.zip_hash)
+
+# Idempotent cleanup: remove stale build outputs before starting
+$staleOutputs = @(
+    (Join-Path $repoRoot 'builds/LabVIEWIconAPI'),
+    (Join-Path $repoRoot 'builds/artifacts/labview-icon-api.zip')
+)
+foreach ($stale in $staleOutputs) {
+    if (Test-Path -LiteralPath $stale) {
+        Write-Stamp -Level "INFO" -Message ("Removing stale output: {0}" -f $stale)
+        Remove-Item -LiteralPath $stale -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
 
 Start-Heartbeat
 try {
@@ -512,7 +552,10 @@ $buildExit = 0
 $buildDuration = ((Get-Date) - $buildStart).TotalSeconds
 try { $buildExit = $buildProc.ExitCode } catch { $buildExit = $LASTEXITCODE }
 if ($buildExit -ne 0) {
-    Write-Stamp -Level "WARN" -Message ("lvbuildspec failed with exit code {0}; will fall back to copy-based Source Distribution staging." -f $buildExit)
+    if (-not $AllowFallback) {
+        throw ("lvbuildspec failed with exit code {0}. Build cannot proceed without -AllowFallback. Check LabVIEW {1} {2}-bit is installed, g-cli is functional, and all source files are present." -f $buildExit, $Package_LabVIEW_Version, $SupportedBitness)
+    }
+    Write-Stamp -Level "WARN" -Message ("lvbuildspec failed with exit code {0}; falling back to copy-based Source Distribution staging (AllowFallback=true)." -f $buildExit)
     $gcliSucceeded = $false
 }
 else {
@@ -535,9 +578,9 @@ if ($gcliSucceeded) {
     Write-Stamp -Level "INFO" -Message ("Using Source Distribution folder: {0}" -f $distRoot)
 }
 else {
-    # Copy-based fallback: stage payload directly from repo roots
+    # Copy-based fallback: stage payload directly from repo roots (only when AllowFallback is set)
     $distRoot = if ($OverrideOutputRoot) { $OverrideOutputRoot } else { Join-Path $repoRoot 'builds\LabVIEWIconAPI' }
-    Write-Stamp -Level "INFO" -Message ("Using copy-based Source Distribution staging at: {0}" -f $distRoot)
+    Write-Stamp -Level "WARN" -Message ("Using copy-based Source Distribution staging at: {0} (fallback mode)" -f $distRoot)
     if (Test-Path -LiteralPath $distRoot) {
         try { Remove-Item -LiteralPath $distRoot -Recurse -Force -ErrorAction Stop } catch { Write-Warning ("Failed to clear existing SD folder {0}: {1}" -f $distRoot, $_.Exception.Message) }
     }

@@ -84,6 +84,53 @@ jobs:
             - HTML: [requirements.html (download artifact)](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             - JSON: [requirements.json (download artifact)](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
+  detect-vi-changes:
+    name: Detect VI file changes
+    needs: [verify-checklist-sync]
+    runs-on: ubuntu-latest
+    outputs:
+      has_vi_changes: ${{ steps.check.outputs.has_vi_changes }}
+      changed_files: ${{ steps.check.outputs.changed_files }}
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+          fetch-depth: 0
+      - name: Check for VI file changes
+        id: check
+        shell: bash
+        run: |
+          # Detect changes to LabVIEW files (.vi, .ctl, .lvlib, .lvclass, .lvlibp)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+          
+          # Handle case where BASE is null/empty (first commit or force push)
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "No base commit available; checking all VI files in current commit"
+            CHANGED_FILES=$(git ls-files | grep -E '\.(vi|ctl|lvlib|lvclass|lvlibp)$' | head -100)
+          else
+            CHANGED_FILES=$(git diff --name-only "$BASE" "$HEAD" 2>/dev/null | grep -E '\.(vi|ctl|lvlib|lvclass|lvlibp)$' || true)
+          fi
+          
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "has_vi_changes=true" >> "$GITHUB_OUTPUT"
+            echo "VI files changed:"
+            echo "$CHANGED_FILES" | head -20
+            # Store as JSON array for downstream jobs
+            echo "changed_files<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$CHANGED_FILES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_vi_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No VI file changes detected"
+            echo "changed_files=" >> "$GITHUB_OUTPUT"
+          fi
+
   requirements-language-lint:
     name: Lint requirements language (ISO 29148)
     needs: [verify-checklist-sync]
@@ -539,14 +586,7 @@ jobs:
             -OllamaPrompt "local-sd/local-sd-ppl"
 
       - name: Validate sim handshake (Linux)
-        shell: pwsh
-        run: |
-          $handshake = 'artifacts/labview-icon-api-handshake.json'
-          if (-not (Test-Path $handshake)) { throw "Missing $handshake" }
-          $json = Get-Content -Raw -LiteralPath $handshake | ConvertFrom-Json
-          foreach ($key in 'zipSha256','pplSha256','zipRelPath','pplRelPath') {
-            if (-not $json.$key) { throw "Handshake missing $key" }
-          }
+        uses: ./.github/actions/validate-ollama-handshake
 
       - name: Upload sim artifacts (Linux)
         if: always()
@@ -584,14 +624,7 @@ jobs:
             -OllamaPrompt "local-sd/local-sd-ppl"
 
       - name: Validate sim handshake (Windows)
-        shell: pwsh
-        run: |
-          $handshake = 'artifacts/labview-icon-api-handshake.json'
-          if (-not (Test-Path $handshake)) { throw "Missing $handshake" }
-          $json = Get-Content -Raw -LiteralPath $handshake | ConvertFrom-Json
-          foreach ($key in 'zipSha256','pplSha256','zipRelPath','pplRelPath') {
-            if (-not $json.$key) { throw "Handshake missing $key" }
-          }
+        uses: ./.github/actions/validate-ollama-handshake
 
       - name: Upload sim artifacts (Windows)
         if: always()
@@ -607,7 +640,9 @@ jobs:
 
   vi-history-sim-linux:
     name: VI History report (sim, Linux)
-    needs: [verify-checklist-sync]
+    needs: [verify-checklist-sync, detect-vi-changes]
+    # Only run when VI files have changed
+    if: needs.detect-vi-changes.outputs.has_vi_changes == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
@@ -619,24 +654,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y powershell
 
-      - name: Ensure Pester 5 is available
+      - name: Run VI History via Ollama Executor (simulation mode)
         shell: pwsh
+        env:
+          OLLAMA_EXECUTOR_MODE: sim
+          OLLAMA_SIM_CREATE_ARTIFACTS: "true"
+          VI_CHANGES_DETECTED: ${{ needs.detect-vi-changes.outputs.changed_files }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $hasPester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 }
-          if (-not $hasPester) {
-            Install-Module -Name Pester -MinimumVersion 5.3.3 -Scope CurrentUser -Force -SkipPublisherCheck
-          }
-
-      - name: Run VI History comparison Pester suite (Linux)
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Invoke-Pester -Configuration @{
-            Run    = @{ Path = 'scripts/vi-history-suite/Test-VIComparison.ps1' }
-            Output = @{ Verbosity = 'Detailed' }
-            CI     = $true
-          }
+          Write-Host "=== VI History Report (Simulation Mode - Linux) ===" -ForegroundColor Cyan
+          Write-Host "VI changes detected - running VI History analysis" -ForegroundColor Yellow
+          
+          # Run VI History suite via Ollama executor
+          & pwsh -NoProfile -File scripts/ollama-executor/Run-Locked-VIHistory.ps1 `
+            -RepoPath . `
+            -TargetCommit "c319892088170bf45fcc65278f21e6b5a2cc3b38"
 
       - name: Upload VI History test artifacts (Linux)
         if: always()
@@ -644,37 +676,38 @@ jobs:
         with:
           name: vi-history-sim-linux
           path: |
+            reports/vi-history/**
+            artifacts/vi-history-handshake.json
             temp/vi-history-report.html
             temp/vi-history-report.json
           if-no-files-found: warn
 
   vi-history-sim-windows:
     name: VI History report (sim, Windows)
-    needs: [verify-checklist-sync]
+    needs: [verify-checklist-sync, detect-vi-changes]
+    # Only run when VI files have changed
+    if: needs.detect-vi-changes.outputs.has_vi_changes == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           set-safe-directory: true
 
-      - name: Ensure Pester 5 is available
+      - name: Run VI History via Ollama Executor (simulation mode)
         shell: pwsh
+        env:
+          OLLAMA_EXECUTOR_MODE: sim
+          OLLAMA_SIM_CREATE_ARTIFACTS: "true"
+          VI_CHANGES_DETECTED: ${{ needs.detect-vi-changes.outputs.changed_files }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $hasPester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 }
-          if (-not $hasPester) {
-            Install-Module -Name Pester -MinimumVersion 5.3.3 -Scope CurrentUser -Force -SkipPublisherCheck
-          }
-
-      - name: Run VI History comparison Pester suite (Windows)
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Invoke-Pester -Configuration @{
-            Run    = @{ Path = 'scripts/vi-history-suite/Test-VIComparison.ps1' }
-            Output = @{ Verbosity = 'Detailed' }
-            CI     = $true
-          }
+          Write-Host "=== VI History Report (Simulation Mode - Windows) ===" -ForegroundColor Cyan
+          Write-Host "VI changes detected - running VI History analysis" -ForegroundColor Yellow
+          
+          # Run VI History suite via Ollama executor
+          & pwsh -NoProfile -File scripts/ollama-executor/Run-Locked-VIHistory.ps1 `
+            -RepoPath . `
+            -TargetCommit "c319892088170bf45fcc65278f21e6b5a2cc3b38"
 
       - name: Upload VI History test artifacts (Windows)
         if: always()
@@ -682,13 +715,20 @@ jobs:
         with:
           name: vi-history-sim-windows
           path: |
+            reports/vi-history/**
+            artifacts/vi-history-handshake.json
             temp/vi-history-report.html
             temp/vi-history-report.json
           if-no-files-found: warn
 
   vi-history-real:
     name: VI History report (real, Windows+LV)
-    needs: [verify-checklist-sync, build-worktree]
+    needs: [verify-checklist-sync, detect-vi-changes, build-worktree]
+    # Only run when VI files have changed and build-worktree succeeded
+    if: |
+      always() && !cancelled() &&
+      needs.detect-vi-changes.outputs.has_vi_changes == 'true' &&
+      needs.build-worktree.result == 'success'
     runs-on: self-hosted-windows-lv
     timeout-minutes: 30
     defaults:
@@ -704,60 +744,21 @@ jobs:
           set-safe-directory: true
           fetch-depth: 0
 
-      - name: Prepare VI History output directories
+      - name: Run VI History via Ollama Executor (real mode)
+        env:
+          # Real execution mode for actual LabVIEW VI analysis
+          OLLAMA_EXECUTOR_MODE: ""
+          VI_CHANGES_DETECTED: ${{ needs.detect-vi-changes.outputs.changed_files }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $outputRoot = Join-Path $env:GITHUB_WORKSPACE '.tmp-tests/vi-compare-replays'
-          $logsDir = Join-Path $env:GITHUB_WORKSPACE 'reports/logs'
-          New-Item -ItemType Directory -Force -Path $outputRoot | Out-Null
-          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
-          Write-Host "VI History output root: $outputRoot"
-          Write-Host "Logs directory: $logsDir"
-
-      - name: Run VI History suite (dry-run mode)
-        run: |
-          $ErrorActionPreference = 'Stop'
-          # Run in dry-run mode for CI - this validates the infrastructure without requiring actual VI comparison
-          # The sample config references LabVIEW 2025 which may not be available on all runners
-          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/vi-compare/run-vi-history-suite.ps1"
+          Write-Host "=== VI History Report (Real Mode - Windows+LV) ===" -ForegroundColor Cyan
+          Write-Host "VI changes detected - running VI History analysis with LabVIEW" -ForegroundColor Yellow
+          Write-Host "Target commit: c319892088170bf45fcc65278f21e6b5a2cc3b38 (ni/labview-icon-editor)" -ForegroundColor Yellow
           
-      - name: Generate VI History comparison report
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $viHistorySuite = Join-Path $env:GITHUB_WORKSPACE 'scripts/vi-history-suite'
-          $outputDir = Join-Path $env:GITHUB_WORKSPACE 'reports/vi-history'
-          New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
-          
-          # Create a sample comparison using the VI History suite scripts
-          $baseViPath = Join-Path $env:GITHUB_WORKSPACE 'vi.lib/LabVIEW Icon API'
-          $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-          $reportPath = Join-Path $outputDir "vi-history-report-$timestamp.html"
-          $jsonPath = Join-Path $outputDir "vi-history-report-$timestamp.json"
-          
-          # Generate a VI compatibility analysis report for the LabVIEW Icon API
-          if (Test-Path -LiteralPath $baseViPath) {
-            Write-Host "Analyzing VIs in: $baseViPath"
-            $viFiles = Get-ChildItem -Path $baseViPath -Filter '*.vi' -Recurse | Select-Object -First 5
-            $analysisResults = @{
-              timestamp = $timestamp
-              analyzed_path = $baseViPath
-              vi_count = $viFiles.Count
-              vi_files = $viFiles | ForEach-Object { $_.FullName }
-              status = 'completed'
-              labview_version = '2023.3'
-            }
-            $analysisResults | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
-            
-            # Generate simple HTML report using string concatenation
-            $viListHtml = ($viFiles | ForEach-Object { "<div class='vi-item'>$($_.Name)</div>" }) -join "`n"
-            $htmlContent = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='lv-version' content='$($analysisResults.labview_version)'><title>VI History Analysis Report</title><style>body { font-family: Arial, sans-serif; margin: 20px; } h1 { color: #333; } .summary { background: #f5f5f5; padding: 15px; border-radius: 5px; } .vi-list { margin-top: 20px; } .vi-item { padding: 5px 0; border-bottom: 1px solid #eee; }</style></head><body><h1>VI History Analysis Report</h1><div class='summary'><p><strong>Analysis Path:</strong> $baseViPath</p><p><strong>VIs Analyzed:</strong> $($viFiles.Count)</p><p><strong>Timestamp:</strong> $timestamp</p><p><strong>LabVIEW Version:</strong> $($analysisResults.labview_version)</p><p><strong>Status:</strong> Completed</p></div><div class='vi-list'><h2>Analyzed VIs</h2>$viListHtml</div></body></html>"
-            $htmlContent | Set-Content -LiteralPath $reportPath -Encoding UTF8
-            Write-Host "VI History report generated: $reportPath"
-          } else {
-            Write-Host "VI path not found: $baseViPath - generating placeholder report"
-            @{ status = 'skipped'; reason = 'VI path not found' } | ConvertTo-Json | Set-Content -LiteralPath $jsonPath -Encoding UTF8
-            "<html><body><p>VI History analysis skipped - source path not found.</p></body></html>" | Set-Content -LiteralPath $reportPath -Encoding UTF8
-          }
+          # Run VI History suite via Ollama executor with target commit
+          & pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/ollama-executor/Run-Locked-VIHistory.ps1" `
+            -RepoPath "$env:GITHUB_WORKSPACE" `
+            -TargetCommit "c319892088170bf45fcc65278f21e6b5a2cc3b38"
 
       - name: Upload VI History real execution artifacts
         if: always()
@@ -767,6 +768,7 @@ jobs:
           path: |
             reports/vi-history/**
             reports/logs/vi-history-*.log
+            artifacts/vi-history-handshake.json
             .tmp-tests/vi-compare-replays/**
           if-no-files-found: warn
 
@@ -1142,79 +1144,124 @@ jobs:
               Remove-Item -LiteralPath $p -Recurse -Force -ErrorAction SilentlyContinue
             }
           }
-      - name: Build LabVIEW Icon API Source Distribution via worktree
+      - name: Build LabVIEW Icon API Source Distribution via Ollama Executor
         shell: pwsh
+        env:
+          # Unset OLLAMA_EXECUTOR_MODE to use real execution (non-simulation) for actual LabVIEW builds.
+          # When set to 'sim', the orchestrator produces stub artifacts without invoking LabVIEW.
+          OLLAMA_EXECUTOR_MODE: ""
         run: |
           $ErrorActionPreference = 'Stop'
+          $runKey = "${{ steps.runkey.outputs.run_key }}"
+          
+          # Generate commit index first (required for manifest generation)
           pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/build-source-distribution/New-CommitIndex.ps1" `
             -RepositoryPath "$env:GITHUB_WORKSPACE" `
             -OutputPath (Join-Path $env:GITHUB_WORKSPACE 'builds/cache/commit-index.json') `
             -AllowDirty
-          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/build-source-distribution/Build_Source_Distribution.ps1" `
-            -RepositoryPath "$env:GITHUB_WORKSPACE" `
-            -CommitIndexPath (Join-Path $env:GITHUB_WORKSPACE 'builds/cache/commit-index.json')
-      - name: Stage LabVIEW Icon API SD under run-scoped builds/builds-isolated
+          
+          # Use Ollama Host as single entry point for build orchestration.
+          # Prompt 'local-sd/local-sd-ppl' triggers the local Source Distribution + PPL build sequence
+          # which: (1) builds SD via OrchestrationCli, (2) extracts to worktree, (3) binds dev-mode,
+          # (4) runs missing-check, (5) runs unit tests, (6) builds PPL from extracted SD.
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/orchestration/Run-Ollama-Host.ps1" `
+            -Repo "$env:GITHUB_WORKSPACE" `
+            -RunKey $runKey `
+            -PwshTimeoutSec 3600 `
+            -OllamaPrompt "local-sd/local-sd-ppl"
+      - name: Validate Ollama Host handshake and stage artifacts
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $runKey    = "${{ steps.runkey.outputs.run_key }}"
-          $srcDist   = Join-Path $env:GITHUB_WORKSPACE 'builds/LabVIEWIconAPI'
-          $srcZip    = Join-Path $env:GITHUB_WORKSPACE 'builds/artifacts/labview-icon-api.zip'
-          $runDist   = Join-Path $env:GITHUB_WORKSPACE "builds/$runKey/LabVIEWIconAPI"
+          $runKey = "${{ steps.runkey.outputs.run_key }}"
+          
+          # Validate handshake from Ollama Host
+          $handshakePath = Join-Path $env:GITHUB_WORKSPACE 'artifacts/labview-icon-api-handshake.json'
+          if (-not (Test-Path -LiteralPath $handshakePath -PathType Leaf)) {
+            throw "Ollama Host handshake not found at $handshakePath"
+          }
+          
+          $handshake = Get-Content -LiteralPath $handshakePath -Raw | ConvertFrom-Json
+          Write-Host "[handshake] runKey=$($handshake.runKey) zip=$($handshake.zipRelPath) sha256=$($handshake.zipSha256)"
+          
+          # Verify artifacts exist
+          $zipPath = Join-Path $env:GITHUB_WORKSPACE $handshake.zipRelPath
+          if (-not (Test-Path -LiteralPath $zipPath -PathType Leaf)) {
+            throw "Source Distribution zip not found at $zipPath"
+          }
+          
+          # Stage under run-scoped builds-isolated (Ollama Host already stages in builds-isolated/$runKey)
+          $isoRoot = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey"
+          if (-not (Test-Path -LiteralPath $isoRoot -PathType Container)) {
+            throw "Ollama Host did not stage artifacts to $isoRoot"
+          }
+          
+          # Also copy to builds/$runKey for backward compatibility
+          $runDist = Join-Path $env:GITHUB_WORKSPACE "builds/$runKey/LabVIEWIconAPI"
           $runZipDir = Join-Path $env:GITHUB_WORKSPACE "builds/$runKey/artifacts"
-          $isoDist   = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/LabVIEWIconAPI"
-          $isoZipDir = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/artifacts"
-
-          if (-not (Test-Path -LiteralPath $srcDist -PathType Container)) {
-            throw "Expected LabVIEWIconAPI distribution folder at $srcDist"
-          }
-          if (-not (Test-Path -LiteralPath $srcZip -PathType Leaf)) {
-            throw "Expected LabVIEWIconAPI distribution zip at $srcZip"
-          }
-
-          Remove-Item -LiteralPath $runDist -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item -LiteralPath $runZipDir -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Path $runDist, $runZipDir -Force | Out-Null
-          Copy-Item -Path (Join-Path $srcDist '*') -Destination $runDist -Recurse -Force
-          Copy-Item -LiteralPath $srcZip -Destination (Join-Path $runZipDir (Split-Path $srcZip -Leaf)) -Force
-
-          Remove-Item -LiteralPath $isoDist -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item -LiteralPath $isoZipDir -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Path $isoDist, $isoZipDir -Force | Out-Null
-          Copy-Item -Path (Join-Path $runDist '*') -Destination $isoDist -Recurse -Force
-          Copy-Item -LiteralPath (Join-Path $runZipDir (Split-Path $srcZip -Leaf)) -Destination (Join-Path $isoZipDir (Split-Path $srcZip -Leaf)) -Force
+          
+          # Copy from builds/LabVIEWIconAPI if it exists (real mode)
+          $srcDist = Join-Path $env:GITHUB_WORKSPACE 'builds/LabVIEWIconAPI'
+          if (Test-Path -LiteralPath $srcDist -PathType Container) {
+            Copy-Item -Path (Join-Path $srcDist '*') -Destination $runDist -Recurse -Force
+          }
+          
+          # Copy zip to run-scoped location
+          Copy-Item -LiteralPath $zipPath -Destination (Join-Path $runZipDir (Split-Path $zipPath -Leaf)) -Force
+          
+          Write-Host "[stage] Artifacts staged under builds-isolated/$runKey and builds/$runKey"
       - name: Locate LabVIEW Icon API artifacts
         id: locate-sd
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $runKey   = "${{ steps.runkey.outputs.run_key }}"
-          $distRoot = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/LabVIEWIconAPI"
-          $zip      = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/builds/artifacts/labview-icon-api.zip"
-
+          $runKey = "${{ steps.runkey.outputs.run_key }}"
+          
+          # Read handshake to get artifact locations
+          $handshakePath = Join-Path $env:GITHUB_WORKSPACE 'artifacts/labview-icon-api-handshake.json'
+          $handshake = Get-Content -LiteralPath $handshakePath -Raw | ConvertFrom-Json
+          
+          # Ollama Host stages artifacts in builds-isolated/$runKey/artifacts/
+          $isoArtifacts = Join-Path $env:GITHUB_WORKSPACE "builds-isolated/$runKey/artifacts"
+          $zip = Join-Path $isoArtifacts 'labview-icon-api.zip'
+          
+          # Check for SD folder with manifests (from builds/LabVIEWIconAPI or run-scoped location)
+          $distRoot = Join-Path $env:GITHUB_WORKSPACE 'builds/LabVIEWIconAPI'
           if (-not (Test-Path -LiteralPath $distRoot -PathType Container)) {
-            throw "LabVIEWIconAPI Source Distribution folder not found at $distRoot"
+            $distRoot = Join-Path $env:GITHUB_WORKSPACE "builds/$runKey/LabVIEWIconAPI"
           }
+          
           if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) {
-            throw "labview-icon-api.zip not found at $zip"
+            # Fallback to artifacts/ location
+            $zip = Join-Path $env:GITHUB_WORKSPACE $handshake.zipRelPath
           }
-
+          
+          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) {
+            throw "labview-icon-api.zip not found"
+          }
+          
           $manifestJson = Join-Path $distRoot 'manifest.json'
           $manifestCsv  = Join-Path $distRoot 'manifest.csv'
-          foreach ($p in @($manifestJson, $manifestCsv)) {
-            if (-not (Test-Path -LiteralPath $p -PathType Leaf)) {
-              throw "Missing manifest file: $p"
-            }
-          }
+          
+          # Manifests are optional when using Ollama Host (handshake provides hashes)
+          $hasManifests = (Test-Path -LiteralPath $manifestJson) -and (Test-Path -LiteralPath $manifestCsv)
+          
           "sd_zip=$zip" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          "sd_manifest_json=$manifestJson" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          "sd_manifest_csv=$manifestCsv" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          "sd_handshake=$handshakePath" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          if ($hasManifests) {
+            "sd_manifest_json=$manifestJson" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+            "sd_manifest_csv=$manifestCsv" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
+          }
+          
+          Write-Host "[locate] zip=$zip handshake=$handshakePath manifests=$hasManifests"
       - name: Upload LabVIEW Icon API artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-labview-icon-api
           path: |
             ${{ steps.locate-sd.outputs.sd_zip }}
+            ${{ steps.locate-sd.outputs.sd_handshake }}
             ${{ steps.locate-sd.outputs.sd_manifest_json }}
             ${{ steps.locate-sd.outputs.sd_manifest_csv }}
           if-no-files-found: error

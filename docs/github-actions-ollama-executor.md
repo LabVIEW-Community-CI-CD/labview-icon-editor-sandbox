@@ -1,55 +1,67 @@
 # GitHub Actions for Ollama Executor
 
 ## Overview
+
 Two GitHub Actions workflows provide automated testing and build capabilities for the Ollama Executor.
 
 ## Workflows
 
-### 1. Smoke Test Hard Gate (`ollama-executor-smoke.yml`)
+### Smoke Test Hard Gate (`ollama-executor-smoke.yml`)
 
-**Purpose**: Quality gate that blocks PR merges if critical tests fail
+Purpose: Quality gate that blocks PR merges if critical tests fail.
 
-**Triggers**:
+#### Build triggers
+
 - Pull requests modifying:
   - `scripts/ollama-executor/**`
   - `.devcontainer/**`
   - `install-ollama.ps1`
 - Pushes to `main` or `develop`
 
-**Jobs**:
+#### Build workflow jobs
+
+##### Smoke workflow jobs
 
 #### `smoke-test` (Multi-OS Matrix)
+
 Runs critical tests on Linux, Windows, and macOS:
+
 - Command vetting tests (26 cases)
 - Simulation mode tests (4 scenarios)
+- Conversation scenario tests
+- Timeout/failure tests
 - Security fuzzing (1,000+ attack vectors)
 - Regression tests (2 tracked bugs)
 - Fast test suite
 
-**Artifacts**:
+Artifacts:
+
 - Test results (JSON/XML)
 - Test reports (HTML)
+- Handshake JSON (validated by composite action)
 
 #### `security-gate` (Hard Gate)
-**BLOCKS MERGE IF FAILS**
+
+Hard gate that blocks merge on failure.
+
 - Runs comprehensive security fuzzing
 - Verifies no regressions in fixed bugs
 - Exit code 1 = merge blocked
 
 #### `performance-baseline`
+
 - Runs performance benchmarks
 - Uploads baseline for tracking
 - Does not block merge (warning only)
 
 #### `summary`
-- Aggregates all results
-- Posts summary comment to PR with:
-  - ✅/❌ status for each gate
-  - Test coverage breakdown
-  - Link to detailed results
 
-**Example PR Comment**:
-```
+- Aggregates all results
+- Posts summary comment to PR with gate status, coverage, and log links
+
+Example PR Comment
+
+```markdown
 ## 🧪 Ollama Executor Smoke Test Results
 
 | Test Category | Status |
@@ -70,170 +82,145 @@ Runs critical tests on Linux, Windows, and macOS:
 
 ---
 
-### 2. Build Automation (`ollama-executor-build.yml`)
+### Build Automation (`ollama-executor-build.yml`)
 
-**Purpose**: Automated builds using Ollama Executor
+Purpose: Automated builds using the locked Ollama executor.
 
-**Triggers**:
-- `workflow_dispatch`: Manual execution with parameters
-- Pull requests modifying:
-  - `scripts/build-source-distribution/**`
-  - `scripts/ppl-from-sd/**`
-  - `scripts/ollama-executor/**`
+#### Triggers
 
-**Inputs** (for workflow_dispatch):
+- `workflow_dispatch` with parameters
+- Pull requests touching build/executor scripts
+
+#### Inputs (workflow_dispatch)
+
 - `goal`: Build goal description (e.g., "Build Source Distribution LV2025 64-bit")
 - `max_turns`: Maximum conversation turns (default: 10)
 - `simulation`: Use simulation mode (default: true)
 
-**Jobs**:
+#### Jobs
 
 #### `ollama-build-simulation`
-**Runs on PRs and when simulation=true**
+
+Runs on PRs and when `simulation=true`.
+
 - Uses mock Ollama server
 - Enables simulation mode (no real LabVIEW)
-- Runs Drive-Ollama-Executor.ps1
-- Creates stub artifacts
-- Fast execution (<2 minutes)
+- Runs `Drive-Ollama-Executor.ps1`
+- Creates stub artifacts fast
 
-**Environment**:
+Environment defaults:
+
 ```yaml
 OLLAMA_EXECUTOR_MODE: sim
 OLLAMA_SIM_DELAY_MS: 50
 OLLAMA_SIM_CREATE_ARTIFACTS: true
 OLLAMA_HOST: http://localhost:11436
 OLLAMA_MODEL_TAG: llama3-8b-local
+OLLAMA_REQUIREMENTS_APPLIED: OEX-PARITY-001,OEX-PARITY-002,OEX-PARITY-003,OEX-PARITY-004
 ```
 
 #### `ollama-build-real`
-**Runs when simulation=false (workflow_dispatch only)**
-- Uses real Ollama service container
-- Actual LLM execution
-- Can create real build artifacts
-- Requires LabVIEW installation for complete builds
 
-**Service Container**:
-```yaml
-services:
-  ollama:
-    image: ghcr.io/${{ github.repository_owner }}/ollama-local:cpu-preloaded
-    ports:
-      - 11435:11435
-```
+Runs when `simulation=false` (dispatch only) on a Windows LV runner.
+
+- Uses real Ollama service (port 11435) and LabVIEW
+- Runs `Run-Ollama-Host.ps1` (locked executor path)
+- Enforces seed image preflight; records LV version/bitness in summary
+- Validates handshake JSON via composite action
 
 #### `multi-platform-build` (Matrix)
-**Runs on PRs**
 
-Builds for all combinations:
-- LabVIEW: 2021, 2025
+Runs on PRs in simulation mode.
+
+- LabVIEW versions: 2021, 2025
 - Bitness: 32-bit, 64-bit
+- Uses mock server + executor to create platform-specific artifacts
 
-Total: 4 parallel builds
+#### `reset-source-dist-sim`
 
-Each build:
-1. Uses simulation mode
-2. Calls SimulationProvider.ps1 directly
-3. Creates platform-specific artifacts
-4. Uploads to separate artifact per platform
+Runs the locked Source Distribution reset flow against the mock host in simulation mode and uploads the reset summary plus logs.
+
+#### `vi-history-sim`
+
+Runs the locked VI History flow against the mock host in simulation mode and uploads VI history reports and its handshake file.
 
 #### `comment-results`
-Posts build summary to PR:
-```
-## 🤖 Ollama Executor Build Results
 
-| Build Type | Status |
-|------------|--------|
-| Single Build (Simulation) | ✅ success |
-| Multi-Platform Matrix | ✅ success |
-
-### Simulated Platforms
-- LabVIEW 2021 32-bit ✅
-- LabVIEW 2021 64-bit ✅
-- LabVIEW 2025 32-bit ✅
-- LabVIEW 2025 64-bit ✅
-
-🎉 **All builds completed successfully!**
-```
+Posts build summary to PR.
 
 ---
 
 ## Usage Examples
 
 ### Run Smoke Tests (Automatic on PR)
-1. Create PR with changes to Ollama executor
-2. Smoke test workflow runs automatically
-3. Wait for results (~5 minutes)
-4. Check PR comment for summary
-5. If fails, review detailed logs in Actions tab
+
+1) Open a PR touching executor or devcontainer files.
+2) Smoke test workflow runs automatically.
+3) Review PR comment and artifacts for results.
 
 ### Simulate a Build (Manual)
-1. Go to Actions → "Ollama Executor Build Automation"
-2. Click "Run workflow"
-3. Enter parameters:
-   - Goal: "Build Source Distribution LV2025 64-bit"
-   - Max turns: 10
-   - Simulation: true (checked)
-4. Click "Run workflow"
-5. Wait for completion (~2 minutes)
-6. Download artifacts from workflow summary
+
+1) Actions → "Ollama Executor Build Automation".
+2) Run workflow with `simulation=true`.
+3) Download simulated artifacts and logs.
 
 ### Real Build with Ollama (Manual)
-1. Go to Actions → "Ollama Executor Build Automation"
-2. Click "Run workflow"
-3. Enter parameters:
-   - Goal: "Build Source Distribution LV2025 64-bit"
-   - Max turns: 20
-   - Simulation: false (unchecked)
-4. Click "Run workflow"
-5. Wait for completion (~10-30 minutes depending on goal)
-6. Download real build artifacts
+
+1) Actions → "Ollama Executor Build Automation".
+2) Run workflow with `simulation=false` on a Windows LV runner.
+3) Wait for completion and download real artifacts.
 
 ---
 
 ## Artifacts
 
 ### Smoke Test Artifacts
-- `test-results-{os}`: JSON/XML test results
-- `test-reports-{os}`: HTML test reports
-- `performance-baseline`: Performance benchmark data
+
+- `test-results-{os}`: JSON/XML
+- `test-reports-{os}`: HTML
+- `ollama-executor-logs`: Logs and handshake JSON
 
 ### Build Artifacts
-- `ollama-build-artifacts-simulation`: Simulated build outputs
-- `ollama-build-artifacts-real`: Real build outputs
-- `build-lv{version}-{bitness}bit`: Platform-specific artifacts
+
+- `ollama-build-artifacts-simulation`: Simulated outputs
+- `ollama-build-artifacts-real`: Real outputs
+- `build-lv{version}-{bitness}bit`: Matrix outputs
 - `ollama-executor-logs`: Execution logs
 
-**Retention**:
-- Test results: 30 days
-- Performance baselines: 90 days
-- Build artifacts: 7-30 days
+Retention: tests 30d, perf 90d, builds 7–30d.
 
 ---
 
 ## Integration with Existing Workflows
 
 ### Compatibility
-- Works alongside existing CI workflows
-- Does not interfere with LabVIEW build actions
-- Uses separate ports (11435-11436) to avoid conflicts
+
+- Runs alongside other CI; ports 11435 (real) and 11436 (mock) avoid conflicts.
+
+### Canonical entry point
+
+- Real paths (agent/build/smoke real lanes) run `scripts/orchestration/Run-Ollama-Host.ps1` with seed image preflight and handshake validation.
+- Simulation lanes (agent sim, build sim, matrix sim, smoke sim) run the executor against the mock host and must pass `.github/actions/validate-ollama-handshake`.
+- Handshake validator enforces `artifacts/labview-icon-api-handshake.json` keys: `zipSha256`, `pplSha256`, `zipRelPath`, `pplRelPath`, `mode`, `requirements`.
+- Defaults across workflows: `OLLAMA_EXECUTOR_MODE=sim`, `OLLAMA_SIM_CREATE_ARTIFACTS=true`, `OLLAMA_SIM_DELAY_MS=50`, mock host `http://localhost:11436`, model `llama3-8b-local`; real host uses port 11435.
 
 ### When to Use
 
-**Use Smoke Test for**:
-- All PRs touching Ollama executor
-- Validating security fixes
-- Ensuring no regressions
+Use Smoke Test for:
 
-**Use Build Automation for**:
-- Testing build script changes
-- Validating cross-platform builds
-- Demonstrating Ollama executor capabilities
-- Creating test artifacts
+- PRs touching executor or security-sensitive code.
+- Validating security fixes and regressions.
 
-**Do NOT use for**:
-- Production LabVIEW builds (use existing workflows)
-- Release artifacts (use real LabVIEW tools)
-- Critical builds requiring validation
+Use Build Automation for:
+
+- Testing build script changes.
+- Validating cross-platform builds (sim).
+- Creating artifacts or proving executor flows.
+
+Do NOT use for:
+
+- Production LabVIEW release builds.
+- Critical release artifacts needing formal validation.
 
 ---
 
@@ -241,84 +228,90 @@ Posts build summary to PR:
 
 ### Smoke Test Failures
 
-**Security Gate Fails**:
-- **Cause**: Security vulnerability detected
-- **Action**: Review fuzzing results, fix vulnerability
-- **Impact**: PR blocked from merge
+Security gate fails:
 
-**Regression Gate Fails**:
-- **Cause**: Previously-fixed bug has reappeared
-- **Action**: Review regression test results, restore fix
-- **Impact**: PR blocked from merge
+- Cause: Vulnerability found.
+- Action: Review fuzzing results and fix.
+- Impact: PR blocked.
 
-**Smoke Test Fails**:
-- **Cause**: Basic functionality broken
-- **Action**: Review test logs, fix breaking change
-- **Impact**: PR blocked from merge
+Regression gate fails:
+
+- Cause: Previously fixed bug reappeared.
+- Action: Review regression logs and restore fix.
+- Impact: PR blocked.
+
+Smoke test fails:
+
+- Cause: Basic functionality broken.
+- Action: Review logs, fix, re-run.
+- Impact: PR blocked.
 
 ### Build Automation Failures
 
-**Simulation Build Fails**:
-- **Cause**: Script syntax error or logic issue
-- **Action**: Review executor logs, fix script
-- **Impact**: Warning only, PR not blocked
+Simulation build fails:
 
-**Real Build Fails**:
-- **Cause**: Ollama service issue or build error
-- **Action**: Check Ollama logs, verify service health
-- **Impact**: Build artifacts not created
+- Cause: Script syntax/logic issue.
+- Action: Review executor logs, fix script.
+- Impact: Warning only (PR not blocked).
 
-**Multi-Platform Build Fails**:
-- **Cause**: Platform-specific script issue
-- **Action**: Review failing platform logs
-- **Impact**: Some platform artifacts missing
+Real build fails:
+
+- Cause: Ollama service or LabVIEW build error.
+- Action: Check service/logs, verify runner prereqs.
+- Impact: Real artifacts missing.
+
+Multi-platform build fails:
+
+- Cause: Platform-specific issue.
+- Action: Review failing platform logs.
+- Impact: Some artifacts missing.
 
 ---
 
 ## Monitoring and Debugging
 
 ### View Detailed Logs
-1. Go to Actions tab
-2. Click on workflow run
-3. Expand failed job
-4. Review step outputs
+
+1) Actions tab → workflow run → failed job → outputs.
 
 ### Download Artifacts
-1. Go to workflow run summary
-2. Scroll to "Artifacts" section
-3. Click artifact name to download
+
+1) Workflow run summary → Artifacts section → download.
 
 ### Re-run Failed Jobs
-1. Go to failed workflow run
-2. Click "Re-run failed jobs"
-3. Or "Re-run all jobs" for clean slate
+
+1) Workflow run → "Re-run failed jobs" (or all jobs).
 
 ---
 
 ## Performance
 
-**Smoke Test**:
+Smoke Test:
+
 - Multi-OS: ~5 minutes total
 - Security gate: ~2 minutes
 - Performance baseline: ~1 minute
 
-**Build Automation**:
+Build Automation:
+
 - Simulation: ~2 minutes
-- Real: ~10-30 minutes (depends on goal)
+- Real: ~10–30 minutes
 - Multi-platform: ~2 minutes (parallel)
 
 ---
 
 ## Future Enhancements
 
-### Planned
+Planned:
+
 - [ ] Code coverage reporting
 - [ ] Performance regression detection
-- [ ] Notification on failures
-- [ ] Integration with status checks
+- [ ] Notifications on failures
+- [ ] Status check integration
 - [ ] Custom Ollama models per workflow
 
-### Possible
+Possible:
+
 - [ ] Scheduled nightly builds
 - [ ] Cross-repo build triggers
 - [ ] Build artifact caching
@@ -329,32 +322,27 @@ Posts build summary to PR:
 ## Troubleshooting
 
 ### "Ollama service unhealthy"
-- Check Ollama image is available
+
+- Check Ollama image availability
 - Verify GHCR credentials
 - Check service container logs
 
 ### "Mock server failed to start"
-- Review MockOllamaServer.ps1 syntax
-- Check port availability (11436)
+
+- Review `MockOllamaServer.ps1` syntax
+- Check port 11436 availability
 - Verify scenario file exists
 
 ### "Simulation artifacts not created"
-- Check OLLAMA_SIM_CREATE_ARTIFACTS=true
-- Verify SimulationProvider.ps1 working
+
+- Check `OLLAMA_SIM_CREATE_ARTIFACTS=true`
+- Verify `SimulationProvider.ps1`
 - Review working directory path
 
 ### "Security gate always fails"
-- Run locally: `pwsh scripts/ollama-executor/Test-SecurityFuzzing.ps1`
+
+- Run `pwsh scripts/ollama-executor/Test-SecurityFuzzing.ps1`
 - Check for new vulnerabilities
 - Review command vetting logic
 
 ---
-
-## Status: Production Ready ✅
-
-Both workflows are tested and operational:
-- ✅ Smoke test validates all PRs
-- ✅ Build automation demonstrates executor
-- ✅ Multi-platform matrix working
-- ✅ Artifacts properly uploaded
-- ✅ PR comments functional

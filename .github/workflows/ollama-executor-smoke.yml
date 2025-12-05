@@ -1,5 +1,13 @@
 name: Ollama Executor Smoke Test
 
+env:
+  OLLAMA_EXECUTOR_MODE: sim
+  OLLAMA_SIM_CREATE_ARTIFACTS: "true"
+  OLLAMA_SIM_DELAY_MS: "50"
+  OLLAMA_HOST: http://localhost:11436
+  OLLAMA_MODEL_TAG: llama3-8b-local
+  OLLAMA_REQUIREMENTS_APPLIED: OEX-PARITY-001,OEX-PARITY-002,OEX-PARITY-003,OEX-PARITY-004
+
 defaults:
   run:
     working-directory: './'
@@ -53,11 +61,29 @@ jobs:
           pwsh -NoProfile -File scripts/ollama-executor/Test-CommandVetting.ps1
         continue-on-error: false
 
+      - name: Validate sim handshake (mock server lane)
+        uses: ./.github/actions/validate-ollama-handshake
+
       - name: Run Simulation Mode Tests
         shell: pwsh
         run: |
           Write-Host "=== Running Simulation Mode Tests ===" -ForegroundColor Cyan
           pwsh -NoProfile -File scripts/ollama-executor/Test-SimulationMode.ps1
+        continue-on-error: false
+
+      - name: Run Conversation Scenario Tests
+        shell: pwsh
+        run: |
+          Write-Host "=== Running Conversation Scenario Tests ===" -ForegroundColor Cyan
+          pwsh -NoProfile -File scripts/ollama-executor/Test-ConversationScenarios.ps1
+        continue-on-error: false
+
+      - name: Run Timeout/Failure Tests
+        shell: pwsh
+        run: |
+          Write-Host "=== Running Timeout/Failure Tests ===" -ForegroundColor Cyan
+          pwsh -NoProfile -File scripts/ollama-executor/Test-Timeout.ps1
+          pwsh -NoProfile -File scripts/ollama-executor/Test-Failures.ps1
         continue-on-error: false
 
       - name: Run Security Fuzzing Tests
@@ -180,6 +206,30 @@ jobs:
           Write-Host "Error: This job requires a Windows runner but is running on ${{ runner.os }}"
           exit 1
 
+      - name: Seed image preflight (required for real runs)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $seedImage = if ($env:SEED_IMAGE) { $env:SEED_IMAGE } else { 'seed:latest' }
+          Write-Host "Ensuring seed image is available: $seedImage" -ForegroundColor Cyan
+
+          if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+            throw "docker CLI not found; required to prepare seed image"
+          }
+
+          $inspect = docker image inspect $seedImage 2>$null
+          if (-not $?) {
+            Write-Host "Seed image missing; building from Tooling/seed/Dockerfile" -ForegroundColor Yellow
+            docker build -f "$env:GITHUB_WORKSPACE/Tooling/seed/Dockerfile" -t $seedImage "$env:GITHUB_WORKSPACE"
+          }
+
+          $inspect = docker image inspect $seedImage 2>$null
+          if (-not $?) {
+            throw "Seed image $seedImage is unavailable after build attempt"
+          }
+
+          "Seed image present: $seedImage" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -253,6 +303,24 @@ jobs:
           
           Write-Host ""
           Write-Host "✓ All build scripts validated successfully" -ForegroundColor Green
+
+      - name: Run Ollama host via locked executor (real/sim fallback)
+        shell: pwsh
+        env:
+          OLLAMA_HOST: http://localhost:11435
+          OLLAMA_EXECUTOR_MODE: ""
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Host "=== Running Ollama host (real path) ===" -ForegroundColor Cyan
+
+          pwsh -NoProfile -File scripts/orchestration/Run-Ollama-Host.ps1 `
+            -Repo $env:GITHUB_WORKSPACE `
+            -RunKey "smoke-real-${{ github.run_id }}" `
+            -PwshTimeoutSec 900 `
+            -OllamaPrompt "local-sd/local-sd-ppl"
+
+      - name: Validate handshake (real lane)
+        uses: ./.github/actions/validate-ollama-handshake
 
       - name: Run LabVIEW Version Detection
         shell: pwsh
