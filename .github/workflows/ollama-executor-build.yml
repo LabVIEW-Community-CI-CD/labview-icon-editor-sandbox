@@ -175,13 +175,15 @@ jobs:
             exit 0
           }
 
+          $imageExists = $false
           try {
             $inspect = docker image inspect $seedImage 2>$null
+            if ($inspect) { $imageExists = $true }
           } catch {
-            # Ignore errors
+            # Image doesn't exist
           }
           
-          if (-not $?) {
+          if (-not $imageExists) {
             Write-Host "Seed image missing; attempting to build from Tooling/seed/Dockerfile" -ForegroundColor Yellow
             try {
               docker build -f "$env:GITHUB_WORKSPACE/Tooling/seed/Dockerfile" -t $seedImage "$env:GITHUB_WORKSPACE"
