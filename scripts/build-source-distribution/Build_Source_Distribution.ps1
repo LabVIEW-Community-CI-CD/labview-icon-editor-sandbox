@@ -451,7 +451,8 @@ foreach ($f in $criticalFiles) {
     }
 }
 if ($missingFiles.Count -gt 0) {
-    throw ("Critical source files missing from repo. Cannot build Source Distribution.`nMissing files:`n  - {0}" -f ($missingFiles -join "`n  - "))
+    $fileList = $missingFiles -join ', '
+    throw "Critical source files missing from repo. Cannot build Source Distribution. Missing files: $fileList"
 }
 Write-Stamp -Level "INFO" -Message ("Preflight check passed: {0} critical files verified" -f $criticalFiles.Count)
 
