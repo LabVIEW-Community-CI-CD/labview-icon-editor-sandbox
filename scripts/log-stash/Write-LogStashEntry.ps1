@@ -23,6 +23,8 @@ param(
     [datetime]$StartedAtUtc,
     [int]$DurationMs,
 
+    [int]$RetentionDays = 14,
+
     [string]$BundleTimestamp,
     [switch]$CompressBundle,
 
@@ -172,6 +174,15 @@ foreach ($att in ($AttachmentPaths ?? @())) {
 }
 
 $startUtc = if ($StartedAtUtc) { $StartedAtUtc.ToUniversalTime() } else { (Get-Date).ToUniversalTime() }
+$retentionUtc = $null
+if ($RetentionDays -gt 0) {
+    try {
+        $retentionUtc = $startUtc.AddDays($RetentionDays)
+    }
+    catch {
+        $retentionUtc = $null
+    }
+}
 
 $manifest = [ordered]@{
     type           = 'log'
@@ -185,6 +196,7 @@ $manifest = [ordered]@{
     status         = $Status
     started_utc    = $startUtc.ToString("o")
     duration_ms    = $DurationMs
+    retention_utc  = if ($retentionUtc) { $retentionUtc.ToString("o") } else { $null }
     files          = [ordered]@{
         logs        = $copiedLogs
         attachments = $copiedAttachments
@@ -217,6 +229,7 @@ $entry = @{
     status    = $Status
     bundle    = Get-RelativePathSafe -Base $repoRoot -Target $bundleDir
     timestamp = $manifest.started_utc
+    retention = $manifest.retention_utc
 }
 Add-IndexEntry -IndexPath $indexPath -Entry $entry -TrimCount $IndexTrim
 
