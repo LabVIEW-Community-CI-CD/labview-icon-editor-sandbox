@@ -579,6 +579,15 @@ jobs:
             Output = @{ Verbosity = 'Detailed' }
             CI     = $true
           }
+      - name: Run build source distribution Pester suite
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-Pester -Configuration @{
+            Run    = @{ Path = 'scripts/build-source-distribution/Test-Build_Source_Distribution.ps1' }
+            Output = @{ Verbosity = 'Detailed' }
+            CI     = $true
+          }
 
   seed-containerized:
     name: Seed + Analyze (containerized)
