@@ -1081,7 +1081,19 @@ jobs:
     name: Build (LabVIEW Icon API Distribution)
     needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, version, resolve-labview-version, test-compute-version-bump, test-tag-existence-check, rtm-gates, docs-quality, dev-mode-binder-tests, list-collaborators]
     # Run even if dev-mode-binder-tests fails/times out (continue-on-error: true job)
-    if: ${{ always() && !cancelled() && needs.verify-checklist-sync.result == 'success' }}
+    # Check that all critical dependencies succeeded; dev-mode-binder-tests is allowed to fail
+    if: |
+      always() && !cancelled() &&
+      needs.verify-checklist-sync.result == 'success' &&
+      needs.requirements-language-lint.result == 'success' &&
+      needs.requirements-attributes.result == 'success' &&
+      needs.version.result == 'success' &&
+      needs.resolve-labview-version.result == 'success' &&
+      needs.test-compute-version-bump.result == 'success' &&
+      needs.test-tag-existence-check.result == 'success' &&
+      needs.rtm-gates.result == 'success' &&
+      needs.docs-quality.result == 'success' &&
+      needs.list-collaborators.result == 'success'
     runs-on: self-hosted-windows-lv
     timeout-minutes: 60
     defaults:
