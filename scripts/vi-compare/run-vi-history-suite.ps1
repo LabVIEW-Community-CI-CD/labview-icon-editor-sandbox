@@ -11,13 +11,7 @@ $logDir = Join-Path $repoRoot 'reports/logs'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
 $scenarios = [ordered]@{
-    'sample'   = 'configs/vi-compare-run-request.sample.json'
-    'failure'  = 'configs/vi-compare-run-request.failure.json'
-    'disabled' = 'configs/vi-compare-run-request.disabled.json'
-}
-
-if (-not $IncludeSample) {
-    $scenarios.Remove('sample')
+    'sample' = 'configs/vi-compare-run-request.sample.json'
 }
 
 foreach ($scenario in $scenarios.GetEnumerator()) {

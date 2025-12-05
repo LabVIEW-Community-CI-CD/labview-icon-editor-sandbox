@@ -9,6 +9,40 @@ $ErrorActionPreference = 'Stop'
 
 # Map single-word keywords to full agent prompts.
 $aliases = @{
+    sd2025 = @"
+Run the locked Source Distribution build via the Ollama executor (sim or real).
+- Preferred: simulation (OLLAMA_EXECUTOR_MODE=sim) with mock host http://localhost:11436.
+- Command (sim):
+  pwsh -NoProfile -File scripts/ollama-executor/Run-Locked-SourceDistribution.ps1 -RepoPath . -Endpoint http://localhost:11436 -Model llama3-8b-local -LabVIEWVersion 2025 -Bitness 64 -CommandTimeoutSec 900
+- Real: switch Endpoint to http://localhost:11435 and clear OLLAMA_EXECUTOR_MODE.
+- Handshake: artifacts/labview-icon-api-handshake.json (validated by workflow action).
+"@
+
+    pkgbuild = @"
+Run the locked Package Build via the Ollama executor (sim or real).
+- Preferred: simulation first (mock host http://localhost:11436).
+- Command (sim):
+  pwsh -NoProfile -File scripts/ollama-executor/Run-Locked-PackageBuild.ps1 -RepoPath . -Endpoint http://localhost:11436 -Model llama3-8b-local -CommandTimeoutSec 600
+- Real: use http://localhost:11435 and clear OLLAMA_EXECUTOR_MODE.
+- Handshake: artifacts/labview-icon-api-handshake.json.
+"@
+
+    localsdppl = @"
+Run the locked Local SD → PPL pipeline via the Ollama executor.
+- Command (sim):
+  pwsh -NoProfile -File scripts/ollama-executor/Run-Locked-LocalSdPpl.ps1 -RepoPath . -Endpoint http://localhost:11436 -Model llama3-8b-local -CommandTimeoutSec 1800
+- Real: use http://localhost:11435 and clear OLLAMA_EXECUTOR_MODE.
+- Produces Source Distribution + PPL artifacts; handshake emitted.
+"@
+
+    reset_sd = @"
+Reset the Source Distribution workspace via the locked executor (orchestration reset-source-dist).
+- Command (sim):
+  pwsh -NoProfile -File scripts/ollama-executor/Run-Locked-ResetSourceDistribution.ps1 -RepoPath . -Endpoint http://localhost:11436 -Model llama3-8b-local -CommandTimeoutSec 600
+- Real: http://localhost:11435 with OLLAMA_EXECUTOR_MODE cleared; requires seed image.
+- Emits reset summary to builds/reports/source-dist-reset.json and archives existing outputs.
+"@
+
     seed2021 = @"
 Create a seeded branch targeting LabVIEW 2021 Q1 64-bit using the vendored Seed image.
 - Ensure SEED_IMAGE is set (defaults to seed:latest; build locally if missing).
@@ -47,14 +81,12 @@ Parse and round-trip the VIPB using the Seed container (for troubleshooting).
 "@
 
     vihistory = @"
-Run the VI History Suite to analyze VI file changes and generate compatibility reports.
-- Use Run-Locked-VIHistory.ps1 for orchestrated execution via Ollama executor.
-- In simulation mode (OLLAMA_EXECUTOR_MODE=sim), generates stub reports without LabVIEW.
-- In real mode, invokes VI History Suite scripts with actual VI analysis.
-- Command:
-  pwsh -NoProfile -File scripts/ollama-executor/Run-Locked-VIHistory.ps1 -RepoPath .
-- Outputs VI comparison reports to reports/vi-history/.
-- Creates handshake at artifacts/vi-history-handshake.json.
+Run the VI History Suite via the locked executor to analyze VI changes.
+- Command (sim):
+  pwsh -NoProfile -File scripts/ollama-executor/Run-Locked-VIHistory.ps1 -RepoPath . -Endpoint http://localhost:11436 -Model llama3-8b-local -CommandTimeoutSec 180
+- Real: switch to http://localhost:11435 and clear OLLAMA_EXECUTOR_MODE.
+- Outputs reports to reports/vi-history/ and writes artifacts/vi-history-handshake.json.
+- Supports changed-file input via VI_CHANGES_DETECTED env or -ChangedFiles.
 "@
 
     vicompare = @"

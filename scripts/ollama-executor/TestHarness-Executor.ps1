@@ -157,7 +157,8 @@ function Invoke-SingleTest {
         [Parameter(Mandatory)]
         [hashtable]$TestDefinition,
         
-        [string]$ScriptDirectory
+        [string]$ScriptDirectory,
+        [int]$TimeoutSeconds = $script:TestHarnessConfig.DefaultTestTimeout
     )
     
     $result = New-TestResult -Name $TestDefinition.Name -Script $TestDefinition.Script
@@ -175,24 +176,60 @@ function Invoke-SingleTest {
     if (-not (Test-Path $scriptPath)) {
         $result.status = 'Error'
         $result.error = "Test script not found: $scriptPath"
-        Register-TestError -Error (New-TestError -Message $result.error -Category 'Configuration' -TestName $TestDefinition.Name)
+        Register-TestError -Error (New-TestError -Message $result.error -Category 'Configuration' -TestName $TestDefinition.Name -IsCritical:$TestDefinition.Required)
         return $result
     }
     
     try {
-        # Execute the test script
-        Write-TestLog "Executing: $scriptPath" -Level Debug
+        # Execute the test script with a timeout to prevent hangs
+        Write-TestLog "Executing: $scriptPath (timeout ${TimeoutSeconds}s)" -Level Debug
         
-        $output = & $scriptPath *>&1
-        $exitCode = $LASTEXITCODE
+        $job = Start-Job -ScriptBlock {
+            param($path)
+            try {
+                $output = & $path *>&1
+                $exitCode = $LASTEXITCODE
+                return [pscustomobject]@{ Output = $output; ExitCode = $exitCode; ErrorMessage = $null }
+            }
+            catch {
+                return [pscustomobject]@{ Output = $_.Exception.Message; ExitCode = 1; ErrorMessage = $_.Exception.Message }
+            }
+        } -ArgumentList $scriptPath
         
-        $result.output = $output | Out-String
-        $result.exit_code = $exitCode
-        $result.passed = ($exitCode -eq 0)
-        $result.status = if ($result.passed) { 'Passed' } else { 'Failed' }
+        $completed = Wait-Job $job -Timeout $TimeoutSeconds
         
-        $result.phases.execute.status = $result.status
-        $result.phases.execute.duration = ((Get-Date) - $result.start_time).TotalSeconds
+        if (-not $completed) {
+            Stop-Job $job -ErrorAction SilentlyContinue
+            $result.status = 'Timeout'
+            $result.passed = $false
+            $result.error = "Test timed out after ${TimeoutSeconds}s"
+            $result.phases.execute.status = 'Timeout'
+            $result.phases.execute.error = $result.error
+            Register-TestError -Error (New-TestError -Message $result.error -Category 'Timeout' -TestName $TestDefinition.Name -IsCritical:$TestDefinition.Required)
+        }
+        else {
+            $jobResult = Receive-Job $job
+            $exitCode = $jobResult.ExitCode
+            $result.output = $jobResult.Output | Out-String
+            $result.exit_code = $exitCode
+            
+            if ($jobResult.ErrorMessage) {
+                $result.error = $jobResult.ErrorMessage
+            }
+            
+            $result.passed = ($exitCode -eq 0)
+            $result.status = if ($result.passed) { 'Passed' } elseif ($jobResult.ErrorMessage) { 'Error' } else { 'Failed' }
+            $result.phases.execute.status = $result.status
+            $result.phases.execute.duration = ((Get-Date) - $result.start_time).TotalSeconds
+            
+            if (-not $result.passed) {
+                $errorMessage = $result.error
+                if (-not $errorMessage) {
+                    $errorMessage = "Test failed with exit code $exitCode"
+                }
+                Register-TestError -Error (New-TestError -Message $errorMessage -Category 'Execution' -TestName $TestDefinition.Name -IsCritical:$TestDefinition.Required)
+            }
+        }
     }
     catch {
         $result.status = 'Error'
@@ -204,7 +241,13 @@ function Invoke-SingleTest {
             -Message $_.Exception.Message `
             -Category 'Execution' `
             -TestName $TestDefinition.Name `
-            -Exception $_.Exception)
+            -Exception $_.Exception `
+            -IsCritical:$TestDefinition.Required)
+    }
+    finally {
+        if ($job) {
+            Remove-Job $job -Force -ErrorAction SilentlyContinue
+        }
     }
     
     $result.end_time = Get-Date
@@ -242,7 +285,8 @@ function Invoke-TestSuite {
         
         [switch]$Required,
         [string[]]$Modes = @('full'),
-        [string]$CurrentMode = 'fast'
+        [string]$CurrentMode = 'fast',
+        [int]$TimeoutSeconds = $script:TestHarnessConfig.DefaultTestTimeout
     )
     
     # Check if test should run in current mode
@@ -263,7 +307,7 @@ function Invoke-TestSuite {
         Modes = $Modes
     }
     
-    return Invoke-SingleTest -TestDefinition $testDef -ScriptDirectory (Split-Path $ScriptPath -Parent)
+    return Invoke-SingleTest -TestDefinition $testDef -ScriptDirectory (Split-Path $ScriptPath -Parent) -TimeoutSeconds $TimeoutSeconds
 }
 
 #endregion

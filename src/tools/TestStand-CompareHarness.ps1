@@ -25,6 +25,7 @@ function Resolve-LVComparePath {
     if ($env:LABVIEW_EXE_PATH) {
         $candidates.Add((Join-Path (Split-Path -Parent $env:LABVIEW_EXE_PATH) 'LVCompare.exe'))
     }
+    $candidates.Add('C:\Program Files\National Instruments\Shared\LabVIEW Compare\LVCompare.exe')
     $candidates.Add('C:\Program Files\National Instruments\LabVIEW 2025\LVCompare.exe')
     $candidates.Add('C:\Program Files\National Instruments\LabVIEW 2023\LVCompare.exe')
     $candidates.Add('C:\Program Files\National Instruments\LabVIEW 2021\LVCompare.exe')
@@ -91,9 +92,9 @@ if (-not $lvCompareExe) {
     $reason = 'LVCompare.exe not found; stub capture only.'
     Write-Warning "[harness] $reason"
 } else {
-    $args = @($Baseline, $Candidate, '-nobdcosm', '-nofppos', '-nobdcolor', '-nofpcolor')
+    $compareArgs = @($Baseline, $Candidate, '-nobdcosm', '-nofppos')
     try {
-        $proc = Start-Process -FilePath $lvCompareExe -ArgumentList $args -NoNewWindow -PassThru -Wait -RedirectStandardOutput (Join-Path $OutputDirectory 'lvcompare.stdout.txt') -RedirectStandardError (Join-Path $OutputDirectory 'lvcompare.stderr.txt')
+        $proc = Start-Process -FilePath $lvCompareExe -ArgumentList $compareArgs -NoNewWindow -PassThru -Wait -RedirectStandardOutput (Join-Path $OutputDirectory 'lvcompare.stdout.txt') -RedirectStandardError (Join-Path $OutputDirectory 'lvcompare.stderr.txt')
         $exitCode = $proc.ExitCode
         if (Test-Path -LiteralPath (Join-Path $OutputDirectory 'lvcompare.stdout.txt')) {
             $stdout = Get-Content -LiteralPath (Join-Path $OutputDirectory 'lvcompare.stdout.txt') -Raw -ErrorAction SilentlyContinue

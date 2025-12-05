@@ -1,5 +1,13 @@
 name: Agent / Ollama Executor
 
+env:
+  OLLAMA_EXECUTOR_MODE: sim
+  OLLAMA_SIM_CREATE_ARTIFACTS: "true"
+  OLLAMA_SIM_DELAY_MS: "50"
+  OLLAMA_HOST: http://localhost:11436
+  OLLAMA_MODEL_TAG: llama3-8b-local
+  OLLAMA_REQUIREMENTS_APPLIED: OEX-PARITY-001,OEX-PARITY-002,OEX-PARITY-003,OEX-PARITY-004
+
 on:
   workflow_dispatch:
     inputs:
@@ -13,6 +21,10 @@ on:
         description: "Optional Windows runner label(s) for real mode (e.g., windows-latest or [\"self-hosted\",\"windows\",\"self-hosted-windows-lv\"]). If empty, real mode falls back to a Windows sim run."
         required: false
         default: ""
+      task_prompt:
+        description: "Ollama prompt/task (e.g., local-sd/local-sd-ppl, reset-source-dist, vi-history)"
+        required: false
+        default: "local-sd/local-sd-ppl"
 
 permissions:
   contents: read
@@ -44,17 +56,10 @@ jobs:
             -Repo . `
             -RunKey agent-sim-${{ github.run_id }} `
             -PwshTimeoutSec 900 `
-            -OllamaPrompt "local-sd/local-sd-ppl"
+            -OllamaPrompt "${{ inputs.task_prompt }}"
 
       - name: Validate sim handshake
-        shell: pwsh
-        run: |
-          $handshake = 'artifacts/labview-icon-api-handshake.json'
-          if (-not (Test-Path $handshake)) { throw "Missing $handshake" }
-          $json = Get-Content -Raw -LiteralPath $handshake | ConvertFrom-Json
-          foreach ($key in 'zipSha256','pplSha256','zipRelPath','pplRelPath') {
-            if (-not $json.$key) { throw "Handshake missing $key" }
-          }
+        uses: ./.github/actions/validate-ollama-handshake
 
       - name: Upload sim artifacts
         if: always()
@@ -72,10 +77,37 @@ jobs:
     if: inputs.mode == 'real' && inputs.windows_runner_label != ''
     name: Ollama executor (real, Windows prereqs enforced)
     runs-on: ${{ fromJson(format('["{0}"]', inputs.windows_runner_label)) }}
+    env:
+      OLLAMA_HOST: http://localhost:11435
+      OLLAMA_EXECUTOR_MODE: ""
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           set-safe-directory: true
+
+      - name: Seed image preflight (required for real runs)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $seedImage = if ($env:SEED_IMAGE) { $env:SEED_IMAGE } else { 'seed:latest' }
+          Write-Host "Ensuring seed image is available: $seedImage" -ForegroundColor Cyan
+
+          if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+            throw "docker CLI not found; required to prepare seed image"
+          }
+
+          $inspect = docker image inspect $seedImage 2>$null
+          if (-not $?) {
+            Write-Host "Seed image missing; building from Tooling/seed/Dockerfile" -ForegroundColor Yellow
+            docker build -f "$env:GITHUB_WORKSPACE/Tooling/seed/Dockerfile" -t $seedImage "$env:GITHUB_WORKSPACE"
+          }
+
+          $inspect = docker image inspect $seedImage 2>$null
+          if (-not $?) {
+            throw "Seed image $seedImage is unavailable after build attempt"
+          }
+
+          "Seed image present: $seedImage" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
 
       - name: Run Ollama host (real)
         shell: pwsh
@@ -86,7 +118,10 @@ jobs:
             -Repo . `
             -RunKey agent-real-${{ github.run_id }} `
             -PwshTimeoutSec 1800 `
-            -OllamaPrompt "local-sd/local-sd-ppl"
+            -OllamaPrompt "${{ inputs.task_prompt }}"
+
+      - name: Validate real handshake
+        uses: ./.github/actions/validate-ollama-handshake
 
       - name: Upload real artifacts
         if: always()
@@ -121,17 +156,10 @@ jobs:
             -Repo . `
             -RunKey agent-windows-sim-${{ github.run_id }} `
             -PwshTimeoutSec 900 `
-            -OllamaPrompt "local-sd/local-sd-ppl"
+            -OllamaPrompt "${{ inputs.task_prompt }}"
 
       - name: Validate sim handshake (Windows)
-        shell: pwsh
-        run: |
-          $handshake = 'artifacts/labview-icon-api-handshake.json'
-          if (-not (Test-Path $handshake)) { throw "Missing $handshake" }
-          $json = Get-Content -Raw -LiteralPath $handshake | ConvertFrom-Json
-          foreach ($key in 'zipSha256','pplSha256','zipRelPath','pplRelPath') {
-            if (-not $json.$key) { throw "Handshake missing $key" }
-          }
+        uses: ./.github/actions/validate-ollama-handshake
 
       - name: Upload sim artifacts (Windows)
         if: always()

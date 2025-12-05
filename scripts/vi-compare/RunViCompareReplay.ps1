@@ -37,62 +37,76 @@ $outputRoot = if ($request.outputRoot) {
     Join-Path $repoRoot ".tmp-tests/vi-compare-replays/$label"
 }
 
-$captureDir = Join-Path $outputRoot "captures/pair-001"
-New-Item -ItemType Directory -Path $captureDir -Force | Out-Null
+$requestsPath = if ($request.scenarioPath) {
+    if ([System.IO.Path]::IsPathRooted($request.scenarioPath)) { $request.scenarioPath } else { Join-Path $repoRoot $request.scenarioPath }
+} else {
+    throw "scenarioPath is required in the request payload."
+}
+$requestsPath = (Resolve-Path -LiteralPath $requestsPath -ErrorAction Stop).ProviderPath
+
+$bundleRoot = if ($request.bundleOutputDirectory) {
+    if ([System.IO.Path]::IsPathRooted($request.bundleOutputDirectory)) { $request.bundleOutputDirectory } else { Join-Path $repoRoot $request.bundleOutputDirectory }
+} else {
+    $null
+}
+
+$labviewExe = if ($request.labVIEWExePath) { $request.labVIEWExePath } else { 'C:/Program Files/National Instruments/LabVIEW 2025/LabVIEW.exe' }
+$noiseProfile = if ($request.noiseProfile) { $request.noiseProfile } else { 'full' }
 
 $dryRun = $true
 if ($null -ne $request.dryRun) { $dryRun = [bool]$request.dryRun }
 if ($ForceDryRun) { $dryRun = $true }
-$timestamp = Get-Date
 
-$sessionPath = Join-Path $captureDir 'session-index.json'
-$cliCapturePath = Join-Path $captureDir 'lvcompare-capture.json'
-$reportPath = Join-Path $captureDir 'compare-report.html'
-
-$session = [ordered]@{
-    schema  = 'teststand-compare-session/v1'
-    at      = $timestamp.ToString("o")
-    status  = if ($dryRun) { 'dry-run' } else { 'failed' }
-    reason  = if ($dryRun) { 'Dry-run mode: LabVIEW CLI execution skipped.' } else { 'LVCompare not invoked (placeholder wrapper).' }
+$cliScript = Join-Path $repoRoot 'local-ci/windows/scripts/Invoke-ViCompareLabVIEWCli.ps1'
+if (-not (Test-Path -LiteralPath $cliScript -PathType Leaf)) {
+    throw "Invoke-ViCompareLabVIEWCli.ps1 not found at $cliScript"
 }
-$session | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $sessionPath -Encoding utf8
 
-$cliCapture = [ordered]@{
-    schema = 'labview-cli-capture@v1'
-    status = if ($dryRun) { 'dry-run' } else { 'failed' }
-    reason = $session.reason
-    at     = $timestamp.ToString("o")
+$splat = @{
+    RepoRoot              = $repoRoot
+    RequestsPath          = $requestsPath
+    OutputRoot            = $outputRoot
+    LabVIEWExePath        = $labviewExe
+    NoiseProfile          = $noiseProfile
+    DryRun                = [bool]$dryRun
+    DisableCli            = $false
+    DisableSessionCapture = [bool]$request.skipBundle
 }
-$cliCapture | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $cliCapturePath -Encoding utf8
 
-"<!DOCTYPE html><html><head><meta charset='utf-8'><title>VI Compare ($($session.status))</title></head><body><p>$($session.reason)</p></body></html>" | Set-Content -LiteralPath $reportPath -Encoding utf8
+if ($bundleRoot) { $splat['SessionRoot'] = $bundleRoot }
+if ($request.ignoreAttributes) { $splat['IgnoreAttributes'] = $true }
+if ($request.ignoreFrontPanel) { $splat['IgnoreFrontPanel'] = $true }
+if ($request.ignoreFrontPanelPosition) { $splat['IgnoreFrontPanelPosition'] = $true }
+if ($request.ignoreBlockDiagram) { $splat['IgnoreBlockDiagram'] = $true }
+if ($request.ignoreBlockDiagramCosmetics) { $splat['IgnoreBlockDiagramCosmetics'] = $true }
+if ($request.PSObject.Properties['timeoutSeconds']) { $splat['TimeoutSeconds'] = [int]$request.timeoutSeconds }
+if ($ForceDryRun) { $splat['DryRun'] = $true }
 
-$logStashScript = Join-Path $repoRoot 'scripts/log-stash/Write-LogStashEntry.ps1'
-if (Test-Path -LiteralPath $logStashScript) {
+Write-Host ("[compare] Running VI History/Compare via LabVIEW CLI | label={0} | dryRun={1}" -f $label, $splat['DryRun'])
+$summary = & $cliScript @splat
+
+$summaryPath = Join-Path $outputRoot 'vi-comparison-summary.json'
+if (-not (Test-Path -LiteralPath $summaryPath -PathType Leaf)) {
+    Write-Warning "[compare] Summary file missing: $summaryPath"
+    exit 99
+}
+
+if (-not $summary) {
     try {
-        $logs = @()
-        $attachments = @($sessionPath, $cliCapturePath, $reportPath)
-        & $logStashScript `
-            -RepositoryPath $repoRoot `
-            -Category 'compare' `
-            -Label $label `
-            -LogPaths $logs `
-            -AttachmentPaths $attachments `
-            -Status $session.status `
-            -ProducerScript $PSCommandPath `
-            -ProducerTask 'RunViCompareReplay.ps1' `
-            -ProducerArgs @{ RequestPath = $RequestPath } `
-            -StartedAtUtc $timestamp.ToUniversalTime() `
-            -DurationMs 0
-    }
-    catch {
-        Write-Warning ("[compare] Failed to write log-stash bundle: {0}" -f $_.Exception.Message)
+        $summary = Get-Content -LiteralPath $summaryPath -Raw | ConvertFrom-Json -Depth 6
+    } catch {
+        Write-Warning "[compare] Unable to parse summary: $($_.Exception.Message)"
     }
 }
 
-Write-Host "[compare] Capture directory: $captureDir"
-Write-Host "[compare] Status: $($session.status)"
-
-if (-not $dryRun) {
-    exit 1
+if ($summary) {
+    $counts = $summary.counts
+    Write-Host ("[compare] Completed: total={0} same={1} different={2} dryRun={3} errors={4}" -f $counts.total, $counts.same, $counts.different, $counts.dryRun, $counts.errors)
 }
+
+$exitCode = 0
+if ($summary -and $summary.labview.forceDryRun) { $exitCode = 2 }
+if ($summary -and $summary.counts.errors -gt 0) { $exitCode = 1 }
+if ($ForceDryRun) { $exitCode = 2 }
+
+exit $exitCode

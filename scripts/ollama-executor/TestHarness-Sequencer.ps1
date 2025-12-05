@@ -95,12 +95,25 @@ function Invoke-SequenceSetup {
         foreach ($suite in $script:TestSuiteDefinitions) {
             $scriptPath = Join-Path $scriptDir $suite.Script
             if (-not (Test-Path $scriptPath)) {
-                $missingScripts += $suite.Script
+                $missingScripts += @{ Name = $suite.Name; Script = $suite.Script; Required = $suite.Required }
             }
         }
         
-        if ($missingScripts.Count -gt 0) {
-            Write-TestLog "Warning: Missing test scripts: $($missingScripts -join ', ')" -Level Warning
+        $missingRequired = $missingScripts | Where-Object { $_.Required }
+        $missingOptional = $missingScripts | Where-Object { -not $_.Required }
+        
+        foreach ($missing in $missingRequired) {
+            $message = "Required test script missing: $($missing.Script)"
+            Register-TestError -Error (New-TestError -Message $message -Category 'Configuration' -TestName $missing.Name -IsCritical:$true)
+        }
+        
+        if ($missingOptional) {
+            $missingList = $missingOptional | ForEach-Object { $_.Script }
+            Write-TestLog "Warning: Optional test scripts missing: $($missingList -join ', ')" -Level Warning
+        }
+        
+        if ($missingRequired.Count -gt 0) {
+            throw "Missing required test scripts"
         }
         
         # Clean up any stale resources
@@ -172,13 +185,16 @@ function Invoke-SequenceExecution {
                 continue
             }
             
+            $timeout = if ($testDef.Timeout) { $testDef.Timeout } else { $script:TestHarnessConfig.DefaultTestTimeout }
+            
             # Execute test
             $testResult = Invoke-TestSuite `
                 -Name $testDef.Name `
                 -ScriptPath $scriptPath `
                 -Required:$testDef.Required `
                 -Modes $testDef.Modes `
-                -CurrentMode $Mode
+                -CurrentMode $Mode `
+                -TimeoutSeconds $timeout
             
             # Record result
             $results.suites += $testResult
@@ -360,7 +376,7 @@ function Invoke-FullTestSequence {
         $null = Invoke-SequenceSetup
         
         # Execute
-        $null = Invoke-SequenceExecution -Mode $Mode
+        $null = Invoke-SequenceExecution -Mode $Mode -StopOnRequiredFailure
         
         # Cleanup
         $null = Invoke-SequenceCleanup

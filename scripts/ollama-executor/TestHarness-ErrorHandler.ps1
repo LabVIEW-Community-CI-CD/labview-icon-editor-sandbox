@@ -344,7 +344,8 @@ function Invoke-ResourceCleanup {
     }
     
     # Wait for port release
-    Start-Sleep -Milliseconds 500
+    $portWait = if ($script:TestHarnessConfig.PortReleaseWaitMs) { $script:TestHarnessConfig.PortReleaseWaitMs } else { 500 }
+    Start-Sleep -Milliseconds $portWait
 }
 
 #endregion

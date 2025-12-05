@@ -586,14 +586,7 @@ jobs:
             -OllamaPrompt "local-sd/local-sd-ppl"
 
       - name: Validate sim handshake (Linux)
-        shell: pwsh
-        run: |
-          $handshake = 'artifacts/labview-icon-api-handshake.json'
-          if (-not (Test-Path $handshake)) { throw "Missing $handshake" }
-          $json = Get-Content -Raw -LiteralPath $handshake | ConvertFrom-Json
-          foreach ($key in 'zipSha256','pplSha256','zipRelPath','pplRelPath') {
-            if (-not $json.$key) { throw "Handshake missing $key" }
-          }
+        uses: ./.github/actions/validate-ollama-handshake
 
       - name: Upload sim artifacts (Linux)
         if: always()
@@ -631,14 +624,7 @@ jobs:
             -OllamaPrompt "local-sd/local-sd-ppl"
 
       - name: Validate sim handshake (Windows)
-        shell: pwsh
-        run: |
-          $handshake = 'artifacts/labview-icon-api-handshake.json'
-          if (-not (Test-Path $handshake)) { throw "Missing $handshake" }
-          $json = Get-Content -Raw -LiteralPath $handshake | ConvertFrom-Json
-          foreach ($key in 'zipSha256','pplSha256','zipRelPath','pplRelPath') {
-            if (-not $json.$key) { throw "Handshake missing $key" }
-          }
+        uses: ./.github/actions/validate-ollama-handshake
 
       - name: Upload sim artifacts (Windows)
         if: always()
