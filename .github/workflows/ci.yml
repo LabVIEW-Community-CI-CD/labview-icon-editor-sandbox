@@ -46,6 +46,10 @@ on:
         description: "Optional upstream repo owner/name for artifact reuse (default: current repo)"
         required: false
         type: string
+      vi_compare_request:
+        description: "Optional vi-compare request JSON path to validate compare bundles"
+        required: false
+        type: string
 
 jobs:
   verify-checklist-sync:
@@ -430,6 +434,81 @@ jobs:
           name: lychee-report
           path: lychee/report.json
           if-no-files-found: error
+
+  ollama-gate:
+    name: Optional Ollama verification
+    needs: [docs-quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+          fetch-depth: 0
+
+      - name: Determine Ollama gating
+        id: gating
+        shell: bash
+        run: |
+          set -euxo pipefail
+          event_path="$GITHUB_EVENT_PATH"
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          data = json.load(open(event_path))
+          event_name = os.environ.get('GITHUB_EVENT_NAME', '')
+          sha = os.environ.get('GITHUB_SHA')
+          before = os.environ.get('GITHUB_BEFORE', '')
+          trigger = False
+          reasons = []
+
+          def check_paths(paths):
+            for path in paths:
+              if path.startswith('ollama/') or path.startswith('prompt-tests/'):
+                return path
+            return None
+
+          if event_name == 'pull_request':
+            labels = [lbl['name'] for lbl in data.get('pull_request', {}).get('labels', [])]
+            if 'needs-ollama' in labels:
+              trigger = True
+              reasons.append('PR label needs-ollama')
+            base_ref = data['pull_request']['base']['ref']
+            base_sha = data['pull_request']['base']['sha']
+            subprocess.run(['git', 'fetch', 'origin', base_ref], check=True)
+            diff = subprocess.run(['git', 'diff', '--name-only', base_sha, sha], check=True, capture_output=True, text=True)
+          else:
+            if not before or before == '0000000000000000000000000000000000000000':
+              diff = subprocess.run(['git', 'diff', '--name-only', f'{sha}^', sha], check=True, capture_output=True, text=True)
+            else:
+              diff = subprocess.run(['git', 'diff', '--name-only', before, sha], check=True, capture_output=True, text=True)
+          files = [p for p in diff.stdout.splitlines() if p]
+          match = check_paths(files)
+          if match:
+            trigger = True
+            reasons.append(f'Path match: {match}')
+
+          reason = '; '.join(reasons) or 'none'
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as out:
+            out.write(f"should_run={'true' if trigger else 'false'}\n")
+            out.write(f"trigger_reason={reason}\n")
+          print('changed files:')
+          for path in files:
+            print(' -', path)
+          print('trigger decision:', reason)
+          PY
+
+      - name: Display gating decision
+        run: |
+          echo "should_run=${{ steps.gating.outputs.should_run }}"
+          echo "trigger_reason=${{ steps.gating.outputs.trigger_reason }}"
+
+      - name: Execute Ollama verify workflow
+        if: steps.gating.outputs.should_run == 'true'
+        uses: ./.github/workflows/ollama-verify.yml
 
   ollama-sim-linux:
     name: Ollama executor parity (sim, Linux)
@@ -1362,25 +1441,12 @@ jobs:
     permissions:
       contents: write
     env:
-      UPSTREAM_REPO: ${{ inputs.upstream_repo || github.repository }}
+      UPSTREAM_REPO: ${{ github.event.inputs.upstream_repo || github.repository }}
+      PREVIOUS_RUN_ID: ${{ github.event.inputs.previous_run_id || '' }}
     steps:
       - name: "Guard: Linux runner"
         if: ${{ runner.os != 'Linux' }}
         run: exit 1
-
-      - name: Guard upstream token when using previous_run_id
-        if: ${{ inputs.previous_run_id != '' }}
-        shell: bash
-        env:
-          HAS_TOKEN: ${{ secrets.UPSTREAM_TOKEN != '' }}
-          UPSTREAM_REPO: ${{ env.UPSTREAM_REPO }}
-        run: |
-          set -euo pipefail
-          if [ "${HAS_TOKEN}" != "true" ]; then
-            echo "previous_run_id provided but secrets.UPSTREAM_TOKEN is missing; add a PAT with actions:read,contents:read scoped to ${UPSTREAM_REPO}." >&2
-            exit 1
-          fi
-
 
       - name: Checkout (for scripts)
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
@@ -1393,18 +1459,18 @@ jobs:
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-labview-icon-api
           path: artifacts/sd
-          repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
-          github-token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
-          run-id: ${{ inputs.previous_run_id || github.run_id }}
+          repository: ${{ env.PREVIOUS_RUN_ID != '' && env.UPSTREAM_REPO || github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ env.PREVIOUS_RUN_ID != '' && env.PREVIOUS_RUN_ID || github.run_id }}
 
       - name: Download Tooling Distribution artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ github.event.repository.name || 'labview-icon-editor' }}-tooling-distribution
           path: artifacts/tooling
-          repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
-          github-token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
-          run-id: ${{ inputs.previous_run_id || github.run_id }}
+          repository: ${{ env.PREVIOUS_RUN_ID != '' && env.UPSTREAM_REPO || github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ env.PREVIOUS_RUN_ID != '' && env.PREVIOUS_RUN_ID || github.run_id }}
 
       - name: Download Source Distribution commit index artifact
         uses: actions/download-artifact@v4
@@ -1412,9 +1478,9 @@ jobs:
         with:
           name: commit-index-sd
           path: artifacts/commit-index-sd
-          repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
-          github-token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
-          run-id: ${{ inputs.previous_run_id || github.run_id }}
+          repository: ${{ env.PREVIOUS_RUN_ID != '' && env.UPSTREAM_REPO || github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ env.PREVIOUS_RUN_ID != '' && env.PREVIOUS_RUN_ID || github.run_id }}
 
       - name: Download Tooling commit index artifact
         uses: actions/download-artifact@v4
@@ -1422,9 +1488,9 @@ jobs:
         with:
           name: commit-index-tooling
           path: artifacts/commit-index-tooling
-          repository: ${{ inputs.previous_run_id && env.UPSTREAM_REPO || github.repository }}
-          github-token: ${{ inputs.previous_run_id && (secrets.UPSTREAM_TOKEN || secrets.GITHUB_TOKEN) || secrets.GITHUB_TOKEN }}
-          run-id: ${{ inputs.previous_run_id || github.run_id }}
+          repository: ${{ env.PREVIOUS_RUN_ID != '' && env.UPSTREAM_REPO || github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ env.PREVIOUS_RUN_ID != '' && env.PREVIOUS_RUN_ID || github.run_id }}
 
       - name: List downloaded artifacts
         run: |

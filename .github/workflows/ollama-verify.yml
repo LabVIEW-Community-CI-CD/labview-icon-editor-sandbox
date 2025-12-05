@@ -1,6 +1,7 @@
 name: Ollama Verify
 
 on:
+  workflow_call: {}
   workflow_dispatch: {}
   push:
     paths:
@@ -68,6 +69,13 @@ jobs:
             for key, value in outputs.items():
               out.write(f"{key}={value}\n")
           PY
+
+      - name: Emit config summary
+        run: |
+          echo "Configured Ollama version: ${{ steps.parse-config.outputs.ollama_version }}" 
+          echo "Primary model tag: ${{ steps.parse-config.outputs.primary_model }}" 
+          echo "Model count: ${{ steps.parse-config.outputs.model_count }}" 
+          cat configs/ollama-models.json
 
       - name: Install Ollama CLI
         shell: bash
