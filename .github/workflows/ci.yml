@@ -86,6 +86,7 @@ jobs:
 
   detect-vi-changes:
     name: Detect VI file changes
+    needs: [verify-checklist-sync]
     runs-on: ubuntu-latest
     outputs:
       has_vi_changes: ${{ steps.check.outputs.has_vi_changes }}

@@ -19,6 +19,10 @@
 
 .PARAMETER GcliPath
     Optional explicit path to the g-cli executable. Defaults to relying on PATH.
+
+.PARAMETER AllowFallback
+    When specified, allows fallback to copy-based staging if g-cli build fails.
+    Default is off (fail fast on build errors). Not recommended for CI use.
 #>
 param(
     [Parameter(Mandatory = $true)]
