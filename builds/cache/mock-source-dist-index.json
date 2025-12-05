@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "author": "smoke",
+      "commit": "smoke-sha",
+      "path": "mock.txt",
+      "date": "2025-12-04T13:48:27.6922381-08:00"
+    },
+    {
+      "author": "smoke",
+      "commit": "smoke-sha",
+      "path": "data/mock-data.txt",
+      "date": "2025-12-04T13:48:27.6922381-08:00"
+    }
+  ]
+}

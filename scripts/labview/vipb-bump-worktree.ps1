@@ -6,6 +6,12 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$TargetLabVIEWVersion,
 
+    [ValidateSet('0', '3')]
+    [string]$TargetLabVIEWMinor = '0',
+
+    [ValidateSet('32','64')]
+    [string]$TargetBitness,
+
 [string]$VipbPath = 'Tooling/deployment/seed.vipb',
 [string]$WorktreeName = 'lvsd-next',
 [string]$SeedImage,
@@ -15,7 +21,7 @@ param(
 [switch]$NoWorktree,
 [switch]$RunSourceDistribution,
 [switch]$RunPackageBuild,
-[switch]$RunDevModeBind = $true,
+[bool]$RunDevModeBind = $true,
 [switch]$ForceWorktree,
 [string]$CompanyName = "LabVIEW Icon Editor",
 [string]$AuthorName = "Automation Agent",
@@ -34,6 +40,16 @@ function Resolve-Repo {
 }
 
 $repo = Resolve-Repo $RepositoryPath
+
+# Docker user mapping to avoid root-owned outputs on Linux
+$runOnWindows = ($env:OS -eq 'Windows_NT') -or ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows))
+$dockerUserArgs = @()
+if (-not $runOnWindows) {
+    $uid = (& id -u)
+    $gid = (& id -g)
+    $dockerUserArgs = @('--user', "$uid`:$gid")
+}
+
 $vipbFull = $null
 try {
     $vipbFull = (Resolve-Path -LiteralPath (Join-Path $repo $VipbPath)).ProviderPath
@@ -58,19 +74,9 @@ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $vipbDest) | Out-N
 Copy-Item -LiteralPath $vipbStaged -Destination $vipbDest -Force
 
 # Derive fork owner and seed image/tag
-function Get-RepoOwner {
-    param([string]$RepoPath)
-    try {
-        $url = git -C $RepoPath config --get remote.origin.url
-        if ($url -match '[:/](?<owner>[^/]+)/(?<repo>[^/]+?)(\.git)?$') {
-            return $Matches['owner']
-        }
-    } catch {}
-    return $null
-}
-$owner = Get-RepoOwner -RepoPath $repo
 if (-not $SeedImage) {
-    $SeedImage = if ($owner) { "ghcr.io/$owner/seed:latest" } else { "seed:latest" }
+    # Use vendored/local Seed image; override via env:SEED_IMAGE if needed.
+    $SeedImage = if ($env:SEED_IMAGE) { $env:SEED_IMAGE } else { "seed:latest" }
 }
 $SeedBuildContext = if ($SeedBuildContext) { (Resolve-Path -LiteralPath (Join-Path $repo $SeedBuildContext)).ProviderPath } else { $repo }
 $SeedDockerfile = if ($SeedDockerfile) { (Resolve-Path -LiteralPath (Join-Path $repo $SeedDockerfile)).ProviderPath } else { (Join-Path $repo 'Tooling/seed/Dockerfile') }
@@ -87,24 +93,42 @@ $vipbRel = [System.IO.Path]::GetRelativePath($repo, $vipbStaged) -replace '\\','
 $vipbJson = Join-Path $stashDir 'seed.vipb.json'
 $vipbJsonRel = [System.IO.Path]::GetRelativePath($repo, $vipbJson) -replace '\\','/'
 Write-Host "[vipb-bump] Converting VIPB to JSON via seed image"
-docker run --rm -v "${repo}:/repo" --entrypoint /usr/local/bin/vipb2json $SeedImage --input "/repo/$vipbRel" --output "/repo/$vipbJsonRel"
+& docker run --rm @dockerUserArgs -v "${repo}:/repo" --entrypoint /usr/local/bin/vipb2json $SeedImage --input "/repo/$vipbRel" --output "/repo/$vipbJsonRel"
 if ($LASTEXITCODE -ne 0) { throw "vipb2json failed with exit code $LASTEXITCODE" }
 if (-not (Test-Path -LiteralPath $vipbJson)) {
     throw "vipb2json did not produce JSON at $vipbJson"
 }
 $json = Get-Content -LiteralPath $vipbJson -Raw | ConvertFrom-Json
-$currentVersion = $json.VI_Package_Builder_Settings.Library_General_Settings.Package_LabVIEW_Version
-$bitnessSuffix = '64-bit'
-if ($currentVersion -and ($currentVersion -match '\((?<bits>\d+)-bit\)')) {
+$vipbRoot = $null
+if ($json.PSObject.Properties['VI_Package_Builder_Settings']) {
+    $vipbRoot = $json.VI_Package_Builder_Settings
+}
+elseif ($json.PSObject.Properties['Package']) {
+    $vipbRoot = $json.Package
+}
+if (-not $vipbRoot) {
+    throw "Unrecognized VIPB JSON structure; expected VI_Package_Builder_Settings or Package root."
+}
+
+$generalSettings = $vipbRoot.Library_General_Settings
+if (-not $generalSettings) {
+    throw "VIPB JSON missing Library_General_Settings node."
+}
+
+$currentVersion = $generalSettings.Package_LabVIEW_Version
+$bitnessSuffix = if ($TargetBitness) { "$TargetBitness-bit" } else { '64-bit' }
+if (-not $TargetBitness -and $currentVersion -and ($currentVersion -match '\((?<bits>\d+)-bit\)')) {
     $bitnessSuffix = "$($Matches['bits'])-bit"
 }
 $lvMajorToken = $TargetLabVIEWVersion
 if ($lvMajorToken -match '^20(?<maj>\d{2})$') { $lvMajorToken = $Matches['maj'] }
-$newVersionString = ("{0}.0 ({1})" -f $lvMajorToken, $bitnessSuffix)
-$json.VI_Package_Builder_Settings.Library_General_Settings.Package_LabVIEW_Version = $newVersionString
+# Use TargetLabVIEWMinor to specify Q1 (.0) or Q3 (.3) releases
+# Examples: 25.0 = LabVIEW 2025 Q1, 25.3 = LabVIEW 2025 Q3
+$newVersionString = ("{0}.{1} ({2})" -f $lvMajorToken, $TargetLabVIEWMinor, $bitnessSuffix)
+$generalSettings.Package_LabVIEW_Version = $newVersionString
 $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding UTF8
 Write-Host "[vipb-bump] Updated Package_LabVIEW_Version to '$newVersionString'"
-docker run --rm -v "${repo}:/repo" --entrypoint /usr/local/bin/json2vipb $SeedImage --input "/repo/$vipbJsonRel" --output "/repo/$vipbRel"
+& docker run --rm @dockerUserArgs -v "${repo}:/repo" --entrypoint /usr/local/bin/json2vipb $SeedImage --input "/repo/$vipbJsonRel" --output "/repo/$vipbRel"
 if ($LASTEXITCODE -ne 0) { throw "json2vipb failed with exit code $LASTEXITCODE" }
 if (-not (Test-Path -LiteralPath $vipbStaged)) {
     throw "Seed tool did not produce the staged VIPB at $vipbStaged"
@@ -119,6 +143,9 @@ $manifest = [ordered]@{
     source_vipb    = $vipbFull
     staged_vipb    = $vipbStaged
     target_version = $TargetLabVIEWVersion
+    target_minor   = $TargetLabVIEWMinor
+    target_bitness = if ($TargetBitness) { $TargetBitness } else { $bitnessSuffix -replace '-bit','' }
+    labview_version_string = $newVersionString
     repo_commit    = $repoCommit
     git_ref        = $repoRef
     hash           = $vipbHash

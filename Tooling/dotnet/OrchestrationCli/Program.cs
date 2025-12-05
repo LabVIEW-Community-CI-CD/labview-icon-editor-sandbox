@@ -42,8 +42,10 @@ public static class Program
         bool Verbose,
         string? SourceDistZip,
         string? SourceDistOutput,
+        string? SourceDistCommitIndex,
         bool SourceDistStrict,
         bool SourceDistLogStash,
+        string? GcliPath,
         string? LabviewCliPath,
         string? LabviewPath,
         int? LabviewPort,
@@ -61,7 +63,85 @@ public static class Program
         bool SkipLocalSdBuild,
         string? OllamaEndpoint,
         string? OllamaModel,
-        string? OllamaPrompt);
+        string? OllamaPrompt,
+        bool ResetArchiveExisting,
+        bool ResetSkipCleanup,
+        bool ResetRunCommitIndex,
+        bool ResetRunFullBuild,
+        string? ResetRunner,
+        bool ResetDryRun,
+        bool ResetEmitSummary,
+        string? ResetSummaryJson,
+        string[] ResetAdditionalPaths,
+        string? ScriptsRoot)
+    {
+        public Options() : this(
+            Subcommand: string.Empty,
+            Repo: Directory.GetCurrentDirectory(),
+            Bitness: "both",
+            Pwsh: "pwsh",
+            Ref: "HEAD",
+            LvlibpBitness: "both",
+            Major: 0,
+            Minor: 1,
+            Patch: 0,
+            Build: 1,
+            Company: "LabVIEW-Community-CI-CD",
+            Author: "Local Developer",
+            LabviewMinor: 3,
+            RunBothBitnessSeparately: false,
+            Managed: false,
+            LvVersion: null,
+            VipcPath: null,
+            RequestPath: null,
+            ProjectPath: null,
+            ScenarioPath: null,
+            VipmManifestPath: null,
+            WorktreeRoot: null,
+            SkipWorktree: false,
+            SkipPreflight: false,
+            RequireDevmode: false,
+            AutoBindDevmode: false,
+            TimeoutSeconds: 0,
+            Plain: false,
+            Verbose: false,
+            SourceDistZip: null,
+            SourceDistOutput: null,
+            SourceDistCommitIndex: null,
+            SourceDistStrict: false,
+            SourceDistLogStash: false,
+            GcliPath: null,
+            LabviewCliPath: null,
+            LabviewPath: null,
+            LabviewPort: null,
+            TempRoot: null,
+            LogRoot: null,
+            LabviewCliTimeoutSec: null,
+            ForceWorktree: false,
+            CopyOnFail: false,
+            RetryBuilds: 0,
+            ExpectSha: null,
+            RunKey: null,
+            LockPath: null,
+            LockTtlSec: 900,
+            ForceLock: false,
+            SkipLocalSdBuild: false,
+            OllamaEndpoint: "http://localhost:11435",
+            OllamaModel: null,
+            OllamaPrompt: "Hello",
+            ResetArchiveExisting: false,
+            ResetSkipCleanup: false,
+            ResetRunCommitIndex: false,
+            ResetRunFullBuild: false,
+            ResetRunner: null,
+            ResetDryRun: false,
+            ResetEmitSummary: false,
+            ResetSummaryJson: null,
+            ResetAdditionalPaths: Array.Empty<string>(),
+            ScriptsRoot: null)
+        {
+        }
+    }
 
     public sealed record CommandResult(
         string Command,
@@ -118,6 +198,13 @@ public static class Program
         var results = new List<CommandResult>();
         var overallExit = 0;
 
+        if (opts.Subcommand.Equals("source-dist-build", StringComparison.OrdinalIgnoreCase))
+        {
+            var build = RunSourceDistBuild(Log, opts, repo);
+            Console.WriteLine(JsonSerializer.Serialize(new[] { build }, new JsonSerializerOptions { WriteIndented = true }));
+            return build.Status.Equals("success", StringComparison.OrdinalIgnoreCase) ? 0 : build.ExitCode;
+        }
+
         if (opts.Subcommand.Equals("source-dist-verify", StringComparison.OrdinalIgnoreCase))
         {
             var verify = RunSourceDistVerify(Log, opts, repo);
@@ -154,6 +241,15 @@ public static class Program
                 }
             }
             return overallExit;
+        }
+
+        if (opts.Subcommand.Equals("reset-source-dist", StringComparison.OrdinalIgnoreCase))
+        {
+            results.Add(RunResetSourceDist(Log, opts, repo));
+            var jsonReset = JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true });
+            Console.WriteLine(jsonReset);
+            var exit = string.Equals(results[0].Status, "success", StringComparison.OrdinalIgnoreCase) ? 0 : results[0].ExitCode;
+            return exit;
         }
 
         if (isPackage)
@@ -224,6 +320,63 @@ public static class Program
         return overallExit;
     }
 
+    private static bool IsSimMode()
+    {
+        static bool IsOn(string? val) =>
+            string.Equals(val, "1", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(val, "true", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(val, "yes", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(val, "sim", StringComparison.OrdinalIgnoreCase);
+
+        var env = Environment.GetEnvironmentVariable("OLLAMA_EXECUTOR_MODE");
+        if (IsOn(env)) return true;
+        return IsOn(Environment.GetEnvironmentVariable("ORCH_SIM_MODE"));
+    }
+
+    private static CommandResult RunLocalSdSim(Action<string> log, string repo, string runKey, string lockPath, int lockTtlSec, bool force, bool keepLock)
+    {
+        var sw = Stopwatch.StartNew();
+        var steps = new List<object>();
+
+        log($"[local-sd][sim] runKey={runKey} lock={lockPath} ttl={lockTtlSec}s force={force}");
+
+        if (!TryAcquireLock(repo, lockPath, runKey, lockTtlSec, force, out var lockError))
+        {
+            return new CommandResult("local-sd", "fail", 1, sw.ElapsedMilliseconds, new { error = lockError });
+        }
+
+        try
+        {
+            var artifactsDir = Path.Combine(repo, "artifacts");
+            Directory.CreateDirectory(artifactsDir);
+            var zipPath = Path.Combine(artifactsDir, "labview-icon-api.zip");
+            File.WriteAllText(zipPath, $"SIMULATION MODE stub zip for {runKey}");
+            var hash = RunPwsh(new Options(), new[] { "-NoProfile", "-Command", $"(Get-FileHash -LiteralPath '{zipPath}' -Algorithm SHA256).Hash | Set-Content '{Path.Combine(artifactsDir, "sha256.txt")}'" }, 0);
+
+            steps.Add(new { Name = "sim-prepare", status = "success", exit = 0, durationMs = 0, stdout = $"[sim] created stub at {zipPath}", stderr = string.Empty });
+            steps.Add(new { Name = "hash-artifacts", status = hash.ExitCode == 0 ? "success" : "fail", exit = hash.ExitCode, durationMs = hash.DurationMs, stdout = hash.StdOut, stderr = hash.StdErr });
+
+            var stage = RunPwsh(new Options(), new[] { "-NoProfile", "-Command", $"$dst=Join-Path 'builds-isolated' '{runKey}'; New-Item -ItemType Directory -Path $dst -Force | Out-Null; Copy-Item -Path 'artifacts' -Destination $dst -Recurse -Force; Write-Host \"[sim] staged artifacts under $dst\"" }, 0);
+            steps.Add(new { Name = "stage-run", status = stage.ExitCode == 0 ? "success" : "fail", exit = stage.ExitCode, durationMs = stage.DurationMs, stdout = stage.StdOut, stderr = stage.StdErr });
+
+            var failed = steps.FirstOrDefault(s => ((string)s.GetType().GetProperty("status")!.GetValue(s)!) != "success");
+            var exitCode = failed == null ? 0 : 1;
+            var status = exitCode == 0 ? "success" : "fail";
+            return new CommandResult("local-sd", status, exitCode, sw.ElapsedMilliseconds, new { mode = "sim", steps });
+        }
+        finally
+        {
+            if (!keepLock)
+            {
+                ReleaseLock(lockPath);
+            }
+            else
+            {
+                log($"[local-sd][sim] keeping lock at {lockPath} (ORCH_KEEP_LOCK=1)");
+            }
+        }
+    }
+
     private static CommandResult RunLocalSdOnce(Action<string> log, Options opts, string repo)
     {
         var sw = Stopwatch.StartNew();
@@ -240,6 +393,11 @@ public static class Program
         if (!TryAcquireLock(repo, lockPath, runKey, lockTtlSec, force, out var lockError))
         {
             return new CommandResult("local-sd", "fail", 1, sw.ElapsedMilliseconds, new { error = lockError });
+        }
+
+        if (IsSimMode())
+        {
+            return RunLocalSdSim(log, repo, runKey, lockPath, lockTtlSec, force, keepLock);
         }
 
         try
@@ -294,6 +452,78 @@ public static class Program
                 log($"[local-sd] keeping lock at {lockPath} (ORCH_KEEP_LOCK=1)");
             }
         }
+    }
+
+    private static CommandResult RunResetSourceDist(Action<string> log, Options opts, string repo)
+    {
+        var sw = Stopwatch.StartNew();
+        var script = Path.Combine(repo, "scripts", "build-source-distribution", "Reset-SourceDistributionWorkspace.ps1");
+        if (!File.Exists(script))
+        {
+            return new CommandResult("reset-source-dist", "fail", 1, sw.ElapsedMilliseconds, new { scriptPath = script, error = "Reset-SourceDistributionWorkspace.ps1 not found" });
+        }
+
+        var args = new List<string>
+        {
+            "-NoProfile", "-File", script,
+            "-RepoPath", repo
+        };
+
+        void AddSwitch(bool condition, string flag)
+        {
+            if (condition)
+            {
+                args.Add(flag);
+            }
+        }
+
+        AddSwitch(opts.ResetArchiveExisting, "-ArchiveExisting");
+        AddSwitch(opts.ResetSkipCleanup, "-SkipCleanup");
+        AddSwitch(opts.ResetRunCommitIndex, "-RunCommitIndex");
+        AddSwitch(opts.ResetRunFullBuild, "-RunFullBuild");
+        AddSwitch(opts.ResetDryRun, "-DryRun");
+        AddSwitch(opts.ResetEmitSummary, "-EmitSummaryToConsole");
+
+        if (!string.IsNullOrWhiteSpace(opts.ResetRunner))
+        {
+            args.AddRange(new[] { "-Runner", opts.ResetRunner! });
+        }
+        if (!string.IsNullOrWhiteSpace(opts.ResetSummaryJson))
+        {
+            args.AddRange(new[] { "-SummaryJsonPath", opts.ResetSummaryJson! });
+        }
+        if (opts.ResetAdditionalPaths.Length > 0)
+        {
+            foreach (var extra in opts.ResetAdditionalPaths)
+            {
+                if (!string.IsNullOrWhiteSpace(extra))
+                {
+                    args.AddRange(new[] { "-AdditionalPaths", extra });
+                }
+            }
+        }
+
+        log("reset-source-dist via Reset-SourceDistributionWorkspace.ps1...");
+        var result = RunPwsh(opts, args, opts.TimeoutSeconds);
+        var status = result.ExitCode == 0 ? "success" : "fail";
+        var details = new
+        {
+            scriptPath = script,
+            repo,
+            archiveExisting = opts.ResetArchiveExisting,
+            skipCleanup = opts.ResetSkipCleanup,
+            runCommitIndex = opts.ResetRunCommitIndex,
+            runFullBuild = opts.ResetRunFullBuild,
+            runner = opts.ResetRunner,
+            summaryJsonPath = opts.ResetSummaryJson,
+            additionalPaths = opts.ResetAdditionalPaths,
+            dryRun = opts.ResetDryRun,
+            exit = result.ExitCode,
+            stdout = result.StdOut,
+            stderr = result.StdErr
+        };
+
+        return new CommandResult("reset-source-dist", status, result.ExitCode, result.DurationMs, details);
     }
 
     private sealed record OrchestrationLock(string RunKey, int Pid, string User, DateTime TimestampUtc);
@@ -705,6 +935,160 @@ public static class Program
         public long SizeBytes { get; set; }
     }
 
+    private static CommandResult RunSourceDistBuild(Action<string> log, Options opts, string repo)
+    {
+        var sw = Stopwatch.StartNew();
+
+        var gcliPath = string.IsNullOrWhiteSpace(opts.GcliPath) ? "g-cli" : opts.GcliPath!;
+        if (!string.Equals(gcliPath, "g-cli", StringComparison.OrdinalIgnoreCase) && !File.Exists(gcliPath))
+        {
+            return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { gcliPath, error = "g-cli path not found" });
+        }
+
+        var commitIndexPath = string.IsNullOrWhiteSpace(opts.SourceDistCommitIndex)
+            ? Path.Combine(repo, "builds", "cache", "commit-index.json")
+            : (Path.IsPathRooted(opts.SourceDistCommitIndex!) ? opts.SourceDistCommitIndex! : Path.Combine(repo, opts.SourceDistCommitIndex!));
+
+        if (!File.Exists(commitIndexPath))
+        {
+            return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { commitIndexPath, error = "commit-index.json not found" });
+        }
+
+        var distRoot = string.IsNullOrWhiteSpace(opts.SourceDistOutput)
+            ? Path.Combine(repo, "builds", "LabVIEWIconAPI")
+            : (Path.IsPathRooted(opts.SourceDistOutput!) ? opts.SourceDistOutput! : Path.Combine(repo, opts.SourceDistOutput!));
+
+        Directory.CreateDirectory(distRoot);
+
+        var lvVersion = string.IsNullOrWhiteSpace(opts.LvVersion) ? "2025" : opts.LvVersion!;
+        var bitness = string.IsNullOrWhiteSpace(opts.Bitness) ? "64" : opts.Bitness;
+
+        var gcliArgs = new List<string>
+        {
+            "--repo", repo,
+            "--dist", distRoot,
+            "--lv-ver", lvVersion,
+            "--bitness", bitness,
+            "--name", "LabVIEWIconAPI"
+        };
+
+        var gcliResult = RunProcess(gcliPath, repo, gcliArgs, opts.TimeoutSeconds);
+        if (gcliResult.ExitCode != 0)
+        {
+            return new CommandResult("source-dist-build", "fail", gcliResult.ExitCode, sw.ElapsedMilliseconds, new { gcliPath, args = gcliArgs, stdout = gcliResult.StdOut, stderr = gcliResult.StdErr });
+        }
+
+        List<SourceManifestEntry> entries;
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(commitIndexPath));
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("entries", out var entryNode) || entryNode.ValueKind != JsonValueKind.Array)
+            {
+                return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { commitIndexPath, error = "entries[] missing from commit-index" });
+            }
+
+            entries = new List<SourceManifestEntry>();
+            foreach (var node in entryNode.EnumerateArray())
+            {
+                var relPath = node.TryGetProperty("path", out var p) ? p.GetString() ?? string.Empty : string.Empty;
+                var commit = node.TryGetProperty("commit", out var c) ? c.GetString() ?? string.Empty : string.Empty;
+                var author = node.TryGetProperty("author", out var a) ? a.GetString() : null;
+                var date = node.TryGetProperty("date", out var d) ? d.GetString() : null;
+                var fullPath = Path.Combine(distRoot, relPath.Replace('/', Path.DirectorySeparatorChar));
+                long size = 0;
+                try { if (File.Exists(fullPath)) { size = new FileInfo(fullPath).Length; } }
+                catch { size = 0; }
+
+                entries.Add(new SourceManifestEntry
+                {
+                    Path = relPath,
+                    LastCommit = commit,
+                    CommitAuthor = author,
+                    CommitDate = date,
+                    CommitSource = "index",
+                    SizeBytes = size
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { commitIndexPath, error = ex.Message });
+        }
+
+        var manifestJson = Path.Combine(distRoot, "manifest.json");
+        var manifestCsv = Path.Combine(distRoot, "manifest.csv");
+        try
+        {
+            File.WriteAllText(manifestJson, JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true }));
+
+            var sb = new StringBuilder();
+            sb.AppendLine("path,last_commit,commit_author,commit_date,commit_source,size_bytes");
+            foreach (var e in entries)
+            {
+                sb.AppendLine(string.Join(',',
+                    EscapeCsv(e.Path),
+                    EscapeCsv(e.LastCommit ?? string.Empty),
+                    EscapeCsv(e.CommitAuthor ?? string.Empty),
+                    EscapeCsv(e.CommitDate ?? string.Empty),
+                    EscapeCsv(e.CommitSource ?? string.Empty),
+                    e.SizeBytes.ToString()));
+            }
+            File.WriteAllText(manifestCsv, sb.ToString());
+        }
+        catch (Exception ex)
+        {
+            return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { manifestJson, error = ex.Message });
+        }
+
+        var artifactsDir = Path.Combine(repo, "builds", "artifacts");
+        Directory.CreateDirectory(artifactsDir);
+        var zipPath = Path.Combine(artifactsDir, "source-distribution.zip");
+        try
+        {
+            if (File.Exists(zipPath)) File.Delete(zipPath);
+            ZipFile.CreateFromDirectory(distRoot, zipPath);
+        }
+        catch (Exception ex)
+        {
+            return new CommandResult("source-dist-build", "fail", 1, sw.ElapsedMilliseconds, new { zipPath, error = ex.Message });
+        }
+
+        try
+        {
+            var logsDir = Path.Combine(repo, "builds", "logs");
+            Directory.CreateDirectory(logsDir);
+            var telemetryPath = Path.Combine(logsDir, $"telemetry-source-dist-build-{DateTime.UtcNow:yyyyMMdd-HHmmssfff}.json");
+            var telemetry = new
+            {
+                build_spec = "source-dist-build",
+                labview_version = lvVersion,
+                bitness = bitness,
+                repo_root = repo,
+                gcli_path = gcliPath,
+                commit_index = GetRelativePathSafe(repo, commitIndexPath),
+                manifest = GetRelativePathSafe(repo, manifestJson),
+                generated_at = DateTime.UtcNow.ToString("o")
+            };
+            File.WriteAllText(telemetryPath, JsonSerializer.Serialize(telemetry, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch
+        {
+            // telemetry best-effort
+        }
+
+        log($"source-dist-build: manifest entries={entries.Count}, dist={GetRelativePathSafe(repo, distRoot)}");
+        sw.Stop();
+        return new CommandResult("source-dist-build", "success", 0, sw.ElapsedMilliseconds, new
+        {
+            distRoot,
+            manifestJson,
+            manifestCsv,
+            zipPath,
+            commitIndexPath
+        });
+    }
+
     private static CommandResult RunSourceDistVerify(Action<string> log, Options opts, string repo)
     {
         var sw = Stopwatch.StartNew();
@@ -769,6 +1153,39 @@ public static class Program
         var warnings = new List<object>();
         var invalidPaths = new List<object>();
         var checkedCount = 0;
+
+        var commitIndexPath = string.IsNullOrWhiteSpace(opts.SourceDistCommitIndex)
+            ? Path.Combine(repo, "builds", "cache", "commit-index.json")
+            : (Path.IsPathRooted(opts.SourceDistCommitIndex!) ? opts.SourceDistCommitIndex! : Path.Combine(repo, opts.SourceDistCommitIndex!));
+        var commitIndex = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (File.Exists(commitIndexPath))
+        {
+            try
+            {
+                using var indexDoc = JsonDocument.Parse(File.ReadAllText(commitIndexPath));
+                if (indexDoc.RootElement.TryGetProperty("entries", out var entriesNode) && entriesNode.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var entry in entriesNode.EnumerateArray())
+                    {
+                        var path = entry.TryGetProperty("path", out var p) ? p.GetString() ?? string.Empty : string.Empty;
+                        var commit = entry.TryGetProperty("commit", out var c) ? c.GetString() ?? string.Empty : string.Empty;
+                        if (!string.IsNullOrWhiteSpace(path) && !string.IsNullOrWhiteSpace(commit))
+                        {
+                            commitIndex[path] = commit;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                warnings.Add(new { path = GetRelativePathSafe(repo, commitIndexPath), reason = $"Failed to parse commit-index: {ex.Message}" });
+            }
+        }
+        else
+        {
+            warnings.Add(new { path = GetRelativePathSafe(repo, commitIndexPath), reason = "commit-index.json not found" });
+        }
+
         foreach (var entry in entries)
         {
             var relPath = entry.Path ?? string.Empty;
@@ -784,6 +1201,15 @@ public static class Program
                 nullCommits.Add(new { path = relPath, reason = "last_commit missing" });
                 warnings.Add(new { path = relPath, reason = "last_commit missing (allowed; reported)" });
                 continue;
+            }
+
+            if (commitIndex.TryGetValue(relPath, out var expectedCommit) && !string.IsNullOrWhiteSpace(expectedCommit))
+            {
+                if (!string.Equals(expectedCommit, commit, StringComparison.OrdinalIgnoreCase))
+                {
+                    failures.Add(new { path = relPath, expected = expectedCommit, actual = commit, reason = "manifest commit mismatch vs commit-index" });
+                    continue;
+                }
             }
 
             var commitSource = entry.CommitSource?.Trim() ?? string.Empty;
@@ -815,13 +1241,15 @@ public static class Program
             manifestCsv = manifestCsv != null ? GetRelativePathSafe(repo, manifestCsv) : null,
             extracted = GetRelativePathSafe(repo, extractDir),
             strict = opts.SourceDistStrict,
+            status,
             totalEntries = entries.Count,
             commitsChecked = checkedCount,
             nullCommitCount = nullCommits.Count,
             failures,
             nullCommits,
             warnings,
-            invalidPaths
+            invalidPaths,
+            commitIndexPath = GetRelativePathSafe(repo, commitIndexPath)
         };
 
         Directory.CreateDirectory(outputRoot);
@@ -2769,8 +3197,10 @@ public static class Program
         var verbose = false;
         string? sourceDistZip = null;
         string? sourceDistOutput = null;
+        string? sourceDistCommitIndex = null;
         var sourceDistStrict = false;
         var sourceDistLogStash = false;
+        string? gcliPath = null;
         string? labviewCliPath = null;
         string? labviewPath = null;
         int? labviewPort = null;
@@ -2793,6 +3223,16 @@ public static class Program
         var ollamaEndpoint = Environment.GetEnvironmentVariable("ORCH_OLLAMA_ENDPOINT") ?? "http://localhost:11435";
         var ollamaModel = Environment.GetEnvironmentVariable("ORCH_OLLAMA_MODEL");
         var ollamaPrompt = Environment.GetEnvironmentVariable("ORCH_OLLAMA_PROMPT") ?? "Hello";
+        var resetArchiveExisting = false;
+        var resetSkipCleanup = false;
+        var resetRunCommitIndex = false;
+        var resetRunFullBuild = false;
+        string? resetRunner = null;
+        var resetDryRun = false;
+        var resetEmitSummary = false;
+        string? resetSummaryJson = null;
+        var resetAdditionalPaths = new List<string> { "builds/cache" };
+        string? scriptsRoot = null;
 
         try
         {
@@ -2803,6 +3243,9 @@ public static class Program
                 {
                     case "--repo":
                         repo = RequireNext(args, ref i, "--repo");
+                        break;
+                    case "--scripts-root":
+                        scriptsRoot = RequireNext(args, ref i, "--scripts-root");
                         break;
                     case "--ref":
                         refName = RequireNext(args, ref i, "--ref");
@@ -2906,11 +3349,17 @@ public static class Program
                     case "--source-dist-output":
                         sourceDistOutput = RequireNext(args, ref i, "--source-dist-output");
                         break;
+                    case "--source-dist-commit-index":
+                        sourceDistCommitIndex = RequireNext(args, ref i, "--source-dist-commit-index");
+                        break;
                     case "--source-dist-strict":
                         sourceDistStrict = true;
                         break;
                     case "--source-dist-log-stash":
                         sourceDistLogStash = true;
+                        break;
+                    case "--gcli-path":
+                        gcliPath = RequireNext(args, ref i, "--gcli-path");
                         break;
                     case "--labviewcli-path":
                         labviewCliPath = RequireNext(args, ref i, "--labviewcli-path");
@@ -2982,6 +3431,41 @@ public static class Program
                     case "--ollama-prompt":
                         ollamaPrompt = RequireNext(args, ref i, "--ollama-prompt");
                         break;
+                    case "--reset-archive-existing":
+                        resetArchiveExisting = true;
+                        break;
+                    case "--reset-skip-cleanup":
+                        resetSkipCleanup = true;
+                        break;
+                    case "--reset-run-commit-index":
+                        resetRunCommitIndex = true;
+                        break;
+                    case "--reset-run-full-build":
+                        resetRunFullBuild = true;
+                        break;
+                    case "--reset-runner":
+                        resetRunner = RequireNext(args, ref i, "--reset-runner");
+                        break;
+                    case "--reset-dry-run":
+                        resetDryRun = true;
+                        break;
+                    case "--reset-emit-summary":
+                        resetEmitSummary = true;
+                        break;
+                    case "--reset-summary-json":
+                        resetSummaryJson = RequireNext(args, ref i, "--reset-summary-json");
+                        break;
+                    case "--reset-additional-path":
+                        resetAdditionalPaths.Add(RequireNext(args, ref i, "--reset-additional-path"));
+                        break;
+                    case "--reset-additional-paths":
+                        var listText = RequireNext(args, ref i, "--reset-additional-paths");
+                        var parts = listText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                        resetAdditionalPaths.AddRange(parts);
+                        break;
+                    case "--reset-clear-additional-paths":
+                        resetAdditionalPaths.Clear();
+                        break;
                     case "--verbose":
                         verbose = true;
                         break;
@@ -3019,7 +3503,7 @@ public static class Program
         var runKeyResolved = string.IsNullOrWhiteSpace(runKeyArg) ? $"local-sd-{DateTime.UtcNow:yyyyMMdd-HHmmss}" : runKeyArg!;
         var lockPathResolved = string.IsNullOrWhiteSpace(lockPathArg) ? Path.Combine(repoFull, ".locks", "orchestration.lock") : lockPathArg!;
 
-        return (new Options(sub, repoFull, bitness, pwsh, refName, lvlibpBitness, major, minor, patch, build, company, author, labviewMinor, runBothBitnessSeparately, managed, lv, vipc, requestPath, projectPath, scenarioPath, vipmManifestPath, worktreeRoot, skipWorktree, skipPreflight, requireDevmode, autoBindDevmode, timeoutSec, plain, verbose, sourceDistZip, sourceDistOutput, sourceDistStrict, sourceDistLogStash, labviewCliPath, labviewPath, labviewPort, tempRoot, logRoot, labviewCliTimeoutSec, forceWorktree, copyOnFail, retryBuilds, expectSha, runKeyResolved, lockPathResolved, lockTtlSec, forceLock, skipLocalSdBuild, ollamaEndpoint, ollamaModel, ollamaPrompt), null, false);
+        return (new Options(sub, repoFull, bitness, pwsh, refName, lvlibpBitness, major, minor, patch, build, company, author, labviewMinor, runBothBitnessSeparately, managed, lv, vipc, requestPath, projectPath, scenarioPath, vipmManifestPath, worktreeRoot, skipWorktree, skipPreflight, requireDevmode, autoBindDevmode, timeoutSec, plain, verbose, sourceDistZip, sourceDistOutput, sourceDistCommitIndex, sourceDistStrict, sourceDistLogStash, gcliPath, labviewCliPath, labviewPath, labviewPort, tempRoot, logRoot, labviewCliTimeoutSec, forceWorktree, copyOnFail, retryBuilds, expectSha, runKeyResolved, lockPathResolved, lockTtlSec, forceLock, skipLocalSdBuild, ollamaEndpoint, ollamaModel, ollamaPrompt, resetArchiveExisting, resetSkipCleanup, resetRunCommitIndex, resetRunFullBuild, resetRunner, resetDryRun, resetEmitSummary, resetSummaryJson, resetAdditionalPaths.ToArray(), scriptsRoot), null, false);
     }
 
     private static List<string> ResolveBitness(string value)
@@ -3294,6 +3778,15 @@ public static class Program
         return RunProcess(opts.Pwsh, opts.Repo, argList, timeoutSec);
     }
 
+    private static string EscapeCsv(string value)
+    {
+        if (value.Contains('"') || value.Contains(',') || value.Contains('\n'))
+        {
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
+        }
+        return value;
+    }
+
     private static string QuoteArg(string arg)
     {
         if (string.IsNullOrEmpty(arg)) return "\"\"";
@@ -3482,6 +3975,7 @@ public static class Program
         Console.WriteLine("  source-dist-verify Verify source-distribution.zip manifest commits against git history.");
         Console.WriteLine("  sd-ppl-lvcli      Build Source Distribution then Icon Editor PPL via LabVIEWCLI with g-cli bind/unbind.");
         Console.WriteLine("                    (Derives LabVIEW version/bitness from VIPB; omit --bitness/--lv-version for this subcommand.)");
+        Console.WriteLine("  reset-source-dist Cull/archive Source Distribution workspace via Reset-SourceDistributionWorkspace.ps1.");
         Console.WriteLine("  ollama            Call a local Ollama endpoint with a model/prompt (offline hook).");
         Console.WriteLine("Options:");
         Console.WriteLine("  --repo <path>             Repository path (default: current directory)");
@@ -3523,6 +4017,17 @@ public static class Program
         Console.WriteLine("  --ollama-endpoint <url>   Ollama endpoint (default: http://localhost:11435)");
         Console.WriteLine("  --ollama-model <name>     Ollama model name (default: llama3-8b-local)");
         Console.WriteLine("  --ollama-prompt <text>    Prompt to send to Ollama (default: Hello)");
+        Console.WriteLine("  --reset-archive-existing  Archive builds/LabVIEWIconAPI before wiping (reset-source-dist)");
+        Console.WriteLine("  --reset-skip-cleanup      Skip Remove-Item/cleanup step after archiving (reset-source-dist)");
+        Console.WriteLine("  --reset-run-commit-index  Re-run New-CommitIndex.ps1 during reset (reset-source-dist)");
+        Console.WriteLine("  --reset-run-full-build    Invoke Build_Source_Distribution.ps1 after reset (reset-source-dist)");
+        Console.WriteLine("  --reset-runner <name>     Runner hint passed through to the reset script (reset-source-dist)");
+        Console.WriteLine("  --reset-dry-run           Only show actions without mutating the workspace (reset-source-dist)");
+        Console.WriteLine("  --reset-emit-summary      Emit summary JSON to stdout (reset-source-dist)");
+        Console.WriteLine("  --reset-summary-json <path> Output path for reset summary JSON (reset-source-dist)");
+        Console.WriteLine("  --reset-additional-path <path> Extra path to delete (defaults include builds/cache, reset-source-dist)");
+        Console.WriteLine("  --reset-additional-paths <p1,p2> Comma-separated list of extra paths to delete (reset-source-dist)");
+        Console.WriteLine("  --reset-clear-additional-paths  Start from an empty additional-path list (reset-source-dist)");
         Console.WriteLine("  --plain                   Plain output (reserved for future)");
         Console.WriteLine("  --verbose                 Verbose output (pass-through)");
     }

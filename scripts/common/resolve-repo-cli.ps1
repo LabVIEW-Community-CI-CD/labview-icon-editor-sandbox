@@ -61,6 +61,7 @@ function Get-CliProjectPath {
         'OllamaSmokeCli'    = 'Tooling/dotnet/OllamaSmokeCli/OllamaSmokeCli.csproj'
         'XCli'              = 'Tooling/x-cli/src/XCli/XCli.csproj'
         'RequirementsSummarizer' = 'Tooling/dotnet/RequirementsSummarizer/RequirementsSummarizer.csproj'
+        'VipbJsonTool'      = 'Tooling/dotnet/VipbJsonTool/VipbJsonTool.csproj'
     }
     if (-not $map.ContainsKey($Name)) { return $null }
     $candidate = Join-Path (Resolve-Path -LiteralPath $Root).Path $map[$Name]

@@ -5,27 +5,67 @@ defaults:
     working-directory: './'
 
 on:
+  # Automatically trigger when CI completes successfully on main/release branches
+  workflow_run:
+    workflows: ["CI Pipeline (Composite)"]
+    types:
+      - completed
+    branches:
+      - main
+      - release/*
+
+  # Manual fallback - only requires selecting from successful CI runs
   workflow_dispatch:
     inputs:
       run_id:
-        description: "Workflow run ID from the successful CI build (usually ci.yml)"
-        required: true
-      tag:
-        description: "Tag/release name (four-part version, optional leading v; e.g., v0.2.2.1503)"
-        required: true
+        description: "CI run ID (leave empty to use latest successful CI run on current branch)"
+        required: false
+        type: string
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   draft-release:
     runs-on: ubuntu-latest
+    # Only run on successful CI completion or manual dispatch
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           set-safe-directory: true
           fetch-depth: 0
+
+      - name: Determine CI run ID
+        id: ci_run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            # Automatic trigger - use the triggering workflow run
+            run_id="${{ github.event.workflow_run.id }}"
+            echo "Using CI run from workflow_run trigger: $run_id"
+          elif [ -n "${{ github.event.inputs.run_id }}" ]; then
+            # Manual trigger with explicit run_id
+            run_id="${{ github.event.inputs.run_id }}"
+            echo "Using manually specified CI run: $run_id"
+          else
+            # Manual trigger without run_id - find latest successful CI run on current branch
+            echo "Finding latest successful CI run on branch: ${{ github.ref_name }}"
+            run_id=$(gh run list --workflow=ci.yml --branch="${{ github.ref_name }}" --status=success --limit=1 --json databaseId --jq '.[0].databaseId // empty')
+            if [ -z "$run_id" ]; then
+              echo "ERROR: No successful CI run found on branch ${{ github.ref_name }}" >&2
+              exit 1
+            fi
+            echo "Using latest successful CI run: $run_id"
+          fi
+
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
 
       - name: Compute version
         id: version
@@ -35,25 +75,37 @@ jobs:
 
       - name: Form tag
         id: tag
-        shell: pwsh
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
         run: |
-          $inputTag = "${{ github.event.inputs.tag }}".Trim()
-          if ([string]::IsNullOrWhiteSpace($inputTag)) {
-            Write-Error "Tag is required; provide a four-part version (optional leading v), e.g., v0.2.2.1503."
-          }
-          $tag = $inputTag
-          "tag=$tag" | Out-File -FilePath $Env:GITHUB_OUTPUT -Append
-          Write-Host ("Release tag/name: {0}" -f $tag)
+          set -euo pipefail
+          # Convert version format from CI convention to release tag format
+          # Example: v1.2.3-build456 -> v1.2.3.456
+          # The -buildN suffix is replaced with .N for the four-part version tag
+          tag="${VERSION/-build/.}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Release tag/name: $tag"
 
       - name: Download artifacts from CI run
         uses: actions/download-artifact@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.inputs.run_id }}
+          run-id: ${{ steps.ci_run.outputs.run_id }}
           path: artifacts
+
+      - name: Generate integrity hashes
+        id: integrity
+        uses: ./.github/actions/generate-integrity-hashes
+        with:
+          artifacts_path: artifacts
+          output_path: artifacts/integrity-hashes
 
       - name: Build release asset inventory
         shell: bash
+        env:
+          CI_RUN_ID: ${{ steps.ci_run.outputs.run_id }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -euo pipefail
           root="artifacts"
@@ -78,8 +130,8 @@ jobs:
 
           {
             echo "Release asset inventory"
-            echo "CI run: ${{ github.event.inputs.run_id }}"
-            echo "Tag: ${{ steps.tag.outputs.tag }}"
+            echo "CI run: $CI_RUN_ID"
+            echo "Tag: $TAG"
             echo "Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
             echo
             echo "Expected categories (low effort):"
@@ -159,16 +211,17 @@ jobs:
 
       - name: Generate release notes
         shell: bash
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          CI_RUN_ID: ${{ steps.ci_run.outputs.run_id }}
         run: |
           set -euo pipefail
-          tag="${{ steps.tag.outputs.tag }}"
-          run_id="${{ github.event.inputs.run_id }}"
           inv_path="release-asset-inventory.txt"
           notes="release-notes.md"
           cat > "$notes" <<EOF
-          # $tag (Draft)
+          # $TAG (Draft)
 
-          CI run: $run_id
+          CI run: $CI_RUN_ID
 
           <details>
             <summary>Requirements Snapshot</summary>

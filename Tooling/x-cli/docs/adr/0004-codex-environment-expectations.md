@@ -32,6 +32,17 @@ PowerShell **may not** be included in all runner images. For `x-cli`, certain CI
   - **PSReadLine** (for shell ergonomics; harmless in CI)
 - Installation must be **idempotent** and **non-interactive**. Prefer installing from a pinned `.deb` artifact; fall back to the Microsoft package feed if needed. Verify version post‑install.
 
+### Parity requirement for locked Ollama flows and executor
+- Full parity (Linux/WSL + Windows) is required for the locked Ollama executor tasks **and the Ollama executor itself**. The orchestrator and executor **shall not** block on Windows-only prerequisites when running in simulation or parity modes.
+- The prereq gate (LabVIEW/VIPM registry checks) **must be bypassable** whenever `OLLAMA_EXECUTOR_MODE=sim` or an explicit “parity/simulation” flag is set so non-Windows hosts can execute the end-to-end flow.
+- Remove or guard the Windows-only prereq path before declaring full parity; keep the guard for real LabVIEW runs on Windows.
+- Success criteria: the `Run-Ollama-Host.ps1` parity path completes on Linux/WSL using simulation artifacts without requiring LabVIEW/VIPM.
+- Requirements (Ollama executor parity):
+  - **OEX-PARITY-001.** The executor **shall** accept a simulation/parity flag (e.g., `OLLAMA_EXECUTOR_MODE=sim`) that bypasses Windows-only prerequisite checks (LabVIEW/VIPM) while still executing the full command graph.
+  - **OEX-PARITY-002.** In simulation/parity mode, the executor **shall** emit stub artifacts plus handshake metadata (paths + SHA256) so downstream stages can validate the flow without LabVIEW.
+  - **OEX-PARITY-003.** Orchestration wrappers (e.g., `Run-Ollama-Host.ps1` / `local-sd` profile) **shall** detect simulation/parity mode and skip Windows registry/VIPM gates while preserving lock and telemetry behavior.
+  - **OEX-PARITY-004.** The parity path **shall** complete on Linux/WSL using simulation artifacts, demonstrating locked tasks are runnable cross-platform without LabVIEW/VIPM.
+
 ### Environment variables
 Setup **must** configure:
 

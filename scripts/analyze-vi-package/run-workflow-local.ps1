@@ -2,7 +2,7 @@ param(
     # Path to the built artifact (directory containing .vip, or a .zip of the artifact). Mirrors CI artifact path.
     [string]$VipArtifactPath = "builds/vip-stash",
     # Minimum LabVIEW version (major.minor)
-    [string]$MinLabVIEW = "21.0"
+    [string]$MinLabVIEW = "23.0"
 )
 
 $ErrorActionPreference = 'Stop'

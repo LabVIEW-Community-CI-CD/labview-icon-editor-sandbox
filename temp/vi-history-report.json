@@ -1,0 +1,156 @@
+{
+  "compare": {
+    "vi_path": "temp/CompareVI.vi",
+    "deprecated_apis": [],
+    "file_size": 12,
+    "platform_features": [],
+    "vi_name": "CompareVI.vi",
+    "dependencies": [],
+    "connector_pane": {
+      "output_count": 0,
+      "has_error_terminals": false,
+      "terminals": [],
+      "input_count": 0
+    },
+    "saved_date": "2025-12-04T14:14:14.2110686-08:00",
+    "compatibility": {
+      "lv2023": true,
+      "lv2025": false,
+      "lv2024": false,
+      "lv2021": true
+    },
+    "extracted_with": "Binary_Parser",
+    "lv_version_normalized": 2023,
+    "lv_version": "23.0"
+  },
+  "lv2025_payload": {
+    "summary": {
+      "counts": {
+        "breaking_changes": 2,
+        "dependency_changes": 0,
+        "connector_changes": 0,
+        "deprecated_api_hits": 0
+      },
+      "compatibility": {
+        "lv2023": "compatible",
+        "lv2025": "incompatible",
+        "lv2024": "incompatible",
+        "lv2021": "compatible"
+      },
+      "severity": {
+        "low": 0,
+        "high": 0,
+        "medium": 2
+      },
+      "version_change": null
+    },
+    "diff": {
+      "breaking_changes": [
+        {
+          "type": "compatibility_regression",
+          "severity": "medium",
+          "description": "Compatibility lost for lv2025"
+        },
+        {
+          "type": "compatibility_regression",
+          "severity": "medium",
+          "description": "Compatibility lost for lv2024"
+        }
+      ],
+      "version": null,
+      "deprecated_apis": {
+        "changes": null,
+        "introduced": null,
+        "removed": null
+      },
+      "connector_pane": {
+        "added": null,
+        "output_delta": 0,
+        "error_terminals": {
+          "from": false,
+          "to": false
+        },
+        "removed": null,
+        "changes": null,
+        "input_delta": 0
+      },
+      "dependencies": {
+        "updated": null,
+        "removed": null,
+        "added": null,
+        "changes": null
+      }
+    },
+    "format": {
+      "report_type": "vi-comparison",
+      "version": "25.3",
+      "schema": "vi-history-suite/1.0"
+    },
+    "header": {
+      "compare_vi": {
+        "name": "CompareVI.vi",
+        "path": "temp/CompareVI.vi",
+        "version": "23.0"
+      },
+      "generated_at": "2025-12-04T15:47:08.8344195-08:00",
+      "base_vi": {
+        "name": "BaseVI.vi",
+        "path": "temp/BaseVI.vi",
+        "version": "23.0"
+      },
+      "recommendation": "Breaking changes detected (2) - Review required before upgrade"
+    }
+  },
+  "tool_version": "1.0",
+  "recommendation": "Breaking changes detected (2) - Review required before upgrade",
+  "generated_at": "2025-12-04T15:47:08.8344195-08:00",
+  "base": {
+    "vi_path": "temp/BaseVI.vi",
+    "deprecated_apis": [],
+    "file_size": 12,
+    "platform_features": [],
+    "vi_name": "BaseVI.vi",
+    "dependencies": [],
+    "connector_pane": {
+      "output_count": 0,
+      "has_error_terminals": false,
+      "terminals": [],
+      "input_count": 0
+    },
+    "saved_date": "2025-12-04T14:14:14.2100632-08:00",
+    "compatibility": {
+      "lv2023": true,
+      "lv2025": false,
+      "lv2024": false,
+      "lv2021": true
+    },
+    "extracted_with": "Binary_Parser",
+    "lv_version_normalized": 2023,
+    "lv_version": "23.0"
+  },
+  "compatibility_impact": {
+    "lv2023": "compatible",
+    "lv2025": "incompatible",
+    "lv2024": "incompatible",
+    "lv2021": "compatible"
+  },
+  "breaking_changes": [
+    {
+      "type": "compatibility_regression",
+      "severity": "medium",
+      "description": "Compatibility lost for lv2025"
+    },
+    {
+      "type": "compatibility_regression",
+      "severity": "medium",
+      "description": "Compatibility lost for lv2024"
+    }
+  ],
+  "differences": {
+    "dependency_changes": [],
+    "deprecated_api_changes": [],
+    "version_change": null,
+    "connector_pane_changes": []
+  },
+  "report_kind": "vi-comparison"
+}

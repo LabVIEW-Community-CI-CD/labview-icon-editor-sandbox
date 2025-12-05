@@ -21,6 +21,97 @@ $lockPath = Join-Path $repoRoot '.locks/orchestration.lock'
 $lockDir = Split-Path -Parent $lockPath
 if (-not (Test-Path -LiteralPath $lockDir)) { New-Item -ItemType Directory -Path $lockDir -Force | Out-Null }
 
+# Simulation/parity mode short-circuit (no LabVIEW/VIPM)
+$simMode = [string]::Equals($env:OLLAMA_EXECUTOR_MODE, 'sim', 'OrdinalIgnoreCase') -or `
+           [string]::Equals($env:ORCH_SIM_MODE, '1', 'OrdinalIgnoreCase') -or `
+           [string]::Equals($env:ORCH_SIM_MODE, 'true', 'OrdinalIgnoreCase')
+
+function Rel([string]$Path) {
+    return [System.IO.Path]::GetRelativePath($repoRoot, $Path)
+}
+
+function Ensure-LockPath([string]$Path) {
+    $dir = Split-Path -Parent $Path
+    if ($dir -and -not (Test-Path -LiteralPath $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        New-Item -ItemType File -Path $Path -Force | Out-Null
+    }
+    return (Resolve-Path -LiteralPath $Path).Path
+}
+
+function Get-AppliedRequirements {
+    $raw = $env:OLLAMA_REQUIREMENTS_APPLIED
+    if ($raw) {
+        return ($raw -split '[,\s]+' | Where-Object { $_ }) | Select-Object -Unique
+    }
+    return @('OEX-PARITY-001','OEX-PARITY-002','OEX-PARITY-003','OEX-PARITY-004')
+}
+
+if ($simMode) {
+    $logDir = Join-Path $repoRoot 'reports/logs'
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+    $logPath = Join-Path $logDir "local-sd-ppl-$runKey.log"
+
+    $artifactsDir = Join-Path $repoRoot 'artifacts'
+    $buildsArtifacts = Join-Path $repoRoot 'builds/artifacts'
+    $isoRoot = Join-Path $repoRoot 'builds-isolated'
+    $runDir = Join-Path $isoRoot $runKey
+
+    foreach ($dir in @($artifactsDir, $buildsArtifacts, $isoRoot)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+
+    $zipPath = Join-Path $artifactsDir 'labview-icon-api.zip'
+    $pplPath = Join-Path $artifactsDir 'labview-icon-api.ppl'
+    "SIMULATION MODE - stub source distribution for $runKey" | Set-Content -LiteralPath $zipPath -Encoding utf8
+    "SIMULATION MODE - stub PPL for $runKey" | Set-Content -LiteralPath $pplPath -Encoding utf8
+
+    Copy-Item -LiteralPath $zipPath -Destination (Join-Path $buildsArtifacts (Split-Path $zipPath -Leaf)) -Force
+    Copy-Item -LiteralPath $pplPath -Destination (Join-Path $buildsArtifacts (Split-Path $pplPath -Leaf)) -Force
+
+    $zipHash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash
+    $pplHash = (Get-FileHash -LiteralPath $pplPath -Algorithm SHA256).Hash
+
+    $appliedReqs = Get-AppliedRequirements
+    $handshake = @{
+        runKey     = $runKey
+        lockPath   = (Ensure-LockPath -Path $lockPath)
+        lockTtlSec = $LockTtlSec
+        forceLock  = $ForceLock.IsPresent
+        zipRelPath = (Rel $zipPath)
+        zipSha256  = $zipHash
+        pplRelPath = (Rel $pplPath)
+        pplSha256  = $pplHash
+        timestampUtc = (Get-Date).ToUniversalTime().ToString('o')
+        mode       = 'sim'
+        requirements = $appliedReqs
+        prereqBypassed = $true
+    }
+
+    $handshakePath = Join-Path $artifactsDir 'labview-icon-api-handshake.json'
+    ConvertTo-Json $handshake -Depth 5 | Set-Content -LiteralPath $handshakePath -Encoding utf8
+
+    New-Item -ItemType Directory -Path $runDir -Force | Out-Null
+    Copy-Item -Path $artifactsDir -Destination $runDir -Recurse -Force
+
+    $summaryPath = Join-Path $logDir "local-sd-ppl-$runKey.summary.json"
+    $handshake | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $summaryPath -Encoding utf8
+
+    $messages = @(
+        "[local-sd-ppl][sim] runKey=$($handshake.runKey) lock=$($handshake.lockPath) ttl=$($handshake.lockTtlSec)s mode=sim",
+        "[local-sd-ppl][sim][requirements] applied=$($appliedReqs -join ',')",
+        "[artifact][labview-icon-api.zip] $($handshake.zipRelPath) ($zipHash)",
+        "[artifact][labview-icon-api.ppl] $($handshake.pplRelPath) ($pplHash)",
+        "[local-sd-ppl][sim] handshake=$((Rel $handshakePath))",
+        "[local-sd-ppl][sim] staged=$((Rel $runDir))",
+        "[local-sd-ppl][sim] summary-json=$((Rel $summaryPath))"
+    )
+    $messages | Tee-Object -FilePath $logPath
+    exit 0
+}
+
 # Create an isolated worktree for the PPL build to keep it separate from the SD build.
 $worktreeRoot = Join-Path $repoRoot "builds/worktrees/ppl-$runKey"
 if (Test-Path -LiteralPath $worktreeRoot) {

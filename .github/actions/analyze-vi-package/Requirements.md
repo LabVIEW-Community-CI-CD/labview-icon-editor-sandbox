@@ -41,7 +41,7 @@ Each requirement below is **singular**, **unambiguous**, **verifiable**, and **c
   **Verification**: Exact match in `[LabVIEW]`.
 
 ## Platform constraints
-- **VIP-PLAT-001** — *Minimum LabVIEW version*: **Exclusive_LabVIEW_Version** SHALL be expressed as `LabVIEW>=X.Y` and SHALL be **≥** a policy-defined minimum (default `21.0`).  
+- **VIP-PLAT-001** — *Minimum LabVIEW version*: **Exclusive_LabVIEW_Version** SHALL be expressed as `LabVIEW>=X.Y` and SHALL be **≥** a policy-defined minimum (default `23.0`).  
   **Verification**: Regex extract then numeric compare of major.minor.
 - **VIP-PLAT-002** — *LabVIEW system scope*: **Exclusive_LabVIEW_System** SHALL be `ALL`, unless a variance is approved.  
   **Verification**: Exact match on `[Platform] Exclusive_LabVIEW_System`.

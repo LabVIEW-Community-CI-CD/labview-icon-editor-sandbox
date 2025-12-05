@@ -12,11 +12,19 @@ Set-StrictMode -Version Latest
 if ([string]::IsNullOrWhiteSpace($Endpoint)) {
     $Endpoint = "http://localhost:11435"
 }
+
+$simMode = $env:OLLAMA_EXECUTOR_MODE
+if (-not [string]::IsNullOrWhiteSpace($simMode) -and $simMode.Trim().ToLowerInvariant() -eq "sim") {
+    $displayModel = if ([string]::IsNullOrWhiteSpace($ModelTag)) { "<unspecified>" } else { $ModelTag }
+    Write-Host "Simulation mode ($simMode) detected; skipping Ollama health check for $Endpoint (model $displayModel)."
+    return
+}
+
 if ($RequireModelTag -and [string]::IsNullOrWhiteSpace($ModelTag)) {
     throw "OLLAMA_MODEL_TAG is missing. Set the env var or pass -ModelTag."
 }
 if ([string]::IsNullOrWhiteSpace($ModelTag)) {
-    $ModelTag = "llama3-8b-local"
+    $ModelTag = "llama3-8b-local:latest"
 }
 
 $uri = "$($Endpoint.TrimEnd('/'))/api/tags"

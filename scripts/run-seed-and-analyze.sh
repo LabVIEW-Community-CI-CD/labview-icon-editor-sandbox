@@ -45,4 +45,4 @@ if ! command -v pwsh >/dev/null 2>&1; then
 fi
 
 echo "Running Analyze-VIP against: $latest_vip"
-pwsh -NoProfile -File "$ROOT/scripts/analyze-vi-package/run-local.ps1" -VipArtifactPath "$latest_vip" -MinLabVIEW "21.0"
+pwsh -NoProfile -File "$ROOT/scripts/analyze-vi-package/run-local.ps1" -VipArtifactPath "$latest_vip" -MinLabVIEW "23.0"

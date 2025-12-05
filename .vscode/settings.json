@@ -1,4 +1,5 @@
 {
   "git.autofetch": false,
-  "dotnet.defaultSolution": "labview-icon-editor-sandbox.sln"
+  "dotnet.defaultSolution": "labview-icon-editor-sandbox.sln",
+  "chat.agent.maxRequests": 50
 }

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en" data-lv-report="vi-comparison" data-lv-version="25.3">
+<head>
+    <meta charset="UTF-8">
+    <meta name="lv-version" content="25.3">
+    <meta name="report-type" content="vi-comparison">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VI Comparison Report</title>
+    <style>
+        :root {
+            --bg: #0b1526;
+            --panel: #0f1f35;
+            --panel-strong: #132949;
+            --text: #e8f1ff;
+            --muted: #a9bcd7;
+            --accent: #5df3ff;
+            --accent-2: #ffb347;
+            --ok: #2ad179;
+            --warn: #f5a524;
+            --error: #ff4d6d;
+            --radius: 16px;
+            --shadow: 0 20px 70px rgba(0,0,0,0.35);
+            font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: radial-gradient(circle at 15% 20%, rgba(93,243,255,0.08), transparent 35%),
+                        radial-gradient(circle at 80% 10%, rgba(255,179,71,0.12), transparent 30%),
+                        linear-gradient(135deg, #0b1526, #0b1020 55%, #0c1b30);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .report {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px 48px;
+        }
+        .hero {
+            background: linear-gradient(135deg, rgba(19,41,73,0.9), rgba(12,27,48,0.85));
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: var(--radius);
+            padding: 28px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px;
+        }
+        .hero h1 {
+            margin: 0;
+            font-size: 2.1rem;
+            letter-spacing: 0.4px;
+        }
+        .hero .subtitle {
+            color: var(--muted);
+            margin-top: 6px;
+            font-size: 0.95rem;
+        }
+        .pill {
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(93,243,255,0.14);
+            color: var(--accent);
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin: 20px 0;
+        }
+        .summary-card {
+            background: var(--panel);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: var(--radius);
+            padding: 18px;
+            box-shadow: var(--shadow);
+            transition: transform 120ms ease, border-color 120ms ease;
+        }
+        .summary-card:hover { transform: translateY(-3px); border-color: rgba(93,243,255,0.4); }
+        .summary-card .label { color: var(--muted); font-size: 0.9rem; }
+        .summary-card .value { font-size: 1.9rem; margin: 6px 0; }
+        .summary-card .subtext { color: var(--muted); font-size: 0.9rem; }
+        .summary-card.ok { border-color: rgba(42,209,121,0.4); }
+        .summary-card.alert { border-color: rgba(255,77,109,0.5); }
+        .panel {
+            background: var(--panel);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: var(--radius);
+            padding: 18px;
+            box-shadow: var(--shadow);
+            margin-top: 18px;
+        }
+        .panel-title { font-weight: 700; margin-bottom: 10px; font-size: 1.05rem; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 14px;
+        }
+        ul { margin: 0; padding-left: 18px; color: var(--muted); }
+        table.compatibility {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--panel-strong);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        table.compatibility th, table.compatibility td {
+            padding: 10px;
+            text-align: left;
+        }
+        table.compatibility thead { background: rgba(255,255,255,0.04); }
+        table.compatibility tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+        .compatible { color: var(--ok); }
+        .warnings { color: var(--accent-2); }
+        .incompatible { color: var(--error); }
+        .callout {
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+        }
+        .callout strong { display: block; margin-bottom: 6px; }
+        .callout.severity-high { border-color: rgba(255,77,109,0.6); }
+        .callout.severity-medium { border-color: rgba(245,165,36,0.6); }
+        .callout.severity-low { border-color: rgba(93,243,255,0.4); }
+        .callout.severity-ok { border-color: rgba(42,209,121,0.6); }
+        .detail h3 { margin-top: 8px; margin-bottom: 8px; }
+        .detail ul { margin-bottom: 12px; }
+        @media (max-width: 640px) {
+            .hero { flex-direction: column; align-items: flex-start; }
+            .hero h1 { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+    <main class="report">
+        <section class="hero">
+            <div>
+                <h1>VI Comparison Report</h1>
+                <div class="subtitle">Base: BaseVI.vi | Compare: CompareVI.vi</div>
+            </div>
+            <div class="pill">Recommendation: Breaking changes detected (2) - Review required before upgrade</div>
+        </section>
+        <section class="summary" id="summary-cards">
+            <div class='summary-card alert'><div class='label'>Breaking changes</div><div class='value'>2</div><div class='subtext'>Severity: H0/M2/L0</div></div><div class='summary-card neutral'><div class='label'>Connector pane</div><div class='value'>0</div><div class='subtext'>inputs delta 0, outputs delta 0</div></div><div class='summary-card neutral'><div class='label'>Dependencies</div><div class='value'>0</div><div class='subtext'>0 added | 0 removed</div></div><div class='summary-card neutral'><div class='label'>Deprecated APIs</div><div class='value'>0</div><div class='subtext'>0 introduced</div></div>
+        </section>
+        <section class="panel">
+            <div class="panel-title">Change Overview</div>
+            <div class="panel-body"><ul></ul></div>
+        </section>
+        <section class="grid">
+            <div class="panel">
+                <div class="panel-title">Compatibility Matrix</div>
+                <div class="panel-body"><table class='compatibility'><thead><tr><th>Version/Platform</th><th>Status</th></tr></thead><tbody><tr><td>lv2021</td><td class='compatible'>compatible</td></tr><tr><td>lv2023</td><td class='compatible'>compatible</td></tr><tr><td>lv2024</td><td class='incompatible'>incompatible</td></tr><tr><td>lv2025</td><td class='incompatible'>incompatible</td></tr></tbody></table></div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">Breaking Changes</div>
+                <div class="panel-body"><div class='callout severity-medium'><strong>compatibility_regression</strong><div>Compatibility lost for lv2025</div></div><div class='callout severity-medium'><strong>compatibility_regression</strong><div>Compatibility lost for lv2024</div></div></div>
+            </div>
+        </section>
+        <section class="panel">
+            <div class="panel-title">Detailed Analysis</div>
+            <div class="panel-body details"></div>
+        </section>
+    </main>
+    <script type="application/json" id="vi-comparison-data">{
+  "summary": {
+    "counts": {
+      "breaking_changes": 2,
+      "dependency_changes": 0,
+      "connector_changes": 0,
+      "deprecated_api_hits": 0
+    },
+    "compatibility": {
+      "lv2023": "compatible",
+      "lv2025": "incompatible",
+      "lv2024": "incompatible",
+      "lv2021": "compatible"
+    },
+    "severity": {
+      "low": 0,
+      "high": 0,
+      "medium": 2
+    },
+    "version_change": null
+  },
+  "diff": {
+    "breaking_changes": [
+      {
+        "type": "compatibility_regression",
+        "severity": "medium",
+        "description": "Compatibility lost for lv2025"
+      },
+      {
+        "type": "compatibility_regression",
+        "severity": "medium",
+        "description": "Compatibility lost for lv2024"
+      }
+    ],
+    "version": null,
+    "deprecated_apis": {
+      "changes": null,
+      "introduced": null,
+      "removed": null
+    },
+    "connector_pane": {
+      "added": null,
+      "output_delta": 0,
+      "error_terminals": {
+        "from": false,
+        "to": false
+      },
+      "removed": null,
+      "changes": null,
+      "input_delta": 0
+    },
+    "dependencies": {
+      "updated": null,
+      "removed": null,
+      "added": null,
+      "changes": null
+    }
+  },
+  "format": {
+    "report_type": "vi-comparison",
+    "version": "25.3",
+    "schema": "vi-history-suite/1.0"
+  },
+  "header": {
+    "compare_vi": {
+      "name": "CompareVI.vi",
+      "path": "temp/CompareVI.vi",
+      "version": "23.0"
+    },
+    "generated_at": "2025-12-04T15:47:08.8344195-08:00",
+    "base_vi": {
+      "name": "BaseVI.vi",
+      "path": "temp/BaseVI.vi",
+      "version": "23.0"
+    },
+    "recommendation": "Breaking changes detected (2) - Review required before upgrade"
+  }
+}</script>
+</body>
+</html>
+

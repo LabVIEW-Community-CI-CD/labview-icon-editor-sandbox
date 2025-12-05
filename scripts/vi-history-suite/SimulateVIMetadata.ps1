@@ -47,7 +47,6 @@ $ErrorActionPreference = "Stop"
 # Load compatibility data
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $compatibilityDataPath = Join-Path $scriptDir "vi-compatibility-matrix.json"
-$deprecationsDataPath = Join-Path $scriptDir "api-deprecations.json"
 
 function Read-VIFileHeader {
     param([string]$Path)
@@ -104,7 +103,7 @@ function Get-LVVersionFromFormat {
     return $version
 }
 
-function Normalize-LVVersion {
+function Convert-LVVersionNormalized {
     param([string]$Version)
     
     if ($Version -match '(\d{2,4})\.?(\d*)') {
@@ -127,7 +126,7 @@ function Get-VIMetadata {
     $header = Read-VIFileHeader -Path $Path
     $viName = Split-Path -Leaf $Path
     $lvVersion = Get-LVVersionFromFormat -FormatVersion $header.FormatVersion
-    $lvVersionNormalized = Normalize-LVVersion -Version $lvVersion
+    $lvVersionNormalized = Convert-LVVersionNormalized -Version $lvVersion
     
     # In real implementation, would extract actual dependencies, connector pane, etc.
     # For now, providing structure with simulated data
@@ -158,11 +157,23 @@ function Get-VIMetadata {
     
     # Load compatibility database if available
     if (Test-Path $compatibilityDataPath) {
-        $compatData = Get-Content $compatibilityDataPath | ConvertFrom-Json
-        
         # Check for platform-specific features (simplified)
         if ($viName -match "64" -or $viName -match "x64") {
             $metadata.platform_features += "64-bit specific"
+        }
+    }
+
+    # Merge in any override metadata stored alongside the VI file
+    $overridePath = [System.IO.Path]::ChangeExtension($Path, '.metadata.json')
+    if (Test-Path -LiteralPath $overridePath) {
+        try {
+            $override = Get-Content -LiteralPath $overridePath -Raw | ConvertFrom-Json
+            foreach ($prop in $override.PSObject.Properties) {
+                $metadata[$prop.Name] = $prop.Value
+            }
+        }
+        catch {
+            throw ("Failed to apply metadata override at {0}: {1}" -f $overridePath, $_.Exception.Message)
         }
     }
     

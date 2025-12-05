@@ -1,0 +1,18 @@
+[
+  {
+    "path": "mock.txt",
+    "last_commit": "smoke-sha",
+    "commit_author": "smoke",
+    "commit_date": "2025-12-04T13:48:27.6922381-08:00",
+    "commit_source": "index",
+    "size_bytes": 66
+  },
+  {
+    "path": "data/mock-data.txt",
+    "last_commit": "smoke-sha",
+    "commit_author": "smoke",
+    "commit_date": "2025-12-04T13:48:27.6922381-08:00",
+    "commit_source": "index",
+    "size_bytes": 14
+  }
+]

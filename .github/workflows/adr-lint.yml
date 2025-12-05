@@ -20,6 +20,6 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version-file: .python-version
       - name: Lint ADRs and agent config language
         run: python .github/scripts/lint_requirements_language.py

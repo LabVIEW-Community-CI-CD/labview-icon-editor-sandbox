@@ -9,15 +9,15 @@ This repo contains:
 
 ## Local run
 ```powershell
-pwsh -NoProfile -File ./Analyze-VIP.Tests.ps1 -VipArtifactPath "/mnt/data/work/ni_icon_editor-0.0.2.16.vip" -MinLabVIEW "21.0"
+pwsh -NoProfile -File ./Analyze-VIP.Tests.ps1 -VipArtifactPath "/mnt/data/work/ni_icon_editor-0.0.2.16.vip" -MinLabVIEW "23.0"
 ```
 
 ## Local workflow-style run (mirrors CI job)
 ```powershell
 # Using a directory, .vip file, or downloaded artifact .zip:
-pwsh -NoProfile -File scripts/analyze-vi-package/run-workflow-local.ps1 -VipArtifactPath "builds/vip-stash" -MinLabVIEW "21.0"
+pwsh -NoProfile -File scripts/analyze-vi-package/run-workflow-local.ps1 -VipArtifactPath "builds/vip-stash" -MinLabVIEW "23.0"
 # Directly target a specific package or artifact directory (recommended for local validation):
-pwsh -NoProfile -File scripts/analyze-vi-package/run-workflow-local.ps1 -VipArtifactPath "path/to/package.vip" -MinLabVIEW "21.0"
+pwsh -NoProfile -File scripts/analyze-vi-package/run-workflow-local.ps1 -VipArtifactPath "path/to/package.vip" -MinLabVIEW "23.0"
 ```
 
 ## Troubleshooting
@@ -34,7 +34,7 @@ jobs:
       - uses: ./vip-analyzer
         with:
           vip_artifact_path: "/mnt/data/work/ni_icon_editor-0.0.2.16.vip"
-          min_labview: "21.0"
+          min_labview: "23.0"
 ```
 
 ## Notes

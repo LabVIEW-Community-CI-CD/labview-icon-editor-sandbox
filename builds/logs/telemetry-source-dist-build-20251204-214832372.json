@@ -1,0 +1,10 @@
+{
+  "build_spec": "source-dist-build",
+  "labview_version": "2025",
+  "bitness": "both",
+  "repo_root": "C:\\Users\\svelderr\\repo\\labview-icon-editor-sandbox",
+  "gcli_path": "C:\\Users\\svelderr\\repo\\labview-icon-editor-sandbox\\scripts\\smoke\\mock-g-cli.cmd",
+  "commit_index": "builds\\cache\\mock-source-dist-index.json",
+  "manifest": "builds\\LabVIEWIconAPI\\manifest.json",
+  "generated_at": "2025-12-04T21:48:32.3735744Z"
+}
