@@ -1,5 +1,13 @@
 name: Ollama Executor Build Automation
 
+env:
+  OLLAMA_EXECUTOR_MODE: sim
+  OLLAMA_SIM_CREATE_ARTIFACTS: "true"
+  OLLAMA_SIM_DELAY_MS: "50"
+  OLLAMA_HOST: http://localhost:11436
+  OLLAMA_MODEL_TAG: llama3-8b-local
+  OLLAMA_REQUIREMENTS_APPLIED: OEX-PARITY-001,OEX-PARITY-002,OEX-PARITY-003,OEX-PARITY-004
+
 defaults:
   run:
     working-directory: './'
@@ -96,6 +104,7 @@ jobs:
         with:
           name: ollama-build-artifacts-simulation
           path: |
+            artifacts/**
             builds/**/*.zip
             builds/**/*.lvlibp
             builds/**/*.vip
@@ -120,6 +129,9 @@ jobs:
     runs-on: self-hosted-windows-lv
     # Run on PRs or when simulation is explicitly disabled via workflow_dispatch
     if: github.event_name == 'pull_request' || github.event.inputs.simulation == false
+    env:
+      OLLAMA_EXECUTOR_MODE: ""
+      OLLAMA_HOST: http://localhost:11435
     
     steps:
       # Runtime safety check: ensures job is running on expected Windows environment
@@ -151,21 +163,65 @@ jobs:
             Write-Host "⚠ LabVIEW installation not found in default location" -ForegroundColor Yellow
           }
 
-      - name: Build Source Distribution (Real LabVIEW)
+      - name: Seed image preflight (required for real runs)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $seedImage = if ($env:SEED_IMAGE) { $env:SEED_IMAGE } else { 'seed:latest' }
+          Write-Host "Ensuring seed image is available: $seedImage" -ForegroundColor Cyan
+
+          if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+            Write-Host "docker CLI not found; skipping seed image check" -ForegroundColor Yellow
+            exit 0
+          }
+
+          try {
+            $inspect = docker image inspect $seedImage 2>$null
+          } catch {
+            # Ignore errors
+          }
+          
+          if (-not $?) {
+            Write-Host "Seed image missing; attempting to build from Tooling/seed/Dockerfile" -ForegroundColor Yellow
+            try {
+              docker build -f "$env:GITHUB_WORKSPACE/Tooling/seed/Dockerfile" -t $seedImage "$env:GITHUB_WORKSPACE"
+            } catch {
+              Write-Host "Failed to build seed image: $_" -ForegroundColor Yellow
+            }
+          }
+
+          "Seed image check completed" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Run Ollama host via locked executor
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          Write-Host "=== Starting Real LabVIEW Build ===" -ForegroundColor Cyan
-          Write-Host ""
+
+          $isDispatch = '${{ github.event_name }}' -eq 'workflow_dispatch'
+          $requestedSim = if ($isDispatch) { '${{ github.event.inputs.simulation }}' } else { 'true' }
+          $mode = if ($requestedSim -eq 'true') { 'sim' } else { '' }
+          if ($mode) { $env:OLLAMA_EXECUTOR_MODE = $mode }
+
+          Write-Host "=== Running Ollama host via executor ===" -ForegroundColor Cyan
           Write-Host "Goal: ${{ github.event.inputs.goal || 'Build Source Distribution LV2025 64-bit' }}" -ForegroundColor Yellow
-          Write-Host "Mode: REAL (Using actual LabVIEW installation)" -ForegroundColor Yellow
-          Write-Host ""
-          
-          # Run the build script directly with LabVIEW
-          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/build-source-distribution/Build_Source_Distribution.ps1" `
-            -RepositoryPath "$env:GITHUB_WORKSPACE" `
-            -Package_LabVIEW_Version 2025 `
-            -SupportedBitness 64
+          Write-Host "Executor mode: $(if ($mode) { $mode } else { 'real' })" -ForegroundColor Yellow
+
+          pwsh -NoProfile -File "$env:GITHUB_WORKSPACE/scripts/orchestration/Run-Ollama-Host.ps1" `
+            -Repo "$env:GITHUB_WORKSPACE" `
+            -RunKey "ollama-real-${{ github.run_id }}" `
+            -PwshTimeoutSec 1800 `
+            -OllamaPrompt "local-sd/local-sd-ppl"
+
+          # Record requested LabVIEW target if present in goal text
+          $goal = "${{ github.event.inputs.goal || 'Build Source Distribution LV2025 64-bit' }}"
+          if ($goal -match "LV(?<lv>\d{4}).*(?<bit>32|64)") {
+            "Target: LV$($Matches['lv']) $($Matches['bit'])-bit" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          }
+
+      - name: Validate handshake
+        uses: ./.github/actions/validate-ollama-handshake
+        with:
+          allow_missing: "true"
 
       - name: Upload Build Artifacts
         if: always()
@@ -173,6 +229,7 @@ jobs:
         with:
           name: ollama-build-artifacts-real
           path: |
+            artifacts/**
             builds/**/*.zip
             builds/**/*.lvlibp
             builds/**/*.vip
@@ -443,6 +500,112 @@ jobs:
             *.log
           retention-days: 7
           if-no-files-found: ignore
+
+  reset-source-dist-sim:
+    name: Reset Source Distribution (Simulation)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run reset-source-dist via locked executor (sim)
+        shell: pwsh
+        env:
+          OLLAMA_EXECUTOR_MODE: sim
+          OLLAMA_SIM_CREATE_ARTIFACTS: "true"
+          OLLAMA_SIM_DELAY_MS: "50"
+          OLLAMA_HOST: http://localhost:11436
+          OLLAMA_MODEL_TAG: llama3-8b-local
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $mockJob = Start-Job -ScriptBlock {
+            & "$using:PWD/scripts/ollama-executor/MockOllamaServer.ps1" `
+              -Port 11436 `
+              -ScenarioFile "$using:PWD/scripts/ollama-executor/test-scenarios/successful-two-turn.json" `
+              -MaxRequests 25
+          }
+
+          try {
+            Start-Sleep -Seconds 2
+            pwsh -NoProfile -File scripts/ollama-executor/Run-Locked-ResetSourceDistribution.ps1 `
+              -RepoPath . `
+              -Endpoint "http://localhost:11436" `
+              -Model "llama3-8b-local" `
+              -CommandTimeoutSec 600
+          }
+          finally {
+            Stop-Job $mockJob -ErrorAction SilentlyContinue
+            Remove-Job $mockJob -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Upload reset artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reset-source-dist-sim
+          path: |
+            builds/reports/source-dist-reset.json
+            reports/logs/**
+            artifacts/**
+          retention-days: 7
+          if-no-files-found: warn
+
+  vi-history-sim:
+    name: VI History Suite (Simulation)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run VI History via locked executor (sim)
+        shell: pwsh
+        env:
+          OLLAMA_EXECUTOR_MODE: sim
+          OLLAMA_SIM_CREATE_ARTIFACTS: "true"
+          OLLAMA_SIM_DELAY_MS: "50"
+          OLLAMA_HOST: http://localhost:11436
+          OLLAMA_MODEL_TAG: llama3-8b-local
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $mockJob = Start-Job -ScriptBlock {
+            & "$using:PWD/scripts/ollama-executor/MockOllamaServer.ps1" `
+              -Port 11436 `
+              -ScenarioFile "$using:PWD/scripts/ollama-executor/test-scenarios/successful-two-turn.json" `
+              -MaxRequests 25
+          }
+
+          try {
+            Start-Sleep -Seconds 2
+            pwsh -NoProfile -File scripts/ollama-executor/Run-Locked-VIHistory.ps1 `
+              -RepoPath . `
+              -Endpoint "http://localhost:11436" `
+              -Model "llama3-8b-local" `
+              -CommandTimeoutSec 180
+          }
+          finally {
+            Stop-Job $mockJob -ErrorAction SilentlyContinue
+            Remove-Job $mockJob -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Upload VI History artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vi-history-sim
+          path: |
+            reports/vi-history/**
+            artifacts/vi-history-handshake.json
+            reports/logs/**
+          retention-days: 7
+          if-no-files-found: warn
 
   comment-results:
     name: Comment Build Results
