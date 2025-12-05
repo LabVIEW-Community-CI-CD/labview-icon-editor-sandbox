@@ -668,39 +668,10 @@ jobs:
             }
             $analysisResults | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
             
-            # Generate simple HTML report
-            $html = @"
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="lv-version" content="25.3">
-  <title>VI History Analysis Report</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { color: #333; }
-    .summary { background: #f5f5f5; padding: 15px; border-radius: 5px; }
-    .vi-list { margin-top: 20px; }
-    .vi-item { padding: 5px 0; border-bottom: 1px solid #eee; }
-  </style>
-</head>
-<body>
-  <h1>VI History Analysis Report</h1>
-  <div class="summary">
-    <p><strong>Analysis Path:</strong> $baseViPath</p>
-    <p><strong>VIs Analyzed:</strong> $($viFiles.Count)</p>
-    <p><strong>Timestamp:</strong> $timestamp</p>
-    <p><strong>LabVIEW Version:</strong> 2023.3</p>
-    <p><strong>Status:</strong> Completed</p>
-  </div>
-  <div class="vi-list">
-    <h2>Analyzed VIs</h2>
-    $($viFiles | ForEach-Object { "<div class='vi-item'>$($_.Name)</div>" } | Out-String)
-  </div>
-</body>
-</html>
-"@
-            $html | Set-Content -LiteralPath $reportPath -Encoding UTF8
+            # Generate simple HTML report using string concatenation
+            $viListHtml = ($viFiles | ForEach-Object { "<div class='vi-item'>$($_.Name)</div>" }) -join "`n"
+            $htmlContent = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='lv-version' content='25.3'><title>VI History Analysis Report</title><style>body { font-family: Arial, sans-serif; margin: 20px; } h1 { color: #333; } .summary { background: #f5f5f5; padding: 15px; border-radius: 5px; } .vi-list { margin-top: 20px; } .vi-item { padding: 5px 0; border-bottom: 1px solid #eee; }</style></head><body><h1>VI History Analysis Report</h1><div class='summary'><p><strong>Analysis Path:</strong> $baseViPath</p><p><strong>VIs Analyzed:</strong> $($viFiles.Count)</p><p><strong>Timestamp:</strong> $timestamp</p><p><strong>LabVIEW Version:</strong> 2023.3</p><p><strong>Status:</strong> Completed</p></div><div class='vi-list'><h2>Analyzed VIs</h2>$viListHtml</div></body></html>"
+            $htmlContent | Set-Content -LiteralPath $reportPath -Encoding UTF8
             Write-Host "VI History report generated: $reportPath"
           } else {
             Write-Host "VI path not found: $baseViPath - generating placeholder report"
