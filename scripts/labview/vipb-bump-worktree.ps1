@@ -40,6 +40,16 @@ function Resolve-Repo {
 }
 
 $repo = Resolve-Repo $RepositoryPath
+
+# Docker user mapping to avoid root-owned outputs on Linux
+$runOnWindows = ($env:OS -eq 'Windows_NT') -or ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows))
+$dockerUserArgs = @()
+if (-not $runOnWindows) {
+    $uid = (& id -u)
+    $gid = (& id -g)
+    $dockerUserArgs = @('--user', "$uid`:$gid")
+}
+
 $vipbFull = $null
 try {
     $vipbFull = (Resolve-Path -LiteralPath (Join-Path $repo $VipbPath)).ProviderPath
@@ -83,7 +93,7 @@ $vipbRel = [System.IO.Path]::GetRelativePath($repo, $vipbStaged) -replace '\\','
 $vipbJson = Join-Path $stashDir 'seed.vipb.json'
 $vipbJsonRel = [System.IO.Path]::GetRelativePath($repo, $vipbJson) -replace '\\','/'
 Write-Host "[vipb-bump] Converting VIPB to JSON via seed image"
-docker run --rm -v "${repo}:/repo" --entrypoint /usr/local/bin/vipb2json $SeedImage --input "/repo/$vipbRel" --output "/repo/$vipbJsonRel"
+& docker run --rm @dockerUserArgs -v "${repo}:/repo" --entrypoint /usr/local/bin/vipb2json $SeedImage --input "/repo/$vipbRel" --output "/repo/$vipbJsonRel"
 if ($LASTEXITCODE -ne 0) { throw "vipb2json failed with exit code $LASTEXITCODE" }
 if (-not (Test-Path -LiteralPath $vipbJson)) {
     throw "vipb2json did not produce JSON at $vipbJson"
@@ -118,7 +128,7 @@ $newVersionString = ("{0}.{1} ({2})" -f $lvMajorToken, $TargetLabVIEWMinor, $bit
 $generalSettings.Package_LabVIEW_Version = $newVersionString
 $json | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $vipbJson -Encoding UTF8
 Write-Host "[vipb-bump] Updated Package_LabVIEW_Version to '$newVersionString'"
-docker run --rm -v "${repo}:/repo" --entrypoint /usr/local/bin/json2vipb $SeedImage --input "/repo/$vipbJsonRel" --output "/repo/$vipbRel"
+& docker run --rm @dockerUserArgs -v "${repo}:/repo" --entrypoint /usr/local/bin/json2vipb $SeedImage --input "/repo/$vipbJsonRel" --output "/repo/$vipbRel"
 if ($LASTEXITCODE -ne 0) { throw "json2vipb failed with exit code $LASTEXITCODE" }
 if (-not (Test-Path -LiteralPath $vipbStaged)) {
     throw "Seed tool did not produce the staged VIPB at $vipbStaged"
