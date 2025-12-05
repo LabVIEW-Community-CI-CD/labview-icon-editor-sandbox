@@ -38,6 +38,8 @@ Describe "Write-LogStashEntry" {
         $manifest.commit | Should -Be 'abc1234'
         $manifest.labview_version | Should -Be '2021'
         $manifest.bitness | Should -Contain '64'
+        $manifest.retention_utc | Should -Not -BeNullOrEmpty
+        ([datetime]$manifest.retention_utc) | Should -BeGreaterThan $start
         $manifest.files.logs.Count | Should -Be 1
         $manifest.files.attachments.Count | Should -Be 1
 
