@@ -437,7 +437,7 @@ jobs:
 
   ollama-gate:
     name: Optional Ollama verification
-    needs: [docs-quality]
+    needs: [verify-checklist-sync, docs-quality]
     runs-on: ubuntu-latest
     timeout-minutes: 180
     continue-on-error: true
