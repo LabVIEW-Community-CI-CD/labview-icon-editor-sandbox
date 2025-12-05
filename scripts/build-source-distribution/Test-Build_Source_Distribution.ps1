@@ -51,8 +51,14 @@ function global:New-TestRepo {
     New-Item -ItemType Directory -Path (Join-Path $root 'vi.lib/LabVIEW Icon API/Nested') -Force | Out-Null
     Set-Content -LiteralPath (Join-Path $root 'vi.lib/LabVIEW Icon API/Nested/payload.txt') -Value 'payload' -Encoding ascii
     Set-Content -LiteralPath (Join-Path $root 'vi.lib/LabVIEW Icon API/extra.txt') -Value 'payload2' -Encoding ascii
+    Set-Content -LiteralPath (Join-Path $root 'vi.lib/LabVIEW Icon API/LabVIEW Icon API.lvlib') -Value '<?xml version="1.0"?><Library/>' -Encoding ascii
     New-Item -ItemType Directory -Path (Join-Path $root 'resource/plugins/deep') -Force | Out-Null
     Set-Content -LiteralPath (Join-Path $root 'resource/plugins/deep/addin.txt') -Value 'plugin' -Encoding ascii
+    # Critical Undo/Redo VIs required by preflight check
+    New-Item -ItemType Directory -Path (Join-Path $root 'resource/plugins/NIIconEditor/Miscellaneous/Undo Redo') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $root 'resource/plugins/NIIconEditor/Miscellaneous/Undo Redo/FGV_Undo Redo.vi') -Value 'vi' -Encoding ascii
+    Set-Content -LiteralPath (Join-Path $root 'resource/plugins/NIIconEditor/Miscellaneous/Undo Redo/Add Data to History.vi') -Value 'vi' -Encoding ascii
+    Set-Content -LiteralPath (Join-Path $root 'resource/plugins/NIIconEditor/Miscellaneous/Undo Redo/Replay Data from History.vi') -Value 'vi' -Encoding ascii
     New-Item -ItemType Directory -Path (Join-Path $root 'Test/Unit tests') -Force | Out-Null
     Set-Content -LiteralPath (Join-Path $root 'Test/Unit tests/sample.txt') -Value 'test' -Encoding ascii
 
