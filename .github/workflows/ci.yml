@@ -526,6 +526,87 @@ jobs:
             reports/logs/ollama-host-ci-windows-sim.summary.json
           if-no-files-found: warn
 
+  vi-history-sim-linux:
+    name: VI History report (sim, Linux)
+    needs: [verify-checklist-sync]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+
+      - name: Install PowerShell
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y powershell
+
+      - name: Ensure Pester 5 is available
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $hasPester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 }
+          if (-not $hasPester) {
+            Install-Module -Name Pester -MinimumVersion 5.3.3 -Scope CurrentUser -Force -SkipPublisherCheck
+          }
+
+      - name: Run VI History comparison Pester suite (Linux)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-Pester -Configuration @{
+            Run    = @{ Path = 'scripts/vi-history-suite/Test-VIComparison.ps1' }
+            Output = @{ Verbosity = 'Detailed' }
+            CI     = $true
+          }
+
+      - name: Upload VI History test artifacts (Linux)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vi-history-sim-linux
+          path: |
+            temp/vi-history-report.html
+            temp/vi-history-report.json
+          if-no-files-found: warn
+
+  vi-history-sim-windows:
+    name: VI History report (sim, Windows)
+    needs: [verify-checklist-sync]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          set-safe-directory: true
+
+      - name: Ensure Pester 5 is available
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $hasPester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 }
+          if (-not $hasPester) {
+            Install-Module -Name Pester -MinimumVersion 5.3.3 -Scope CurrentUser -Force -SkipPublisherCheck
+          }
+
+      - name: Run VI History comparison Pester suite (Windows)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-Pester -Configuration @{
+            Run    = @{ Path = 'scripts/vi-history-suite/Test-VIComparison.ps1' }
+            Output = @{ Verbosity = 'Detailed' }
+            CI     = $true
+          }
+
+      - name: Upload VI History test artifacts (Windows)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vi-history-sim-windows
+          path: |
+            temp/vi-history-report.html
+            temp/vi-history-report.json
+          if-no-files-found: warn
+
   dev-mode-binder-tests:
     name: Dev-mode binder tests
     needs: [verify-checklist-sync, requirements-language-lint, requirements-attributes, enforce-verify-checklist-needs]
