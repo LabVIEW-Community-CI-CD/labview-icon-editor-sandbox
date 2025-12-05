@@ -444,23 +444,16 @@ foreach ($pair in $pairs | Select-Object -First $MaxPairs) {
         } else {
             $cliArgs = @(
                 '-NoLogo','-NoProfile','-File', $HarnessScript,
-                '-BaseVi', $baselinePath,
-                '-HeadVi', $candidatePath,
-                '-LabVIEWPath', $LabVIEWExePath,
-                '-OutputRoot', $pairRoot,
-                '-NoiseProfile', $NoiseProfile,
-                '-RenderReport',
-                '-CloseLabVIEW',
-                '-CloseLVCompare'
+                '-Baseline', $baselinePath,
+                '-Candidate', $candidatePath,
+                '-OutputDirectory', $pairRoot,
+                '-NoiseProfile', $NoiseProfile
             )
-            if ($TimeoutSeconds -gt 0) {
-            $cliArgs += @('-TimeoutSeconds', $TimeoutSeconds)
-        }
-        if ($IgnoreAttributes) { $cliArgs += '-IgnoreAttributes' }
-        if ($IgnoreFrontPanel) { $cliArgs += '-IgnoreFrontPanel' }
-        if ($IgnoreFrontPanelPosition) { $cliArgs += '-IgnoreFrontPanelPosition' }
-        if ($IgnoreBlockDiagram) { $cliArgs += '-IgnoreBlockDiagram' }
-        if ($IgnoreBlockDiagramCosmetics) { $cliArgs += '-IgnoreBlockDiagramCosmetics' }
+            if ($IgnoreAttributes) { $cliArgs += '-IgnoreAttributes' }
+            if ($IgnoreFrontPanel) { $cliArgs += '-IgnoreFrontPanel' }
+            if ($IgnoreFrontPanelPosition) { $cliArgs += '-IgnoreFrontPanelPosition' }
+            if ($IgnoreBlockDiagram) { $cliArgs += '-IgnoreBlockDiagram' }
+            if ($IgnoreBlockDiagramCosmetics) { $cliArgs += '-IgnoreBlockDiagramCosmetics' }
 
             Write-Host ("[vi-compare] Running LabVIEW CLI for pair {0} ({1} vs {2})" -f $pairLabel, $baselinePath, $candidatePath)
             $startParams = @{
